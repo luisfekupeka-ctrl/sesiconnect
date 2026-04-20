@@ -1,0 +1,10 @@
+numero_sala,dia_semana,indice_bloco,nome_professor,turma,materia,tipo
+1,1,1,Ana Beatriz Silva,6º Ano A,Matemática,regular
+1,1,2,Ana Beatriz Silva,6º Ano A,Matemática,regular
+2,1,1,Carlos Eduardo,7º Ano B,História,regular
+3,2,1,Mariana Costa,8º Ano C,Português,regular
+4,3,1,Roberto Alve,9º Ano A,Ciências,regular
+5,4,1,Fernanda Lima,Ensino Médio 1,Física,regular
+6,5,1,Gabriel Souza,Ensino Médio 2,Química,regular
+1,1,3,Ana Beatriz Silva,6º Ano A,Matemática,regular
+2,1,2,Carlos Eduardo,7º Ano B,História,regular
