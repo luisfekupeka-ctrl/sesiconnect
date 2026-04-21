@@ -1,9 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { FileText, Search, UserCheck, Download, BarChart3, Plus, X, ChevronDown, Calendar, Filter } from 'lucide-react';
+import { FileText, Search, UserCheck, Download, BarChart3, Plus, X, ChevronDown, Calendar, Filter, FileSpreadsheet } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 import { Aluno, ModeloFormulario, CampoFormulario, RegistroOcorrencia } from '../types';
+import { 
+  salvarOcorrencia, 
+  salvarModeloFormulario, 
+  excluirModeloFormulario 
+} from '../services/dataService';
 
 // === Componente de Autopreenchimento de Aluno ===
 function AutocompleteAluno({
@@ -82,24 +87,40 @@ function AutocompleteAluno({
 }
 
 // === Página Principal de Formulários ===
+const SERIES = [
+  '6º Ano Fundamental', '7º Ano Fundamental', '8º Ano Fundamental', '9º Ano Fundamental',
+  '1º Ano Médio', '2º Ano Médio', '3º Ano Médio'
+];
+
 export default function FormsPage() {
-  const { alunos, modelosFormulario, ocorrencias, adicionarOcorrencia, estadoEscola, professores } = useEscola();
-  const [abaAtiva, setAbaAtiva] = useState<'nova' | 'relatorios' | 'admin'>('nova');
-  const [modeloSelecionado, setModeloSelecionado] = useState<ModeloFormulario | null>(modelosFormulario[0] || null);
+  const { 
+    alunos, modelosFormulario, ocorrencias, 
+    adicionarOcorrencia, atualizar, professoresCMS 
+  } = useEscola();
+
+  const [abaAtiva, setAbaAtiva] = useState<'nova' | 'relatorios'>('nova');
+  const [modeloSelecionado, setModeloSelecionado] = useState<ModeloFormulario | null>(null);
   const [alunoSelecionado, setAlunoSelecionado] = useState<Aluno | null>(null);
   const [dadosFormulario, setDadosFormulario] = useState<Record<string, string>>({});
   const [enviado, setEnviado] = useState(false);
+  const [salvando, setSalvando] = useState(false);
   const [filtroRelatorio, setFiltroRelatorio] = useState<'diario' | 'semanal' | 'quinzenal' | 'mensal'>('diario');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Estado do Construtor
+  const [editandoModelo, setEditandoModelo] = useState<Partial<ModeloFormulario> | null>(null);
+
+  useEffect(() => {
+    if (modelosFormulario.length > 0 && !modeloSelecionado) {
+      setModeloSelecionado(modelosFormulario[0]);
+    }
+  }, [modelosFormulario, modeloSelecionado]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!modeloSelecionado || !alunoSelecionado) return;
 
-    // Encontrar professor atual baseado no estado da escola
-    const salaProfAtual = estadoEscola.salas.find(s => s.numeroSala === alunoSelecionado.numeroSala);
-
-    const novaOcorrencia: RegistroOcorrencia = {
-      id: `oc-${Date.now()}`,
+    setSalvando(true);
+    const ok = await salvarOcorrencia({
       modeloFormularioId: modeloSelecionado.id,
       nomeModelo: modeloSelecionado.nome,
       dados: dadosFormulario,
@@ -107,12 +128,14 @@ export default function FormsPage() {
       turmaAluno: alunoSelecionado.turma,
       anoAluno: alunoSelecionado.ano,
       salaAluno: alunoSelecionado.numeroSala,
-      professorAtual: salaProfAtual?.professorAtual,
-      criadoEm: new Date().toISOString(),
-    };
+      professorAtual: 'A DEFINIR', // Poderia vir do contexto se logado
+    });
 
-    adicionarOcorrencia(novaOcorrencia);
-    setEnviado(true);
+    if (ok) {
+      atualizar();
+      setEnviado(true);
+    }
+    setSalvando(false);
   };
 
   const limparFormulario = () => {
@@ -121,10 +144,15 @@ export default function FormsPage() {
     setEnviado(false);
   };
 
-  // Filtrar ocorrências por período
+  // Filtrar ocorrências por período (Defensivo)
   const agora = new Date();
-  const ocorrenciasFiltradas = ocorrencias.filter(oc => {
+  const ocorrenciasBase = Array.isArray(ocorrencias) ? ocorrencias : [];
+  
+  const ocorrenciasFiltradas = ocorrenciasBase.filter(oc => {
+    if (!oc.criadoEm) return false;
     const dataOc = new Date(oc.criadoEm);
+    if (isNaN(dataOc.getTime())) return false;
+    
     const diff = agora.getTime() - dataOc.getTime();
     const dias = diff / (1000 * 60 * 60 * 24);
 
@@ -133,49 +161,43 @@ export default function FormsPage() {
       case 'semanal': return dias <= 7;
       case 'quinzenal': return dias <= 15;
       case 'mensal': return dias <= 30;
+      default: return true;
     }
   });
 
-  // Contagens para relatório
   const contagemPorTipo = ocorrenciasFiltradas.reduce((acc, oc) => {
-    acc[oc.nomeModelo] = (acc[oc.nomeModelo] || 0) + 1;
+    const nome = oc.nomeModelo || 'Desconhecido';
+    acc[nome] = (acc[nome] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
   const alunosRecorrentes = ocorrenciasFiltradas.reduce((acc, oc) => {
-    acc[oc.nomeAluno] = (acc[oc.nomeAluno] || 0) + 1;
+    const nome = oc.nomeAluno || 'Desconhecido';
+    acc[nome] = (acc[nome] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
-  const alunosOrdenados = Object.entries(alunosRecorrentes).sort((a, b) => (b[1] as number) - (a[1] as number)).slice(0, 5);
+  const alunosOrdenados = Object.entries(alunosRecorrentes)
+    .sort((a, b) => (b[1] as number) - (a[1] as number))
+    .slice(0, 5);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="max-w-5xl mx-auto space-y-10"
-    >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-5xl mx-auto space-y-10">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-on-surface mb-3">Formulários</h1>
+          <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-on-surface mb-3">Comando Central: Forms</h1>
           <p className="text-on-surface-variant text-lg font-medium leading-relaxed">
-            Registro de ocorrências com autopreenchimento inteligente e relatórios automáticos.
+            Crie formulários dinâmicos e visualize relatórios em tempo real.
           </p>
         </div>
         <div className="flex gap-1 p-1.5 bg-surface-container-low rounded-2xl">
           {([
-            { id: 'nova', rotulo: 'Nova Ocorrência' },
-            { id: 'relatorios', rotulo: 'Relatórios' },
-            { id: 'admin', rotulo: 'Modelos' },
+            { id: 'nova', rotulo: 'Registrar' },
+            { id: 'relatorios', rotulo: 'Dashboards' },
           ] as const).map((aba) => (
-            <button
-              key={aba.id}
-              onClick={() => setAbaAtiva(aba.id)}
-              className={cn(
-                "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                abaAtiva === aba.id ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"
-              )}
-            >
+            <button key={aba.id} onClick={() => setAbaAtiva(aba.id)}
+              className={cn("px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                abaAtiva === aba.id ? "bg-surface-container-low text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface")}>
               {aba.rotulo}
             </button>
           ))}
@@ -185,62 +207,42 @@ export default function FormsPage() {
       <AnimatePresence mode="wait">
         {/* === ABA: NOVA OCORRÊNCIA === */}
         {abaAtiva === 'nova' && (
-          <motion.div
-            key="nova"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            className="space-y-6"
-          >
-            {/* Seletor de modelo */}
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-              {modelosFormulario.map(modelo => (
-                <button
-                  key={modelo.id}
-                  onClick={() => { setModeloSelecionado(modelo); limparFormulario(); }}
-                  className={cn(
-                    "flex-shrink-0 px-6 py-3 rounded-2xl text-xs font-black transition-all border-2",
-                    modeloSelecionado?.id === modelo.id
-                      ? "bg-primary text-white border-primary"
-                      : "bg-surface-container-lowest text-on-surface-variant border-transparent hover:border-primary/10"
-                  )}
-                >
-                  {modelo.nome}
-                </button>
-              ))}
-            </div>
+          <motion.div key="nova" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
+            {Array.isArray(modelosFormulario) && modelosFormulario.length > 0 ? (
+              <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
+                {modelosFormulario.map(modelo => (
+                  <button key={modelo.id} onClick={() => { setModeloSelecionado(modelo); limparFormulario(); }}
+                    className={cn("flex-shrink-0 px-6 py-3 rounded-2xl text-xs font-black transition-all border-2",
+                      modeloSelecionado?.id === modelo.id ? "bg-primary text-on-surface-bright border-primary" : "bg-surface-container-lowest text-on-surface-variant border-transparent hover:border-primary/10")}>
+                    {modelo.nome}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="p-20 text-center bg-surface-container-lowest rounded-[2.5rem] editorial-shadow border-2 border-dashed border-primary/10">
+                <FileSpreadsheet size={48} className="text-primary/20 mx-auto mb-4" />
+                <h3 className="text-lg font-black mb-2">Nenhum formulário ativo</h3>
+                <p className="text-on-surface-variant text-sm mb-6 max-w-sm mx-auto">Solicite ao administrador a criação de um novo formulário dinâmico.</p>
+              </div>
+            )}
 
             {modeloSelecionado && !enviado && (
-              <div className="bg-surface-container-lowest p-8 md:p-10 rounded-[2.5rem] editorial-shadow">
+              <div className="bg-surface-container-lowest p-8 md:p-10 rounded-[2.5rem] editorial-shadow border border-outline-variant/10">
                 <div className="mb-8">
                   <h2 className="text-xl font-black text-on-surface mb-1">{modeloSelecionado.nome}</h2>
                   <p className="text-on-surface-variant font-medium text-sm">{modeloSelecionado.descricao}</p>
                 </div>
-
                 <form onSubmit={handleSubmit} className="space-y-8">
                   {modeloSelecionado.campos.map(campo => (
                     <div key={campo.id} className="space-y-3">
                       <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest px-1 flex items-center gap-1">
-                        {campo.rotulo}
-                        {campo.obrigatorio && <span className="text-red-500">*</span>}
+                        {campo.rotulo} {campo.obrigatorio && <span className="text-red-500">*</span>}
                       </label>
-
                       {campo.tipo === 'autocomplete_aluno' && (
                         <div className="space-y-3">
-                          <AutocompleteAluno
-                            alunos={alunos}
-                            valor={alunoSelecionado?.nome || ''}
-                            aoSelecionar={(aluno) => {
-                              setAlunoSelecionado(aluno);
-                            }}
-                          />
-                          {/* Campos autopreenchidos */}
+                          <AutocompleteAluno alunos={alunos} valor={alunoSelecionado?.nome || ''} aoSelecionar={setAlunoSelecionado} />
                           {alunoSelecionado && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              className="grid grid-cols-3 gap-3"
-                            >
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="grid grid-cols-3 gap-3">
                               {[
                                 { rotulo: 'Turma', valor: alunoSelecionado.turma },
                                 { rotulo: 'Ano', valor: alunoSelecionado.ano },
@@ -255,30 +257,21 @@ export default function FormsPage() {
                           )}
                         </div>
                       )}
-
-                      {campo.tipo === 'texto' && (
-                        <input
-                          type="text"
-                          required={campo.obrigatorio}
-                          value={dadosFormulario[campo.rotulo] || ''}
-                          onChange={(e) => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))}
-                          className="w-full px-5 py-4 bg-surface-container-low border-none rounded-2xl text-on-surface focus:ring-4 focus:ring-primary/10 transition-all font-bold text-sm"
-                        />
+                      {campo.tipo === 'texto' && <input type="text" required={campo.obrigatorio} value={dadosFormulario[campo.rotulo] || ''} onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} className="campo-input-base" />}
+                      
+                      {campo.tipo === 'selecao' && campo.opcoes && (
+                        <select required={campo.obrigatorio} value={dadosFormulario[campo.rotulo] || ''} onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} className="campo-input-base">
+                          <option value="">Selecione uma opção...</option>
+                          {campo.opcoes.map(opcao => <option key={opcao} value={opcao}>{opcao}</option>)}
+                        </select>
                       )}
 
-                      {campo.tipo === 'selecao' && campo.opcoes && (
+                      {campo.tipo === 'radio' && campo.opcoes && (
                         <div className="flex flex-wrap gap-3">
                           {campo.opcoes.map(opcao => (
                             <label key={opcao} className="cursor-pointer">
-                              <input
-                                type="radio"
-                                name={campo.id}
-                                required={campo.obrigatorio}
-                                className="sr-only peer"
-                                onChange={() => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: opcao }))}
-                                checked={dadosFormulario[campo.rotulo] === opcao}
-                              />
-                              <div className="px-5 py-3 rounded-2xl bg-surface-container-low text-on-surface-variant peer-checked:bg-primary/10 peer-checked:text-primary peer-checked:ring-2 peer-checked:ring-primary transition-all font-bold text-sm">
+                              <input type="radio" name={campo.id} required={campo.obrigatorio} className="sr-only peer" onChange={() => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: opcao }))} checked={dadosFormulario[campo.rotulo] === opcao} />
+                              <div className="px-5 py-3 rounded-2xl bg-surface-container-low text-on-surface-variant peer-checked:bg-primary/10 peer-checked:text-primary peer-checked:ring-2 peer-checked:ring-primary font-bold text-sm">
                                 {opcao}
                               </div>
                             </label>
@@ -286,27 +279,43 @@ export default function FormsPage() {
                         </div>
                       )}
 
-                      {campo.tipo === 'area_texto' && (
-                        <textarea
-                          required={campo.obrigatorio}
-                          value={dadosFormulario[campo.rotulo] || ''}
-                          onChange={(e) => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))}
-                          rows={3}
-                          className="w-full p-5 bg-surface-container-low border-none rounded-2xl text-on-surface focus:ring-4 focus:ring-primary/10 transition-all font-medium resize-none"
-                          placeholder="Detalhes adicionais..."
-                        />
+                      {campo.tipo === 'checkbox' && campo.opcoes && (
+                        <div className="flex flex-wrap gap-3">
+                          {campo.opcoes.map(opcao => {
+                            const valores = dadosFormulario[campo.rotulo] || [];
+                            const estaSelecionado = valores.includes(opcao);
+                            return (
+                              <label key={opcao} className="cursor-pointer">
+                                <input type="checkbox" className="sr-only peer" 
+                                  onChange={e => {
+                                    const novosValores = e.target.checked 
+                                      ? [...valores, opcao]
+                                      : valores.filter((v: string) => v !== opcao);
+                                    setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: novosValores }));
+                                  }} checked={estaSelecionado} />
+                                <div className="px-5 py-3 rounded-2xl bg-surface-container-low text-on-surface-variant peer-checked:bg-primary/10 peer-checked:text-primary peer-checked:ring-2 peer-checked:ring-primary font-bold text-sm">
+                                  {opcao}
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
                       )}
+
+                      {campo.tipo === 'serie_escolar' && (
+                        <select required={campo.obrigatorio} value={dadosFormulario[campo.rotulo] || ''} onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} className="campo-input-base">
+                          <option value="">Selecione a série...</option>
+                          {SERIES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      )}
+
+                      {campo.tipo === 'area_texto' && <textarea required={campo.obrigatorio} value={dadosFormulario[campo.rotulo] || ''} onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} rows={3} className="campo-input-base resize-none" placeholder="Detalhes..." />}
                     </div>
                   ))}
-
                   <div className="flex justify-end gap-4 pt-4">
-                    <button type="button" onClick={limparFormulario} className="px-8 py-4 text-on-surface-variant font-bold text-sm hover:text-on-surface">Limpar</button>
-                    <button
-                      type="submit"
-                      disabled={!alunoSelecionado}
-                      className="px-12 py-4 bg-primary text-white rounded-full font-black text-sm uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      Registrar
+                    <button type="button" onClick={limparFormulario} className="px-8 py-4 text-on-surface-variant font-bold text-sm">Limpar</button>
+                    <button type="submit" disabled={!alunoSelecionado || salvando} className="btn-primary !px-12 !py-4">
+                      {salvando ? 'Salvando...' : 'Registrar'}
                     </button>
                   </div>
                 </form>
@@ -314,189 +323,85 @@ export default function FormsPage() {
             )}
 
             {enviado && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-surface-container-lowest p-16 rounded-[2.5rem] editorial-shadow text-center space-y-6"
-              >
-                <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto">
-                  <UserCheck size={40} strokeWidth={3} />
-                </div>
-                <h2 className="text-2xl font-black">Ocorrência Registrada!</h2>
-                <p className="text-on-surface-variant font-medium">
-                  {alunoSelecionado?.nome} — {modeloSelecionado?.nome}
-                </p>
-                <button onClick={limparFormulario} className="px-8 py-3 bg-primary text-white rounded-full font-black text-sm">Novo Registro</button>
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                className="bg-surface-container-lowest p-16 rounded-[2.5rem] editorial-shadow text-center space-y-6">
+                <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto"><UserCheck size={40} /></div>
+                <h2 className="text-2xl font-black">Registrado com Sucesso!</h2>
+                <p className="text-on-surface-variant font-medium">{alunoSelecionado?.nome}</p>
+                <button onClick={limparFormulario} className="btn-primary">Novo Registro</button>
               </motion.div>
             )}
           </motion.div>
         )}
 
-        {/* === ABA: RELATÓRIOS === */}
+        {/* === ABA: RELATÓRIOS (DASHBOARDS) === */}
         {abaAtiva === 'relatorios' && (
-          <motion.div
-            key="relatorios"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-8"
-          >
-            {/* Filtros de período */}
+          <motion.div key="relatorios" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
             <div className="flex gap-2 p-1.5 bg-surface-container-low rounded-2xl w-fit">
-              {([
-                { id: 'diario', rotulo: 'Diário' },
-                { id: 'semanal', rotulo: 'Semanal' },
-                { id: 'quinzenal', rotulo: 'Quinzenal' },
-                { id: 'mensal', rotulo: 'Mensal' },
-              ] as const).map(f => (
-                <button
-                  key={f.id}
-                  onClick={() => setFiltroRelatorio(f.id)}
-                  className={cn(
-                    "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                    filtroRelatorio === f.id ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"
-                  )}
-                >
-                  {f.rotulo}
-                </button>
+              {['diario', 'semanal', 'quinzenal', 'mensal'].map(f => (
+                <button key={f} onClick={() => setFiltroRelatorio(f as any)}
+                  className={cn("px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                    filtroRelatorio === f ? "bg-surface-container-low text-primary shadow-sm" : "text-on-surface-variant")}>{f}</button>
               ))}
             </div>
 
-            {/* Cards de resumo */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div className="bg-surface-container-lowest p-6 rounded-2xl editorial-shadow">
-                <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2">Total de Ocorrências</p>
-                <p className="text-4xl font-black text-primary">{ocorrenciasFiltradas.length}</p>
-              </div>
-
-              <div className="bg-surface-container-lowest p-6 rounded-2xl editorial-shadow">
-                <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2">Tipo Mais Comum</p>
-                <p className="text-lg font-black text-on-surface">
-                  {Object.entries(contagemPorTipo).sort((a, b) => (b[1] as number) - (a[1] as number))[0]?.[0] || '—'}
-                </p>
-                <p className="text-sm text-on-surface-variant font-bold">
-                  {Object.entries(contagemPorTipo).sort((a, b) => (b[1] as number) - (a[1] as number))[0]?.[1] || 0} registros
-                </p>
-              </div>
-
-              <div className="bg-surface-container-lowest p-6 rounded-2xl editorial-shadow">
-                <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2">Alunos Recorrentes</p>
-                <p className="text-lg font-black text-on-surface">{alunosOrdenados[0]?.[0] || '—'}</p>
-                <p className="text-sm text-on-surface-variant font-bold">{alunosOrdenados[0]?.[1] || 0} ocorrências</p>
-              </div>
+              <CardResumoMini titulo="Total" valor={ocorrenciasFiltradas.length} cor="primary" icone={FileText} />
+              <CardResumoMini titulo="Frequente" valor={alunosOrdenados[0]?.[1] || 0} subtitulo={alunosOrdenados[0]?.[0] || '—'} cor="tertiary" icone={UserCheck} />
+              <CardResumoMini titulo="Top Evento" valor={Object.entries(contagemPorTipo).sort((a,b)=>b[1]-a[1])[0]?.[1] || 0} subtitulo={Object.entries(contagemPorTipo).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—'} cor="indigo" icone={BarChart3} />
             </div>
 
-            {/* Barras por tipo */}
-            <div className="bg-surface-container-lowest p-8 rounded-[2.5rem] editorial-shadow">
-              <h3 className="text-lg font-black text-on-surface mb-6 flex items-center gap-2">
-                <BarChart3 size={20} className="text-primary" />
-                Ocorrências por Tipo
-              </h3>
-              <div className="space-y-4">
-                {Object.entries(contagemPorTipo).map(([tipo, qtd]) => {
-                  const vals = Object.values(contagemPorTipo) as number[];
-                  const max = Math.max(...vals);
-                  return (
-                    <div key={tipo} className="flex items-center gap-4">
-                      <span className="text-xs font-black text-on-surface w-48 truncate">{tipo}</span>
-                      <div className="flex-1 bg-surface-container-low rounded-full h-4 overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${((qtd as number) / max) * 100}%` }}
-                          transition={{ duration: 0.8, ease: 'easeOut' }}
-                          className="h-full bg-primary rounded-full"
-                        />
-                      </div>
-                      <span className="text-xs font-black text-primary w-8 text-right">{qtd}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Lista de ocorrências */}
             <div className="bg-surface-container-lowest rounded-[2.5rem] editorial-shadow overflow-hidden">
-              <div className="p-6 border-b border-surface-container-low flex items-center justify-between">
-                <h3 className="font-black text-on-surface flex items-center gap-2">
-                  <FileText size={18} className="text-primary" />
-                  Registros Recentes
-                </h3>
-                <div className="flex gap-2">
-                  <button className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/90 transition-colors">PDF</button>
-                  <button className="px-4 py-2 bg-surface-container-low text-on-surface-variant rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-surface-container-high transition-colors">Excel</button>
+                <div className="p-6 border-b flex items-center justify-between">
+                    <h3 className="font-black">Eventos Recentes</h3>
+                    <div className="flex gap-2">
+                      {ocorrenciasFiltradas.length > 0 && <button className="btn-mini"><Download size={12}/> XLS</button>}
+                    </div>
                 </div>
-              </div>
-
-              <div className="divide-y divide-surface-container-low max-h-96 overflow-y-auto">
-                {ocorrenciasFiltradas.map(oc => (
-                  <div key={oc.id} className="px-6 py-4 hover:bg-primary/5 transition-colors flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                      <FileText size={16} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-on-surface truncate">{oc.nomeAluno}</p>
-                      <p className="text-[10px] text-on-surface-variant font-bold">{oc.nomeModelo} • {oc.turmaAluno}</p>
-                    </div>
-                    <span className="text-[9px] font-black text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-lg shrink-0">
-                      {new Date(oc.criadoEm).toLocaleDateString('pt-BR')}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* === ABA: ADMIN (MODELOS) === */}
-        {abaAtiva === 'admin' && (
-          <motion.div
-            key="admin"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black text-on-surface">Modelos de Formulário</h2>
-              <button className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
-                <Plus size={16} />
-                Novo Modelo
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {modelosFormulario.map(modelo => (
-                <div key={modelo.id} className="bg-surface-container-lowest p-7 rounded-[2rem] editorial-shadow">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-black text-on-surface mb-1">{modelo.nome}</h3>
-                      <p className="text-sm text-on-surface-variant font-medium">{modelo.descricao}</p>
-                    </div>
-                    <span className="text-[9px] font-black text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-lg">{modelo.campos.length} campos</span>
-                  </div>
-
-                  <div className="space-y-2 pt-4 border-t border-surface-container-low">
-                    {modelo.campos.map(campo => (
-                      <div key={campo.id} className="flex items-center gap-3 text-xs">
-                        <span className={cn(
-                          "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest",
-                          campo.tipo === 'autocomplete_aluno' ? "bg-primary/10 text-primary" :
-                          campo.tipo === 'selecao' ? "bg-tertiary-container/10 text-tertiary-container" :
-                          "bg-surface-container-high text-on-surface-variant"
-                        )}>
-                          {campo.tipo === 'autocomplete_aluno' ? 'Auto' :
-                           campo.tipo === 'selecao' ? 'Seleção' :
-                           campo.tipo === 'area_texto' ? 'Texto' : 'Campo'}
-                        </span>
-                        <span className="font-bold text-on-surface">{campo.rotulo}</span>
-                        {campo.obrigatorio && <span className="text-red-500 text-[10px]">*</span>}
+                <div className="max-h-96 overflow-y-auto">
+                    {ocorrenciasFiltradas.length === 0 ? (
+                      <div className="p-20 text-center space-y-3">
+                        <BarChart3 size={40} className="text-on-surface-variant/20 mx-auto" />
+                        <p className="text-on-surface-variant text-sm italic">Nenhum registro encontrado para este período.</p>
                       </div>
-                    ))}
-                  </div>
+                    ) : (
+                      ocorrenciasFiltradas.map(oc => (
+                          <div key={oc.id} className="p-4 border-b border-surface-container-low flex items-center gap-4 hover:bg-primary/5 transition-all">
+                              <div className="w-10 h-10 rounded-xl bg-surface-container-low flex items-center justify-center"><FileText size={16}/></div>
+                              <div className="flex-1">
+                                  <p className="text-sm font-black">{oc.nomeAluno}</p>
+                                  <p className="text-[10px] text-on-surface-variant font-bold uppercase">{oc.nomeModelo} · {oc.turmaAluno}</p>
+                              </div>
+                              <p className="text-[10px] font-bold text-on-surface-variant">{new Date(oc.criadoEm).toLocaleDateString()}</p>
+                          </div>
+                      ))
+                    )}
                 </div>
-              ))}
             </div>
           </motion.div>
         )}
+
+        {/* Construtor removido desta página a pedido do usuário - Movido para Painel Admin */}
       </AnimatePresence>
     </motion.div>
   );
 }
+
+function CardResumoMini({ titulo, valor, subtitulo, cor, icone: Icone }: { titulo: string; valor: number; subtitulo?: string; cor: string; icone: any }) {
+  const cores: Record<string, string> = {
+    primary: 'bg-primary/10 text-primary',
+    tertiary: 'bg-emerald-500/10 text-emerald-600',
+    indigo: 'bg-indigo-500/10 text-indigo-600',
+  };
+  return (
+    <div className="bg-surface-container-low p-6 rounded-[1.5rem] editorial-shadow flex items-center gap-4">
+      <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", cores[cor])}><Icone size={24}/></div>
+      <div>
+        <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">{titulo}</p>
+        <p className="text-3xl font-black leading-none my-1">{valor}</p>
+        {subtitulo && <p className="text-[9px] font-bold text-on-surface-variant truncate max-w-[120px]">{subtitulo}</p>}
+      </div>
+    </div>
+  );
+}
+

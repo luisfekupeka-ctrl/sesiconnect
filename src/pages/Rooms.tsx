@@ -5,36 +5,67 @@ import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 import { obterBlocosDeHorario, obterDiaSemana } from '../services/motorEscolar';
 import { Sala, EntradaGradeSala } from '../types';
+import { registrarAtrasoProfessor } from '../services/dataService';
 
-const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-const DIAS_SEMANA_COMPLETO = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+const DIAS_SEMANA_NOMES: Record<string, string> = {
+  'DOMINGO': 'Dom',
+  'SEGUNDA': 'Seg',
+  'TERÇA': 'Ter',
+  'QUARTA': 'Qua',
+  'QUINTA': 'Qui',
+  'SEXTA': 'Sex',
+  'SÁBADO': 'Sáb'
+};
+
+const LISTA_DIAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
 export default function RoomsPage() {
-  const { salas, estadoEscola, gradeCompleta, horaAtual } = useEscola();
+  const { salas, estadoEscola, gradeCompleta, languageLab, atividadesAfter, horaAtual, carregando } = useEscola();
   const [filtroStatus, setFiltroStatus] = useState<'todas' | 'livres' | 'ocupadas'>('todas');
   const [filtroSegmento, setFiltroSegmento] = useState<string>('todos');
-  const [salaExpandida, setSalaExpandida] = useState<number | null>(null);
+  const [salaGradeModal, setSalaGradeModal] = useState<Sala | null>(null);
+  const [reportando, setReportando] = useState<number | null>(null);
   const [busca, setBusca] = useState('');
   const [diaGrade, setDiaGrade] = useState(obterDiaSemana(horaAtual));
+  const [salaExpandida, setSalaExpandida] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<'regular' | 'after' | 'language'>('regular');
 
   const blocos = obterBlocosDeHorario();
 
-  const salasFiltradas = salas.filter(sala => {
-    const estadoSala = estadoEscola.salas.find(s => s.numeroSala === sala.numero);
+  const salasFiltradas = salas.filter((sala) => {
+    const coincideBusca =
+      sala.nome.toLowerCase().includes(busca.toLowerCase()) ||
+      sala.numero.toString().includes(busca);
+
+    const coincideSegmento =
+      filtroSegmento === 'todos' || sala.segmento === filtroSegmento;
+
+    const estadoSala = estadoEscola.salas.find((s) => s.numeroSala === sala.numero);
     const ocupada = estadoSala?.estaOcupada || false;
 
-    if (filtroStatus === 'livres' && ocupada) return false;
-    if (filtroStatus === 'ocupadas' && !ocupada) return false;
-    if (filtroSegmento !== 'todos' && sala.segmento !== filtroSegmento) return false;
-    if (busca && !sala.nome.toLowerCase().includes(busca.toLowerCase()) && !sala.numero.toString().includes(busca)) return false;
+    const coincideStatus =
+      filtroStatus === 'todas' ||
+      (filtroStatus === 'ocupadas' && ocupada) ||
+      (filtroStatus === 'livres' && !ocupada);
 
-    return true;
+    return coincideBusca && coincideSegmento && coincideStatus;
   });
 
-  const obterGradeSalaDia = (numeroSala: number, dia: number): EntradaGradeSala[] => {
-    return gradeCompleta
-      .filter(e => e.numeroSala === numeroSala && e.diaSemana === dia)
-      .sort((a, b) => a.indiceBlocoHorario - b.indiceBlocoHorario);
+  const handleReportarAtraso = async (sala: Sala, estado: any) => {
+    if (!estado?.estaOcupada) return;
+    
+    setReportando(sala.numero);
+    const ok = await registrarAtrasoProfessor({
+      sala: sala.numero,
+      professor: estado.professorAtual || 'Desconhecido',
+      materia: estado.materiaAtual || '—',
+      turma: estado.turmaAtual || sala.ano
+    });
+
+    if (ok) {
+      alert(`Atraso de ${estado.professorAtual} reportado com sucesso!`);
+    }
+    setReportando(null);
   };
 
   return (
@@ -75,7 +106,7 @@ export default function RoomsPage() {
                 onClick={() => setFiltroStatus(f)}
                 className={cn(
                   "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                  filtroStatus === f ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"
+                  filtroStatus === f ? "bg-surface-container-low text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"
                 )}
               >
                 {f === 'todas' ? 'Todas' : f === 'livres' ? 'Livres' : 'Ocupadas'}
@@ -84,17 +115,39 @@ export default function RoomsPage() {
           </div>
 
           <div className="flex gap-1 p-1.5 bg-surface-container-low rounded-2xl">
-            {['todos', 'Fundamental', 'Médio'].map(seg => (
+            {['todos', '6º e 7º', '8º e 9º', 'Ensino Médio', 'Especializado'].map(seg => (
               <button
                 key={seg}
                 onClick={() => setFiltroSegmento(seg)}
                 className={cn(
                   "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
-                  filtroSegmento === seg ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"
+                  filtroSegmento === seg ? "bg-surface-container-low text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"
                 )}
               >
                 <GraduationCap size={12} />
                 {seg === 'todos' ? 'Todos' : seg}
+              </button>
+            ))}
+          </div>
+
+          <div className="w-px h-8 bg-outline-variant/20 mx-2 self-center hidden sm:block" />
+
+          <div className="flex gap-1 p-1.5 bg-surface-container-low rounded-2xl border border-primary/10">
+            {[
+              { id: 'regular', label: 'Regular', icon: GraduationCap },
+              { id: 'after', label: 'After School', icon: Clock },
+              { id: 'language', label: 'Language Lab', icon: Users }
+            ].map(m => (
+              <button
+                key={m.id}
+                onClick={() => setViewMode(m.id as any)}
+                className={cn(
+                  "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2",
+                  viewMode === m.id ? "bg-primary text-on-surface-bright shadow-lg shadow-primary/20" : "text-on-surface-variant hover:text-on-surface"
+                )}
+              >
+                <m.icon size={12} />
+                {m.label}
               </button>
             ))}
           </div>
@@ -133,98 +186,285 @@ export default function RoomsPage() {
                     </div>
                   </div>
 
-                  <h4 className="font-black text-lg tracking-tight text-on-surface mb-1 leading-tight">{sala.nome}</h4>
-                  <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-4">{sala.andar} • {sala.segmento}</p>
+                  <h4 className="font-black text-lg tracking-tight text-on-surface mb-1 leading-tight">
+                    {estadoSala?.nomeSala || sala.nome}
+                  </h4>
+                  <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-4">
+                    {estadoSala?.tipoBlocoAtual === 'after' ? 'Atividade Extra' : sala.segmento}
+                  </p>
 
-                  {/* Aula atual */}
-                  {ocupada && estadoSala && (
-                    <div className="bg-primary/5 p-4 rounded-xl space-y-2 mb-4">
-                      <div className="flex items-center gap-2">
-                        <Clock size={12} className="text-primary" />
-                        <span className="text-[9px] font-black text-primary uppercase tracking-widest">Aula Atual</span>
+                  {/* Atividade por Modo */}
+                  {(() => {
+                    let ocupadaNoModo = false;
+                    let infoAtividade: any = null;
+
+                    if (viewMode === 'regular') {
+                      ocupadaNoModo = ocupada;
+                      infoAtividade = estadoSala ? {
+                        materia: estadoSala.materiaAtual,
+                        professor: estadoSala.professorAtual,
+                        turma: estadoSala.turmaAtual,
+                        fim: estadoSala.horarioFim
+                      } : null;
+                    } else if (viewMode === 'after') {
+                      // Buscar se há atividade de After agora nesta sala
+                      const diaSemana = obterDiaSemana(horaAtual);
+                      const agoraStr = `${horaAtual.getHours().toString().padStart(2, '0')}:${horaAtual.getMinutes().toString().padStart(2, '0')}`;
+                      const minAgora = (horaAtual.getHours() * 60) + horaAtual.getMinutes();
+
+                      const ativ = atividadesAfter.find(a => 
+                        a.local.includes(sala.numero.toString()) && 
+                        a.dias.includes(diaSemana) &&
+                        minAgora >= ((parseInt(a.horarioInicio.split(':')[0]) * 60) + parseInt(a.horarioInicio.split(':')[1])) &&
+                        minAgora < ((parseInt(a.horarioFim.split(':')[0]) * 60) + parseInt(a.horarioFim.split(':')[1]))
+                      );
+
+                      if (ativ) {
+                        ocupadaNoModo = true;
+                        infoAtividade = {
+                          materia: ativ.nome,
+                          professor: ativ.nomeProfessor,
+                          turma: ativ.grupoAlunos,
+                          fim: ativ.horarioFim
+                        };
+                      }
+                    } else if (viewMode === 'language') {
+                      const diaSemana = obterDiaSemana(horaAtual);
+                      const agoraStr = `${horaAtual.getHours().toString().padStart(2, '0')}:${horaAtual.getMinutes().toString().padStart(2, '0')}`;
+                      const minAgora = (horaAtual.getHours() * 60) + horaAtual.getMinutes();
+
+                      const lab = languageLab.find(l => 
+                        l.sala.includes(sala.numero.toString()) && 
+                        l.diaSemana === diaSemana &&
+                        minAgora >= ((parseInt(l.horarioInicio.split(':')[0]) * 60) + parseInt(l.horarioInicio.split(':')[1])) &&
+                        minAgora < ((parseInt(l.horarioFim.split(':')[0]) * 60) + parseInt(l.horarioFim.split(':')[1]))
+                      );
+
+                      if (lab) {
+                        ocupadaNoModo = true;
+                        infoAtividade = {
+                          materia: `Inglês: ${lab.nivel}`,
+                          professor: lab.professor,
+                          turma: lab.turma,
+                          fim: lab.horarioFim
+                        };
+                      }
+                    }
+
+                    if (!ocupadaNoModo || !infoAtividade) return null;
+
+                    return (
+                      <div className={cn(
+                        "p-4 rounded-xl space-y-2 mb-4",
+                        viewMode === 'after' ? "bg-amber-500/10 border border-amber-500/20" : 
+                        viewMode === 'language' ? "bg-indigo-500/10 border border-indigo-500/20" : "bg-primary/5"
+                      )}>
+                        <div className="flex items-center gap-2">
+                          <Clock size={12} className={viewMode === 'after' ? "text-amber-600" : viewMode === 'language' ? "text-indigo-600" : "text-primary"} />
+                          <span className={cn(
+                            "text-[9px] font-black uppercase tracking-widest",
+                            viewMode === 'after' ? "text-amber-600" : viewMode === 'language' ? "text-indigo-600" : "text-primary"
+                          )}>
+                            {viewMode === 'regular' ? 'Aula Regular' : viewMode === 'after' ? 'After School' : 'Language Lab'}
+                          </span>
+                        </div>
+                        <p className="text-sm font-black text-on-surface">{infoAtividade.materia}</p>
+                        <div className="flex items-center gap-2">
+                          <Users size={11} className="text-on-surface-variant" />
+                          <span className="text-[10px] font-bold text-on-surface-variant">{infoAtividade.professor}</span>
+                        </div>
+                        <span className="text-[9px] font-bold text-on-surface-variant">{infoAtividade.turma} • até {infoAtividade.fim}</span>
                       </div>
-                      <p className="text-sm font-black text-on-surface">{estadoSala.materiaAtual}</p>
-                      <div className="flex items-center gap-2">
-                        <Users size={11} className="text-on-surface-variant" />
-                        <span className="text-[10px] font-bold text-on-surface-variant">{estadoSala.professorAtual}</span>
-                      </div>
-                      <span className="text-[9px] font-bold text-on-surface-variant">{estadoSala.turmaAtual} • até {estadoSala.horarioFim}</span>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Botões */}
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setSalaExpandida(expandida ? null : sala.numero)}
-                      className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface-container-low rounded-xl text-[10px] font-black uppercase tracking-widest text-on-surface-variant hover:bg-surface-container-high transition-colors"
+                      onClick={() => setSalaGradeModal(sala)}
+                      className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary/5 text-primary rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/10 transition-all"
                     >
-                      {expandida ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      <Clock size={14} />
                       Grade
                     </button>
-                    <button className="flex items-center justify-center gap-1.5 px-4 py-3 bg-tertiary-container/10 text-tertiary-container rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-tertiary-container/20 transition-colors">
+                    <button 
+                      onClick={() => handleReportarAtraso(sala, estadoSala)}
+                      disabled={!ocupada || reportando === sala.numero}
+                      className={cn(
+                        "flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                        !ocupada ? "bg-surface-container-low text-outline cursor-not-allowed opacity-50" : 
+                        "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                      )}
+                    >
                       <AlertTriangle size={12} />
-                      Atraso
+                      {reportando === sala.numero ? '...' : 'Atraso'}
                     </button>
                   </div>
                 </div>
-
-                {/* Grade expandida */}
-                <AnimatePresence>
-                  {expandida && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="px-6 pb-6 pt-2">
-                        {/* Seletor de dia */}
-                        <div className="flex gap-1 mb-4">
-                          {[1, 2, 3, 4, 5].map(dia => (
-                            <button
-                              key={dia}
-                              onClick={() => setDiaGrade(dia)}
-                              className={cn(
-                                "flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
-                                diaGrade === dia ? "bg-primary text-white" : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
-                              )}
-                            >
-                              {DIAS_SEMANA[dia]}
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* Blocos do dia */}
-                        <div className="space-y-1.5">
-                          {blocos.map(bloco => {
-                            const entrada = obterGradeSalaDia(sala.numero, diaGrade)
-                              .find(e => e.indiceBlocoHorario === bloco.indice);
-
-                            return (
-                              <div key={bloco.indice} className={cn(
-                                "flex items-center gap-3 p-2.5 rounded-lg text-[10px]",
-                                estadoEscola.indiceBlocoAtual === bloco.indice && diaGrade === obterDiaSemana(horaAtual)
-                                  ? "bg-primary text-white"
-                                  : "bg-surface-container-low/50"
-                              )}>
-                                <span className="w-12 font-mono font-black text-[9px] shrink-0">{bloco.inicio}</span>
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-black truncate">{entrada?.materia || '—'}</p>
-                                  <p className="opacity-70 text-[9px] truncate">{entrada?.nomeProfessor || ''}</p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </motion.div>
             );
           })}
         </AnimatePresence>
       </div>
+
+      {/* Modal de Grade (Pop-up) */}
+      <AnimatePresence>
+        {salaGradeModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-on-surface/60 backdrop-blur-md"
+              onClick={() => setSalaGradeModal(null)}
+            />
+            <motion.div
+              layoutId={`modal-${salaGradeModal.numero}`}
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative bg-surface-container-lowest w-full max-w-4xl max-h-[90vh] rounded-[3rem] overflow-hidden shadow-2xl flex flex-col"
+            >
+              {/* Header Modal */}
+              <div className="p-8 border-b border-outline-variant/10 flex items-center justify-between bg-surface-container-low">
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black rounded-full uppercase tracking-widest">
+                      Sala {salaGradeModal.numero}
+                    </span>
+                    <span className="text-[10px] font-bold text-outline uppercase">{salaGradeModal.segmento}</span>
+                  </div>
+                  <h3 className="text-3xl font-black tracking-tighter text-on-surface">{salaGradeModal.nome}</h3>
+                </div>
+                <button 
+                  onClick={() => setSalaGradeModal(null)}
+                  className="w-12 h-12 rounded-full hover:bg-surface-container-low flex items-center justify-center text-on-surface-variant transition-colors"
+                >
+                  <Search className="rotate-45" size={24} />
+                </button>
+              </div>
+
+              {/* Seletor de Dia */}
+              <div className="px-8 py-4 bg-surface-container-lowest flex gap-2 overflow-x-auto no-scrollbar">
+                {LISTA_DIAS.map(dia => (
+                  <button
+                    key={dia}
+                    onClick={() => setDiaGrade(dia)}
+                    className={cn(
+                      "px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shrink-0",
+                      diaGrade === dia ? "bg-primary text-on-surface-bright shadow-xl shadow-primary/20" : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
+                    )}
+                  >
+                    {DIAS_SEMANA_NOMES[dia]}
+                  </button>
+                ))}
+              </div>
+
+              {/* Conteúdo Grade */}
+              <div className="p-8 overflow-y-auto flex-1 bg-surface-container-lowest/50">
+                {viewMode === 'regular' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {obterBlocosDeHorario().map(bloco => {
+                      const range = `${bloco.inicio} - ${bloco.fim}`;
+                      const entradasDia = gradeCompleta.filter(e => e.numeroSala === salaGradeModal.numero && e.diaSemana === diaGrade);
+                      const entrada = entradasDia.find(e => e.horario === range);
+                      const isAgora = estadoEscola.indiceBlocoAtual === bloco.indice && diaGrade === obterDiaSemana(horaAtual);
+
+                      return (
+                        <div key={bloco.indice} className={cn(
+                          "p-5 rounded-3xl border-2 transition-all",
+                          isAgora ? "bg-primary border-primary text-on-surface-bright shadow-xl shadow-primary/10" : 
+                          entrada ? "bg-surface-container-low border-transparent shadow-sm" : "bg-surface-container-low/30 border-transparent opacity-40"
+                        )}>
+                          <div className="flex items-center justify-between mb-4">
+                            <span className={cn("text-[10px] font-mono font-black", isAgora ? "text-on-surface-bright/60" : "text-outline")}>{bloco.inicio} — {bloco.fim}</span>
+                            {isAgora && <div className="w-2 h-2 rounded-full bg-surface-container-low animate-pulse" />}
+                          </div>
+                          <p className={cn("text-sm font-black mb-1", isAgora ? "text-on-surface-bright" : "text-on-surface")}>
+                            {entrada?.materia || 'Sala Livre'}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <Users size={12} className={isAgora ? "text-on-surface-bright/60" : "text-on-surface-variant"} />
+                            <p className={cn("text-[10px] font-bold", isAgora ? "text-on-surface-bright/80" : "text-on-surface-variant")}>
+                              {entrada?.nomeProfessor || '—'}
+                            </p>
+                          </div>
+                          {entrada?.turma && (
+                            <p className={cn("mt-2 text-[9px] font-black uppercase tracking-widest", isAgora ? "text-on-surface-bright/60" : "text-primary")}>
+                              {entrada.turma}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : viewMode === 'after' ? (
+                  <div className="space-y-4">
+                    {atividadesAfter
+                      .filter(a => a.local.includes(salaGradeModal.numero.toString()) && a.dias.includes(diaGrade))
+                      .map(ativ => (
+                        <div key={ativ.id} className="p-6 bg-amber-500/5 border border-amber-500/10 rounded-[2rem] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="flex gap-4 items-center">
+                            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-600">
+                              <Clock size={24} />
+                            </div>
+                            <div>
+                              <p className="text-lg font-black text-on-surface">{ativ.nome}</p>
+                              <p className="text-xs text-on-surface-variant font-bold">{ativ.categoria} • {ativ.grupoAlunos}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-6">
+                            <div className="text-right">
+                              <p className="text-xs font-black text-amber-600 uppercase tracking-widest">{ativ.horarioInicio} — {ativ.horarioFim}</p>
+                              <p className="text-[10px] text-on-surface-variant font-bold uppercase">{ativ.nomeProfessor}</p>
+                            </div>
+                            <div className="px-4 py-2 bg-amber-500/10 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest">
+                              {ativ.quantidadeAlunos} Alunos
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    {atividadesAfter.filter(a => a.local.includes(salaGradeModal.numero.toString()) && a.dias.includes(diaGrade)).length === 0 && (
+                      <div className="py-20 text-center opacity-30">
+                        <Clock size={48} className="mx-auto mb-4" />
+                        <p className="font-black uppercase tracking-widest text-xs">Sem atividades After School nesta sala</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {languageLab
+                      .filter(l => l.sala.includes(salaGradeModal.numero.toString()) && l.diaSemana === diaGrade)
+                      .map(lab => (
+                        <div key={lab.id} className="p-6 bg-indigo-500/5 border border-indigo-500/10 rounded-[2rem] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="flex gap-4 items-center">
+                            <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-600">
+                              <Users size={24} />
+                            </div>
+                            <div>
+                              <p className="text-lg font-black text-on-surface">{lab.turma}</p>
+                              <p className="text-xs text-on-surface-variant font-bold">Language Lab • {lab.nivel}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-6">
+                            <div className="text-right">
+                              <p className="text-xs font-black text-indigo-600 uppercase tracking-widest">{lab.horarioInicio} — {lab.horarioFim}</p>
+                              <p className="text-[10px] text-on-surface-variant font-bold uppercase">{lab.professor}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    {languageLab.filter(l => l.sala.includes(salaGradeModal.numero.toString()) && l.diaSemana === diaGrade).length === 0 && (
+                      <div className="py-20 text-center opacity-30">
+                        <Users size={48} className="mx-auto mb-4" />
+                        <p className="font-black uppercase tracking-widest text-xs">Sem aulas de Inglês nesta sala</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

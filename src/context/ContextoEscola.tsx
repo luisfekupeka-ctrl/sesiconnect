@@ -1,6 +1,6 @@
 // ============================================================
 // SESI Connect — Contexto Global da Escola
-// Provedor de dados para todas as abas
+// Provedor de dados em tempo real (Supabase)
 // ============================================================
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
@@ -9,56 +9,58 @@ import {
   Sala,
   EntradaGradeSala,
   Aluno,
-  NivelIdioma,
+  LanguageLabRecord,
   AtividadeAfter,
   Monitor,
+  GradeMonitor,
   ModeloFormulario,
   RegistroOcorrencia,
   Professor,
-  PeriodoEscolar,
+  PeriodoConfig,
+  ProfessorCMS,
+  LocalCMS,
 } from '../types';
 import {
   obterEstadoAtualDaEscola,
-  obterBlocosDeHorario,
   obterDiaSemana,
   extrairProfessores,
   obterAgendaProfessor,
   obterLocalizacaoProfessor,
   obterPeriodoEscolar,
+  estaNoHorario,
 } from '../services/motorEscolar';
 import {
-  salas as salasMock,
-  gradeCompleta as gradeMock,
-  alunos as alunosMock,
-  laboratorioIdiomas as labMock,
-  atividadesAfter as afterMock,
-  monitores as monitoresMock,
-  modelosFormulario as modelosMock,
-  ocorrenciasMock,
+  buscarSalas,
+  buscarMapaSalas,
+  buscarAlunos,
+  buscarLanguageLab,
+  buscarAtividadesAfter,
+  buscarMonitores,
+  buscarModelosFormulario,
+  buscarOcorrencias,
+  buscarPeriodosEscolares,
+  buscarProfessoresCMS,
+  buscarLocaisCMS,
+  buscarGradeMonitores,
 } from '../services/dataService';
 
 interface ContextoEscolaType {
-  // Estado em tempo real
   estadoEscola: EstadoEscola;
   horaAtual: Date;
-
-  // Dados base
   salas: Sala[];
   gradeCompleta: EntradaGradeSala[];
   alunos: Aluno[];
-  laboratorioIdiomas: NivelIdioma[];
+  languageLab: LanguageLabRecord[];
   atividadesAfter: AtividadeAfter[];
   monitores: Monitor[];
-
-  // Dados derivados
   professores: Professor[];
-
-  // Formulários
+  professoresCMS: ProfessorCMS[];
+  locaisCMS: LocalCMS[];
   modelosFormulario: ModeloFormulario[];
   ocorrencias: RegistroOcorrencia[];
+  periodos: PeriodoConfig[];
+  gradeMonitores: GradeMonitor[];
   adicionarOcorrencia: (ocorrencia: RegistroOcorrencia) => void;
-
-  // Controle
   carregando: boolean;
   atualizar: () => void;
 }
@@ -67,17 +69,138 @@ const Contexto = createContext<ContextoEscolaType | null>(null);
 
 export function ProvedorEscola({ children }: { children: ReactNode }) {
   const [horaAtual, setHoraAtual] = useState(new Date());
-  const [salas] = useState<Sala[]>(salasMock);
-  const [gradeCompleta] = useState<EntradaGradeSala[]>(gradeMock);
-  const [alunos] = useState<Aluno[]>(alunosMock);
-  const [laboratorioIdiomas] = useState<NivelIdioma[]>(labMock);
-  const [atividadesAfter] = useState<AtividadeAfter[]>(afterMock);
-  const [monitores] = useState<Monitor[]>(monitoresMock);
-  const [modelosFormulario] = useState<ModeloFormulario[]>(modelosMock);
-  const [ocorrencias, setOcorrencias] = useState<RegistroOcorrencia[]>(ocorrenciasMock);
-  const [carregando] = useState(false);
+  const [salas, setSalas] = useState<Sala[]>([]);
+  const [gradeCompleta, setGradeCompleta] = useState<EntradaGradeSala[]>([]);
+  const [alunos, setAlunos] = useState<Aluno[]>([]);
+  const [languageLab, setLanguageLab] = useState<LanguageLabRecord[]>([]);
+  const [atividadesAfter, setAtividadesAfter] = useState<AtividadeAfter[]>([]);
+  const [monitores, setMonitores] = useState<Monitor[]>([]);
+  const [professoresCMS, setProfessoresCMS] = useState<ProfessorCMS[]>([]);
+  const [locaisCMS, setLocaisCMS] = useState<LocalCMS[]>([]);
+  const [modelosFormulario, setModelosFormulario] = useState<ModeloFormulario[]>([]);
+  const [ocorrencias, setOcorrencias] = useState<RegistroOcorrencia[]>([]);
+  const [gradeMonitores, setGradeMonitores] = useState<GradeMonitor[]>([]);
+  const [periodos, setPeriodos] = useState<PeriodoConfig[]>([
+    // 6º e 7º Anos
+    { id: '67-1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: '6e7' },
+    { id: '67-2', nome: '2ª Aula', horarioInicio: '08:20', horarioFim: '09:10', tipo: 'aula', segmento: '6e7' },
+    { id: '67-int', nome: 'Intervalo', horarioInicio: '09:10', horarioFim: '09:30', tipo: 'intervalo', segmento: '6e7' },
+    { id: '67-3', nome: '3ª Aula', horarioInicio: '09:30', horarioFim: '10:20', tipo: 'aula', segmento: '6e7' },
+    { id: '67-4', nome: '4ª Aula', horarioInicio: '10:20', horarioFim: '11:10', tipo: 'aula', segmento: '6e7' },
+    { id: '67-5', nome: '5ª Aula', horarioInicio: '11:10', horarioFim: '12:00', tipo: 'aula', segmento: '6e7' },
+    
+    // 8º, 9º e Médio
+    { id: '89m-1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: '8e9' },
+    { id: '89m-2', nome: '2ª Aula', horarioInicio: '08:20', horarioFim: '09:10', tipo: 'aula', segmento: '8e9' },
+    { id: '89m-3', nome: '3ª Aula', horarioInicio: '09:10', horarioFim: '10:00', tipo: 'aula', segmento: '8e9' },
+    { id: '89m-int', nome: 'Intervalo', horarioInicio: '10:00', horarioFim: '10:20', tipo: 'intervalo', segmento: '8e9' },
+    { id: '89m-4', nome: '4ª Aula', horarioInicio: '10:20', horarioFim: '11:10', tipo: 'aula', segmento: '8e9' },
+    { id: '89m-5', nome: '5ª Aula', horarioInicio: '11:10', horarioFim: '12:00', tipo: 'aula', segmento: '8e9' },
+    
+    // Médio (com extras se necessário)
+    { id: 'med-1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: 'medio' },
+    { id: 'med-int', nome: 'Intervalo', horarioInicio: '10:00', horarioFim: '10:20', tipo: 'intervalo', segmento: 'medio' },
+    { id: 'med-6', nome: '6ª Aula', horarioInicio: '12:00', horarioFim: '12:50', tipo: 'aula', segmento: 'medio' },
+  ]);
+  const [carregando, setCarregando] = useState(true);
 
-  // Atualizar relógio a cada 30 segundos
+  const carregarDados = useCallback(async () => {
+    setCarregando(true);
+    try {
+      const [s, g, a, li, aa, m, mf, oc, p, pCms, lCms, gm] = await Promise.all([
+        buscarSalas(),
+        buscarMapaSalas(),
+        buscarAlunos(),
+        buscarLanguageLab(),
+        buscarAtividadesAfter(),
+        buscarMonitores(),
+        buscarModelosFormulario(),
+        buscarOcorrencias(),
+        buscarPeriodosEscolares(),
+        buscarProfessoresCMS(),
+        buscarLocaisCMS(),
+        buscarGradeMonitores(),
+      ]);
+      setSalas(s);
+      setGradeCompleta(g);
+      setAlunos(a);
+      setAtividadesAfter(aa);
+      setProfessoresCMS(pCms);
+      setLocaisCMS(lCms);
+      setOcorrencias(oc);
+      if (p && p.length > 0) setPeriodos(p);
+
+      // === LANGUAGE LAB DEMO ===
+      if (li && li.length > 0) {
+        setLanguageLab(li);
+      } else {
+        setLanguageLab([
+          { id: 'lab-1', turma: '9º Ano A', nivel: 'B1 Intermediate', professor: 'Teacher Sarah', sala: 'Lab Inglês 01', horarioInicio: '08:20', horarioFim: '10:00', diaSemana: 'SEGUNDA' },
+          { id: 'lab-2', turma: '9º Ano B', nivel: 'A2 Elementary', professor: 'Teacher John', sala: 'Lab Inglês 02', horarioInicio: '08:20', horarioFim: '10:00', diaSemana: 'SEGUNDA' },
+          { id: 'lab-3', turma: '2º EM A', nivel: 'C1 Advanced', professor: 'Teacher Mike', sala: 'Lab Inglês 01', horarioInicio: '10:20', horarioFim: '12:00', diaSemana: 'TERÇA' },
+          { id: 'lab-4', turma: '7º Ano A', nivel: 'A1 Beginner', professor: 'Teacher Anna', sala: 'Lab Inglês 03', horarioInicio: '07:30', horarioFim: '09:10', diaSemana: 'QUARTA' },
+          { id: 'lab-5', turma: '8º Ano C', nivel: 'B2 Upper Inter', professor: 'Teacher Paul', sala: 'Lab Inglês 02', horarioInicio: '10:00', horarioFim: '11:40', diaSemana: 'QUINTA' },
+        ]);
+      }
+
+      // === GRADE MONITORES DEMO ===
+      if (gm && gm.length > 0) {
+        setGradeMonitores(gm);
+      } else {
+        setGradeMonitores([
+          { id: 'gm-1', monitorNome: 'Maria Silva', diaSemana: 'SEGUNDA', horarioInicio: '07:30', horarioFim: '09:10', posto: 'Pátio Central', corEtiqueta: '#3B82F6' },
+          { id: 'gm-2', monitorNome: 'Maria Silva', diaSemana: 'SEGUNDA', horarioInicio: '09:30', horarioFim: '11:10', posto: 'Corredor 1º Andar', corEtiqueta: '#10B981' },
+          { id: 'gm-3', monitorNome: 'João Pedro', diaSemana: 'SEGUNDA', horarioInicio: '07:30', horarioFim: '12:00', posto: 'Entrada Principal', corEtiqueta: '#EF4444' },
+          { id: 'gm-4', monitorNome: 'Ana Santos', diaSemana: 'TERÇA', horarioInicio: '13:00', horarioFim: '15:20', posto: 'Refeitório', corEtiqueta: '#F59E0B' },
+          { id: 'gm-5', monitorNome: 'Ana Santos', diaSemana: 'TERÇA', horarioInicio: '16:00', horarioFim: '18:00', posto: 'Pátio Esportivo', corEtiqueta: '#8B5CF6' },
+          { id: 'gm-6', monitorNome: 'Lucas Oliveira', diaSemana: 'QUARTA', horarioInicio: '13:00', horarioFim: '17:00', posto: 'Biblioteca', corEtiqueta: '#EC4899' },
+        ]);
+      }
+
+      // === MONITORES DE TESTE (se vazio) ===
+      if (m && m.length > 0) {
+        setMonitores(m);
+      } else {
+        setMonitores([
+          { id: 'mock-1', nome: 'Maria Silva', materia: 'Matemática', diaSemana: 'SEGUNDA', turno: 'manha', horarioInicio: '08:00', horarioFim: '12:00', localPermanencia: 'Sala 15', localAlmoco: 'Refeitório A', tipo: 'fixo', status: 'ativo' },
+          { id: 'mock-2', nome: 'João Pedro', materia: 'Português', diaSemana: 'SEGUNDA', turno: 'manha', horarioInicio: '08:00', horarioFim: '12:00', localPermanencia: '', localAlmoco: 'Refeitório B', tipo: 'volante', status: 'ativo' },
+          { id: 'mock-3', nome: 'Ana Santos', materia: 'Ciências', diaSemana: 'TERÇA', turno: 'tarde', horarioInicio: '13:00', horarioFim: '17:00', localPermanencia: 'Sala 08', localAlmoco: 'Refeitório A', tipo: 'fixo', status: 'ativo' },
+          { id: 'mock-4', nome: 'Lucas Oliveira', materia: 'História', diaSemana: 'QUARTA', turno: 'tarde', horarioInicio: '13:00', horarioFim: '17:00', localPermanencia: '', localAlmoco: 'Refeitório B', tipo: 'volante', status: 'ativo' },
+          { id: 'mock-5', nome: 'Camila Costa', materia: 'Inglês', diaSemana: 'QUINTA', turno: 'manha', horarioInicio: '09:00', horarioFim: '12:00', localPermanencia: 'Lab Idiomas', localAlmoco: 'Refeitório A', tipo: 'fixo', status: 'ativo' },
+          { id: 'mock-6', nome: 'Pedro Almeida', materia: 'Ed. Física', diaSemana: 'SEXTA', turno: 'tarde', horarioInicio: '14:00', horarioFim: '18:00', localPermanencia: '', localAlmoco: 'Refeitório B', tipo: 'volante', status: 'inativo' },
+        ]);
+      }
+
+      // === FORMULÁRIO DE TESTE (se vazio) ===
+      if (mf && mf.length > 0) {
+        setModelosFormulario(mf);
+      } else {
+        setModelosFormulario([
+          {
+            id: 'mock-form-1',
+            nome: 'Ocorrência Disciplinar',
+            descricao: 'Registre ocorrências disciplinares de alunos com categoria e descrição detalhada.',
+            campos: [
+              { id: 'f-aluno', rotulo: 'Aluno', tipo: 'autocomplete_aluno', obrigatorio: true },
+              { id: 'f-tipo', rotulo: 'Tipo de Ocorrência', tipo: 'selecao', obrigatorio: true, opcoes: ['Atraso', 'Indisciplina', 'Falta', 'Elogio', 'Outro'] },
+              { id: 'f-desc', rotulo: 'Descrição', tipo: 'area_texto', obrigatorio: true },
+              { id: 'f-prof', rotulo: 'Professor Responsável', tipo: 'texto', obrigatorio: false },
+            ],
+            criadoEm: new Date().toISOString(),
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados do Supabase:', error);
+    } finally {
+      setCarregando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    carregarDados();
+  }, [carregarDados]);
+
   useEffect(() => {
     const intervalo = setInterval(() => {
       setHoraAtual(new Date());
@@ -85,10 +208,21 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
     return () => clearInterval(intervalo);
   }, []);
 
-  // Calcular estado da escola
-  const estadoEscola = obterEstadoAtualDaEscola(horaAtual, salas, gradeCompleta);
+  let estadoEscola: EstadoEscola;
+  try {
+    estadoEscola = obterEstadoAtualDaEscola(horaAtual, salas || [], gradeCompleta || [], periodos || []);
+  } catch (err) {
+    console.error('Erro crítico no motor escolar:', err);
+    estadoEscola = {
+      periodo: 'fora',
+      blocoAtual: null,
+      indiceBlocoAtual: -1,
+      proximaTransicao: '--:--',
+      rotuloProximaTransicao: 'Erro no Sistema',
+      salas: [],
+    };
+  }
 
-  // Derivar professores da grade
   const professores: Professor[] = (() => {
     const nomes = extrairProfessores(gradeCompleta);
     const diaSemana = obterDiaSemana(horaAtual);
@@ -97,20 +231,22 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
       const localizacao = obterLocalizacaoProfessor(nome, horaAtual, gradeCompleta);
       const agenda = obterAgendaProfessor(nome, diaSemana, gradeCompleta);
       const horaStr = `${horaAtual.getHours().toString().padStart(2, '0')}:${horaAtual.getMinutes().toString().padStart(2, '0')}`;
-      const periodo = obterPeriodoEscolar(horaStr);
+      const periodoLabel = obterPeriodoEscolar(horaStr, periodos);
 
       let status: Professor['status'] = 'presente';
-      if (localizacao && periodo === 'aula') {
+      if (localizacao && periodoLabel === 'aula') {
         status = 'em_aula';
       }
 
-      // Encontrar a próxima aula
-      const blocoAtual = estadoEscola.indiceBlocoAtual;
-      const proximaAula = agenda.find(e => e.indiceBlocoHorario > blocoAtual);
-      const blocosHorario = obterBlocosDeHorario();
-      const blocoProximo = proximaAula ? blocosHorario.find(b => b.indice === proximaAula.indiceBlocoHorario) : null;
+      // Encontrar a próxima aula (aquela que começa após o horário atual)
+      const proximaAula = agenda.find(e => {
+        const horaInicioAula = e.horario.split('-')[0].trim();
+        const [h, m] = horaStr.split(':').map(Number);
+        const [ah, am] = horaInicioAula.split(':').map(Number);
+        return (ah > h) || (ah === h && am > m);
+      });
 
-      // Encontrar a matéria principal (mais frequente na agenda)
+      // Encontrar a matéria principal
       const materias = agenda.map(e => e.materia);
       const matContador: Record<string, number> = {};
       materias.forEach(m => { matContador[m] = (matContador[m] || 0) + 1; });
@@ -123,7 +259,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
         status,
         salaAtual: localizacao ? `Sala ${localizacao.numeroSala.toString().padStart(2, '0')}` : undefined,
         proximaAula: proximaAula?.materia,
-        horarioProximaAula: blocoProximo?.inicio,
+        horarioProximaAula: proximaAula?.horario.split('-')[0].trim(),
         agendaDoDia: agenda,
       };
     });
@@ -133,9 +269,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
     setOcorrencias(prev => [ocorrencia, ...prev]);
   }, []);
 
-  const atualizar = useCallback(() => {
-    setHoraAtual(new Date());
-  }, []);
+  const atualizar = carregarDados;
 
   return (
     <Contexto.Provider value={{
@@ -144,12 +278,16 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
       salas,
       gradeCompleta,
       alunos,
-      laboratorioIdiomas,
+      languageLab,
       atividadesAfter,
       monitores,
       professores,
+      professoresCMS,
+      locaisCMS,
       modelosFormulario,
       ocorrencias,
+      periodos,
+      gradeMonitores,
       adicionarOcorrencia,
       carregando,
       atualizar,

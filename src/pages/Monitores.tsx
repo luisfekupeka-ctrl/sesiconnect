@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { UserCircle, Search, Clock, BookOpen, Calendar, MapPin } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -12,23 +13,28 @@ const ESCALA_FIM = 18 * 60;    // 18:00 em minutos
 const ESCALA_TOTAL = ESCALA_FIM - ESCALA_INICIO;
 
 function horaParaMinutos(hora: string): number {
-  const [h, m] = hora.split(':').map(Number);
+  if (!hora || typeof hora !== 'string' || !hora.includes(':')) return 0;
+  const parts = hora.split(':');
+  const h = parseInt(parts[0], 10) || 0;
+  const m = parseInt(parts[1], 10) || 0;
   return h * 60 + m;
 }
 
 export default function Monitores() {
-  const { monitores } = useEscola();
+  const { monitores, horaAtual } = useEscola();
   const [busca, setBusca] = useState('');
   const [monitorSelecionado, setMonitorSelecionado] = useState<Monitor | null>(null);
   const [visualizacao, setVisualizacao] = useState<'cards' | 'timeline'>('timeline');
 
-  const monitoresFiltrados = monitores.filter(m =>
-    m.nome.toLowerCase().includes(busca.toLowerCase()) ||
-    m.materia.toLowerCase().includes(busca.toLowerCase())
-  );
+  const monitoresFiltrados = (monitores || []).filter(m => {
+    const n = m.nome?.toLowerCase() || '';
+    const mat = m.materia?.toLowerCase() || '';
+    const b = busca.toLowerCase();
+    return n.includes(b) || mat.includes(b);
+  });
 
   // Verificar se monitor está ativo agora baseado no horário
-  const agora = new Date();
+  const agora = new Date(horaAtual);
   const minutosAgora = agora.getHours() * 60 + agora.getMinutes();
 
   const estaAtivoAgora = (inicio: string, fim: string): boolean => {
@@ -61,13 +67,21 @@ export default function Monitores() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Botão para o Portal do Monitor */}
+          <Link
+            to="/meu-horario"
+            className="px-6 py-4 bg-primary text-on-primary rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all hover:bg-primary/90 flex items-center gap-2 shadow-lg shadow-primary/20"
+          >
+            <UserCircle size={16} /> Consultar Meu Horário
+          </Link>
+
           {/* Alternador de visualização */}
           <div className="flex gap-1 p-1.5 bg-surface-container-low rounded-2xl">
             <button
               onClick={() => setVisualizacao('timeline')}
               className={cn(
                 "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
-                visualizacao === 'timeline' ? "bg-white text-primary shadow-sm" : "text-on-surface-variant"
+                visualizacao === 'timeline' ? "bg-surface-container-low text-primary shadow-sm" : "text-on-surface-variant"
               )}
             >
               <Calendar size={12} /> Escala
@@ -76,7 +90,7 @@ export default function Monitores() {
               onClick={() => setVisualizacao('cards')}
               className={cn(
                 "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
-                visualizacao === 'cards' ? "bg-white text-primary shadow-sm" : "text-on-surface-variant"
+                visualizacao === 'cards' ? "bg-surface-container-low text-primary shadow-sm" : "text-on-surface-variant"
               )}
             >
               <UserCircle size={12} /> Cards
@@ -117,7 +131,7 @@ export default function Monitores() {
             <div className="sticky top-0 z-10 bg-surface-container-lowest border-b border-surface-container-low">
               <div className="flex">
                 <div className="w-56 shrink-0 p-4 border-r border-surface-container-low">
-                  <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Monitor / Matéria</p>
+                  <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Monitor / Tipo</p>
                 </div>
                 <div className="flex-1 relative">
                   <div className="flex">
@@ -163,50 +177,56 @@ export default function Monitores() {
                     ativo && "bg-emerald-500/5"
                   )}
                 >
-                  {/* Info do monitor */}
-                  <div className="w-56 shrink-0 p-4 border-r border-surface-container-low flex items-center gap-3">
-                    <div className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black transition-colors shrink-0",
-                      ativo ? "bg-emerald-500/10 text-emerald-600" : monitor.status === 'inativo' ? "bg-surface-container-high text-on-surface-variant/50" : "bg-primary/10 text-primary"
-                    )}>
-                      {monitor.nome.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className={cn("text-xs font-black truncate", monitor.status === 'inativo' ? "text-on-surface-variant/50" : "text-on-surface")}>{monitor.nome}</p>
-                      <p className="text-[9px] text-on-surface-variant font-bold truncate">{monitor.materia}</p>
-                    </div>
-                  </div>
+                   {/* Info do monitor */}
+                   <div className="w-56 shrink-0 p-4 border-r border-surface-container-low flex items-center gap-3">
+                     <div className={cn(
+                       "w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black transition-colors shrink-0",
+                       ativo ? "bg-emerald-500 text-on-surface-bright shadow-lg shadow-emerald-500/20" : 
+                       monitor.tipo === 'volante' ? "bg-amber-500/10 text-amber-600" :
+                       monitor.status === 'inativo' ? "bg-surface-container-high text-on-surface-variant/50" : "bg-primary/10 text-primary"
+                     )}>
+                       {(monitor.nome || 'M').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                     </div>
+                     <div className="min-w-0">
+                       <p className={cn("text-[11px] font-black truncate", monitor.status === 'inativo' ? "text-on-surface-variant/50" : "text-on-surface")}>{monitor.nome}</p>
+                       <p className="text-[9px] text-on-surface-variant font-bold truncate uppercase tracking-tighter">{monitor.tipo === 'hibrido' ? 'HÍBRIDO' : monitor.tipo === 'volante' ? 'VOLANTE' : 'FIXO'}</p>
+                     </div>
+                   </div>
 
-                  {/* Barra de horário */}
-                  <div className="flex-1 relative p-2 flex items-center">
-                    {monitor.status === 'ativo' ? (
-                      <motion.div
-                        initial={{ width: 0, opacity: 0 }}
-                        animate={{ width: `${widthPct}%`, opacity: 1 }}
-                        transition={{ duration: 0.6, ease: 'easeOut' }}
-                        className={cn(
-                          "absolute h-10 rounded-xl flex items-center px-4 gap-2 shadow-sm overflow-hidden",
-                          ativo
-                            ? "bg-primary text-white shadow-lg shadow-primary/20"
-                            : "bg-primary/15 text-primary"
-                        )}
-                        style={{ left: `${leftPct}%` }}
-                      >
-                        <Clock size={11} strokeWidth={3} />
-                        <span className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap">
-                          {monitor.horarioInicio} — {monitor.horarioFim}
-                        </span>
-                        <span className="text-[8px] font-bold opacity-70 whitespace-nowrap">({Math.floor(duracao / 60)}h{duracao % 60 > 0 ? `${duracao % 60}min` : ''})</span>
-                      </motion.div>
-                    ) : (
-                      <div
-                        className="absolute h-10 rounded-xl bg-surface-container-high/50 flex items-center px-4 gap-2"
-                        style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
-                      >
-                        <span className="text-[9px] font-black text-on-surface-variant/50 uppercase tracking-widest whitespace-nowrap">Inativo</span>
-                      </div>
-                    )}
-                  </div>
+                   {/* Barra de horário */}
+                   <div className="flex-1 relative p-2 flex items-center">
+                     {monitor.status === 'ativo' ? (
+                       <motion.div
+                         initial={{ width: 0, opacity: 0 }}
+                         animate={{ width: `${widthPct}%`, opacity: 1 }}
+                         transition={{ duration: 0.6, ease: 'easeOut' }}
+                         className={cn(
+                           "absolute h-10 rounded-xl flex flex-col justify-center px-4 gap-0 shadow-sm overflow-hidden",
+                           ativo
+                             ? "bg-primary text-on-surface-bright shadow-lg shadow-primary/20"
+                             : "bg-surface-container-high text-on-surface-variant"
+                         )}
+                         style={{ left: `${leftPct}%` }}
+                       >
+                         <div className="flex items-center gap-1.5">
+                           <Clock size={10} strokeWidth={3} />
+                           <span className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap">
+                             {monitor.horarioInicio} — {monitor.horarioFim}
+                           </span>
+                         </div>
+                         <span className="text-[7px] font-black opacity-70 uppercase tracking-tighter truncate max-w-full">
+                           {monitor.tipo === 'volante' ? '📍 VOLANTE' : `🏠 ${monitor.localPermanencia || 'POSTO FIXO'}`}
+                         </span>
+                       </motion.div>
+                     ) : (
+                       <div
+                         className="absolute h-10 rounded-xl bg-surface-container-high/30 flex items-center px-4 gap-2 border border-dashed border-outline-variant/10"
+                         style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                       >
+                         <span className="text-[9px] font-black text-on-surface-variant/30 uppercase tracking-widest whitespace-nowrap">Ausente</span>
+                       </div>
+                     )}
+                   </div>
                 </div>
               );
             })}
@@ -222,13 +242,13 @@ export default function Monitores() {
               <div className="flex items-center gap-6 mb-6">
                 <div className={cn(
                   "w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-black",
-                  monitorSelecionado.status === 'ativo' ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-surface-container-high text-on-surface-variant"
+                  monitorSelecionado.status === 'ativo' ? "bg-primary text-on-surface-bright shadow-lg shadow-primary/20" : "bg-surface-container-high text-on-surface-variant"
                 )}>
-                  {monitorSelecionado.nome.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                  {(monitorSelecionado.nome || 'M').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
                 <div>
                   <h3 className="text-2xl font-black text-on-surface mb-1">{monitorSelecionado.nome}</h3>
-                  <p className="text-on-surface-variant font-bold">{monitorSelecionado.materia}</p>
+                  <p className="text-on-surface-variant font-bold">{monitorSelecionado.tipo === 'hibrido' ? 'Híbrido' : monitorSelecionado.tipo === 'volante' ? 'Volante' : 'Fixo'} · {monitorSelecionado.localPermanencia || 'Sem posto fixo'}</p>
                 </div>
                 {estaAtivoAgora(monitorSelecionado.horarioInicio, monitorSelecionado.horarioFim) && monitorSelecionado.status === 'ativo' && (
                   <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 ml-auto">
@@ -307,73 +327,57 @@ export default function Monitores() {
 
                     return (
                       <div key={monitor.id} className={cn(
-                        "bg-surface-container-lowest p-7 rounded-[2rem] editorial-shadow transition-all hover:translate-y-[-2px] relative overflow-hidden border-2",
-                        ativo ? "border-emerald-500/20" : "border-transparent"
+                        "bg-surface-container-lowest p-7 rounded-[2.5rem] editorial-shadow transition-all hover:translate-y-[-4px] relative overflow-hidden border-2",
+                        ativo ? "border-primary/20" : "border-transparent"
                       )}>
                         {ativo && (
                           <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 rounded-lg">
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Ativo Agora</span>
+                            <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Ativo</span>
                           </div>
                         )}
 
-                        <div className="flex items-center gap-4 mb-5">
+                        <div className="flex items-center gap-4 mb-6">
                           <div className={cn(
-                            "w-14 h-14 rounded-2xl flex items-center justify-center transition-colors",
-                            ativo ? "bg-emerald-500/10 text-emerald-600" : "bg-secondary-container/10 text-primary"
+                            "w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg shadow-lg transition-all",
+                            ativo ? "bg-primary text-on-surface-bright" : 
+                            monitor.tipo === 'volante' ? "bg-amber-500/10 text-amber-600" :
+                        monitor.tipo === 'hibrido' ? "bg-indigo-500/10 text-indigo-500" : "bg-primary/10 text-primary"
                           )}>
-                            <UserCircle size={28} />
+                            {(monitor.nome || 'M')[0]}
                           </div>
                           <div>
                             <h4 className="font-black text-lg leading-tight">{monitor.nome}</h4>
-                            <p className="text-[10px] text-on-surface-variant font-black uppercase tracking-widest">{monitor.materia}</p>
+                            <p className="text-[10px] text-primary font-black uppercase tracking-widest">{monitor.tipo}</p>
+                          </div>
+                        </div>
+
+                        {/* Detalhes do posto */}
+                        <div className="grid grid-cols-2 gap-3 mb-6">
+                          <div className="bg-surface-container-low/50 p-3 rounded-2xl border border-outline-variant/10">
+                            <p className="text-[7px] font-black text-on-surface-variant uppercase mb-1">Posto de Trabalho</p>
+                            <p className="text-[10px] font-black text-on-surface leading-tight truncate">{monitor.localPermanencia || 'Sem posto'}</p>
+                          </div>
+                          <div className="bg-surface-container-low/50 p-3 rounded-2xl border border-outline-variant/10">
+                            <p className="text-[7px] font-black text-on-surface-variant uppercase mb-1">Local de Almoço</p>
+                            <p className="text-[10px] font-black text-on-surface leading-tight truncate">{monitor.localAlmoco || '—'}</p>
                           </div>
                         </div>
 
                         {/* Detalhes do horário */}
-                        <div className="space-y-3 pt-5 border-t border-surface-container-low">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-emerald-500/5 p-3 rounded-xl">
-                              <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest mb-0.5">Início</p>
-                              <p className="text-sm font-black text-on-surface">{monitor.horarioInicio}</p>
+                        <div className="pt-4 border-t border-surface-container-low flex items-center justify-between">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-1.5 text-on-surface mb-0.5">
+                              <Clock size={12} className="text-primary" />
+                              <span className="text-[11px] font-black">{monitor.horarioInicio} — {monitor.horarioFim}</span>
                             </div>
-                            <div className="bg-red-500/5 p-3 rounded-xl">
-                              <p className="text-[8px] font-black text-red-500 uppercase tracking-widest mb-0.5">Término</p>
-                              <p className="text-sm font-black text-on-surface">{monitor.horarioFim}</p>
-                            </div>
+                            <span className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest">{monitor.diaSemana || 'SEGUNDA'}</span>
                           </div>
-
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-on-surface">
-                              <Clock size={14} className="text-primary" />
-                              <span className="text-xs font-black">
-                                {Math.floor(duracao / 60)}h{duracao % 60 > 0 ? `${duracao % 60}min` : ''} de plantão
-                              </span>
-                            </div>
-                            <span className={cn(
-                              "text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-lg",
-                              monitor.status === 'ativo' ? "bg-primary/10 text-primary" : "bg-surface-container-high text-on-surface-variant"
-                            )}>
-                              {monitor.status === 'ativo' ? 'Ativo' : 'Inativo'}
-                            </span>
-                          </div>
-
-                          {/* Mini barra de progresso do plantão */}
-                          <div className="bg-surface-container-low rounded-full h-2 overflow-hidden">
-                            {(() => {
-                              const minInicio = horaParaMinutos(monitor.horarioInicio);
-                              const minFim = horaParaMinutos(monitor.horarioFim);
-                              const progresso = ativo
-                                ? Math.min(100, ((minutosAgora - minInicio) / (minFim - minInicio)) * 100)
-                                : minutosAgora > minFim ? 100 : 0;
-                              return (
-                                <motion.div
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${progresso}%` }}
-                                  className={cn("h-full rounded-full", ativo ? "bg-emerald-500" : "bg-primary/30")}
-                                />
-                              );
-                            })()}
+                          <div className="flex flex-col items-end">
+                            <span className={cn("px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter mb-1", 
+                              monitor.status === 'ativo' ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"
+                            )}>{monitor.status}</span>
+                            <span className="text-[8px] font-black text-on-surface-variant">{Math.floor(duracao / 60)}h{duracao % 60 > 0 ? `${duracao % 60}m` : ''}</span>
                           </div>
                         </div>
                       </div>

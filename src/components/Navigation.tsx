@@ -1,81 +1,100 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { Home, Users, DoorOpen, Languages, Sparkles, BookOpen, FileText, Shield } from 'lucide-react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { 
+  Home, Users, DoorOpen, Languages, Sparkles, 
+  BookOpen, FileText, Shield, LayoutGrid, ListTodo, 
+  Calendar, Zap, GraduationCap, Map
+} from 'lucide-react';
 import { cn } from '../lib/utils';
 
 const navItems = [
-  { to: '/', icon: Home, label: 'Início' },
+  { to: '/', icon: LayoutGrid, label: 'Agora' },
   { to: '/rooms', icon: DoorOpen, label: 'Salas' },
-  { to: '/teachers', icon: Users, label: 'Professores' },
-  { to: '/language-lab', icon: Languages, label: 'Idiomas' },
-  { to: '/after', icon: Sparkles, label: 'After' },
+  { to: '/teachers', icon: GraduationCap, label: 'Professores' },
   { to: '/monitores', icon: BookOpen, label: 'Monitores' },
-  { to: '/forms', icon: FileText, label: 'Formulários' },
+  { to: '/language-lab', icon: Languages, label: 'Language Lab' },
+  { to: '/after', icon: Sparkles, label: 'After School' },
+  { to: '/forms', icon: FileText, label: 'Ocorrências' },
 ];
 
-export function BottomNav() {
+export function Sidebar() {
+  const location = useLocation();
+
   return (
-    <nav className="fixed bottom-0 left-0 w-full z-50 glass border-t border-outline-variant rounded-t-[2.5rem] px-4 pt-3 pb-8 md:hidden">
-      <div className="flex justify-around items-center max-w-lg mx-auto">
+    <aside className="fixed left-0 top-0 h-screen w-72 bg-[#0b0f1a] border-r border-outline-variant/10 hidden md:flex flex-col z-50">
+      {/* Brand */}
+      <div className="p-8 pb-12">
+        <h1 className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-accent-cyan flex items-center justify-center text-on-primary font-black text-xl shadow-lg shadow-primary/20">S</div>
+          <div>
+            <p className="text-lg font-black tracking-tighter text-on-surface-bright leading-none">SESI Connect</p>
+            <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mt-1">Gestão em tempo real</p>
+          </div>
+        </h1>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 px-4 space-y-1">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
               cn(
-                "flex flex-col items-center justify-center transition-all duration-300 gap-1 px-3 py-1 rounded-2xl",
-                isActive ? "text-primary bg-primary-container/10" : "text-on-surface-variant hover:text-on-surface"
+                "flex items-center gap-4 px-6 py-4 rounded-2xl text-sm font-black transition-all group",
+                isActive 
+                  ? "bg-primary text-on-primary shadow-xl shadow-primary/20" 
+                  : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
               )
             }
           >
-            <item.icon size={20} strokeWidth={2.5} />
-            <span className="text-[10px] font-bold uppercase tracking-widest">{item.label}</span>
+            <item.icon size={20} className={cn("transition-colors", location.pathname === item.to ? "text-on-primary" : "group-hover:text-primary")} />
+            {item.label}
           </NavLink>
         ))}
-      </div>
-    </nav>
-  );
-}
+      </nav>
 
-export function DesktopNav() {
-  return (
-    <header className="fixed top-0 left-0 w-full z-50 glass border-b border-outline-variant px-8 py-4 hidden md:flex justify-between items-center">
-      <div className="flex items-center gap-12">
-        <h1 className="text-xl font-extrabold tracking-tighter text-on-surface">SESI Connect</h1>
-        <nav className="flex items-center gap-2">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                cn(
-                  "px-4 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-1.5",
-                  isActive ? "text-primary bg-primary-container/10" : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
-                )
-              }
-            >
-              <item.icon size={14} />
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-      </div>
-      <div className="flex items-center gap-2">
+      {/* Admin Section */}
+      <div className="p-6 mt-auto">
         <NavLink
           to="/admin"
           className={({ isActive }) =>
             cn(
-              "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all border",
+              "flex items-center gap-4 px-6 py-5 rounded-3xl text-sm font-black transition-all border",
               isActive
-                ? "bg-red-500/10 text-red-500 border-red-500/20"
-                : "text-on-surface-variant hover:text-red-500 hover:bg-red-500/5 border-transparent hover:border-red-500/20"
+                ? "bg-accent-rose text-on-primary border-transparent shadow-xl shadow-accent-rose/20"
+                : "bg-surface-container-low text-on-surface-variant border-outline-variant/10 hover:border-accent-rose hover:text-accent-rose"
             )
           }
         >
-          <Shield size={16} />
-          Admin
+          <Shield size={20} />
+          Painel Adm
         </NavLink>
       </div>
-    </header>
+    </aside>
+  );
+}
+
+export function BottomNav() {
+  return (
+    <nav className="fixed bottom-0 left-0 w-full z-50 glass rounded-t-[2.5rem] px-4 pt-3 pb-8 md:hidden">
+      <div className="flex justify-around items-center max-w-lg mx-auto">
+        {navItems.slice(0, 5).map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              cn(
+                "flex flex-col items-center justify-center transition-all duration-300 gap-1 px-3 py-1 rounded-2xl",
+                isActive ? "text-primary" : "text-on-surface-variant hover:text-on-surface"
+              )
+            }
+          >
+            <item.icon size={20} strokeWidth={2.5} />
+            <span className="text-[10px] font-bold uppercase tracking-widest">{item.label.split(' ')[0]}</span>
+          </NavLink>
+        ))}
+      </div>
+    </nav>
   );
 }

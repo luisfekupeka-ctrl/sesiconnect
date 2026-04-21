@@ -16,10 +16,12 @@ export default function TeachersPage() {
 
   const blocos = obterBlocosDeHorario();
 
-  const profsFiltrados = professores.filter(p =>
-    p.nome.toLowerCase().includes(busca.toLowerCase()) ||
-    p.materia.toLowerCase().includes(busca.toLowerCase())
-  );
+  const profsFiltrados = (professores || []).filter(p => {
+    const n = p.nome?.toLowerCase() || '';
+    const mat = p.materia?.toLowerCase() || '';
+    const b = busca.toLowerCase();
+    return n.includes(b) || mat.includes(b);
+  });
 
   const obterAgendaDia = (nome: string, dia: number): EntradaGradeSala[] => {
     return gradeCompleta
@@ -80,10 +82,10 @@ export default function TeachersPage() {
                   <div className={cn(
                     "w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black transition-all duration-500",
                     selecionado
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-on-surface-bright"
                       : "bg-secondary-container/10 text-primary"
                   )}>
-                    {prof.nome.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    {(prof.nome || 'P').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-black text-on-surface truncate">{prof.nome}</h3>
@@ -128,19 +130,19 @@ export default function TeachersPage() {
               className="bg-surface-container-lowest rounded-[2.5rem] editorial-shadow overflow-hidden sticky top-24"
             >
               {/* Header */}
-              <div className="p-8 bg-primary text-white relative overflow-hidden">
-                <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+              <div className="p-8 bg-primary text-on-surface-bright relative overflow-hidden">
+                <div className="absolute -right-10 -top-10 w-40 h-40 bg-surface-container-low/5 rounded-full blur-3xl" />
                 <div className="relative z-10 flex items-center gap-6">
-                  <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-2xl font-black">
-                    {profSelecionado.nome.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                  <div className="w-16 h-16 rounded-2xl bg-surface-container-low/20 flex items-center justify-center text-2xl font-black">
+                    {(profSelecionado.nome || 'P').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                   </div>
                   <div>
                     <h2 className="text-2xl font-black tracking-tight">{profSelecionado.nome}</h2>
-                    <p className="text-white/70 font-bold">{profSelecionado.materia}</p>
+                    <p className="text-on-surface-bright/70 font-bold">{profSelecionado.materia}</p>
                   </div>
                 </div>
                 {profSelecionado.salaAtual && (
-                  <div className="mt-4 flex items-center gap-2 px-4 py-2 bg-white/10 rounded-xl w-fit">
+                  <div className="mt-4 flex items-center gap-2 px-4 py-2 bg-surface-container-low/10 rounded-xl w-fit">
                     <MapPin size={14} />
                     <span className="text-sm font-black">{profSelecionado.salaAtual} agora</span>
                   </div>
@@ -155,7 +157,7 @@ export default function TeachersPage() {
                     onClick={() => setDiaGrade(dia)}
                     className={cn(
                       "flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                      diaGrade === dia ? "bg-primary text-white" : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
+                      diaGrade === dia ? "bg-primary text-on-surface-bright" : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
                     )}
                   >
                     {DIAS_SEMANA[dia]}
@@ -173,25 +175,25 @@ export default function TeachersPage() {
                   return (
                     <div key={bloco.indice} className={cn(
                       "flex items-center gap-4 p-4 rounded-xl transition-all",
-                      ativo ? "bg-primary text-white shadow-lg" : "bg-surface-container-low/50 hover:bg-surface-container-low"
+                      ativo ? "bg-primary text-on-surface-bright shadow-lg" : "bg-surface-container-low/50 hover:bg-surface-container-low"
                     )}>
                       <div className={cn(
                         "w-16 py-1.5 rounded-lg text-center shrink-0",
-                        ativo ? "bg-white/20" : "bg-white border border-surface-container-low"
+                        ativo ? "bg-surface-container-low/20" : "bg-surface-container-low border border-surface-container-low"
                       )}>
-                        <Clock size={10} className={cn("mx-auto mb-0.5", ativo ? "text-white" : "text-primary")} />
+                        <Clock size={10} className={cn("mx-auto mb-0.5", ativo ? "text-on-surface-bright" : "text-primary")} />
                         <span className="text-[9px] font-mono font-black">{bloco.inicio}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         {entrada ? (
                           <>
                             <p className="text-sm font-black truncate">{entrada.materia}</p>
-                            <p className={cn("text-[10px] font-bold truncate", ativo ? "text-white/70" : "text-on-surface-variant")}>
+                            <p className={cn("text-[10px] font-bold truncate", ativo ? "text-on-surface-bright/70" : "text-on-surface-variant")}>
                               Sala {entrada.numeroSala.toString().padStart(2, '0')} • {entrada.turma}
                             </p>
                           </>
                         ) : (
-                          <p className={cn("text-sm font-bold", ativo ? "text-white/60" : "text-on-surface-variant/40")}>—</p>
+                          <p className={cn("text-sm font-bold", ativo ? "text-on-surface-bright/60" : "text-on-surface-variant/40")}>—</p>
                         )}
                       </div>
                     </div>

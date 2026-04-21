@@ -13,6 +13,15 @@ export interface BlocoHorario {
 
 export type PeriodoEscolar = 'aula' | 'intervalo' | 'almoco' | 'after' | 'fora';
 
+export interface PeriodoConfig {
+  id: string;
+  nome: string;
+  horarioInicio: string; // "09:30"
+  horarioFim: string;    // "09:50"
+  tipo: PeriodoEscolar;
+  segmento?: SegmentoEscolar; // Opcional para manter compatibilidade
+}
+
 export interface EstadoEscola {
   periodo: PeriodoEscolar;
   blocoAtual: BlocoHorario | null;
@@ -24,6 +33,8 @@ export interface EstadoEscola {
 
 export interface EstadoSalaAoVivo {
   numeroSala: number;
+  nomeSala?: string;
+  anoTurma?: string;
   estaOcupada: boolean;
   professorAtual?: string;
   materiaAtual?: string;
@@ -34,28 +45,29 @@ export interface EstadoSalaAoVivo {
 
 // --- Grade de Salas (base do sistema) ---
 
-export type TipoBloco = 'regular' | 'laboratorio_idiomas' | 'after';
+export type TipoBloco = 'regular' | 'laboratorio_idiomas' | 'after' | 'almoco' | 'permanencia';
 
 export interface EntradaGradeSala {
   id: string;
   numeroSala: number;        // 1-31
-  diaSemana: number;         // 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex
-  indiceBlocoHorario: number; // 1-9
+  nomeSala: string;          // "ONE OF A KIND"
+  anoTurma: string;          // "6º Ano A"
+  diaSemana: string;         // "SEGUNDA"
+  horario: string;           // "08:00 - 08:45"
   nomeProfessor: string;
-  turma: string;             // "6º Ano A"
-  materia: string;           // "Matemática"
+  turma: string;             // Alias de anoTurma
+  materia: string;
   tipo: TipoBloco;
 }
 
 // --- Salas ---
 
-export type SegmentoEscolar = 'Fundamental' | 'Médio' | 'Especializado';
+export type SegmentoEscolar = '6º e 7º' | '8º e 9º' | 'Ensino Médio' | 'Especializado';
 
 export interface Sala {
   id: string;
   numero: number;
   nome: string;
-  andar: string;
   segmento: SegmentoEscolar;
   ano: string;
   grade: EntradaGradeSala[];
@@ -84,18 +96,17 @@ export interface Aluno {
   numeroSala: number;
 }
 
-// --- Laboratório de Idiomas ---
+// --- Language Lab (Ensalamento de Inglês) ---
 
-export interface NivelIdioma {
+export interface LanguageLabRecord {
   id: string;
+  turma: string;
   nivel: string;
-  nomeProfessor: string;
-  numeroSala: number;
+  professor: string;
+  sala: string;
   horarioInicio: string;
   horarioFim: string;
-  quantidadeAlunos: number;
-  grupoAlunos: string;
-  listaAlunos: string[];
+  diaSemana: string;
 }
 
 // --- Atividades After School ---
@@ -122,15 +133,44 @@ export interface Monitor {
   id: string;
   nome: string;
   materia: string;
+  diaSemana?: string;
   turno: 'manha' | 'tarde' | 'noite';
   horarioInicio: string;
   horarioFim: string;
+  localPermanencia: string;
+  localAlmoco: string;
+  tipo: 'volante' | 'fixo' | 'hibrido';
   status: 'ativo' | 'inativo';
+}
+
+export interface GradeMonitor {
+  id: string;
+  monitorNome: string;
+  diaSemana: string;
+  horarioInicio: string;
+  horarioFim: string;
+  posto: string;
+  corEtiqueta?: string;
+}
+
+export interface ProfessorCMS {
+  id: string;
+  nome: string;
+  cor: string;
+  especialidade?: string;
+}
+
+export interface LocalCMS {
+  id: string;
+  nome: string;
+  numero?: number;
+  tipo: 'sala' | 'arena' | 'quadra' | 'patio' | 'especializado';
+  capacidade?: number;
 }
 
 // --- Formulários ---
 
-export type TipoCampoFormulario = 'texto' | 'selecao' | 'autocomplete_aluno' | 'data' | 'area_texto';
+export type TipoCampoFormulario = 'texto' | 'selecao' | 'autocomplete_aluno' | 'data' | 'area_texto' | 'checkbox' | 'radio' | 'serie_escolar';
 
 export interface CampoFormulario {
   id: string;
@@ -155,8 +195,8 @@ export interface RegistroOcorrencia {
   dados: Record<string, any>;
   nomeAluno: string;
   turmaAluno: string;
-  anoAluno: string;
-  salaAluno: number;
+  anoAluno?: string;
+  salaAluno?: number;
   professorAtual?: string;
   criadoEm: string;
 }

@@ -59,7 +59,7 @@ export default function AfterSchool() {
             onClick={() => setDiaFiltro(null)}
             className={cn(
               "flex-shrink-0 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-              !diaFiltro ? "bg-primary text-white" : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
+              !diaFiltro ? "bg-primary text-on-surface-bright" : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
             )}
           >
             Todos os dias
@@ -70,7 +70,7 @@ export default function AfterSchool() {
               onClick={() => setDiaFiltro(diaFiltro === dia ? null : dia)}
               className={cn(
                 "flex-shrink-0 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                diaFiltro === dia ? "bg-primary text-white" : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
+                diaFiltro === dia ? "bg-primary text-on-surface-bright" : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
               )}
             >
               {dia}
@@ -115,7 +115,7 @@ export default function AfterSchool() {
                 <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-700" />
 
                 <div className="flex flex-col md:flex-row gap-6 items-start relative z-10">
-                  <div className="w-16 h-16 bg-surface-container-low rounded-2xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all duration-500 shadow-inner shrink-0">
+                  <div className="w-16 h-16 bg-surface-container-low rounded-2xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-surface-bright transition-all duration-500 shadow-inner shrink-0">
                     <Sparkles size={28} />
                   </div>
 
@@ -133,7 +133,7 @@ export default function AfterSchool() {
                         )}
                         <div className={cn(
                           "w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300",
-                          expandida ? "bg-primary text-white rotate-180" : "bg-surface-container-low text-on-surface-variant"
+                          expandida ? "bg-primary text-on-surface-bright rotate-180" : "bg-surface-container-low text-on-surface-variant"
                         )}>
                           <ChevronDown size={16} />
                         </div>
@@ -145,11 +145,11 @@ export default function AfterSchool() {
                     {/* Badges rápidos */}
                     <div className="flex flex-wrap gap-3 pt-3 border-t border-surface-container-low">
                       <div className="flex items-center gap-2 bg-surface-container-low pr-4 pl-2 py-1.5 rounded-xl border border-primary/5">
-                        <div className="p-1.5 bg-white rounded-lg"><Clock size={12} className="text-primary" /></div>
+                        <div className="p-1.5 bg-surface-container-low rounded-lg"><Clock size={12} className="text-primary" /></div>
                         <span className="text-xs font-black text-on-surface">{atividade.horarioInicio} — {atividade.horarioFim}</span>
                       </div>
                       <div className="flex items-center gap-2 bg-surface-container-low pr-4 pl-2 py-1.5 rounded-xl border border-primary/5">
-                        <div className="p-1.5 bg-white rounded-lg"><DoorOpen size={12} className="text-primary" /></div>
+                        <div className="p-1.5 bg-surface-container-low rounded-lg"><DoorOpen size={12} className="text-primary" /></div>
                         <span className="text-xs font-black text-on-surface">{atividade.local}</span>
                       </div>
                       <div className="flex items-center gap-2 bg-primary/10 px-4 py-1.5 rounded-xl">
@@ -212,7 +212,7 @@ export default function AfterSchool() {
 
                       {/* Professor responsável */}
                       <div className="bg-surface-container-low/50 p-5 rounded-2xl flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-primary text-white flex items-center justify-center text-lg font-black shadow-lg shadow-primary/20">
+                        <div className="w-14 h-14 rounded-2xl bg-primary text-on-surface-bright flex items-center justify-center text-lg font-black shadow-lg shadow-primary/20">
                           {atividade.nomeProfessor.split(' ').map(n => n[0]).join('').slice(0, 2)}
                         </div>
                         <div>
@@ -234,7 +234,7 @@ export default function AfterSchool() {
                               <div key={dia} className={cn(
                                 "flex-1 py-3 rounded-xl text-center text-[10px] font-black uppercase tracking-widest transition-all",
                                 ativo
-                                  ? "bg-primary text-white shadow-md shadow-primary/20"
+                                  ? "bg-primary text-on-surface-bright shadow-sm shadow-primary/20"
                                   : "bg-surface-container-low text-on-surface-variant/30"
                               )}>
                                 {dia.slice(0, 3)}
@@ -278,7 +278,7 @@ export default function AfterSchool() {
                                   className="absolute top-0 h-full bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20"
                                   style={{ left: `${leftPct}%` }}
                                 >
-                                  <span className="text-[9px] font-black text-white uppercase tracking-widest">
+                                  <span className="text-[9px] font-black text-on-surface-bright uppercase tracking-widest">
                                     {atividade.horarioInicio} — {atividade.horarioFim}
                                   </span>
                                 </motion.div>
