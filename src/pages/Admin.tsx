@@ -203,7 +203,8 @@ export default function Admin() {
   // RENDER
   // ============================================================
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8 pb-20">
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8 pb-20">
       {/* Header */}
       <header>
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-500/10 text-red-600 rounded-full mb-4 font-black text-xs uppercase tracking-widest">
@@ -641,28 +642,6 @@ export default function Admin() {
                 ))}
               </div>
             </Painel>
-
-            <ModalForm aberto={!!editandoLanguageLab} onClose={() => setEditandoLanguageLab(null)}
-              titulo={editandoLanguageLab?.id === 'novo' ? 'Cadastrar Aula de Inglês' : 'Editar Aula de Inglês'}
-              onSalvar={() => doSave(salvarLanguageLab(editandoLanguageLab), setEditandoLanguageLab)} carregando={carregando}>
-              {editandoLanguageLab && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <CampoTexto label="Turma (Ex: 9º Ano A)" value={editandoLanguageLab.turma} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, turma: v })} />
-                    <CampoTexto label="Nível (Ex: B1 Intermediate)" value={editandoLanguageLab.nivel} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, nivel: v })} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <CampoTexto label="Professor" value={editandoLanguageLab.professor} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, professor: v })} />
-                    <CampoTexto label="Sala / Local" value={editandoLanguageLab.sala} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, sala: v })} />
-                  </div>
-                  <CampoSelect label="Dia da Semana" value={editandoLanguageLab.diaSemana} options={DIAS_SEMANA} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, diaSemana: v })} />
-                  <div className="grid grid-cols-2 gap-4">
-                    <CampoTexto label="Início" value={editandoLanguageLab.horarioInicio} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, horarioInicio: v })} tipo="time" />
-                    <CampoTexto label="Fim" value={editandoLanguageLab.horarioFim} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, horarioFim: v })} tipo="time" />
-                  </div>
-                </div>
-              )}
-            </ModalForm>
           </motion.div>
         )}
 
@@ -915,37 +894,7 @@ export default function Admin() {
           </motion.div>
         )}
 
-        {/* ===================== LANGUAGE LAB ===================== */}
-        {abaAtiva === 'language-lab' && (
-          <motion.div key="language-lab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-            <Painel titulo="Ensalamento Language Lab" subtitulo="Gerencie as aulas de inglês, níveis e salas do laboratório."
-              acao={<button onClick={() => setEditandoLanguageLab({ id: 'novo', turma: '', nivel: '', professor: '', sala: '', horarioInicio: '08:00', horarioFim: '09:30', diaSemana: 'SEGUNDA' })} className="btn-primary"><Plus size={14} /> Nova Aula Inglês</button>}>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {languageLab.length === 0 ? <VazioMsg texto="Nenhuma aula de Language Lab cadastrada." /> : 
-                languageLab.map(lab => (
-                  <div key={lab.id} className="bg-surface-container-low p-5 rounded-[2rem] border border-primary/10 group hover:bg-primary/5 transition-all">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="px-3 py-1 bg-primary text-on-surface-bright rounded-full text-[10px] font-black uppercase tracking-widest">
-                        {lab.nivel}
-                      </div>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                        <button onClick={() => setEditandoLanguageLab(lab)} className="p-1.5 bg-surface-container-high rounded-lg hover:text-primary"><Eye size={12} /></button>
-                        <button onClick={() => { if (confirm('Excluir aula?')) doDelete(excluirLanguageLab(lab.id)); }} className="p-1.5 bg-surface-container-high rounded-lg hover:text-red-500"><Trash2 size={12} /></button>
-                      </div>
-                    </div>
-                    <h3 className="text-sm font-black">{lab.turma}</h3>
-                    <p className="text-[11px] font-bold text-on-surface-variant mt-1">{lab.professor} · {lab.sala}</p>
-                    <div className="mt-4 pt-3 border-t border-outline-variant/10 flex justify-between items-center text-[10px] font-black uppercase tracking-tighter">
-                      <span className="text-primary">{lab.diaSemana}</span>
-                      <span className="text-on-surface-variant">{lab.horarioInicio} - {lab.horarioFim}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Painel>
-          </motion.div>
-        )}
+
 
         {/* ===================== AFTER SCHOOL ===================== */}
         {abaAtiva === 'after-school' && (
@@ -981,47 +930,8 @@ export default function Admin() {
                 ))}
               </div>
             </Painel>
-
-            <ModalForm aberto={!!editandoAfter} onClose={() => setEditandoAfter(null)}
-              titulo={editandoAfter?.id === 'novo' ? 'Nova Atividade After' : 'Editar Atividade'}
-              onSalvar={() => doSave(salvarAtividadeAfter(editandoAfter), setEditandoAfter)} carregando={carregando}>
-              {editandoAfter && (
-                <div className="space-y-4">
-                  <CampoTexto label="Nome da Atividade" value={editandoAfter.nome} onChange={v => setEditandoAfter({ ...editandoAfter, nome: v })} />
-                  <div className="grid grid-cols-2 gap-4">
-                    <CampoSelect label="Categoria" value={editandoAfter.categoria} options={['Esporte', 'Cultura', 'Tecnologia', 'Apoio', 'Outro']} onChange={v => setEditandoAfter({ ...editandoAfter, categoria: v })} />
-                    <CampoTexto label="Local (Ex: Arena)" value={editandoAfter.local} onChange={v => setEditandoAfter({ ...editandoAfter, local: v })} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <CampoTexto label="Professor Responsável" value={editandoAfter.nomeProfessor} onChange={v => setEditandoAfter({ ...editandoAfter, nomeProfessor: v })} />
-                    <CampoTexto label="Grupo / Turma Alvo" value={editandoAfter.grupoAlunos} onChange={v => setEditandoAfter({ ...editandoAfter, grupoAlunos: v })} />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2 block">Dias da Semana</label>
-                    <div className="flex flex-wrap gap-2">
-                      {DIAS_SEMANA.map(d => (
-                        <button key={d} onClick={() => {
-                          const novos = editandoAfter.dias.includes(d) ? editandoAfter.dias.filter((x:string) => x !== d) : [...editandoAfter.dias, d];
-                          setEditandoAfter({ ...editandoAfter, dias: novos });
-                        }} className={cn("px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all",
-                          editandoAfter.dias.includes(d) ? "bg-amber-500 text-on-surface-bright" : "bg-surface-container-high text-on-surface-variant")}>
-                          {d}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <CampoTexto label="Início" value={editandoAfter.horarioInicio} onChange={v => setEditandoAfter({ ...editandoAfter, horarioInicio: v })} tipo="time" />
-                    <CampoTexto label="Fim" value={editandoAfter.horarioFim} onChange={v => setEditandoAfter({ ...editandoAfter, horarioFim: v })} tipo="time" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <CampoTexto label="Vagas Totais" value={editandoAfter.vagas} onChange={v => setEditandoAfter({ ...editandoAfter, vagas: parseInt(v) })} tipo="number" />
-                    <CampoTexto label="Alunos Inscritos" value={editandoAfter.quantidadeAlunos} onChange={v => setEditandoAfter({ ...editandoAfter, quantidadeAlunos: parseInt(v) })} tipo="number" />
-                  </div>
-                </div>
-              )}
-            </ModalForm>
           </motion.div>
+        )}
       </AnimatePresence>
 
       {/* MODAIS CENTRALIZADOS */}
@@ -1091,7 +1001,6 @@ export default function Admin() {
           </div>
         )}
       </ModalForm>
-
       <ModalForm aberto={!!editandoGrade} onClose={() => setEditandoGrade(null)}
         titulo="Editar Horário de Aula"
         onSalvar={() => doSave(salvarGradeSala([editandoGrade]), setEditandoGrade)} carregando={carregando}>
@@ -1113,6 +1022,7 @@ export default function Admin() {
         )}
       </ModalForm>
     </motion.div>
+    </>
   );
 }
 
