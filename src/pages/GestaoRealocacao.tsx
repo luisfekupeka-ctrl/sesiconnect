@@ -17,7 +17,7 @@ import {
   salvarEventoEscola, 
   salvarRealocacoes 
 } from '../services/motorRealocacao';
-import { DIAS_SEMANA } from '../services/dataService';
+const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
 export default function GestaoRealocacao() {
   const { professores, gradeSalas } = useEscola();
