@@ -6,13 +6,14 @@ import {
 } from 'lucide-react';
 import { useEscola } from '../context/ContextoEscola';
 import { cn } from '../lib/utils';
-import { obterDiaSemana, estaNoHorario } from '../services/motorEscolar';
+import { obterDiaSemana, estaNoHorario, obterHoraAtualString } from '../services/motorEscolar';
 
 export default function MonitorPortal() {
   const { gradeMonitores, monitores, horaAtual } = useEscola();
   const [monitorSelecionado, setMonitorSelecionado] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
   const [diaFiltro] = useState(obterDiaSemana(horaAtual));
+  const horaAtualStr = obterHoraAtualString(horaAtual);
 
   const listaMonitores = monitores.map(m => m.nome).sort();
   const filteredMonitores = listaMonitores.filter(m => 
@@ -24,7 +25,7 @@ export default function MonitorPortal() {
   ).sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
 
   const postoAtual = minhaGrade.find(g => 
-    estaNoHorario(horaAtual, g.horarioInicio, g.horarioFim)
+    estaNoHorario(horaAtualStr, `${g.horarioInicio} - ${g.horarioFim}`)
   );
 
   const proximoPosto = minhaGrade.find(g => {
@@ -153,7 +154,7 @@ export default function MonitorPortal() {
         ) : (
           <div className="space-y-4 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-surface-container-high">
             {minhaGrade.map((g, idx) => {
-              const ativo = estaNoHorario(horaAtual, g.horarioInicio, g.horarioFim);
+              const ativo = estaNoHorario(horaAtualStr, `${g.horarioInicio} - ${g.horarioFim}`);
               const agoraStr = `${horaAtual.getHours().toString().padStart(2, '0')}:${horaAtual.getMinutes().toString().padStart(2, '0')}`;
               const passado = !ativo && g.horarioFim < agoraStr;
 

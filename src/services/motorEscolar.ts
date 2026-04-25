@@ -14,20 +14,6 @@ import {
   PeriodoConfig
 } from '../types';
 
-// --- Grade fixa de horários (blocos de 45 min) ---
-// Estes ainda são usados para a visualização da grade semanal
-const BLOCOS_HORARIO: BlocoHorario[] = [
-  { indice: 1, inicio: '08:00', fim: '08:45' },
-  { indice: 2, inicio: '08:45', fim: '09:30' },
-  { indice: 3, inicio: '09:50', fim: '10:35' },
-  { indice: 4, inicio: '10:35', fim: '11:20' },
-  { indice: 5, inicio: '11:20', fim: '12:05' },
-  { indice: 6, inicio: '13:05', fim: '13:50' },
-  { indice: 7, inicio: '13:50', fim: '14:35' },
-  { indice: 8, inicio: '14:35', fim: '15:20' },
-  { indice: 9, inicio: '15:20', fim: '15:35' },
-];
-
 // --- Funções auxiliares ---
 
 function horaParaMinutos(hora: string): number {
@@ -43,14 +29,22 @@ function horaParaMinutos(hora: string): number {
   }
 }
 
-function obterHoraAtualString(data: Date): string {
+export function obterHoraAtualString(data: Date): string {
   return `${data.getHours().toString().padStart(2, '0')}:${data.getMinutes().toString().padStart(2, '0')}`;
 }
 
 // --- Funções públicas ---
 
-export function obterBlocosDeHorario(): BlocoHorario[] {
-  return [...BLOCOS_HORARIO];
+export function obterBlocosDeHorario(periodos: PeriodoConfig[]): BlocoHorario[] {
+  return periodos
+    .filter(p => p.tipo === 'aula')
+    .map((p, index) => ({
+      indice: index + 1,
+      inicio: p.horarioInicio.slice(0, 5),
+      fim: p.horarioFim.slice(0, 5),
+      nome: p.nome,
+      segmento: p.segmento
+    }));
 }
 
 export function obterDiaSemana(data: Date): string {
@@ -61,7 +55,7 @@ export function obterDiaSemana(data: Date): string {
 export function estaNoHorario(horaAtual: string, horarioRange: string): boolean {
   if (!horarioRange.includes('-')) return false;
   const [inicio, fim] = horarioRange.split('-').map(s => s.trim());
-  
+
   const minAtual = horaParaMinutos(horaAtual);
   const minInicio = horaParaMinutos(inicio);
   const minFim = horaParaMinutos(fim);
@@ -71,12 +65,12 @@ export function estaNoHorario(horaAtual: string, horarioRange: string): boolean 
 
 export function obterPeriodoEscolar(horaAtual: string, periodos: PeriodoConfig[], segmentoParaFiltrar?: string): PeriodoEscolar {
   const minAtual = horaParaMinutos(horaAtual);
-  
+
   // Garantir que periodos é uma array
   const listaPeriodos = Array.isArray(periodos) ? periodos : [];
-  
+
   // Filtrar períodos pelo segmento, se fornecido
-  const periodosFiltrados = segmentoParaFiltrar 
+  const periodosFiltrados = segmentoParaFiltrar
     ? listaPeriodos.filter(p => !p?.segmento || p.segmento === segmentoParaFiltrar)
     : listaPeriodos;
 
@@ -100,10 +94,11 @@ export function obterPeriodoEscolar(horaAtual: string, periodos: PeriodoConfig[]
   return 'fora';
 }
 
-export function obterIndiceBlocoAtual(horaAtual: string): number {
+export function obterIndiceBlocoAtual(horaAtual: string, periodos: PeriodoConfig[]): number {
   const minAtual = horaParaMinutos(horaAtual);
+  const blocos = obterBlocosDeHorario(periodos);
 
-  for (const bloco of BLOCOS_HORARIO) {
+  for (const bloco of blocos) {
     const minInicio = horaParaMinutos(bloco.inicio);
     const minFim = horaParaMinutos(bloco.fim);
     if (minAtual >= minInicio && minAtual < minFim) {
@@ -115,8 +110,8 @@ export function obterIndiceBlocoAtual(horaAtual: string): number {
 
 export function obterProximaTransicao(horaAtual: string, periodos: PeriodoConfig[], segmentoParaFiltrar?: string): { horario: string; rotulo: string } {
   const minAtual = horaParaMinutos(horaAtual);
-  
-  const periodosFiltrados = segmentoParaFiltrar 
+
+  const periodosFiltrados = segmentoParaFiltrar
     ? periodos.filter(p => !p.segmento || p.segmento === segmentoParaFiltrar)
     : periodos;
 
@@ -172,71 +167,38 @@ export function obterEstadoAtualDaEscola(
 
   const horaAtualStr = obterHoraAtualString(horarioAtual);
   const diaSemanaStr = obterDiaSemana(horarioAtual);
-  
+
   // Período global 
   const periodoGlobal = obterPeriodoEscolar(horaAtualStr, listaPeriodos);
   const transicaoGlobal = obterProximaTransicao(horaAtualStr, listaPeriodos);
 
-  const indiceBlocoAtual = obterIndiceBlocoAtual(horaAtualStr);
-  const blocoAtual = BLOCOS_HORARIO.find(b => b.indice === indiceBlocoAtual) || null;
+  const indiceBlocoAtual = obterIndiceBlocoAtual(horaAtualStr, listaPeriodos);
+  const blocoAtual = obterBlocosDeHorario(listaPeriodos).find(b => b.indice === indiceBlocoAtual) || null;
 
   const estadoSalas: EstadoSalaAoVivo[] = listaSalas.map(sala => {
     // Detectar o período Específico deste segmento
     const periodoSala = obterPeriodoEscolar(horaAtualStr, listaPeriodos, sala.segmento);
 
-    // 1. Prioridade: AFTER SCHOOL (16:00 - 17:30)
-    // Regra de ouro: se estiver no horário de After e houver atividade na sala
-    const minAtual = horaParaMinutos(horaAtualStr);
-    const minInicioAfter = horaParaMinutos('16:00');
-    const minFimAfter = horaParaMinutos('17:30');
-    
-    if (minAtual >= minInicioAfter && minAtual < minFimAfter) {
-      // Buscar se há atividade de After nesta sala
-      // Como o motor recebe a grade, podemos verificar se há algo do tipo 'after'
-      const atividadeAfter = listaGrade.find(e => 
-        e.numeroSala === sala.numero && 
-        e.diaSemana === diaSemanaStr && 
-        e.tipo === 'after'
-      );
-
-      if (atividadeAfter) {
-        return {
-          numeroSala: sala.numero,
-          nomeSala: `${atividadeAfter.materia} (Sala ${sala.numero.toString().padStart(2, '0')})`,
-          anoTurma: atividadeAfter.turma,
-          estaOcupada: true,
-          professorAtual: atividadeAfter.nomeProfessor,
-          materiaAtual: atividadeAfter.materia,
-          turmaAtual: atividadeAfter.turma,
-          horarioFim: '17:30',
-          tipoBlocoAtual: 'after',
-        };
-      }
-    }
-
-    // 2. Prioridade: LANGUAGE LAB / REGULAR
+    // Busca o que está agendado na grade para esta sala agora
     const entrada = listaGrade.find(
       e => e.numeroSala === sala.numero &&
-           e.diaSemana === diaSemanaStr &&
-           estaNoHorario(horaAtualStr, e.horario)
+        e.diaSemana === diaSemanaStr &&
+        estaNoHorario(horaAtualStr, e.horario)
     );
 
     if (entrada) {
-      // Se for período de aula regular
-      if (periodoSala === 'aula') {
-        const ocupada = !['almoco', 'permanencia'].includes(entrada.tipo);
-        return {
-          numeroSala: sala.numero,
-          nomeSala: sala.nome,
-          anoTurma: sala.ano,
-          estaOcupada: ocupada,
-          professorAtual: entrada.nomeProfessor,
-          materiaAtual: entrada.tipo === 'almoco' ? 'ALMOÇO' : entrada.tipo === 'permanencia' ? 'PERMANÊNCIA' : entrada.materia,
-          turmaAtual: entrada.turma,
-          horarioFim: entrada.horario.split('-')[1]?.trim(),
-          tipoBlocoAtual: entrada.tipo,
-        };
-      }
+      const ocupada = !['almoco', 'permanencia', 'vazio'].includes(entrada.tipo);
+      return {
+        numeroSala: sala.numero,
+        nomeSala: sala.nome,
+        anoTurma: sala.ano,
+        estaOcupada: ocupada,
+        professorAtual: entrada.nomeProfessor,
+        materiaAtual: entrada.materia || (entrada.tipo === 'almoco' ? 'ALMOÇO' : 'LIVRE'),
+        turmaAtual: entrada.turma,
+        horarioFim: entrada.horario.split('-')[1]?.trim(),
+        tipoBlocoAtual: entrada.tipo,
+      };
     }
 
     return {
@@ -285,7 +247,7 @@ export function obterLocalizacaoProfessor(
 
   return gradeCompleta.find(
     e => e.nomeProfessor === nomeProfessor &&
-         e.diaSemana === diaSemana &&
-         estaNoHorario(horaAtual, e.horario)
+      e.diaSemana === diaSemana &&
+      estaNoHorario(horaAtual, e.horario)
   ) || null;
 }

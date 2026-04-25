@@ -20,7 +20,7 @@ const DIAS_SEMANA_NOMES: Record<string, string> = {
 const LISTA_DIAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
 export default function RoomsPage() {
-  const { salas, estadoEscola, gradeCompleta, languageLab, atividadesAfter, horaAtual, carregando, alunos } = useEscola();
+  const { salas, estadoEscola, gradeCompleta, languageLab, atividadesAfter, horaAtual, carregando, alunos, periodos } = useEscola();
   const [filtroStatus, setFiltroStatus] = useState<'todas' | 'livres' | 'ocupadas'>('todas');
   const [filtroSegmento, setFiltroSegmento] = useState<string>('todos');
   const [salaGradeModal, setSalaGradeModal] = useState<Sala | null>(null);
@@ -30,7 +30,7 @@ export default function RoomsPage() {
   const [salaExpandida, setSalaExpandida] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<'regular' | 'after' | 'language'>('regular');
 
-  const blocos = obterBlocosDeHorario();
+  const blocos = obterBlocosDeHorario(periodos);
 
   const salasFiltradas = salas.filter((sala) => {
     const coincideBusca =
@@ -53,7 +53,7 @@ export default function RoomsPage() {
 
   const handleReportarAtraso = async (sala: Sala, estado: any) => {
     if (!estado?.estaOcupada) return;
-    
+
     setReportando(sala.numero);
     const ok = await registrarAtrasoProfessor({
       sala: sala.numero,
@@ -212,8 +212,8 @@ export default function RoomsPage() {
                       const agoraStr = `${horaAtual.getHours().toString().padStart(2, '0')}:${horaAtual.getMinutes().toString().padStart(2, '0')}`;
                       const minAgora = (horaAtual.getHours() * 60) + horaAtual.getMinutes();
 
-                      const ativ = atividadesAfter.find(a => 
-                        a.local.includes(sala.numero.toString()) && 
+                      const ativ = atividadesAfter.find(a =>
+                        a.local.includes(sala.numero.toString()) &&
                         a.dias.includes(diaSemana) &&
                         minAgora >= ((parseInt(a.horarioInicio.split(':')[0]) * 60) + parseInt(a.horarioInicio.split(':')[1])) &&
                         minAgora < ((parseInt(a.horarioFim.split(':')[0]) * 60) + parseInt(a.horarioFim.split(':')[1]))
@@ -233,8 +233,8 @@ export default function RoomsPage() {
                       const agoraStr = `${horaAtual.getHours().toString().padStart(2, '0')}:${horaAtual.getMinutes().toString().padStart(2, '0')}`;
                       const minAgora = (horaAtual.getHours() * 60) + horaAtual.getMinutes();
 
-                      const lab = languageLab.find(l => 
-                        l.sala.includes(sala.numero.toString()) && 
+                      const lab = languageLab.find(l =>
+                        l.sala.includes(sala.numero.toString()) &&
                         l.diaSemana === diaSemana &&
                         minAgora >= ((parseInt(l.horarioInicio.split(':')[0]) * 60) + parseInt(l.horarioInicio.split(':')[1])) &&
                         minAgora < ((parseInt(l.horarioFim.split(':')[0]) * 60) + parseInt(l.horarioFim.split(':')[1]))
@@ -256,8 +256,8 @@ export default function RoomsPage() {
                     return (
                       <div className={cn(
                         "p-4 rounded-xl space-y-2 mb-4",
-                        viewMode === 'after' ? "bg-amber-500/10 border border-amber-500/20" : 
-                        viewMode === 'language' ? "bg-indigo-500/10 border border-indigo-500/20" : "bg-primary/5"
+                        viewMode === 'after' ? "bg-amber-500/10 border border-amber-500/20" :
+                          viewMode === 'language' ? "bg-indigo-500/10 border border-indigo-500/20" : "bg-primary/5"
                       )}>
                         <div className="flex items-center gap-2">
                           <Clock size={12} className={viewMode === 'after' ? "text-amber-600" : viewMode === 'language' ? "text-indigo-600" : "text-primary"} />
@@ -287,13 +287,13 @@ export default function RoomsPage() {
                       <Clock size={14} />
                       Grade
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleReportarAtraso(sala, estadoSala)}
                       disabled={!ocupada || reportando === sala.numero}
                       className={cn(
                         "flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                        !ocupada ? "bg-surface-container-low text-outline cursor-not-allowed opacity-50" : 
-                        "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                        !ocupada ? "bg-surface-container-low text-outline cursor-not-allowed opacity-50" :
+                          "bg-red-500/10 text-red-500 hover:bg-red-500/20"
                       )}
                     >
                       <AlertTriangle size={12} />
@@ -311,7 +311,7 @@ export default function RoomsPage() {
       <AnimatePresence>
         {salaGradeModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="absolute inset-0 bg-on-surface/60 backdrop-blur-md"
               onClick={() => setSalaGradeModal(null)}
@@ -334,7 +334,7 @@ export default function RoomsPage() {
                   </div>
                   <h3 className="text-3xl font-black tracking-tighter text-on-surface">{salaGradeModal.nome}</h3>
                 </div>
-                <button 
+                <button
                   onClick={() => setSalaGradeModal(null)}
                   className="w-12 h-12 rounded-full hover:bg-surface-container-low flex items-center justify-center text-on-surface-variant transition-colors"
                 >
@@ -362,11 +362,11 @@ export default function RoomsPage() {
               <div className="p-8 overflow-y-auto flex-1 bg-surface-container-lowest/50">
                 {viewMode === 'regular' ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {obterBlocosDeHorario().map(bloco => {
+                    {obterBlocosDeHorario(periodos).map(bloco => {
                       const range = `${bloco.inicio} - ${bloco.fim}`;
                       const entradasDia = gradeCompleta.filter(e => e.numeroSala === salaGradeModal.numero && e.diaSemana === diaGrade);
                       const entradaRegular = entradasDia.find(e => e.horario === range);
-                      
+
                       const lab = languageLab.find(l => l.sala.includes(salaGradeModal.numero.toString()) && l.diaSemana === diaGrade && l.horarioInicio <= bloco.inicio && l.horarioFim >= bloco.fim);
                       const after = atividadesAfter.find(a => a.local.includes(salaGradeModal.numero.toString()) && a.dias.includes(diaGrade) && a.horarioInicio <= bloco.inicio && a.horarioFim >= bloco.fim);
 
@@ -388,7 +388,7 @@ export default function RoomsPage() {
                         const mat = entradaRegular ? entradaRegular.materia : after?.nome;
                         entradaFinal = { materia: mat, nomeProfessor: prof };
                         labelEnsalamento = after ? `After School • ${after.categoria}` : 'After School';
-                        
+
                         if (after && after.listaAlunos && after.listaAlunos.length > 0) {
                           const alunosDoAfter = alunos.filter(a => after.listaAlunos.includes(a.id));
                           listaAlunos = `${alunosDoAfter.length} alunos inscritos: ${alunosDoAfter.map(a => a.nome.split(' ')[0]).join(', ')}`;
@@ -400,7 +400,7 @@ export default function RoomsPage() {
                         const mat = entradaRegular ? entradaRegular.materia : `Language Lab - ${lab?.nivel}`;
                         entradaFinal = { materia: mat, nomeProfessor: prof };
                         labelEnsalamento = lab ? `Language Lab • Nível ${lab.nivel}` : 'Language Lab';
-                        
+
                         if (lab && lab.listaAlunos && lab.listaAlunos.length > 0) {
                           const alunosDoLab = alunos.filter(a => lab.listaAlunos.includes(a.id));
                           listaAlunos = `${alunosDoLab.length} alunos matriculados: ${alunosDoLab.map(a => a.nome.split(' ')[0]).join(', ')}`;
@@ -409,10 +409,15 @@ export default function RoomsPage() {
                         }
                       } else if (entradaRegular) {
                         entradaFinal = entradaRegular;
-                        if (entradaRegular.turma && entradaRegular.turma !== 'A DEFINIR') {
-                          const alunosDaTurma = alunos.filter(a => a.turma === entradaRegular.turma || a.ano === entradaRegular.turma);
-                          labelEnsalamento = `Ensalamento: ${entradaRegular.turma}`;
-                          listaAlunos = alunosDaTurma.length > 0 
+                        const idsAlunos = entradaRegular.listaAlunos || [];
+                        if (idsAlunos.length > 0) {
+                          const alunosEnsalados = alunos.filter(a => idsAlunos.includes(a.id));
+                          labelEnsalamento = `Ensalamento Dinâmico: ${entradaRegular.turma}`;
+                          listaAlunos = `${alunosEnsalados.length} alunos: ${alunosEnsalados.map(a => a.nome.split(' ')[0]).join(', ')}`;
+                        } else if (entradaRegular.turma && entradaRegular.turma !== 'A DEFINIR') {
+                          const alunosDaTurma = alunos.filter(a => a.turma === entradaRegular.turma);
+                          labelEnsalamento = `Turma Base: ${entradaRegular.turma}`;
+                          listaAlunos = alunosDaTurma.length > 0
                             ? `${alunosDaTurma.length} alunos: ${alunosDaTurma.map(a => a.nome.split(' ')[0]).join(', ')}`
                             : 'Nenhum aluno cadastrado nesta turma';
                         }
@@ -423,8 +428,8 @@ export default function RoomsPage() {
                       return (
                         <div key={bloco.indice} className={cn(
                           "p-5 rounded-3xl border-2 transition-all",
-                          isAgora ? "bg-primary border-primary text-on-surface-bright shadow-xl shadow-primary/10" : 
-                          entradaFinal ? (tipoBloco === 'after' ? 'bg-amber-500/10 border-amber-500/20' : tipoBloco === 'language' ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-surface-container-low border-transparent shadow-sm') : "bg-surface-container-low/30 border-transparent opacity-40"
+                          isAgora ? "bg-primary border-primary text-on-surface-bright shadow-xl shadow-primary/10" :
+                            entradaFinal ? (tipoBloco === 'after' ? 'bg-amber-500/10 border-amber-500/20' : tipoBloco === 'language' ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-surface-container-low border-transparent shadow-sm') : "bg-surface-container-low/30 border-transparent opacity-40"
                         )}>
                           <div className="flex items-center justify-between mb-4">
                             <span className={cn("text-[10px] font-mono font-black", isAgora ? "text-on-surface-bright/60" : "text-outline")}>{bloco.inicio} — {bloco.fim}</span>

@@ -165,20 +165,20 @@ export default function FormsPage() {
     }
   });
 
-  const contagemPorTipo = ocorrenciasFiltradas.reduce((acc, oc) => {
+  const contagemPorTipo: Record<string, number> = ocorrenciasFiltradas.reduce((acc, oc) => {
     const nome = oc.nomeModelo || 'Desconhecido';
     acc[nome] = (acc[nome] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
-  const alunosRecorrentes = ocorrenciasFiltradas.reduce((acc, oc) => {
+  const alunosRecorrentes: Record<string, number> = ocorrenciasFiltradas.reduce((acc, oc) => {
     const nome = oc.nomeAluno || 'Desconhecido';
     acc[nome] = (acc[nome] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
-  const alunosOrdenados = Object.entries(alunosRecorrentes)
-    .sort((a, b) => (b[1] as number) - (a[1] as number))
+  const alunosOrdenados: [string, number][] = Object.entries(alunosRecorrentes)
+    .sort((a, b) => (Number(b[1]) || 0) - (Number(a[1]) || 0))
     .slice(0, 5);
 
   return (

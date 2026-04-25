@@ -88,7 +88,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
     { id: '67-3', nome: '3ª Aula', horarioInicio: '09:30', horarioFim: '10:20', tipo: 'aula', segmento: '6e7' },
     { id: '67-4', nome: '4ª Aula', horarioInicio: '10:20', horarioFim: '11:10', tipo: 'aula', segmento: '6e7' },
     { id: '67-5', nome: '5ª Aula', horarioInicio: '11:10', horarioFim: '12:00', tipo: 'aula', segmento: '6e7' },
-    
+
     // 8º, 9º e Médio
     { id: '89m-1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: '8e9' },
     { id: '89m-2', nome: '2ª Aula', horarioInicio: '08:20', horarioFim: '09:10', tipo: 'aula', segmento: '8e9' },
@@ -96,7 +96,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
     { id: '89m-int', nome: 'Intervalo', horarioInicio: '10:00', horarioFim: '10:20', tipo: 'intervalo', segmento: '8e9' },
     { id: '89m-4', nome: '4ª Aula', horarioInicio: '10:20', horarioFim: '11:10', tipo: 'aula', segmento: '8e9' },
     { id: '89m-5', nome: '5ª Aula', horarioInicio: '11:10', horarioFim: '12:00', tipo: 'aula', segmento: '8e9' },
-    
+
     // Médio (com extras se necessário)
     { id: 'med-1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: 'medio' },
     { id: 'med-int', nome: 'Intervalo', horarioInicio: '10:00', horarioFim: '10:20', tipo: 'intervalo', segmento: 'medio' },
@@ -121,11 +121,87 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
         buscarLocaisCMS(),
         buscarGradeMonitores(),
       ]);
-      setSalas(s);
-      setGradeCompleta(g);
-      setAlunos(a);
+
+      // === DADOS DEMO: PROFESSORES ===
+      if (pCms && pCms.length > 0) {
+        setProfessoresCMS(pCms);
+      } else {
+        setProfessoresCMS([
+          { id: 'p1', nome: 'Luis Kim', cor: '#3B82F6', especialidade: 'Matemática' },
+          { id: 'p2', nome: 'Patricia Santos', cor: '#EF4444', especialidade: 'Português' },
+          { id: 'p3', nome: 'Carlos Edu', cor: '#10B981', especialidade: 'Ciências' },
+          { id: 'p4', nome: 'Ana Beatriz', cor: '#F59E0B', especialidade: 'História' },
+        ]);
+      }
+
+      // === DADOS DEMO: ALUNOS ===
+      if (a && a.length > 0) {
+        setAlunos(a);
+      } else {
+        setAlunos([
+          { id: 'a1', nome: 'Arthur Silva', turma: '6º Ano A', ano: '6º Ano', numeroSala: 1 },
+          { id: 'a2', nome: 'Beatriz Oliveira', turma: '6º Ano A', ano: '6º Ano', numeroSala: 1 },
+          { id: 'a3', nome: 'Caio Castro', turma: '7º Ano B', ano: '7º Ano', numeroSala: 2 },
+          { id: 'a4', nome: 'Daniela Lima', turma: '7º Ano B', ano: '7º Ano', numeroSala: 2 },
+          { id: 'a5', nome: 'Eduardo Costa', turma: '8º Ano C', ano: '8º Ano', numeroSala: 3 },
+        ]);
+      }
+
+      // === DADOS DEMO: GRADE COMPLETA ===
+      if (g && g.length > 0) {
+        setGradeCompleta(g);
+      } else {
+        const demoGrade: EntradaGradeSala[] = [];
+        const dias = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
+        const profs = ['Luis Kim', 'Patricia Santos', 'Carlos Edu', 'Ana Beatriz'];
+        const materias = ['Matemática', 'Português', 'Ciências', 'História'];
+
+        dias.forEach(dia => {
+          // Criar 3 aulas para cada dia para teste
+          demoGrade.push({
+            id: `g-${dia}-1`,
+            numeroSala: 1,
+            nomeSala: 'Sala 01',
+            anoTurma: '6º Ano A',
+            diaSemana: dia,
+            horario: '07:30 - 08:20',
+            nomeProfessor: profs[0],
+            turma: '6º Ano A',
+            materia: materias[0],
+            tipo: 'regular',
+            listaAlunos: ['a1', 'a2']
+          });
+          demoGrade.push({
+            id: `g-${dia}-2`,
+            numeroSala: 2,
+            nomeSala: 'Sala 02',
+            anoTurma: '7º Ano B',
+            diaSemana: dia,
+            horario: '08:20 - 09:10',
+            nomeProfessor: profs[1],
+            turma: '7º Ano B',
+            materia: materias[1],
+            tipo: 'regular',
+            listaAlunos: ['a3', 'a4']
+          });
+        });
+        setGradeCompleta(demoGrade);
+      }
+
+      // === DADOS DEMO: SALAS ===
+      if (s && s.length > 0) {
+        setSalas(s);
+      } else {
+        setSalas([
+          { id: 's1', numero: 1, nome: 'Sala 01', segmento: '6º e 7º', ano: '6º Ano A', grade: [] },
+          { id: 's2', numero: 2, nome: 'Sala 02', segmento: '6º e 7º', ano: '7º Ano B', grade: [] },
+          { id: 's3', numero: 3, nome: 'Sala 03', segmento: '8º e 9º', ano: '8º Ano C', grade: [] },
+          { id: 's4', numero: 4, nome: 'Sala 04', segmento: '8º e 9º', ano: '9º Ano A', grade: [] },
+          { id: 's5', numero: 5, nome: 'Sala 05', segmento: 'Ensino Médio', ano: '1º EM', grade: [] },
+        ]);
+      }
+
       setAtividadesAfter(aa);
-      setProfessoresCMS(pCms);
       setLocaisCMS(lCms);
       setOcorrencias(oc);
       if (p && p.length > 0) setPeriodos(p);

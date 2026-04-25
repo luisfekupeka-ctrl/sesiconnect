@@ -1,34 +1,58 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Settings, CalendarX, BookOpen, UserMinus, FileSignature, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Settings, CalendarX, BookOpen, UserMinus, FileSignature, CheckCircle2, AlertCircle, RefreshCw, DoorOpen, Users, ChevronRight, FileDown, ShieldCheck, ArrowLeft, FileText, Check, Info, ChevronDown, Coffee, Filter, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
-import { 
-  ProfessorConfig, 
-  EventoEscola, 
-  ResultadoRealocacao, 
-  TipoEventoEscola 
+import {
+  ProfessorConfig,
+  ResultadoRealocacao,
+  StatusEvento,
 } from '../types';
-import { 
-  buscarProfessoresConfig, 
-  buscarRealocacoes, 
-  calcularCenarioFalta, 
-  calcularCenarioProva, 
-  salvarEventoEscola, 
-  salvarRealocacoes 
+import {
+  buscarProfessoresConfig,
+  buscarRealocacoes,
+  calcularModoProva,
+  calcularCenarioFalta,
+  salvarEventoEscola,
+  salvarRealocacoes,
+  aprovarRascunho,
+  excluirEvento
 } from '../services/motorRealocacao';
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
+const SEGMENTOS = ['6º e 7º', '8º e 9º', 'Ensino Médio'];
 
 export default function GestaoRealocacao() {
-  const { professores, gradeSalas } = useEscola();
+  const { professores, gradeCompleta, salas, periodos } = useEscola();
   const [professoresConfig, setProfessoresConfig] = useState<ProfessorConfig[]>([]);
   const [historico, setHistorico] = useState<ResultadoRealocacao[]>([]);
-  
-  const [modoAtivo, setModoAtivo] = useState<'HISTORICO' | 'NOVA_FALTA' | 'NOVA_PROVA'>('HISTORICO');
-  
-  const [novoEvento, setNovoEvento] = useState<Partial<EventoEscola>>({ dia: 'SEGUNDA' });
-  const [sugestoes, setSugestoes] = useState<ResultadoRealocacao[]>([]);
+
+  // ESTADO DO WIZARD
+  const [step, setStep] = useState(1);
+  const [diaSel, setDiaSel] = useState('SEGUNDA');
+  const [tipoFluxo, setTipoFluxo] = useState<'SALA' | 'PROFESSOR' | null>(null);
+  const [targetId, setTargetId] = useState<string>('');
+  const [segmentoSel, setSegmentoSel] = useState<string>('6º e 7º');
+  const [horariosSel, setHorariosSel] = useState<string[]>([]);
+  const [isModoProva, setIsModoProva] = useState(false);
+  const [profFixoProva, setProfFixoProva] = useState('');
+
+  const [resultados, setResultados] = useState<ResultadoRealocacao[]>([]);
   const [carregando, setCarregando] = useState(false);
+  const [filtroHistorico, setFiltroHistorico] = useState<'TODOS' | 'RASCUNHOS'>('TODOS');
+
+  // Lógica de Horários Consecutivos para Modo Prova
+  const verificarConsecutividade = () => {
+    if (horariosSel.length <= 1) return true;
+    const sorted = [...horariosSel].sort();
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const fimAtual = sorted[i].split(' - ')[1];
+      const inicioProximo = sorted[i + 1].split(' - ')[0];
+      if (fimAtual !== inicioProximo) return false;
+    }
+    return true;
+  };
+
+  const horariosSaoConsecutivos = verificarConsecutividade();
 
   useEffect(() => {
     carregarDados();
@@ -36,8 +60,6 @@ export default function GestaoRealocacao() {
 
   async function carregarDados() {
     const config = await buscarProfessoresConfig();
-    
-    // Se o banco de config estiver vazio, cria configs dinâmicas baseadas na grade para testes
     if (config.length === 0) {
       const fallbackConfig = professores.map(p => ({
         id: p.id,
@@ -55,223 +77,269 @@ export default function GestaoRealocacao() {
     setHistorico(rec);
   }
 
-  async function calcularSugestoes() {
+  const mudarSubstituto = (index: number, novoNome: string) => {
+    setResultados(prev => prev.map((item, idx) =>
+      idx === index ? { ...item, professorSubstituto: novoNome } : item
+    ));
+  };
+
+  const handleCalcular = () => {
     setCarregando(true);
-    setSugestoes([]);
-
-    // Delay simulado para UX
-    await new Promise(r => setTimeout(r, 800));
-
-    try {
-      if (modoAtivo === 'NOVA_FALTA') {
-        const result = calcularCenarioFalta(novoEvento as EventoEscola, gradeSalas, professoresConfig);
-        setSugestoes(result);
-      } else if (modoAtivo === 'NOVA_PROVA') {
-        const result = calcularCenarioProva(novoEvento as EventoEscola, gradeSalas, professoresConfig);
-        setSugestoes(result);
+    setTimeout(() => {
+      let res: ResultadoRealocacao[] = [];
+      if (tipoFluxo === 'SALA' && isModoProva) {
+        res = calcularModoProva(profFixoProva, Number(targetId), horariosSel, diaSel, segmentoSel, gradeCompleta, professoresConfig);
+      } else if (tipoFluxo === 'SALA') {
+        // Substituição normal por sala: identifica o professor original de cada horário
+        horariosSel.forEach(h => {
+          const entradaOriginal = gradeCompleta.find(
+            g => g.numeroSala === Number(targetId) && g.diaSemana === diaSel && g.horario === h
+          );
+          if (entradaOriginal) {
+            const subsHorario = calcularCenarioFalta(diaSel, [h], entradaOriginal.nomeProfessor, segmentoSel, gradeCompleta, professoresConfig);
+            res = [...res, ...subsHorario];
+          }
+        });
+      } else {
+        const profAlvo = tipoFluxo === 'PROFESSOR' ? targetId : 'Desconhecido';
+        res = calcularCenarioFalta(diaSel, horariosSel, profAlvo, segmentoSel, gradeCompleta, professoresConfig);
       }
-    } catch (e) {
-      console.error(e);
-      alert('Erro ao calcular cenário. Verifique se os dados estão preenchidos.');
-    } finally {
+      setResultados(res);
+      setStep(4);
       setCarregando(false);
-    }
-  }
+    }, 800);
+  };
 
-  async function efetivarRealocacao() {
+  const handleFinalizar = async (isDraft: boolean) => {
     setCarregando(true);
+    const status: StatusEvento = isDraft ? 'RASCUNHO' : 'EFETIVADO';
     try {
-      // Salva o evento no DB
-      const eventoId = await salvarEventoEscola(novoEvento);
+      const eventoId = await salvarEventoEscola({
+        tipo: isModoProva ? 'PROVA' : 'FALTA',
+        dia: diaSel,
+        horarios: horariosSel,
+        professor: tipoFluxo === 'PROFESSOR' ? targetId : profFixoProva,
+        status
+      });
+
       if (eventoId) {
-        // Vincula as sugestoes ao evento
-        const sugestoesComEvento = sugestoes.map(s => ({ ...s, eventoId }));
-        await salvarRealocacoes(sugestoesComEvento);
-        alert('Realocações efetivadas com sucesso!');
-        setModoAtivo('HISTORICO');
-        setSugestoes([]);
+        await salvarRealocacoes(resultados.map(r => ({ ...r, eventoId, status })));
+        alert(isDraft ? 'Rascunho salvo com sucesso!' : 'Realocações efetivadas com sucesso!');
+        setStep(1);
+        setResultados([]);
         carregarDados();
       }
     } catch (e) {
-      console.error(e);
-      alert('Erro ao efetivar.');
+      alert(isDraft ? 'Erro ao salvar rascunho.' : 'Erro ao efetivar.');
     } finally {
       setCarregando(false);
     }
-  }
+  };
+
+  const handleAprovar = async (eventoId: string) => {
+    setCarregando(true);
+    const ok = await aprovarRascunho(eventoId);
+    if (ok) {
+      alert('Substituição efetivada com sucesso!');
+      await carregarDados();
+    } else {
+      alert('Erro ao aprovar rascunho.');
+    }
+    setCarregando(false);
+  };
+
+  const handleExcluir = async (eventoId: string) => {
+    if (!confirm('Deseja realmente excluir este registro permanentemente?')) return;
+    setCarregando(true);
+    const ok = await excluirEvento(eventoId);
+    if (ok) {
+      alert('Registro removido com sucesso!');
+      await carregarDados();
+    } else {
+      alert('Erro ao excluir registro.');
+    }
+    setCarregando(false);
+  };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-20">
-      <header className="flex justify-between items-end bg-surface-container-lowest p-8 rounded-[3rem] editorial-shadow border border-outline-variant/10">
-        <div>
-          <div className="flex items-center gap-3 mb-2 text-primary">
-            <RefreshCw size={24} />
-            <h1 className="text-3xl font-black tracking-tighter">Motor de Realocação</h1>
-          </div>
-          <p className="text-on-surface-variant font-medium">Automatize substituições e trocas de professores</p>
-        </div>
+    <div className="max-w-5xl mx-auto space-y-8 pb-32">
+      <header className="bg-surface-container-lowest p-10 rounded-[3.5rem] editorial-shadow border border-primary/5">
+        <h1 className="text-5xl font-black tracking-tighter">Smart Sub</h1>
+        <p className="text-primary font-black uppercase text-[10px] tracking-widest mt-2">Inteligência em Realocação</p>
       </header>
 
-      {/* ABAS */}
-      <div className="flex gap-4 mb-6 overflow-x-auto no-scrollbar">
-        <button onClick={() => { setModoAtivo('HISTORICO'); setSugestoes([]); }} className={cn("px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all whitespace-nowrap", modoAtivo === 'HISTORICO' ? "bg-primary text-on-primary" : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high")}>Histórico Geral</button>
-        <button onClick={() => { setModoAtivo('NOVA_FALTA'); setSugestoes([]); setNovoEvento({ tipo: 'FALTA', dia: 'SEGUNDA', horarios: [] }); }} className={cn("px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2", modoAtivo === 'NOVA_FALTA' ? "bg-error text-on-error" : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high")}><UserMinus size={16}/> Registrar Falta</button>
-        <button onClick={() => { setModoAtivo('NOVA_PROVA'); setSugestoes([]); setNovoEvento({ tipo: 'PROVA', dia: 'SEGUNDA', horarios: [] }); }} className={cn("px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2", modoAtivo === 'NOVA_PROVA' ? "bg-secondary text-on-secondary" : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high")}><FileSignature size={16}/> Registrar Prova (Liberação)</button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* LADO ESQUERDO: CONTROLES / FORMULÁRIO */}
-        <div className="lg:col-span-1 space-y-6">
-          {modoAtivo !== 'HISTORICO' && (
-            <div className="bg-surface-container-lowest p-6 rounded-[2.5rem] editorial-shadow border border-outline-variant/10">
-              <h3 className="font-black text-lg mb-6 flex items-center gap-2">
-                {modoAtivo === 'NOVA_FALTA' ? <UserMinus size={20} className="text-error" /> : <FileSignature size={20} className="text-secondary" />}
-                {modoAtivo === 'NOVA_FALTA' ? 'Detalhes da Ausência' : 'Detalhes da Prova'}
-              </h3>
-
-              <div className="space-y-4">
-                {/* Dia da Semana */}
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-2 block">Dia da Semana</label>
-                  <select value={novoEvento.dia} onChange={e => setNovoEvento({...novoEvento, dia: e.target.value})} className="w-full bg-surface-container p-3 rounded-xl text-sm font-bold border-2 border-transparent focus:border-primary outline-none">
-                    {DIAS_SEMANA.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-
-                {modoAtivo === 'NOVA_PROVA' && (
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-2 block">Professor Ocupado na Prova</label>
-                    <select value={novoEvento.professor || ''} onChange={e => setNovoEvento({...novoEvento, professor: e.target.value})} className="w-full bg-surface-container p-3 rounded-xl text-sm font-bold border-2 border-transparent focus:border-primary outline-none">
-                      <option value="">Selecione...</option>
-                      {professores.map(p => <option key={p.nome} value={p.nome}>{p.nome}</option>)}
-                    </select>
-                  </div>
-                )}
-
-                {modoAtivo === 'NOVA_FALTA' && (
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-2 block">Turma Afetada pela Falta</label>
-                    <select value={novoEvento.turma || ''} onChange={e => setNovoEvento({...novoEvento, turma: e.target.value})} className="w-full bg-surface-container p-3 rounded-xl text-sm font-bold border-2 border-transparent focus:border-primary outline-none">
-                      <option value="">Selecione a Turma...</option>
-                      {/* Agrupamento simples de turmas existentes */}
-                      {Array.from(new Set(gradeSalas.map(g => g.turma))).sort().map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
-                )}
-
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-2 block">
-                    {modoAtivo === 'NOVA_FALTA' ? 'Horário da Falta' : 'Horários (Bloco de Prova)'}
-                  </label>
-                  {/* Simplificação: Um único input textual para horários separados por vírgula, ou select múltiplo */}
-                  <input type="text" placeholder="Ex: 13:00 - 13:45, 13:45 - 14:30" 
-                    value={novoEvento.horarios?.join(', ') || ''} 
-                    onChange={e => setNovoEvento({...novoEvento, horarios: e.target.value.split(',').map(s => s.trim())})} 
-                    className="w-full bg-surface-container p-3 rounded-xl text-sm font-bold border-2 border-transparent focus:border-primary outline-none" 
-                  />
-                  <p className="text-[10px] text-on-surface-variant mt-1">Separe horários por vírgula.</p>
-                </div>
-
-                <button 
-                  onClick={calcularSugestoes}
-                  disabled={carregando || (!novoEvento.professor && modoAtivo === 'NOVA_PROVA') || (!novoEvento.turma && modoAtivo === 'NOVA_FALTA')}
-                  className="w-full mt-4 py-4 bg-primary text-on-primary font-black rounded-2xl uppercase tracking-widest text-xs hover:bg-primary/90 disabled:opacity-50 transition-all flex justify-center gap-2"
-                >
-                  {carregando ? <RefreshCw className="animate-spin" size={16}/> : <CheckCircle2 size={16}/>}
-                  Calcular Solução Automática
+      <AnimatePresence mode="wait">
+        {step === 1 && (
+          <motion.div key="s1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-surface-container-lowest p-8 rounded-[3rem] editorial-shadow">
+            <h2 className="text-2xl font-black mb-6">1. Selecione o Dia</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+              {DIAS_SEMANA.map(d => (
+                <button key={d} onClick={() => setDiaSel(d)} className={cn("p-4 rounded-xl font-black text-sm border-2 transition-all shadow-sm", diaSel === d ? "bg-primary text-white border-primary shadow-primary/20" : "bg-surface-container-highest border-outline-variant/40 text-on-surface hover:border-primary")}>
+                  {d}
                 </button>
+              ))}
+            </div>
+            <button onClick={() => setStep(2)} className="w-full mt-8 py-5 bg-primary text-white rounded-2xl font-black uppercase text-xs">Próximo Passo</button>
+          </motion.div>
+        )}
+
+        {step === 2 && (
+          <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <button onClick={() => { setTipoFluxo('SALA'); setStep(3); }} className="p-10 bg-surface-container-low rounded-[3rem] hover:bg-primary hover:text-white transition-all group">
+              <DoorOpen size={48} className="mx-auto mb-4 group-hover:scale-110 transition-all" />
+              <h3 className="text-xl font-black uppercase">Por Sala</h3>
+            </button>
+            <button onClick={() => { setTipoFluxo('PROFESSOR'); setStep(3); }} className="p-10 bg-surface-container-low rounded-[3rem] hover:bg-error hover:text-white transition-all group">
+              <UserMinus size={48} className="mx-auto mb-4 group-hover:scale-110 transition-all" />
+              <h3 className="text-xl font-black uppercase">Professor Faltou</h3>
+            </button>
+          </motion.div>
+        )}
+
+        {step === 3 && (
+          <motion.div key="s3" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-surface-container-lowest p-10 rounded-[3.5rem] editorial-shadow">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              <div className="space-y-6">
+                <h2 className="text-3xl font-black">Configuração</h2>
+                <select value={targetId} onChange={e => setTargetId(e.target.value)} className="w-full bg-surface-container-low p-5 rounded-2xl font-black">
+                  <option value="">Selecione o Alvo...</option>
+                  {tipoFluxo === 'SALA' ? salas.map(s => <option key={s.numero} value={s.numero}>Sala {s.numero}</option>) : professores.map(p => <option key={p.nome} value={p.nome}>{p.nome}</option>)}
+                </select>
+
+                {tipoFluxo === 'SALA' && (
+                  <div className={cn("p-6 rounded-3xl border-2 transition-all", horariosSaoConsecutivos && horariosSel.length > 1 ? "bg-amber-500/10 border-amber-500" : "bg-surface-container-low border-transparent opacity-50")}>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" disabled={!horariosSaoConsecutivos || horariosSel.length <= 1} checked={isModoProva} onChange={e => setIsModoProva(e.target.checked)} className="w-5 h-5" />
+                      <span className="font-black text-amber-700">MODO PROVA</span>
+                    </label>
+                    {isModoProva && (
+                      <select value={profFixoProva} onChange={e => setProfFixoProva(e.target.value)} className="w-full mt-4 p-3 rounded-xl bg-white border-none">
+                        <option value="">Fiscal da Prova...</option>
+                        {professores.map(p => <option key={p.nome} value={p.nome}>{p.nome}</option>)}
+                      </select>
+                    )}
+                    {!horariosSaoConsecutivos && <p className="text-[10px] text-red-500 mt-2 font-bold flex items-center gap-1"><Info size={12} /> Selecione horários seguidos para ativar.</p>}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-black mb-4 uppercase tracking-widest text-on-surface-variant">Selecione as Aulas</h3>
+                <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto pr-2">
+                  {gradeCompleta.filter(g => g.diaSemana === diaSel && (tipoFluxo === 'SALA' ? g.numeroSala === Number(targetId) : g.nomeProfessor === targetId)).map(g => (
+                    <button key={g.id} onClick={() => setHorariosSel(prev => prev.includes(g.horario) ? prev.filter(h => h !== g.horario) : [...prev, g.horario])}
+                      className={cn("p-4 rounded-xl text-xs font-black text-left transition-all border-2", horariosSel.includes(g.horario) ? "bg-primary text-white border-primary shadow-md" : "bg-surface-container-highest border-outline-variant/30 text-on-surface")}>
+                      {g.horario} - {g.turma}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          )}
-          
-          {modoAtivo === 'HISTORICO' && (
-            <div className="bg-surface-container-lowest p-6 rounded-[2.5rem] editorial-shadow border border-outline-variant/10 text-center opacity-60">
-              <CalendarX size={48} className="mx-auto mb-4" />
-              <p className="font-black text-sm">Selecione uma opção acima para gerar novas alocações.</p>
+            <div className="flex gap-4 mt-12">
+              <button onClick={() => setStep(2)} className="px-8 py-5 font-black uppercase text-xs">Voltar</button>
+              <button onClick={handleCalcular} disabled={horariosSel.length === 0 || carregando} className="flex-1 py-5 bg-on-surface text-white rounded-2xl font-black uppercase text-xs">Calcular Realocação</button>
             </div>
-          )}
-        </div>
+          </motion.div>
+        )}
 
-        {/* LADO DIREITO: RESULTADOS / SUGESTÕES / HISTÓRICO */}
-        <div className="lg:col-span-2">
-          
-          {modoAtivo !== 'HISTORICO' ? (
-            <div className="bg-surface-container-lowest p-8 rounded-[3rem] editorial-shadow border border-outline-variant/10 min-h-[500px]">
-              <h2 className="text-2xl font-black mb-6 flex items-center gap-2">
-                Soluções Propostas pelo Motor
-              </h2>
-
-              {sugestoes.length === 0 && !carregando ? (
-                <div className="py-20 flex flex-col items-center justify-center opacity-50 text-center">
-                  <AlertCircle size={40} className="mb-4" />
-                  <p className="font-black">Preencha os dados e calcule as sugestões.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {sugestoes.map((s, idx) => (
-                    <div key={idx} className="p-5 rounded-3xl bg-surface-container-low border border-outline-variant/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div>
-                        <span className={cn(
-                          "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-2 inline-block",
-                          s.acao === 'Troca Completa' ? "bg-primary text-on-primary" : "bg-tertiary text-on-tertiary"
-                        )}>
-                          {s.acao}
-                        </span>
-                        <h4 className="font-black text-lg">{s.horario} • {s.turma}</h4>
-                        <div className="flex items-center gap-3 mt-1 text-sm font-bold text-on-surface-variant">
-                          <span className="line-through opacity-60">{s.professorOriginal || 'Faltante'}</span>
-                          <span className="text-primary">→</span >
-                          <span className="text-on-surface">{s.professorSubstituto}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {sugestoes.length > 0 && (
-                    <button 
-                      onClick={efetivarRealocacao}
-                      disabled={carregando}
-                      className="w-full mt-6 py-4 bg-on-surface text-surface-container-lowest font-black rounded-2xl uppercase tracking-widest hover:bg-on-surface/90 transition-all"
-                    >
-                      Efetivar Mudanças na Grade Oficial
-                    </button>
-                  )}
-                </div>
-              )}
+        {step === 4 && (
+          <motion.div key="s4" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-surface-container-lowest p-10 rounded-[3.5rem] editorial-shadow">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-3xl font-black text-on-surface">Sugestões de Substituição</h2>
+              <button onClick={() => window.print()} className="bg-primary text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest"><FileDown className="inline mr-2" size={16} /> Gerar PDF</button>
             </div>
-          ) : (
-            <div className="bg-surface-container-lowest p-8 rounded-[3rem] editorial-shadow border border-outline-variant/10">
-              <h2 className="text-2xl font-black mb-6">Histórico Recente</h2>
-              
-              {historico.length === 0 ? (
-                <div className="py-12 text-center opacity-50">Nenhum evento registrado.</div>
-              ) : (
-                <div className="space-y-3">
-                  {historico.map(h => (
-                    <div key={h.id} className="flex items-center justify-between p-4 rounded-2xl bg-surface-container-low/50">
-                      <div>
-                        <span className={cn(
-                          "px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest",
-                          h.tipo === 'FALTA' ? "bg-error/20 text-error" : "bg-secondary/20 text-secondary"
-                        )}>
-                          {h.tipo} • {h.acao}
-                        </span>
-                        <p className="font-bold text-sm mt-1">{h.turma} • {h.horario}</p>
-                      </div>
-                      <div className="text-right text-xs font-bold text-on-surface-variant">
-                        <p><span className="line-through">{h.professorOriginal}</span></p>
-                        <p className="text-primary">{h.professorSubstituto}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+            <div className="overflow-hidden rounded-3xl border border-outline-variant/10">
+              <table className="w-full text-left">
+                <thead className="bg-surface-container-low text-[10px] font-black uppercase tracking-widest text-on-surface">
+                  <tr>
+                    <th className="p-5">Horário</th>
+                    <th className="p-5">Turma</th>
+                    <th className="p-5">Original</th>
+                    <th className="p-5">Substituto (Troca Rápida)</th>
+                    <th className="p-5">Tipo</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant/25">
+                  {resultados.map((r, i) => {
+                    // Verificação de conflito: professor já possui aula na grade base neste horário
+                    const temConflitoNaGrade = gradeCompleta.some(g =>
+                      g.nomeProfessor === r.professorSubstituto &&
+                      g.diaSemana === diaSel &&
+                      g.horario === r.horario
+                    );
 
-        </div>
-      </div>
+                    const semProfessor = r.professorSubstituto === 'A DEFINIR';
+
+                    return (
+                      <tr key={i} className={cn("text-sm font-medium transition-colors", semProfessor ? "bg-red-50" : "hover:bg-surface-container-low/50 even:bg-surface-container-low/20")}>
+                        <td className="p-5 font-black">{r.horario}</td>
+                        <td className="p-5">{r.turma}</td>
+                        <td className="p-5 text-on-surface-variant line-through">{r.professorOriginal}</td>
+                        <td className="p-5">
+                          <div className="flex items-center gap-2">
+                            <div className="relative group/swap">
+                              <select
+                                value={r.professorSubstituto}
+                                onChange={(e) => mudarSubstituto(i, e.target.value)}
+                                className={cn("font-black px-3 py-2 rounded-xl outline-none appearance-none cursor-pointer pr-10 border transition-all shadow-md",
+                                  semProfessor ? "bg-red-100 text-red-700 border-red-300 animate-pulse" : "bg-primary/10 hover:bg-primary/20 text-primary border-primary/20 focus:border-primary")}
+                              >
+                                {semProfessor && <option value="A DEFINIR">SELECIONAR...</option>}
+                                {professores.map(p => (
+                                  <option key={p.id} value={p.nome} className="text-on-surface bg-surface-container-lowest">{p.nome}</option>
+                                ))}
+                              </select>
+                              <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary pointer-events-none opacity-60" />
+                            </div>
+                            {temConflitoNaGrade && (
+                              <div className="group relative">
+                                <AlertCircle size={14} className="text-red-500 animate-pulse cursor-help" />
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-red-600 text-white text-[10px] font-bold rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-xl">
+                                  Este professor já está em aula nesta sala!
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-5">
+                          <span className={cn(
+                            "px-3 py-1 rounded-full text-[8px] font-black uppercase bg-primary/10 text-primary",
+                            temConflitoNaGrade && "bg-red-500/10 text-red-600"
+                          )}>
+                            {r.acao}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex gap-4 mt-10">
+              <button
+                onClick={() => handleFinalizar(true)}
+                disabled={carregando}
+                className="flex-1 py-6 bg-surface-container-high text-on-surface rounded-3xl font-black uppercase text-xs tracking-[0.1em] border border-outline-variant/20 hover:bg-surface-container-highest transition-all flex justify-center items-center gap-2"
+              >
+                <FileText size={16} />
+                Salvar como Rascunho
+              </button>
+              <button
+                onClick={() => handleFinalizar(false)}
+                disabled={carregando}
+                className="flex-[2] py-6 bg-on-surface text-white rounded-3xl font-black uppercase text-xs tracking-[0.2em] shadow-2xl hover:bg-primary transition-all flex justify-center items-center gap-2"
+              >
+                {carregando ? (
+                  <RefreshCw className="animate-spin" size={16} />
+                ) : (
+                  <Check size={16} />
+                )}
+                Efetivar Grade Oficial
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -18,6 +18,8 @@ import {
   PeriodoEscolar,
   RegistroChamada,
   StatusPresenca,
+  ProfessorCMS,
+  LocalCMS,
 } from '../types';
 
 // --- Grades e Salas ---
@@ -44,6 +46,7 @@ export async function buscarMapaSalas(): Promise<EntradaGradeSala[]> {
     turma: item.turma,
     materia: item.materia,
     tipo: item.tipo || 'regular',
+    listaAlunos: item.lista_alunos || [],
   }));
 }
 
@@ -55,7 +58,7 @@ export async function buscarSalas(): Promise<Sala[]> {
 
   const rawSalas = salasResult.data || [];
   const grade = gradeResult || [];
-  
+
   // Mapear salas do banco
   const salas: Sala[] = rawSalas.map(s => ({
     id: s.id,
@@ -107,7 +110,7 @@ export async function buscarAlunos(): Promise<Aluno[]> {
     // Fallback temporário caso a migration não tenha sido rodada
     const fallback = await supabase.from('alunos').select('*');
     return (fallback.data || []).map(item => ({
-      id: item.nome, 
+      id: item.nome,
       nome: item.nome,
       turma: item.turma,
       ano: item.ano,
@@ -627,20 +630,21 @@ export async function salvarGradeSala(entradas: Omit<EntradaGradeSala, 'id'>[]):
     materia: e.materia,
     nome_professor: e.nomeProfessor,
     turma: e.turma,
-    tipo: e.tipo || 'regular'
+    tipo: e.tipo || 'regular',
+    lista_alunos: e.listaAlunos || []
   }));
 
   const { error } = await supabase
     .from('mapa_salas')
-    .upsert(payload, { 
-      onConflict: 'numero_sala,dia_semana,horario' 
+    .upsert(payload, {
+      onConflict: 'numero_sala,dia_semana,horario'
     });
 
   if (error) {
     console.error('Erro ao salvar grade:', error);
     return false;
   }
-  
+
   // LOGICA EXTRA: Criar professor automaticamente se não existir
   const professoresUnicos = Array.from(new Set(entradas.map(e => e.nomeProfessor).filter(n => n && n !== '—' && n !== 'A DEFINIR')));
   for (const nome of professoresUnicos) {
@@ -658,6 +662,7 @@ export async function buscarChamadas(filtros?: {
   sala?: string;
   materia?: string;
   idAluno?: string;
+  horario?: string;
 }): Promise<RegistroChamada[]> {
   let query = supabase.from('chamadas').select('*');
 
@@ -667,6 +672,7 @@ export async function buscarChamadas(filtros?: {
     if (filtros.sala) query = query.eq('sala', filtros.sala);
     if (filtros.materia) query = query.eq('materia', filtros.materia);
     if (filtros.idAluno) query = query.eq('id_aluno', filtros.idAluno);
+    if (filtros.horario) query = query.eq('horario', filtros.horario);
   }
 
   const { data, error } = await query.order('criado_em', { ascending: false });
@@ -704,23 +710,12 @@ export async function salvarChamadas(registros: RegistroChamada[]): Promise<bool
     status: r.status,
   }));
 
-  if (registros.length > 0) {
-    const { data: _d, horario, sala } = registros[0];
-    await supabase.from('chamadas')
-      .delete()
-      .eq('data', _d)
-      .eq('horario', horario)
-      .eq('sala', sala);
-  }
-
+  // Utilizamos upsert para garantir que se o professor enviar a chamada novamente,
+  // os registros existentes sejam atualizados em vez de duplicados.
+  // O 'onConflict' deve bater com a constraint UNIQUE que criamos no SQL.
   const { error } = await supabase
     .from('chamadas')
-    .insert(payload);
+    .upsert(payload, { onConflict: 'data,horario,sala,id_aluno' });
 
-  if (error) {
-    console.error('Erro ao salvar chamadas:', error);
-    return false;
-  }
-
-  return true;
+  return !error;
 }

@@ -40,7 +40,7 @@ export interface EstadoSalaAoVivo {
   materiaAtual?: string;
   turmaAtual?: string;
   horarioFim?: string;
-  tipoBlocoAtual?: 'regular' | 'laboratorio_idiomas' | 'after';
+  tipoBlocoAtual?: TipoBloco;
 }
 
 // --- Grade de Salas (base do sistema) ---
@@ -239,17 +239,19 @@ export interface ProfessorConfig {
 }
 
 export type TipoEventoEscola = 'PROVA' | 'FALTA';
+export type StatusEvento = 'RASCUNHO' | 'EFETIVADO';
 
 export interface EventoEscola {
   id: string;
   tipo: TipoEventoEscola;
+  status?: StatusEvento;
   professor?: string;
   turma?: string;
   dia: string;
   horarios: string[]; // ["13:00 - 13:45", "13:45 - 14:30"]
 }
 
-export type AcaoRealocacao = 'Troca Completa' | 'Substituição' | 'Parcial';
+export type AcaoRealocacao = 'Troca Completa' | 'Substituição' | 'MODO PROVA' | 'Parcial';
 
 export interface ResultadoRealocacao {
   id: string;
@@ -259,5 +261,8 @@ export interface ResultadoRealocacao {
   professorSubstituto: string;
   turma: string;
   horario: string;
+  segmento: string;
   acao: AcaoRealocacao;
+  status?: StatusEvento;
+  dia?: string;
 }

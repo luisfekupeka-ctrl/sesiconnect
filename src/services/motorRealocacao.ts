@@ -1,12 +1,16 @@
 import { supabase } from '../lib/supabase';
-import { 
-  ProfessorConfig, 
-  EventoEscola, 
-  ResultadoRealocacao, 
-  EntradaGradeSala 
+import {
+  ProfessorConfig,
+  EventoEscola,
+  ResultadoRealocacao,
+  EntradaGradeSala,
+  AreaConhecimento,
+  TipoEventoEscola,
+  AcaoRealocacao,
+  SegmentoEscolar,
+  StatusEvento
 } from '../types';
 
-// ==========================================
 // DETECÇÃO DE BLOCOS E PROFESSORES LIVRES
 // ==========================================
 
@@ -20,7 +24,7 @@ export function detectarBlocos(professor: string, dia: string, grade: EntradaGra
 
   for (let i = 0; i < aulasDoDia.length; i++) {
     const aula = aulasDoDia[i];
-    
+
     if (blocoAtual.length === 0) {
       blocoAtual.push(aula.horario);
     } else {
@@ -45,108 +49,82 @@ export function detectarBlocos(professor: string, dia: string, grade: EntradaGra
 }
 
 export function encontrarProfessoresLivres(
-  horario: string, 
-  dia: string, 
+  horario: string,
+  dia: string,
   grade: EntradaGradeSala[],
   professoresConfig: ProfessorConfig[]
 ): ProfessorConfig[] {
-  // Pegar todos os professores que TÊM aula nesse horário e dia
   const ocupados = new Set(
     grade
       .filter(a => a.diaSemana === dia && a.horario === horario)
       .map(a => a.nomeProfessor)
   );
 
-  // Filtrar os que não estão ocupados
   return professoresConfig.filter(p => !ocupados.has(p.nome));
 }
 
 // ==========================================
-// CENÁRIO 1: PROVA (Liberar Professor)
+// CENÁRIO 1: MODO PROVA (Professor Fixo na Sala)
 // ==========================================
 
-export function calcularCenarioProva(
-  evento: EventoEscola,
+export function calcularModoProva(
+  profFixo: string,
+  salaNumero: number,
+  horarios: string[],
+  dia: string,
+  segmento: string,
   grade: EntradaGradeSala[],
-  professoresConfig: ProfessorConfig[]
+  configs: ProfessorConfig[]
 ): ResultadoRealocacao[] {
-  if (!evento.professor) return [];
-
   const resultados: ResultadoRealocacao[] = [];
-  const horariosAlvo = [...evento.horarios].sort(); // Garantir ordem
-  const dia = evento.dia;
 
-  // PASSO 2/3: Buscar professores com um bloco EXATAMENTE igual
-  const candidatosTrocaCompleta: string[] = [];
+  horarios.forEach(h => {
+    resultados.push({
+      id: `prova-${Math.random()}`,
+      eventoId: 'modo-prova',
+      tipo: 'PROVA',
+      professorOriginal: 'Livre',
+      professorSubstituto: profFixo,
+      turma: `SALA ${salaNumero} (PROVA)`,
+      horario: h,
+      segmento: segmento,
+      acao: 'MODO PROVA',
+      status: 'EFETIVADO'
+    });
+  });
 
-  for (const p of professoresConfig) {
-    if (p.nome === evento.professor) continue;
+  const aulasParaRepor = grade.filter(g =>
+    g.nomeProfessor === profFixo &&
+    g.diaSemana === dia &&
+    horarios.includes(g.horario)
+  );
 
-    const blocosDoProfessor = detectarBlocos(p.nome, dia, grade);
-    
-    // Verifica se algum bloco bate exatamente com os horariosAlvo
-    const temBlocoIgual = blocosDoProfessor.some(bloco => 
-      bloco.length === horariosAlvo.length && 
-      bloco.every((horario, index) => horario === horariosAlvo[index])
-    );
+  aulasParaRepor.forEach(aula => {
+    const substitutosValidos = configs.filter(c => {
+      const ocupado = grade.some(g =>
+        g.nomeProfessor === c.nome &&
+        g.diaSemana === dia &&
+        g.horario === aula.horario
+      );
+      // Trava de Segmento: No futuro o config terá a lista de segmentos do prof
+      return !ocupado;
+    });
 
-    if (temBlocoIgual) {
-      candidatosTrocaCompleta.push(p.nome);
-    }
-  }
-
-  // PRIORIDADE 1: Se houver alguém para troca completa
-  if (candidatosTrocaCompleta.length > 0) {
-    const substituto = candidatosTrocaCompleta[0]; // Pega o primeiro por simplicidade
-
-    // Para cada horário, gera um resultado de "Troca Completa"
-    for (const horario of horariosAlvo) {
-      // Descobre de qual turma era a aula original do professor naquele horário
-      const aulaOriginal = grade.find(a => a.nomeProfessor === evento.professor && a.diaSemana === dia && a.horario === horario);
-      
-      if (aulaOriginal) {
-        resultados.push({
-          id: Math.random().toString(36).substr(2, 9),
-          eventoId: evento.id,
-          tipo: 'PROVA',
-          professorOriginal: evento.professor,
-          professorSubstituto: substituto,
-          turma: aulaOriginal.turma,
-          horario,
-          acao: 'Troca Completa'
-        });
-      }
-    }
-
-    return resultados;
-  }
-
-  // PRIORIDADE 2: Se não houver bloco completo, buscar livres por horário
-  for (const horario of horariosAlvo) {
-    const aulaOriginal = grade.find(a => a.nomeProfessor === evento.professor && a.diaSemana === dia && a.horario === horario);
-    
-    if (!aulaOriginal) continue;
-
-    const livres = encontrarProfessoresLivres(horario, dia, grade, professoresConfig);
-    
-    if (livres.length > 0) {
-      // Pega o primeiro livre (idealmente priorizando por área/carga, mas faremos simples)
-      const substituto = livres[0];
-
+    if (substitutosValidos.length > 0) {
       resultados.push({
-        id: Math.random().toString(36).substr(2, 9),
-        eventoId: evento.id,
-        tipo: 'PROVA',
-        professorOriginal: evento.professor,
-        professorSubstituto: substituto.nome,
-        turma: aulaOriginal.turma,
-        horario,
-        acao: 'Substituição' // Substituição por horário
+        id: `rep-${Math.random()}`,
+        eventoId: 'modo-prova',
+        tipo: 'FALTA',
+        professorOriginal: profFixo,
+        professorSubstituto: substitutosValidos[0].nome,
+        turma: aula.turma,
+        horario: aula.horario,
+        segmento: segmento,
+        acao: 'Substituição',
+        status: 'EFETIVADO'
       });
-    } else {
-      // Sem professor livre! Fica pendente.
     }
-  }
+  });
 
   return resultados;
 }
@@ -156,64 +134,40 @@ export function calcularCenarioProva(
 // ==========================================
 
 export function calcularCenarioFalta(
-  evento: EventoEscola,
+  dia: string,
+  horarios: string[],
+  professorAlvo: string,
+  segmento: string,
   grade: EntradaGradeSala[],
   professoresConfig: ProfessorConfig[]
 ): ResultadoRealocacao[] {
   const resultados: ResultadoRealocacao[] = [];
-  
-  if (!evento.turma || evento.horarios.length === 0) return resultados;
 
-  const dia = evento.dia;
-  const horario = evento.horarios[0]; // Assumindo uma falta por horário, ou processar iterativamente se for array
-  
-  // Pegar a aula que será afetada
-  const aulaAfetada = grade.find(a => 
-    a.turma === evento.turma && 
-    a.diaSemana === dia && 
-    a.horario === horario
-  );
+  horarios.forEach(horario => {
+    const aulaAfetada = grade.find(a =>
+      a.nomeProfessor === professorAlvo &&
+      a.diaSemana === dia &&
+      a.horario === horario
+    );
 
-  if (!aulaAfetada) return resultados;
+    if (!aulaAfetada) return;
 
-  const professorFaltante = aulaAfetada.nomeProfessor;
-  const configFaltante = professoresConfig.find(p => p.nome === professorFaltante);
+    let livres = encontrarProfessoresLivres(horario, dia, grade, professoresConfig);
+    const substituto = livres.length > 0 ? livres[0] : null;
 
-  // Professores livres neste horário
-  let livres = encontrarProfessoresLivres(horario, dia, grade, professoresConfig);
-
-  // Ordenar livres por prioridade:
-  // 1. Mesma disciplina
-  // 2. Mesma área
-  // 3. Qualquer outro
-  livres.sort((a, b) => {
-    // 1. Disciplina
-    if (configFaltante && a.disciplina === configFaltante.disciplina && b.disciplina !== configFaltante.disciplina) return -1;
-    if (configFaltante && a.disciplina !== configFaltante.disciplina && b.disciplina === configFaltante.disciplina) return 1;
-
-    // 2. Área
-    if (configFaltante && a.area === configFaltante.area && b.area !== configFaltante.area) return -1;
-    if (configFaltante && a.area !== configFaltante.area && b.area === configFaltante.area) return 1;
-
-    return 0;
-  });
-
-  // Também precisamos verificar a carga máxima (neste MVP simples não estamos somando as aulas totais deles, mas fica o placeholder da lógica)
-  // const livresRespeitandoCarga = livres.filter(p => countAulas(p, dia) < p.cargaMaximaDia);
-  const substituto = livres.length > 0 ? livres[0] : null;
-
-  if (substituto) {
     resultados.push({
-      id: Math.random().toString(36).substr(2, 9),
-      eventoId: evento.id,
+      id: `falta-${Math.random()}`,
+      eventoId: 'falta-id',
       tipo: 'FALTA',
-      professorOriginal: professorFaltante,
-      professorSubstituto: substituto.nome,
+      professorOriginal: professorAlvo,
+      professorSubstituto: substituto ? substituto.nome : 'A DEFINIR',
       turma: aulaAfetada.turma,
       horario,
-      acao: 'Substituição'
+      segmento: segmento,
+      acao: 'Substituição',
+      status: 'EFETIVADO'
     });
-  }
+  });
 
   return resultados;
 }
@@ -225,7 +179,7 @@ export function calcularCenarioFalta(
 export async function buscarProfessoresConfig(): Promise<ProfessorConfig[]> {
   const { data, error } = await supabase.from('professores_config').select('*');
   if (error || !data) return [];
-  
+
   return data.map(item => ({
     id: item.id,
     nome: item.nome,
@@ -254,7 +208,8 @@ export async function salvarEventoEscola(evento: Partial<EventoEscola>): Promise
     professor: evento.professor,
     turma: evento.turma,
     dia: evento.dia,
-    horarios: evento.horarios
+    horarios: evento.horarios,
+    status: evento.status || 'EFETIVADO'
   };
 
   const { data, error } = await supabase.from('eventos_escola').insert([payload]).select().single();
@@ -273,7 +228,8 @@ export async function salvarRealocacoes(realocacoes: ResultadoRealocacao[]): Pro
     professor_substituto: r.professorSubstituto,
     turma: r.turma,
     horario: r.horario,
-    acao: r.acao
+    acao: r.acao,
+    status: r.status || 'EFETIVADO'
   }));
 
   const { error } = await supabase.from('realocacoes').insert(payload);
@@ -281,7 +237,10 @@ export async function salvarRealocacoes(realocacoes: ResultadoRealocacao[]): Pro
 }
 
 export async function buscarRealocacoes(): Promise<ResultadoRealocacao[]> {
-  const { data, error } = await supabase.from('realocacoes').select('*').order('criado_em', { ascending: false });
+  const { data, error } = await supabase
+    .from('realocacoes')
+    .select('*, eventos_escola(dia)')
+    .order('criado_em', { ascending: false });
   if (error || !data) return [];
 
   return data.map(item => ({
@@ -292,6 +251,43 @@ export async function buscarRealocacoes(): Promise<ResultadoRealocacao[]> {
     professorSubstituto: item.professor_substituto,
     turma: item.turma,
     horario: item.horario,
-    acao: item.acao as AcaoRealocacao
+    segmento: item.segmento,
+    acao: item.acao as AcaoRealocacao,
+    status: item.status as StatusEvento,
+    dia: (item as any).eventos_escola?.dia
   }));
+}
+
+export async function aprovarRascunho(eventoId: string): Promise<boolean> {
+  // Atualiza o status do evento principal
+  const { error: err1 } = await supabase
+    .from('eventos_escola')
+    .update({ status: 'EFETIVADO' })
+    .eq('id', eventoId);
+  if (err1) return false;
+
+  // Atualiza todas as realocações vinculadas a este evento
+  const { error: err2 } = await supabase
+    .from('realocacoes')
+    .update({ status: 'EFETIVADO' })
+    .eq('evento_id', eventoId);
+  return !err2;
+}
+
+export async function excluirEvento(eventoId: string): Promise<boolean> {
+  // Primeiro deletamos as realocações vinculadas ao evento
+  const { error: errRealoc } = await supabase
+    .from('realocacoes')
+    .delete()
+    .eq('evento_id', eventoId);
+
+  if (errRealoc) return false;
+
+  // Depois removemos o registro do evento principal
+  const { error: errEvento } = await supabase
+    .from('eventos_escola')
+    .delete()
+    .eq('id', eventoId);
+
+  return !errEvento;
 }

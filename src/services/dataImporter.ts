@@ -4,7 +4,7 @@
 // Em produção, será conectado ao Supabase
 // ============================================================
 
-import { EntradaGradeSala, Aluno, AtividadeAfter, Monitor, NivelIdioma } from '../types';
+import { EntradaGradeSala, Aluno, AtividadeAfter, Monitor, LanguageLabRecord } from '../types';
 
 /**
  * Utilitário para transformar dados crus (importados de Excel/JSON)
@@ -15,8 +15,10 @@ export const ImportadorDados = {
     return raw.map((r, i) => ({
       id: `gs-${i + 1}`,
       numeroSala: Number(r.numero_sala || r.sala),
-      diaSemana: Number(r.dia_semana || r.dia),
-      indiceBlocoHorario: Number(r.indice_bloco || r.bloco),
+      nomeSala: `Sala ${r.numero_sala || r.sala}`,
+      anoTurma: String(r.turma),
+      diaSemana: String(r.dia_semana || r.dia),
+      horario: String(r.horario),
       nomeProfessor: String(r.nome_professor || r.professor),
       turma: String(r.turma),
       materia: String(r.materia),
@@ -60,19 +62,22 @@ export const ImportadorDados = {
       horarioInicio: String(r.horario_inicio),
       horarioFim: String(r.horario_fim),
       status: (r.status as 'ativo' | 'inativo') || 'ativo',
+      localPermanencia: '',
+      localAlmoco: '',
+      tipo: 'fixo',
     }));
   },
 
-  mapearLaboratorioIdiomas: (raw: any[]): NivelIdioma[] => {
+  mapearLaboratorioIdiomas: (raw: any[]): LanguageLabRecord[] => {
     return raw.map((r, i) => ({
       id: `li-${i + 1}`,
+      turma: String(r.turma),
       nivel: String(r.nivel),
-      nomeProfessor: String(r.nome_professor || r.professor),
-      numeroSala: Number(r.numero_sala || r.sala),
+      professor: String(r.nome_professor || r.professor),
+      sala: String(r.numero_sala || r.sala),
       horarioInicio: String(r.horario_inicio),
       horarioFim: String(r.horario_fim),
-      quantidadeAlunos: Number(r.quantidade_alunos || 0),
-      grupoAlunos: String(r.grupo_alunos || ''),
+      diaSemana: String(r.dia_semana || r.dia),
       listaAlunos: [],
     }));
   },

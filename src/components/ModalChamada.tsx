@@ -66,12 +66,12 @@ export default function ModalChamada({ aula, onClose }: ModalChamadaProps) {
   const handleSalvar = async () => {
     setSalvando(true);
     const dataHoje = new Date().toISOString().split('T')[0];
-    
+
     const registros = alunosDaTurma.map(aluno => ({
       data: dataHoje,
       horario: aula.horario,
       professor: aula.nomeProfessor,
-      sala: aula.numeroSala.toString(),
+      sala: aula.numeroSala > 0 ? aula.numeroSala.toString() : aula.nomeSala,
       materia: aula.materia,
       idAluno: aluno.id,
       nomeAluno: aluno.nome,
@@ -101,7 +101,7 @@ export default function ModalChamada({ aula, onClose }: ModalChamadaProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -118,7 +118,7 @@ export default function ModalChamada({ aula, onClose }: ModalChamadaProps) {
               {aula.horario}
             </p>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 bg-surface-container-highest hover:bg-hover rounded-full transition-colors"
           >

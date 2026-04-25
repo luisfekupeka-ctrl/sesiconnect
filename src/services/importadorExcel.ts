@@ -4,7 +4,7 @@
 // ============================================================
 
 import * as XLSX from 'xlsx';
-import { EntradaGradeSala, Aluno, AtividadeAfter, Monitor, NivelIdioma } from '../types';
+import { EntradaGradeSala, Aluno, AtividadeAfter, Monitor, LanguageLabRecord } from '../types';
 
 export type TipoImportacao = 'grades_salas' | 'alunos' | 'atividades_after' | 'monitores' | 'laboratorio_idiomas';
 
@@ -47,15 +47,15 @@ export async function importarGradesSalas(arquivo: File): Promise<ResultadoImpor
 
     raw.forEach((linha: any, i: number) => {
       const numeroSala = Number(linha['numero_sala'] || linha['sala'] || linha['Sala']);
-      const diaSemana = Number(linha['dia_semana'] || linha['dia'] || linha['Dia']);
-      const indiceBlocoHorario = Number(linha['indice_bloco'] || linha['bloco'] || linha['Bloco']);
+      const diaSemana = String(linha['dia_semana'] || linha['dia'] || linha['Dia']);
+      const horario = String(linha['horario'] || linha['Horário'] || linha['horario']);
       const nomeProfessor = String(linha['nome_professor'] || linha['professor'] || linha['Professor'] || '');
       const turma = String(linha['turma'] || linha['Turma'] || '');
       const materia = String(linha['materia'] || linha['Matéria'] || linha['Materia'] || '');
       const tipo = String(linha['tipo'] || linha['Tipo'] || 'regular') as 'regular' | 'laboratorio_idiomas' | 'after';
 
-      if (!numeroSala || !diaSemana || !indiceBlocoHorario) {
-        erros.push(`Linha ${i + 2}: faltando sala, dia ou bloco`);
+      if (!numeroSala || !diaSemana || !horario) {
+        erros.push(`Linha ${i + 2}: faltando sala, dia ou horário`);
         return;
       }
       if (!nomeProfessor) {
@@ -66,8 +66,10 @@ export async function importarGradesSalas(arquivo: File): Promise<ResultadoImpor
       dados.push({
         id: `gs-imp-${i + 1}`,
         numeroSala,
+        nomeSala: `Sala ${numeroSala}`,
+        anoTurma: turma,
         diaSemana,
-        indiceBlocoHorario,
+        horario,
         nomeProfessor,
         turma,
         materia,
@@ -163,6 +165,9 @@ export async function importarMonitores(arquivo: File): Promise<ResultadoImporta
         horarioInicio: String(linha['horario_inicio'] || linha['Início'] || linha['Inicio'] || ''),
         horarioFim: String(linha['horario_fim'] || linha['Fim'] || linha['Término'] || ''),
         status: 'ativo',
+        localPermanencia: '',
+        localAlmoco: '',
+        tipo: 'fixo',
       });
     });
 
@@ -172,11 +177,11 @@ export async function importarMonitores(arquivo: File): Promise<ResultadoImporta
   }
 }
 
-export async function importarLaboratorioIdiomas(arquivo: File): Promise<ResultadoImportacao<NivelIdioma>> {
+export async function importarLaboratorioIdiomas(arquivo: File): Promise<ResultadoImportacao<LanguageLabRecord>> {
   const erros: string[] = [];
   try {
     const raw = await lerExcel(arquivo);
-    const dados: NivelIdioma[] = [];
+    const dados: LanguageLabRecord[] = [];
 
     raw.forEach((linha: any, i: number) => {
       const nivel = String(linha['nivel'] || linha['Nível'] || linha['Nivel'] || '');
@@ -184,13 +189,13 @@ export async function importarLaboratorioIdiomas(arquivo: File): Promise<Resulta
 
       dados.push({
         id: `li-imp-${i + 1}`,
+        turma: String(linha['turma'] || linha['Turma'] || ''),
         nivel,
-        nomeProfessor: String(linha['nome_professor'] || linha['Professor'] || ''),
-        numeroSala: Number(linha['numero_sala'] || linha['Sala'] || 0),
+        professor: String(linha['nome_professor'] || linha['Professor'] || ''),
+        sala: String(linha['numero_sala'] || linha['Sala'] || ''),
         horarioInicio: String(linha['horario_inicio'] || linha['Início'] || linha['Inicio'] || ''),
         horarioFim: String(linha['horario_fim'] || linha['Fim'] || linha['Término'] || ''),
-        quantidadeAlunos: Number(linha['quantidade_alunos'] || linha['Alunos'] || 0),
-        grupoAlunos: String(linha['grupo_alunos'] || linha['Grupo'] || ''),
+        diaSemana: String(linha['dia_semana'] || linha['Dia'] || ''),
         listaAlunos: [],
       });
     });
@@ -260,6 +265,7 @@ export const ESTRUTURA_PLANILHAS: Record<TipoImportacao, { nome: string; descric
       { nome: 'numero_sala', obrigatoria: false, exemplo: '5' },
       { nome: 'horario_inicio', obrigatoria: false, exemplo: '14:00' },
       { nome: 'horario_fim', obrigatoria: false, exemplo: '15:30' },
+      { nome: 'dia_semana', obrigatoria: true, exemplo: 'SEGUNDA' },
     ],
   },
 };

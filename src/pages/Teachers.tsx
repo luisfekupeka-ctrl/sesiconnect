@@ -23,10 +23,10 @@ export default function TeachersPage() {
     return n.includes(b) || mat.includes(b);
   });
 
-  const obterAgendaDia = (nome: string, dia: number): EntradaGradeSala[] => {
+  const obterAgendaDia = (nome: string, dia: string): EntradaGradeSala[] => {
     return gradeCompleta
       .filter(e => e.nomeProfessor === nome && e.diaSemana === dia)
-      .sort((a, b) => a.indiceBlocoHorario - b.indiceBlocoHorario);
+      .sort((a, b) => a.horario.localeCompare(b.horario));
   };
 
   return (
@@ -168,8 +168,9 @@ export default function TeachersPage() {
               {/* Agenda */}
               <div className="p-8 space-y-2 max-h-[50vh] overflow-y-auto scrollbar-hide">
                 {blocos.map(bloco => {
+                  const range = `${bloco.inicio} - ${bloco.fim}`;
                   const entrada = obterAgendaDia(profSelecionado.nome, diaGrade)
-                    .find(e => e.indiceBlocoHorario === bloco.indice);
+                    .find(e => e.horario === range);
                   const ativo = estadoEscola.indiceBlocoAtual === bloco.indice && diaGrade === obterDiaSemana(horaAtual);
 
                   return (

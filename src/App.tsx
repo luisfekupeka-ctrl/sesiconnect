@@ -15,6 +15,7 @@ import LoginPage from './pages/Login';
 import ChamadaProfessor from './pages/ChamadaProfessor';
 import ControleFaltas from './pages/ControleFaltas';
 import GestaoRealocacao from './pages/GestaoRealocacao';
+import RelatorioDiario from './pages/RelatorioDiario';
 
 // Rotas abertas a pedido do usuário
 
@@ -38,8 +39,9 @@ export default function App() {
             <Route path="/monitores" element={<Monitores />} />
             <Route path="/forms" element={<FormsPage />} />
             <Route path="/controle-faltas" element={<ControleFaltas />} />
+            <Route path="/relatorio-diario" element={<RelatorioDiario />} />
             <Route path="/realocacao" element={<GestaoRealocacao />} />
-            
+
             {/* Áreas Administrativas (Abertas) */}
             <Route path="/admin" element={<Admin />} />
             <Route path="/schedule-editor" element={<ScheduleEditor />} />
