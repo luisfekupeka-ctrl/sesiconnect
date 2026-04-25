@@ -7,6 +7,7 @@ import {
   MapPin, FileSpreadsheet, ClipboardList, BarChart3, RefreshCw, FileText,
   AlignLeft, List, ChevronDownSquare, CircleDot, CheckSquare, GraduationCap
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 import {
@@ -24,9 +25,8 @@ import {
 // TIPOS & CONSTANTES
 // ============================================================
 type AbaAdmin =
-  | 'alunos' | 'professores' | 'monitores'
-  | 'locais' | 'grade-salas'
-  | 'escala-prof' | 'escala-mon'
+  | 'alunos' | 'professores' | 'gestao-monitores'
+  | 'locais' | 'grade-professores'
   | 'cronograma' | 'formularios' | 'language-lab' | 'after-school';
 
 const ANOS_ESCOLARES = ['6º Ano', '7º Ano', '8º Ano', '9º Ano', '1º Ano EM', '2º Ano EM', '3º Ano EM'];
@@ -69,6 +69,7 @@ function lerNomesExcel(arquivo: File): Promise<string[]> {
 // COMPONENTE PRINCIPAL
 // ============================================================
 export default function Admin() {
+  const navigate = useNavigate();
   const { 
     salas, alunos, gradeCompleta, monitores, periodos, 
     professoresCMS, locaisCMS, modelosFormulario, ocorrencias, 
@@ -187,12 +188,10 @@ export default function Admin() {
   // ============================================================
   const abas: { id: AbaAdmin; rotulo: string; icone: any; badge?: number }[] = [
     { id: 'alunos', rotulo: 'Alunos', icone: Users, badge: (alunos || []).length },
-    { id: 'professores', rotulo: 'Professores', icone: UserPlus, badge: (professoresCMS || []).length },
-    { id: 'monitores', rotulo: 'Monitores', icone: BookOpen, badge: (monitores || []).length },
+    { id: 'professores', rotulo: 'Professores Base', icone: UserPlus, badge: (professoresCMS || []).length },
+    { id: 'grade-professores', rotulo: 'Grade e Escala', icone: Calendar },
+    { id: 'gestao-monitores', rotulo: 'Gestão Monitores', icone: ClipboardList, badge: (monitores || []).length },
     { id: 'locais', rotulo: 'Locais / Salas', icone: MapPin, badge: (locaisCMS || []).length },
-    { id: 'grade-salas', rotulo: 'Grade das Salas', icone: DoorOpen },
-    { id: 'escala-prof', rotulo: 'Escala Professores', icone: Calendar },
-    { id: 'escala-mon', rotulo: 'Escala Monitores', icone: ClipboardList },
     { id: 'language-lab', rotulo: 'Language Lab', icone: BookOpen, badge: (languageLab || []).length },
     { id: 'after-school', rotulo: 'After School', icone: Clock, badge: (atividadesAfter || []).length },
     { id: 'cronograma', rotulo: 'Horários Base', icone: Clock, badge: (periodos || []).length },
@@ -395,37 +394,26 @@ export default function Admin() {
           </motion.div>
         )}
 
-        {/* ===================== GRADE DAS SALAS ===================== */}
-        {abaAtiva === 'grade-salas' && (
-          <motion.div key="grade" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <Painel titulo="Grade das Salas" subtitulo="Configure o ensalamento — aulas normais, after, inglês. Cada tipo de grade é criado por você." 
-              acao={<a href="/schedule-editor" className="btn-emerald"><Calendar size={14} /> Abrir Editor de Grade ⚡</a>}>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <CardResumo icone={DoorOpen} titulo="Salas Ativas" valor={salas.length} cor="primary" />
-                <CardResumo icone={ClipboardList} titulo="Entradas na Grade" valor={gradeCompleta.length} cor="emerald" />
-                <CardResumo icone={UserPlus} titulo="Professores na Grade" valor={listaProfessores.length} cor="indigo" />
+        {/* ===================== GRADE E ESCALA (SALAS + PROFS) ===================== */}
+        {abaAtiva === 'grade-professores' && (
+          <motion.div key="grade-prof" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
+            
+            {/* Bloco 1: Acesso ao Editor */}
+            <div className="bg-emerald-500/10 border-2 border-emerald-500/20 p-8 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6">
+              <div>
+                <h2 className="text-2xl font-black text-emerald-600">Grade de Aulas</h2>
+                <p className="text-sm font-medium text-emerald-700/80 mt-1 max-w-xl">
+                  A escala dos professores é montada automaticamente quando você preenche a grade das salas. Clique abaixo para abrir o painel de edição visual (por Dia da Semana).
+                </p>
               </div>
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-                {salas.map(s => {
-                  const total = gradeCompleta.filter(g => g.numeroSala === s.numero).length;
-                  return (
-                    <div key={s.numero} className={cn("p-3 rounded-xl text-center transition-all border",
-                      total > 0 ? "bg-emerald-500/5 border-emerald-500/20" : "bg-surface-container-low border-transparent")}>
-                      <p className="text-lg font-black text-on-surface">{s.numero}</p>
-                      <p className="text-[8px] font-bold text-on-surface-variant">{total} aulas</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </Painel>
-          </motion.div>
-        )}
+              <button onClick={() => navigate('/schedule-editor')} className="bg-emerald-500 text-white px-8 py-4 rounded-2xl font-black text-sm whitespace-nowrap hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-xl shadow-emerald-500/20">
+                <Calendar size={18} /> Montar Grade das Salas
+              </button>
+            </div>
 
-        {/* ===================== ESCALA PROFESSORES ===================== */}
-        {abaAtiva === 'escala-prof' && (
-          <motion.div key="escala-prof" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <Painel titulo="Escala de Professores" subtitulo="Veja e gerencie os horários de cada professor. Os dados vêm da Grade das Salas.">
-              {listaProfessores.length === 0 ? <VazioMsg texto="Nenhum professor na grade ainda. Primeiro crie a grade das salas." /> : (
+            {/* Bloco 2: Visualização da Escala Pronta */}
+            <Painel titulo="Escala de Professores Gerada" subtitulo="Abaixo estão as aulas que o sistema já agrupou para cada professor.">
+              {listaProfessores.length === 0 ? <VazioMsg texto="Nenhum professor na grade ainda. Comece montando a grade no botão acima." /> : (
                 <div className="space-y-6">
                   {listaProfessores.filter(n => !busca || n.toLowerCase().includes(busca.toLowerCase())).map(nome => {
                     const aulas = gradeCompleta.filter(g => g.nomeProfessor === nome);
@@ -467,77 +455,90 @@ export default function Admin() {
           </motion.div>
         )}
 
-        {/* ===================== MONITORES (PESSOAS) ===================== */}
-        {abaAtiva === 'monitores' && (
-          <motion.div key="monitores" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-            <Painel titulo="Gestão de Monitores" subtitulo="Cadastre as pessoas que realizam o apoio pedagógico."
-              acao={<button onClick={() => setEditandoMonitor({ id: 'novo', nome: '', materia: '', diaSemana: 'SEGUNDA', turno: 'manha', horarioInicio: '08:00', horarioFim: '12:00', tipo: 'fixo', status: 'ativo', localPermanencia: '', localAlmoco: '' })} className="btn-primary"><Plus size={14} /> Novo Monitor</button>}>
-              
-              <div className="relative mb-6">
-                <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
-                <input type="text" placeholder="Buscar por nome ou matéria..." value={busca} onChange={e => setBusca(e.target.value)} className="campo-input pl-10" />
-              </div>
+        {/* ===================== GESTÃO DE MONITORES ===================== */}
+        {abaAtiva === 'gestao-monitores' && (
+          <motion.div key="gestao-monitores" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-12">
+            
+            {/* Passo 1: Cadastro */}
+            <div>
+              <Painel titulo="Passo 1: Quem são os Monitores?" subtitulo="Primeiro, certifique-se de que o monitor existe no banco (Nome, Tipo e Horário Base)."
+                acao={<button onClick={() => setEditandoMonitor({ id: 'novo', nome: '', materia: '', diaSemana: 'SEGUNDA', turno: 'manha', horarioInicio: '08:00', horarioFim: '12:00', tipo: 'fixo', status: 'ativo', localPermanencia: '', localAlmoco: '' })} className="btn-primary"><Plus size={14} /> Cadastrar Monitor</button>}>
+                
+                <div className="relative mb-6">
+                  <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
+                  <input type="text" placeholder="Buscar monitor..." value={busca} onChange={e => setBusca(e.target.value)} className="campo-input pl-10" />
+                </div>
 
-              {Array.isArray(monitores) && monitores.length === 0 ? (
-                <VazioMsg texto="Nenhum monitor cadastrado ainda." />
-              ) : (
+                {Array.isArray(monitores) && monitores.length === 0 ? (
+                  <VazioMsg texto="Nenhum monitor cadastrado ainda." />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {(Array.isArray(monitores) ? monitores : []).filter(m => {
+                      const b = busca.toLowerCase();
+                      return !busca || (m.nome?.toLowerCase() || '').includes(b);
+                    }).map(m => (
+                      <div key={m.id} className="bg-surface-container-low p-5 rounded-2xl group transition-all hover:bg-surface-container-high border border-transparent hover:border-primary/10">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black", m.tipo === 'volante' ? "bg-amber-500/10 text-amber-600" : "bg-primary/10 text-primary")}>
+                              {m.nome.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="text-sm font-black truncate max-w-[150px]">{m.nome}</p>
+                              <p className="text-[10px] text-on-surface-variant font-black uppercase tracking-widest leading-none mb-1">{m.tipo}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100">
+                            <button onClick={() => setEditandoMonitor(m)} className="p-1.5 bg-surface-container-high rounded-lg shadow-sm hover:text-primary"><Eye size={12} /></button>
+                            <button onClick={() => { if (confirm('Excluir?')) doDelete(excluirMonitor(m.id)); }} className="p-1.5 bg-surface-container-high rounded-lg shadow-sm hover:text-red-500"><Trash2 size={12} /></button>
+                          </div>
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-outline-variant/10">
+                          <span className="text-[10px] font-bold text-on-surface-variant">Trabalha das {m.horarioInicio} às {m.horarioFim}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Painel>
+            </div>
+
+            {/* Passo 2: Escala (Fixa) */}
+            <div>
+              <Painel titulo="Passo 2: Onde eles vão ficar? (Plantões Fixos)" subtitulo="Com o monitor cadastrado, adicione a escala. A escala é fixa: uma vez montada, vale para sempre até que você a exclua."
+                acao={<button onClick={() => setEditandoGradeMonitor({ id: 'novo', monitorNome: '', diaSemana: 'FIXO', horarioInicio: '08:00', horarioFim: '09:30', posto: '', corEtiqueta: '#3B82F6' })} className="btn-primary"><Plus size={14} /> Alocar em um Posto</button>}>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {(Array.isArray(monitores) ? monitores : []).filter(m => {
-                    const b = busca.toLowerCase();
-                    return !busca || (m.nome?.toLowerCase() || '').includes(b) || (m.materia?.toLowerCase() || '').includes(b);
-                  }).map(m => (
-                    <div key={m.id} className="bg-surface-container-low p-5 rounded-2xl group transition-all hover:bg-surface-container-high border border-transparent hover:border-primary/10">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black", m.tipo === 'volante' ? "bg-amber-500/10 text-amber-600" : "bg-primary/10 text-primary")}>
-                            {m.nome.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="text-sm font-black truncate max-w-[150px]">{m.nome}</p>
-                            <p className="text-[10px] text-on-surface-variant font-black uppercase tracking-widest leading-none mb-1">{m.tipo}</p>
-                            <p className="text-[9px] text-primary font-bold uppercase tracking-tight">{m.localPermanencia || 'Sem posto fixo'}</p>
-                          </div>
+                  {gradeMonitores.length === 0 ? <VazioMsg texto="Nenhuma escala detalhada cadastrada. Adicione postos no botão acima." /> : 
+                  gradeMonitores.map(gm => (
+                    <div key={gm.id} className="bg-surface-container-low p-4 rounded-2xl border-l-4 group" style={{ borderLeftColor: gm.corEtiqueta || '#3B82F6' }}>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-sm font-black">{gm.monitorNome}</p>
+                          <p className="text-[10px] font-bold text-primary uppercase tracking-widest">{gm.posto}</p>
                         </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100">
-                          <button onClick={() => setEditandoMonitor(m)} className="p-1.5 bg-surface-container-high rounded-lg shadow-sm hover:text-primary"><Eye size={12} /></button>
-                          <button onClick={() => { if (confirm('Excluir?')) doDelete(excluirMonitor(m.id)); }} className="p-1.5 bg-surface-container-high rounded-lg shadow-sm hover:text-red-500"><Trash2 size={12} /></button>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                          <button onClick={() => setEditandoGradeMonitor(gm)} className="p-1.5 bg-surface-container-high rounded-lg hover:text-primary"><Eye size={12} /></button>
+                          <button onClick={() => { if (confirm('Excluir este plantão?')) doDelete(excluirGradeMonitor(gm.id)); }} className="p-1.5 bg-surface-container-high rounded-lg hover:text-red-500"><Trash2 size={12} /></button>
                         </div>
                       </div>
-                      
-                      <div className="mt-4 grid grid-cols-2 gap-2">
-                        <div className="bg-surface-container-highest p-2 rounded-xl border border-outline-variant/5">
-                          <p className="text-[7px] font-black text-on-surface-variant uppercase mb-0.5">Permanência</p>
-                          <p className="text-[9px] font-bold truncate">{m.localPermanencia || '—'}</p>
-                        </div>
-                        <div className="bg-surface-container-highest p-2 rounded-xl border border-outline-variant/5">
-                          <p className="text-[7px] font-black text-on-surface-variant uppercase mb-0.5">Almoço</p>
-                          <p className="text-[9px] font-bold truncate">{m.localAlmoco || '—'}</p>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t border-outline-variant/10 flex items-center justify-between">
-                        <div className="flex flex-col">
-                          <span className="text-[9px] font-black text-on-surface-variant uppercase">{m.diaSemana || '—'}</span>
-                          <span className="text-[10px] font-bold text-primary">{m.horarioInicio} - {m.horarioFim}</span>
-                        </div>
-                        <span className={cn("px-2 py-0.5 rounded-full text-[8px] font-black uppercase", m.status === 'ativo' ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-500")}>
-                          {m.status}
-                        </span>
+                      <div className="mt-3 flex items-center justify-between text-[10px] font-bold text-on-surface-variant">
+                        <span>{gm.diaSemana}</span>
+                        <span>{gm.horarioInicio} - {gm.horarioFim}</span>
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </Painel>
+              </Painel>
+            </div>
 
             <ModalForm aberto={!!editandoMonitor} onClose={() => setEditandoMonitor(null)}
               titulo={editandoMonitor?.id === 'novo' ? 'Cadastrar Monitor' : 'Editar Monitor'}
               onSalvar={() => {
-                // Forçar valores padronizados que não estão no formulário
                 const payload = {
                   ...editandoMonitor,
                   status: 'ativo',
-                  turno: 'manha', // Ou calcular pelo horário
+                  turno: 'manha',
                   diaSemana: 'SEGUNDA',
                   localPermanencia: '',
                   localAlmoco: ''
@@ -550,7 +551,7 @@ export default function Admin() {
                   <CampoSelect label="Tipo" value={editandoMonitor.tipo || 'fixo'} options={['fixo', 'volante']} onChange={v => setEditandoMonitor({ ...editandoMonitor, tipo: v as any })} />
                   
                   <div className="p-4 bg-surface-container-high rounded-2xl border border-outline-variant/10">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-3 block">Horário de Trabalho (Padrão da Semana)</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-3 block">Horário de Trabalho (Padrão)</label>
                     <div className="grid grid-cols-2 gap-4">
                       <CampoTexto label="Entrada" value={editandoMonitor.horarioInicio} onChange={v => setEditandoMonitor({ ...editandoMonitor, horarioInicio: v })} tipo="time" />
                       <CampoTexto label="Saída" value={editandoMonitor.horarioFim} onChange={v => setEditandoMonitor({ ...editandoMonitor, horarioFim: v })} tipo="time" />
@@ -558,7 +559,7 @@ export default function Admin() {
                   </div>
 
                   <div className="p-4 bg-surface-container-high rounded-2xl border border-outline-variant/10">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-3 block">Horário de Almoço (Padrão da Semana)</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-3 block">Horário de Almoço (Padrão)</label>
                     <div className="grid grid-cols-2 gap-4">
                       <CampoTexto label="Início Almoço" value={editandoMonitor.almocoInicio || ''} onChange={v => setEditandoMonitor({ ...editandoMonitor, almocoInicio: v })} tipo="time" />
                       <CampoTexto label="Fim Almoço" value={editandoMonitor.almocoFim || ''} onChange={v => setEditandoMonitor({ ...editandoMonitor, almocoFim: v })} tipo="time" />
@@ -570,35 +571,6 @@ export default function Admin() {
           </motion.div>
         )}
 
-        {/* ===================== ESCALA MONITORES (DETALHADA) ===================== */}
-        {abaAtiva === 'escala-mon' && (
-          <motion.div key="escala-mon" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-            <Painel titulo="Escala de Monitores (Plantão)" subtitulo="Configure os postos específicos de cada monitor por dia e horário."
-              acao={<button onClick={() => setEditandoGradeMonitor({ id: 'novo', monitorNome: '', diaSemana: 'SEGUNDA', horarioInicio: '08:00', horarioFim: '09:30', posto: '', corEtiqueta: '#3B82F6' })} className="btn-primary"><Plus size={14} /> Novo Plantão</button>}>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {gradeMonitores.length === 0 ? <VazioMsg texto="Nenhuma escala detalhada cadastrada." /> : 
-                gradeMonitores.map(gm => (
-                  <div key={gm.id} className="bg-surface-container-low p-4 rounded-2xl border-l-4 group" style={{ borderLeftColor: gm.corEtiqueta || '#3B82F6' }}>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-sm font-black">{gm.monitorNome}</p>
-                        <p className="text-[10px] font-bold text-primary uppercase tracking-widest">{gm.posto}</p>
-                      </div>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                        <button onClick={() => setEditandoGradeMonitor(gm)} className="p-1.5 bg-surface-container-high rounded-lg hover:text-primary"><Eye size={12} /></button>
-                        <button onClick={() => { if (confirm('Excluir este plantão?')) doDelete(excluirGradeMonitor(gm.id)); }} className="p-1.5 bg-surface-container-high rounded-lg hover:text-red-500"><Trash2 size={12} /></button>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between text-[10px] font-bold text-on-surface-variant">
-                      <span>{gm.diaSemana}</span>
-                      <span>{gm.horarioInicio} - {gm.horarioFim}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Painel>
-
             <ModalForm aberto={!!editandoGradeMonitor} onClose={() => setEditandoGradeMonitor(null)}
               titulo={editandoGradeMonitor?.id === 'novo' ? 'Novo Plantão' : 'Editar Plantão'}
               onSalvar={() => doSave(salvarGradeMonitor(editandoGradeMonitor), setEditandoGradeMonitor)} carregando={carregando}>
@@ -606,7 +578,6 @@ export default function Admin() {
                 <div className="space-y-4">
                   <CampoSelect label="Monitor" value={editandoGradeMonitor.monitorNome} options={monitores.map(m => m.nome)} onChange={v => setEditandoGradeMonitor({ ...editandoGradeMonitor, monitorNome: v })} />
                   <CampoTexto label="Posto / Local" value={editandoGradeMonitor.posto} onChange={v => setEditandoGradeMonitor({ ...editandoGradeMonitor, posto: v })} />
-                  <CampoSelect label="Dia da Semana" value={editandoGradeMonitor.diaSemana} options={DIAS_SEMANA} onChange={v => setEditandoGradeMonitor({ ...editandoGradeMonitor, diaSemana: v })} />
                   <div className="grid grid-cols-2 gap-4">
                     <CampoTexto label="Início" value={editandoGradeMonitor.horarioInicio} onChange={v => setEditandoGradeMonitor({ ...editandoGradeMonitor, horarioInicio: v })} tipo="time" />
                     <CampoTexto label="Fim" value={editandoGradeMonitor.horarioFim} onChange={v => setEditandoGradeMonitor({ ...editandoGradeMonitor, horarioFim: v })} tipo="time" />
@@ -986,10 +957,10 @@ export default function Admin() {
         {editandoLocal && (
           <div className="space-y-4">
             <CampoTexto label="Nome do Local" value={editandoLocal.nome} onChange={v => setEditandoLocal({ ...editandoLocal, nome: v })} />
-            <CampoTexto label="Número (se houver)" value={editandoLocal.numero} onChange={v => setEditandoLocal({ ...editandoLocal, numero: v ? parseInt(v) : undefined })} tipo="number" />
-            <CampoSelect label="Segmento" value={editandoLocal.segmento || ''} options={['6º e 7º', '8º e 9º', 'Ensino Médio', 'Especializado']} onChange={v => setEditandoLocal({ ...editandoLocal, segmento: v })} />
-            <CampoSelect label="Tipo" value={editandoLocal.tipo} options={['sala', 'arena', 'quadra', 'patio', 'especializado']} onChange={v => setEditandoLocal({ ...editandoLocal, tipo: v })} />
-            <CampoTexto label="Capacidade" value={editandoLocal.capacidade} onChange={v => setEditandoLocal({ ...editandoLocal, capacidade: v ? parseInt(v) : undefined })} tipo="number" />
+            <CampoTexto label="Número (se houver)" value={editandoLocal.numero?.toString() || ''} onChange={v => setEditandoLocal({ ...editandoLocal, numero: v ? parseInt(v) : undefined })} tipo="number" />
+            <CampoSelect label="Ano Escolar / Turma" value={editandoLocal.segmento || ''} options={ANOS_ESCOLARES} onChange={v => setEditandoLocal({ ...editandoLocal, segmento: v })} />
+            <CampoTexto label="Tipo (sala, quadra, etc)" value={editandoLocal.tipo} onChange={v => setEditandoLocal({ ...editandoLocal, tipo: v })} />
+            <CampoTexto label="Capacidade" value={editandoLocal.capacidade?.toString() || ''} onChange={v => setEditandoLocal({ ...editandoLocal, capacidade: v ? parseInt(v) : undefined })} tipo="number" />
           </div>
         )}
       </ModalForm>
@@ -1030,8 +1001,48 @@ export default function Admin() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <CampoTexto label="Turma" value={editandoGrade.turma} onChange={v => setEditandoGrade({...editandoGrade, turma: v})} />
-              <CampoTexto label="Número da Sala" value={editandoGrade.numeroSala} tipo="number" onChange={v => setEditandoGrade({...editandoGrade, numeroSala: parseInt(v)})} />
+              <CampoTexto label="Número da Sala" value={editandoGrade.numeroSala?.toString()} tipo="number" onChange={v => setEditandoGrade({...editandoGrade, numeroSala: parseInt(v)})} />
             </div>
+          </div>
+        )}
+      </ModalForm>
+
+      <ModalForm aberto={!!editandoAfter} onClose={() => setEditandoAfter(null)}
+        titulo={editandoAfter?.id === 'novo' ? 'Nova Atividade After School' : 'Editar Atividade After School'}
+        onSalvar={() => doSave(salvarAtividadeAfter(editandoAfter), setEditandoAfter)} carregando={carregando}>
+        {editandoAfter && (
+          <div className="space-y-4">
+            <CampoTexto label="Nome da Atividade" value={editandoAfter.nome} onChange={v => setEditandoAfter({...editandoAfter, nome: v})} />
+            <CampoSelect label="Categoria" value={editandoAfter.categoria} options={['Esporte', 'Oficina', 'Reforço', 'Outro']} onChange={v => setEditandoAfter({...editandoAfter, categoria: v})} />
+            <div className="grid grid-cols-2 gap-4">
+              <CampoTexto label="Professor" value={editandoAfter.nomeProfessor} onChange={v => setEditandoAfter({...editandoAfter, nomeProfessor: v})} />
+              <CampoTexto label="Local" value={editandoAfter.local} onChange={v => setEditandoAfter({...editandoAfter, local: v})} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <CampoTexto label="Horário de Início" value={editandoAfter.horarioInicio} tipo="time" onChange={v => setEditandoAfter({...editandoAfter, horarioInicio: v})} />
+              <CampoTexto label="Horário de Término" value={editandoAfter.horarioFim} tipo="time" onChange={v => setEditandoAfter({...editandoAfter, horarioFim: v})} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <CampoTexto label="Alunos Matriculados" value={editandoAfter.quantidadeAlunos?.toString() || '0'} tipo="number" onChange={v => setEditandoAfter({...editandoAfter, quantidadeAlunos: parseInt(v)})} />
+              <CampoTexto label="Vagas Totais" value={editandoAfter.vagas?.toString() || '20'} tipo="number" onChange={v => setEditandoAfter({...editandoAfter, vagas: parseInt(v)})} />
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1 block">Dias da Semana</label>
+              <div className="flex flex-wrap gap-2">
+                {DIAS_SEMANA.map(dia => (
+                  <label key={dia} className="flex items-center gap-2 bg-surface-container p-2 rounded-lg text-xs font-bold cursor-pointer">
+                    <input type="checkbox" checked={editandoAfter.dias?.includes(dia)} onChange={e => {
+                      const dias = e.target.checked 
+                        ? [...(editandoAfter.dias || []), dia] 
+                        : (editandoAfter.dias || []).filter((d: string) => d !== dia);
+                      setEditandoAfter({...editandoAfter, dias});
+                    }} className="rounded text-primary" />
+                    {dia}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <CampoTexto label="Descrição / Detalhes" value={editandoAfter.descricao || ''} onChange={v => setEditandoAfter({...editandoAfter, descricao: v})} />
           </div>
         )}
       </ModalForm>

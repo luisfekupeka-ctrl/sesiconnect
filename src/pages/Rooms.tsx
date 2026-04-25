@@ -20,7 +20,7 @@ const DIAS_SEMANA_NOMES: Record<string, string> = {
 const LISTA_DIAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
 export default function RoomsPage() {
-  const { salas, estadoEscola, gradeCompleta, languageLab, atividadesAfter, horaAtual, carregando } = useEscola();
+  const { salas, estadoEscola, gradeCompleta, languageLab, atividadesAfter, horaAtual, carregando, alunos } = useEscola();
   const [filtroStatus, setFiltroStatus] = useState<'todas' | 'livres' | 'ocupadas'>('todas');
   const [filtroSegmento, setFiltroSegmento] = useState<string>('todos');
   const [salaGradeModal, setSalaGradeModal] = useState<Sala | null>(null);
@@ -367,6 +367,7 @@ export default function RoomsPage() {
                       const entradasDia = gradeCompleta.filter(e => e.numeroSala === salaGradeModal.numero && e.diaSemana === diaGrade);
                       const entrada = entradasDia.find(e => e.horario === range);
                       const isAgora = estadoEscola.indiceBlocoAtual === bloco.indice && diaGrade === obterDiaSemana(horaAtual);
+                      const alunosDaTurma = entrada?.turma ? alunos.filter(a => a.turma === entrada.turma || a.ano === entrada.turma) : [];
 
                       return (
                         <div key={bloco.indice} className={cn(
@@ -388,9 +389,20 @@ export default function RoomsPage() {
                             </p>
                           </div>
                           {entrada?.turma && (
-                            <p className={cn("mt-2 text-[9px] font-black uppercase tracking-widest", isAgora ? "text-on-surface-bright/60" : "text-primary")}>
-                              {entrada.turma}
-                            </p>
+                            <div className="mt-3 pt-3 border-t border-outline-variant/10">
+                              <p className={cn("text-[9px] font-black uppercase tracking-widest", isAgora ? "text-on-surface-bright/90" : "text-primary")}>
+                                Ensalamento: {entrada.turma}
+                              </p>
+                              {alunosDaTurma.length > 0 ? (
+                                <p className={cn("mt-1 text-[8px] font-medium leading-relaxed line-clamp-3", isAgora ? "text-on-surface-bright/70" : "text-on-surface-variant")}>
+                                  {alunosDaTurma.length} alunos: {alunosDaTurma.map(a => a.nome.split(' ')[0]).join(', ')}
+                                </p>
+                              ) : (
+                                <p className={cn("mt-1 text-[8px] italic", isAgora ? "text-on-surface-bright/50" : "text-outline")}>
+                                  Nenhum aluno cadastrado nesta turma
+                                </p>
+                              )}
+                            </div>
                           )}
                         </div>
                       );
