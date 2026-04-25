@@ -981,6 +981,14 @@ export default function Admin() {
               <CampoTexto label="Início" value={editandoLanguageLab.horarioInicio} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, horarioInicio: v })} tipo="time" />
               <CampoTexto label="Fim" value={editandoLanguageLab.horarioFim} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, horarioFim: v })} tipo="time" />
             </div>
+            
+            <div className="mt-6 pt-4 border-t border-outline-variant/20">
+              <SeletorAlunos 
+                alunos={alunosBase} 
+                selecionados={editandoLanguageLab.listaAlunos || []} 
+                onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, listaAlunos: v })}
+              />
+            </div>
           </div>
         )}
       </ModalForm>
@@ -1041,6 +1049,14 @@ export default function Admin() {
               </div>
             </div>
             <CampoTexto label="Descrição / Detalhes" value={editandoAfter.descricao || ''} onChange={v => setEditandoAfter({...editandoAfter, descricao: v})} />
+            
+            <div className="mt-6 pt-4 border-t border-outline-variant/20">
+              <SeletorAlunos 
+                alunos={alunosBase} 
+                selecionados={editandoAfter.listaAlunos || []} 
+                onChange={v => setEditandoAfter({ ...editandoAfter, listaAlunos: v })}
+              />
+            </div>
           </div>
         )}
       </ModalForm>
@@ -1132,6 +1148,62 @@ function CampoSelect({ label, value, options, onChange }: { label: string; value
       <select value={value || ''} onChange={e => onChange(e.target.value)} className="campo-input">
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
+    </div>
+  );
+}
+
+function SeletorAlunos({ alunos, selecionados, onChange }: { alunos: any[]; selecionados: string[]; onChange: (selecionados: string[]) => void }) {
+  const [busca, setBusca] = useState('');
+  
+  const alunosFiltrados = alunos.filter(a => 
+    !busca || 
+    a.nome.toLowerCase().includes(busca.toLowerCase()) || 
+    (a.turma && a.turma.toLowerCase().includes(busca.toLowerCase()))
+  );
+
+  const toggleAluno = (id: string) => {
+    if (selecionados.includes(id)) {
+      onChange(selecionados.filter(s => s !== id));
+    } else {
+      onChange([...selecionados, id]);
+    }
+  };
+
+  return (
+    <div className="border border-outline-variant/20 rounded-xl overflow-hidden bg-surface-container-lowest">
+      <div className="p-3 border-b border-outline-variant/20 bg-surface-container-low">
+        <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2 block flex justify-between">
+          <span>Selecionar Alunos Matriculados</span>
+          <span className="text-primary">{selecionados.length} selecionados</span>
+        </label>
+        <input 
+          type="text" 
+          placeholder="Buscar aluno por nome ou turma..." 
+          value={busca} 
+          onChange={e => setBusca(e.target.value)}
+          className="w-full text-xs p-2 rounded bg-surface-container focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </div>
+      <div className="max-h-48 overflow-y-auto p-2 space-y-1">
+        {alunosFiltrados.length === 0 ? (
+          <p className="text-xs text-center p-4 text-on-surface-variant">Nenhum aluno encontrado.</p>
+        ) : (
+          alunosFiltrados.map(a => (
+            <label key={a.id} className="flex items-center gap-3 p-2 hover:bg-surface-container rounded-lg cursor-pointer transition-colors">
+              <input 
+                type="checkbox" 
+                checked={selecionados.includes(a.id)} 
+                onChange={() => toggleAluno(a.id)}
+                className="rounded text-primary focus:ring-primary h-4 w-4"
+              />
+              <div className="flex flex-col">
+                <span className="text-xs font-bold">{a.nome}</span>
+                <span className="text-[9px] font-black text-on-surface-variant tracking-widest uppercase">{a.turma}</span>
+              </div>
+            </label>
+          ))
+        )}
+      </div>
     </div>
   );
 }

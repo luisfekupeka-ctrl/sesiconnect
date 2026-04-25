@@ -375,16 +375,38 @@ export default function RoomsPage() {
                       let listaAlunos: string = '';
                       let tipoBloco = 'regular';
 
-                      if (after) {
-                        entradaFinal = { materia: after.nome, nomeProfessor: after.nomeProfessor };
-                        labelEnsalamento = `After School • ${after.categoria}`;
-                        listaAlunos = `${after.quantidadeAlunos} alunos (${after.grupoAlunos || 'Misto'})`;
-                        tipoBloco = 'after';
-                      } else if (lab) {
-                        entradaFinal = { materia: `Language Lab - ${lab.nivel}`, nomeProfessor: lab.professor };
-                        labelEnsalamento = `Turma: ${lab.turma}`;
-                        listaAlunos = `Alunos do nível ${lab.nivel}`;
-                        tipoBloco = 'language';
+                      // Determina o tipo a partir da grade, se existir
+                      if (entradaRegular) {
+                        tipoBloco = entradaRegular.tipo === 'after' ? 'after' : entradaRegular.tipo === 'laboratorio_idiomas' ? 'language' : 'regular';
+                      } else {
+                        if (after) tipoBloco = 'after';
+                        else if (lab) tipoBloco = 'language';
+                      }
+
+                      if (tipoBloco === 'after' && (after || entradaRegular)) {
+                        const prof = entradaRegular ? entradaRegular.nomeProfessor : after?.nomeProfessor;
+                        const mat = entradaRegular ? entradaRegular.materia : after?.nome;
+                        entradaFinal = { materia: mat, nomeProfessor: prof };
+                        labelEnsalamento = after ? `After School • ${after.categoria}` : 'After School';
+                        
+                        if (after && after.listaAlunos && after.listaAlunos.length > 0) {
+                          const alunosDoAfter = alunos.filter(a => after.listaAlunos.includes(a.id));
+                          listaAlunos = `${alunosDoAfter.length} alunos inscritos: ${alunosDoAfter.map(a => a.nome.split(' ')[0]).join(', ')}`;
+                        } else {
+                          listaAlunos = 'Nenhum aluno nominalmente matriculado nesta atividade.';
+                        }
+                      } else if (tipoBloco === 'language' && (lab || entradaRegular)) {
+                        const prof = entradaRegular ? entradaRegular.nomeProfessor : lab?.professor;
+                        const mat = entradaRegular ? entradaRegular.materia : `Language Lab - ${lab?.nivel}`;
+                        entradaFinal = { materia: mat, nomeProfessor: prof };
+                        labelEnsalamento = lab ? `Language Lab • Nível ${lab.nivel}` : 'Language Lab';
+                        
+                        if (lab && lab.listaAlunos && lab.listaAlunos.length > 0) {
+                          const alunosDoLab = alunos.filter(a => lab.listaAlunos.includes(a.id));
+                          listaAlunos = `${alunosDoLab.length} alunos matriculados: ${alunosDoLab.map(a => a.nome.split(' ')[0]).join(', ')}`;
+                        } else {
+                          listaAlunos = 'Nenhum aluno nominalmente matriculado neste nível.';
+                        }
                       } else if (entradaRegular) {
                         entradaFinal = entradaRegular;
                         if (entradaRegular.turma && entradaRegular.turma !== 'A DEFINIR') {

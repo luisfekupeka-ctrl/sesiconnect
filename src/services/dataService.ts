@@ -178,7 +178,7 @@ export async function buscarAtividadesAfter(): Promise<AtividadeAfter[]> {
     quantidadeAlunos: item.quantidade_alunos,
     grupoAlunos: item.grupo_alunos,
     vagas: item.vagas,
-    listaAlunos: [] // Simplificação
+    listaAlunos: item.lista_alunos || []
   }));
 }
 
@@ -195,7 +195,8 @@ export async function salvarAtividadeAfter(atividade: Partial<AtividadeAfter>): 
     descricao: atividade.descricao,
     quantidade_alunos: atividade.quantidadeAlunos,
     grupo_alunos: atividade.grupoAlunos,
-    vagas: atividade.vagas
+    vagas: atividade.vagas,
+    lista_alunos: atividade.listaAlunos || []
   };
 
   const { error } = await supabase
@@ -318,6 +319,7 @@ export async function buscarLanguageLab(): Promise<LanguageLabRecord[]> {
     horarioInicio: item.horario_inicio,
     horarioFim: item.horario_fim,
     diaSemana: item.dia_semana,
+    listaAlunos: item.lista_alunos || [],
   }));
 }
 
@@ -331,6 +333,7 @@ export async function salvarLanguageLab(record: Partial<LanguageLabRecord>): Pro
     horario_inicio: record.horarioInicio,
     horario_fim: record.horarioFim,
     dia_semana: record.diaSemana,
+    lista_alunos: record.listaAlunos || []
   };
 
   const { error } = await supabase

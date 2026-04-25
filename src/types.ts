@@ -107,6 +107,7 @@ export interface LanguageLabRecord {
   horarioInicio: string;
   horarioFim: string;
   diaSemana: string;
+  listaAlunos: string[];
 }
 
 // --- Atividades After School ---

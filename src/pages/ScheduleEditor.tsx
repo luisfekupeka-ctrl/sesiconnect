@@ -36,7 +36,7 @@ interface LinhaGrade {
   horarioInicio: string;
   horarioFim: string;
   nome: string;  // "1ª Aula", "Intervalo", etc
-  tipo: 'aula' | 'intervalo' | 'almoco' | 'after';
+  tipo: 'aula' | 'intervalo' | 'almoco' | 'after' | 'laboratorio_idiomas';
   materia: string;
   professor: string;
 }
@@ -149,6 +149,8 @@ export default function ScheduleEditor() {
           novasLinhas[idx].professor = e.nomeProfessor;
           if (e.materia === 'INTERVALO') novasLinhas[idx].tipo = 'intervalo';
           else if (e.materia === 'ALMOÇO') novasLinhas[idx].tipo = 'almoco';
+          else if (e.tipo === 'laboratorio_idiomas') novasLinhas[idx].tipo = 'laboratorio_idiomas';
+          else if (e.tipo === 'after') novasLinhas[idx].tipo = 'after';
           else novasLinhas[idx].tipo = 'aula';
         }
       });
@@ -167,7 +169,7 @@ export default function ScheduleEditor() {
   const toggleIntervalo = (id: string) => {
     setLinhas(prev => prev.map(l => {
       if (l.id !== id) return l;
-      if (l.tipo === 'aula' || l.tipo === 'after') {
+      if (l.tipo === 'aula' || l.tipo === 'after' || l.tipo === 'laboratorio_idiomas') {
         return { ...l, tipo: 'intervalo', materia: 'INTERVALO', professor: '—' };
       } else {
         return { ...l, tipo: 'aula', materia: '', professor: '' };
@@ -219,7 +221,7 @@ export default function ScheduleEditor() {
       nomeProfessor: l.professor || '—',
       turma: turmaEditavel,
       materia: l.materia || 'A DEFINIR',
-      tipo: 'regular'
+      tipo: l.tipo === 'laboratorio_idiomas' ? 'laboratorio_idiomas' : l.tipo === 'after' ? 'after' : 'regular'
     }));
     const ok = await salvarGradeSala(entradas);
     setMensagem(ok ? { tipo: 'sucesso', texto: 'Grade salva!' } : { tipo: 'erro', texto: 'Erro ao salvar.' });
@@ -235,7 +237,7 @@ export default function ScheduleEditor() {
       const dest = salas.find(s => s.numero === num);
       if (!dest) return;
       linhas.forEach(l => {
-        entradas.push({ anoTurma: turmaEditavel, numeroSala: dest.numero, nomeSala: dest.nome, diaSemana: diaSelecionado, horario: `${l.horarioInicio} - ${l.horarioFim}`, nomeProfessor: l.professor || '—', turma: turmaEditavel, materia: l.materia || 'A DEFINIR', tipo: 'regular' });
+        entradas.push({ anoTurma: turmaEditavel, numeroSala: dest.numero, nomeSala: dest.nome, diaSemana: diaSelecionado, horario: `${l.horarioInicio} - ${l.horarioFim}`, nomeProfessor: l.professor || '—', turma: turmaEditavel, materia: l.materia || 'A DEFINIR', tipo: l.tipo === 'laboratorio_idiomas' ? 'laboratorio_idiomas' : l.tipo === 'after' ? 'after' : 'regular' });
       });
     });
     const ok = await salvarGradeSala(entradas);
@@ -248,9 +250,9 @@ export default function ScheduleEditor() {
     if (!salaSelecionada) return;
     setSalvando(true); setModalCopiaAberto(false);
     const entradas: Omit<EntradaGradeSala, 'id'>[] = [];
-    dias.forEach(dia => {
+    dias.forEach(d => {
       linhas.forEach(l => {
-        entradas.push({ anoTurma: turmaEditavel, numeroSala: salaSelecionada.numero, nomeSala: salaSelecionada.nome, diaSemana: dia, horario: `${l.horarioInicio} - ${l.horarioFim}`, nomeProfessor: l.professor || '—', turma: turmaEditavel, materia: l.materia || 'A DEFINIR', tipo: 'regular' });
+        entradas.push({ anoTurma: turmaEditavel, numeroSala: salaSelecionada.numero, nomeSala: salaSelecionada.nome, diaSemana: d, horario: `${l.horarioInicio} - ${l.horarioFim}`, nomeProfessor: l.professor || '—', turma: turmaEditavel, materia: l.materia || 'A DEFINIR', tipo: l.tipo === 'laboratorio_idiomas' ? 'laboratorio_idiomas' : l.tipo === 'after' ? 'after' : 'regular' });
       });
     });
     const ok = await salvarGradeSala(entradas);
@@ -413,7 +415,7 @@ export default function ScheduleEditor() {
                       ehIntervalo ? "bg-amber-500/5 border border-amber-500/15" : "hover:bg-primary/3 border border-transparent hover:border-outline-variant/10")}
                     style={!ehIntervalo && profCor !== 'transparent' ? { borderLeftWidth: '4px', borderLeftColor: profCor } : {}}>
 
-                    <div className="grid grid-cols-[auto_1fr] md:grid-cols-[40px_70px_6px_70px_auto_1fr_1fr_auto] items-center gap-2 p-3">
+                    <div className="grid grid-cols-[auto_1fr] xl:grid-cols-[40px_70px_6px_70px_auto_100px_1fr_1fr_auto] items-center gap-2 p-3">
                       {/* Número */}
                       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0",
                         ehIntervalo ? "bg-amber-500/10 text-amber-600" : "bg-surface-container-high text-on-surface-variant")}>
@@ -441,7 +443,7 @@ export default function ScheduleEditor() {
 
                       {ehIntervalo ? (
                         /* Intervalo — nome editável */
-                        <div className="col-span-1 md:col-span-2">
+                        <div className="col-span-1 xl:col-span-3">
                           <input type="text" value={linha.materia}
                             onChange={e => atualizarLinha(linha.id, 'materia', e.target.value)}
                             className="w-full bg-amber-500/10 rounded-lg py-2 px-3 text-xs font-black text-amber-700 uppercase tracking-widest text-center outline-none border border-transparent focus:border-amber-500/30"
@@ -449,6 +451,16 @@ export default function ScheduleEditor() {
                         </div>
                       ) : (
                         <>
+                          {/* TIPO DE AULA */}
+                          <select 
+                            value={linha.tipo} 
+                            onChange={e => atualizarLinha(linha.id, 'tipo', e.target.value)}
+                            className="bg-surface-container-low border border-transparent focus:border-primary rounded-lg py-2 px-2 text-[10px] font-black uppercase outline-none transition-all cursor-pointer text-on-surface-variant"
+                          >
+                            <option value="aula">Regular</option>
+                            <option value="laboratorio_idiomas">Language</option>
+                            <option value="after">After</option>
+                          </select>
                           {/* Matéria — dropdown */}
                           <div className="relative" onClick={e => e.stopPropagation()}>
                             <BookOpen size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/30 z-10 pointer-events-none" />
