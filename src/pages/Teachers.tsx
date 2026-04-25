@@ -1,44 +1,38 @@
-import { useState } from 'react';
-import { motion } from 'motion/react';
+import { useState from 'motion/react';
 import { Search, MapPin, Clock, Users, Calendar } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 import { obterBlocosDeHorario, obterDiaSemana } from '../services/motorEscolar';
 import { Professor, EntradaGradeSala } from '../types';
+const OPCOES_DIAS = [
 
-const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  { label: 'Ter', valor: 'TERÇA' },
+  { label: 'Qua', valor: 'QUARTA' },
+  { label: 'Qui', valor: 'QUINTA' },
+  { label: 'Sex', valor: 'SEXTA' },
+];
 
 export default function TeachersPage() {
-  const { professores, horaAtual, estadoEscola, gradeCompleta } = useEscola();
+  const { professores, horaAtual, estadoEscola, gradeCompleta, periodos } = useEscola();
   const [busca, setBusca] = useState('');
-  const [profSelecionado, setProfSelecionado] = useState<Professor | null>(null);
-  const [diaGrade, setDiaGrade] = useState(obterDiaSemana(horaAtual));
+  const [profSelecionado, setProfSelecionado] = useState<Prof= ahal));
 
-  const blocos = obterBlocosDeHorario();
+  const blocos = useMemo(() => obterBlocosDeHorario(periodos), [periodos]);
 
-  const profsFiltrados = (professores || []).filter(p => {
-    const n = p.nome?.toLowerCase() || '';
-    const mat = p.materia?.toLowerCase() || '';
-    const b = busca.toLowerCase();
-    return n.includes(b) || mat.includes(b);
-  });
-
-  const obterAgendaDia = (nome: string, dia: string): EntradaGradeSala[] => {
-    return gradeCompleta
-      .filter(e => e.nomeProfessor === nome && e.diaSemana === dia)
-      .sort((a, b) => a.horario.localeCompare(b.horario));
-  };
+ '';
+      const mat = p.materia?.toLowerCase() || '';
+      const b = busca.toLowerCase();
+      return n.incluealrio.localeCompare(b.horario));
+  }, [gradeCompleta]);
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="space-y-10"
+
     >
       <header>
         <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-on-surface mb-3">Professores</h1>
-        <p className="text-on-surface-variant text-lg font-medium leading-relaxed max-w-2xl">
-          Dados derivados automaticamente das salas. Veja onde cada professor está agora, suas próximas aulas e a agenda completa.
+        <p className="text-on-surface-variant text-lg fon       Dados derivados automaticamente das salas. Veja onde cada professor está agora, suas próximas aulas e a agenda completa.
         </p>
       </header>
 
@@ -151,32 +145,27 @@ export default function TeachersPage() {
 
               {/* Seletor de dia */}
               <div className="px-8 pt-6 flex gap-2">
-                {[1, 2, 3, 4, 5].map(dia => (
+                {OPCOES_DIAS.map(dia => (
                   <button
-                    key={dia}
-                    onClick={() => setDiaGrade(dia)}
+                    key={dia.valor}
+                    onClick={() => setDiaGrade(dia.valor)}
                     className={cn(
                       "flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                      diaGrade === dia ? "bg-primary text-on-surface-bright" : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
+                      diaGrade === dia.valor ? "bg-primary text-on-surface-bright shadow-md" : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
                     )}
                   >
-                    {DIAS_SEMANA[dia]}
+                    {dia.label}
                   </button>
                 ))}
-              </div>
-
+              </d
               {/* Agenda */}
-              <div className="p-8 space-y-2 max-h-[50vh] overflow-y-auto scrollbar-hide">
-                {blocos.map(bloco => {
-                  const range = `${bloco.inicio} - ${bloco.fim}`;
+              <div classNamee = `${bloco.inicio} - ${bloco.fim}`;
                   const entrada = obterAgendaDia(profSelecionado.nome, diaGrade)
                     .find(e => e.horario === range);
-                  const ativo = estadoEscola.indiceBlocoAtual === bloco.indice && diaGrade === obterDiaSemana(horaAtual);
-
+                  const ativo = estadoEscola.indiceBlocoAtual === bloco.indice && diaGrade === obterDiaSemana(hor
                   return (
                     <div key={bloco.indice} className={cn(
-                      "flex items-center gap-4 p-4 rounded-xl transition-all",
-                      ativo ? "bg-primary text-on-surface-bright shadow-lg" : "bg-surface-container-low/50 hover:bg-surface-container-low"
+                   ary text-on-surface-bright shadow-lg" : "bg-surface-container-low/50 hover:bg-surface-container-low"
                     )}>
                       <div className={cn(
                         "w-16 py-1.5 rounded-lg text-center shrink-0",

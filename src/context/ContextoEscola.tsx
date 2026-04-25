@@ -2,7 +2,7 @@
 // SESI Connect — Contexto Global da Escola
 // Provedor de dados em tempo real (Supabase)
 // ============================================================
-
+import { useMemo } from 'react';
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import {
   EstadoEscola,
@@ -299,7 +299,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
     };
   }
 
-  const professores: Professor[] = (() => {
+  const professores: Professor[] = useMemo(() => {
     const nomes = extrairProfessores(gradeCompleta);
     const diaSemana = obterDiaSemana(horaAtual);
 
@@ -339,7 +339,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
         agendaDoDia: agenda,
       };
     });
-  })();
+  }, [gradeCompleta, horaAtual, periodos]);
 
   const adicionarOcorrencia = useCallback((ocorrencia: RegistroOcorrencia) => {
     setOcorrencias(prev => [ocorrencia, ...prev]);
