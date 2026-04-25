@@ -137,6 +137,8 @@ export interface Monitor {
   turno: 'manha' | 'tarde' | 'noite';
   horarioInicio: string;
   horarioFim: string;
+  almocoInicio?: string;
+  almocoFim?: string;
   localPermanencia: string;
   localAlmoco: string;
   tipo: 'volante' | 'fixo' | 'hibrido';
@@ -204,3 +206,57 @@ export interface RegistroOcorrencia {
 // --- Reexport de tipos legados para compatibilidade ---
 
 export type { EntradaGradeSala as ScheduleEntry };
+
+// --- Chamada Escolar ---
+
+export type StatusPresenca = 'presente' | 'falta' | 'atraso' | 'justificado';
+
+export interface RegistroChamada {
+  id?: string;
+  data: string; // YYYY-MM-DD
+  horario: string;
+  professor: string;
+  sala: string;
+  materia: string;
+  idAluno: string;
+  nomeAluno: string;
+  turmaAluno: string;
+  status: StatusPresenca;
+  criadoEm?: string;
+}
+
+// --- Gestão de Realocação Automática ---
+
+export type AreaConhecimento = 'Humanas' | 'Exatas' | 'Linguagens' | 'Biológicas' | 'Outras';
+
+export interface ProfessorConfig {
+  id: string;
+  nome: string;
+  disciplina: string;
+  cargaMaximaDia: number;
+  area: AreaConhecimento;
+}
+
+export type TipoEventoEscola = 'PROVA' | 'FALTA';
+
+export interface EventoEscola {
+  id: string;
+  tipo: TipoEventoEscola;
+  professor?: string;
+  turma?: string;
+  dia: string;
+  horarios: string[]; // ["13:00 - 13:45", "13:45 - 14:30"]
+}
+
+export type AcaoRealocacao = 'Troca Completa' | 'Substituição' | 'Parcial';
+
+export interface ResultadoRealocacao {
+  id: string;
+  eventoId: string;
+  tipo: TipoEventoEscola;
+  professorOriginal?: string;
+  professorSubstituto: string;
+  turma: string;
+  horario: string;
+  acao: AcaoRealocacao;
+}

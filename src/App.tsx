@@ -12,6 +12,9 @@ import Admin from './pages/Admin';
 import ScheduleEditor from './pages/ScheduleEditor';
 import MonitorPortal from './pages/MonitorPortal';
 import LoginPage from './pages/Login';
+import ChamadaProfessor from './pages/ChamadaProfessor';
+import ControleFaltas from './pages/ControleFaltas';
+import GestaoRealocacao from './pages/GestaoRealocacao';
 
 // Rotas abertas a pedido do usuário
 
@@ -23,6 +26,7 @@ export default function App() {
           {/* Rotas Públicas */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/meu-horario" element={<MonitorPortal />} />
+          <Route path="/professor-chamada" element={<ChamadaProfessor />} />
 
           {/* Rotas com Layout (Dashboard e Admin) */}
           <Route element={<Layout />}>
@@ -33,6 +37,8 @@ export default function App() {
             <Route path="/after" element={<AfterSchool />} />
             <Route path="/monitores" element={<Monitores />} />
             <Route path="/forms" element={<FormsPage />} />
+            <Route path="/controle-faltas" element={<ControleFaltas />} />
+            <Route path="/realocacao" element={<GestaoRealocacao />} />
             
             {/* Áreas Administrativas (Abertas) */}
             <Route path="/admin" element={<Admin />} />

@@ -352,15 +352,15 @@ export default function Monitores() {
                           </div>
                         </div>
 
-                        {/* Detalhes do posto */}
+                        {/* Detalhes do posto e almoço */}
                         <div className="grid grid-cols-2 gap-3 mb-6">
                           <div className="bg-surface-container-low/50 p-3 rounded-2xl border border-outline-variant/10">
-                            <p className="text-[7px] font-black text-on-surface-variant uppercase mb-1">Posto de Trabalho</p>
-                            <p className="text-[10px] font-black text-on-surface leading-tight truncate">{monitor.localPermanencia || 'Sem posto'}</p>
+                            <p className="text-[7px] font-black text-on-surface-variant uppercase mb-1">Horário de Trabalho</p>
+                            <p className="text-[10px] font-black text-on-surface leading-tight truncate">{monitor.horarioInicio} - {monitor.horarioFim}</p>
                           </div>
                           <div className="bg-surface-container-low/50 p-3 rounded-2xl border border-outline-variant/10">
-                            <p className="text-[7px] font-black text-on-surface-variant uppercase mb-1">Local de Almoço</p>
-                            <p className="text-[10px] font-black text-on-surface leading-tight truncate">{monitor.localAlmoco || '—'}</p>
+                            <p className="text-[7px] font-black text-on-surface-variant uppercase mb-1">Horário de Almoço</p>
+                            <p className="text-[10px] font-black text-on-surface leading-tight truncate">{monitor.almocoInicio && monitor.almocoFim ? `${monitor.almocoInicio} - ${monitor.almocoFim}` : 'Sem almoço'}</p>
                           </div>
                         </div>
 

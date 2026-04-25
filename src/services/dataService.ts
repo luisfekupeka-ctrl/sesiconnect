@@ -16,6 +16,8 @@ import {
   RegistroOcorrencia,
   PeriodoConfig,
   PeriodoEscolar,
+  RegistroChamada,
+  StatusPresenca,
 } from '../types';
 
 // --- Grades e Salas ---
@@ -234,6 +236,8 @@ export async function buscarMonitores(): Promise<Monitor[]> {
     horarioFim: item.horario_fim,
     localPermanencia: item.local_permanencia || '',
     localAlmoco: item.local_almoco || '',
+    almocoInicio: item.almoco_inicio || '',
+    almocoFim: item.almoco_fim || '',
     tipo: (item.tipo || 'fixo') as 'volante' | 'fixo' | 'hibrido',
     status: item.status as 'ativo' | 'inativo'
   }));
@@ -248,6 +252,8 @@ export async function salvarMonitor(monitor: Partial<Monitor>): Promise<boolean>
     turno: monitor.turno,
     horario_inicio: monitor.horarioInicio,
     horario_fim: monitor.horarioFim,
+    almoco_inicio: monitor.almocoInicio,
+    almoco_fim: monitor.almocoFim,
     local_permanencia: monitor.localPermanencia,
     local_almoco: monitor.localAlmoco,
     tipo: monitor.tipo,
@@ -636,6 +642,81 @@ export async function salvarGradeSala(entradas: Omit<EntradaGradeSala, 'id'>[]):
   const professoresUnicos = Array.from(new Set(entradas.map(e => e.nomeProfessor).filter(n => n && n !== '—' && n !== 'A DEFINIR')));
   for (const nome of professoresUnicos) {
     await salvarProfessorCMS({ id: 'novo', nome, cor: '#3B82F6' });
+  }
+
+  return true;
+}
+
+// --- Chamadas ---
+
+export async function buscarChamadas(filtros?: {
+  data?: string;
+  professor?: string;
+  sala?: string;
+  materia?: string;
+  idAluno?: string;
+}): Promise<RegistroChamada[]> {
+  let query = supabase.from('chamadas').select('*');
+
+  if (filtros) {
+    if (filtros.data) query = query.eq('data', filtros.data);
+    if (filtros.professor) query = query.eq('professor', filtros.professor);
+    if (filtros.sala) query = query.eq('sala', filtros.sala);
+    if (filtros.materia) query = query.eq('materia', filtros.materia);
+    if (filtros.idAluno) query = query.eq('id_aluno', filtros.idAluno);
+  }
+
+  const { data, error } = await query.order('criado_em', { ascending: false });
+
+  if (error) {
+    console.error('Erro ao buscar chamadas:', error);
+    return [];
+  }
+
+  return (data || []).map(item => ({
+    id: item.id,
+    data: item.data,
+    horario: item.horario,
+    professor: item.professor,
+    sala: item.sala,
+    materia: item.materia,
+    idAluno: item.id_aluno,
+    nomeAluno: item.nome_aluno,
+    turmaAluno: item.turma_aluno,
+    status: item.status as StatusPresenca,
+    criadoEm: item.criado_em,
+  }));
+}
+
+export async function salvarChamadas(registros: RegistroChamada[]): Promise<boolean> {
+  const payload = registros.map(r => ({
+    data: r.data,
+    horario: r.horario,
+    professor: r.professor,
+    sala: r.sala,
+    materia: r.materia,
+    id_aluno: r.idAluno,
+    nome_aluno: r.nomeAluno,
+    turma_aluno: r.turmaAluno,
+    status: r.status,
+  }));
+
+  if (registros.length > 0) {
+    const { data: _d, horario, sala } = registros[0];
+    await supabase.from('chamadas')
+      .delete()
+      .eq('data', _d)
+      .eq('horario', horario)
+      .eq('sala', sala);
+  }
+
+  const { error } = await supabase
+    .from('chamadas')
+    .insert(payload);
+
+  if (error) {
+    console.error('Erro ao salvar chamadas:', error);
+    return false;
   }
 
   return true;

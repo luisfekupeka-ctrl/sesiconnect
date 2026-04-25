@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { 
   Home, Users, DoorOpen, Languages, Sparkles, 
   BookOpen, FileText, Shield, LayoutGrid, ListTodo, 
-  Calendar, Zap, GraduationCap, Map
+  Calendar, Zap, GraduationCap, Map, ClipboardCheck, RefreshCw
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -15,6 +15,8 @@ const navItems = [
   { to: '/language-lab', icon: Languages, label: 'Language Lab' },
   { to: '/after', icon: Sparkles, label: 'After School' },
   { to: '/forms', icon: FileText, label: 'Ocorrências' },
+  { to: '/controle-faltas', icon: ClipboardCheck, label: 'Chamadas' },
+  { to: '/realocacao', icon: RefreshCw, label: 'Realocação' },
 ];
 
 export function Sidebar() {

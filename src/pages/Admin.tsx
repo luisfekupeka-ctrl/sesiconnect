@@ -532,23 +532,37 @@ export default function Admin() {
 
             <ModalForm aberto={!!editandoMonitor} onClose={() => setEditandoMonitor(null)}
               titulo={editandoMonitor?.id === 'novo' ? 'Cadastrar Monitor' : 'Editar Monitor'}
-              onSalvar={() => doSave(salvarMonitor(editandoMonitor), setEditandoMonitor)} carregando={carregando}>
+              onSalvar={() => {
+                // Forçar valores padronizados que não estão no formulário
+                const payload = {
+                  ...editandoMonitor,
+                  status: 'ativo',
+                  turno: 'manha', // Ou calcular pelo horário
+                  diaSemana: 'SEGUNDA',
+                  localPermanencia: '',
+                  localAlmoco: ''
+                };
+                doSave(salvarMonitor(payload), setEditandoMonitor);
+              }} carregando={carregando}>
               {editandoMonitor && (
                 <div className="space-y-4">
-                  <CampoTexto label="Nome Completo" value={editandoMonitor.nome} onChange={v => setEditandoMonitor({ ...editandoMonitor, nome: v })} />
-                  <div className="grid grid-cols-2 gap-4">
-                    <CampoSelect label="Tipo de Monitor" value={editandoMonitor.tipo || 'fixo'} options={['fixo', 'volante', 'hibrido']} onChange={v => setEditandoMonitor({ ...editandoMonitor, tipo: v as any })} />
-                    <CampoSelect label="Escala / Turno" value={editandoMonitor.turno} options={['manha', 'tarde', 'noite']} onChange={v => setEditandoMonitor({ ...editandoMonitor, turno: v })} />
+                  <CampoTexto label="Nome do monitor" value={editandoMonitor.nome} onChange={v => setEditandoMonitor({ ...editandoMonitor, nome: v })} />
+                  <CampoSelect label="Tipo" value={editandoMonitor.tipo || 'fixo'} options={['fixo', 'volante']} onChange={v => setEditandoMonitor({ ...editandoMonitor, tipo: v as any })} />
+                  
+                  <div className="p-4 bg-surface-container-high rounded-2xl border border-outline-variant/10">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-3 block">Horário de Trabalho (Padrão da Semana)</label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <CampoTexto label="Entrada" value={editandoMonitor.horarioInicio} onChange={v => setEditandoMonitor({ ...editandoMonitor, horarioInicio: v })} tipo="time" />
+                      <CampoTexto label="Saída" value={editandoMonitor.horarioFim} onChange={v => setEditandoMonitor({ ...editandoMonitor, horarioFim: v })} tipo="time" />
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <CampoTexto label="Posto Permanência" value={editandoMonitor.localPermanencia || ''} onChange={v => setEditandoMonitor({ ...editandoMonitor, localPermanencia: v })} />
-                    <CampoTexto label="Posto Almoço" value={editandoMonitor.localAlmoco || ''} onChange={v => setEditandoMonitor({ ...editandoMonitor, localAlmoco: v })} />
-                  </div>
-                  <CampoSelect label="Dia da Semana" value={editandoMonitor.diaSemana} options={DIAS_SEMANA} onChange={v => setEditandoMonitor({ ...editandoMonitor, diaSemana: v })} />
-                  <div className="grid grid-cols-3 gap-4">
-                    <CampoTexto label="Início" value={editandoMonitor.horarioInicio} onChange={v => setEditandoMonitor({ ...editandoMonitor, horarioInicio: v })} tipo="time" />
-                    <CampoTexto label="Fim" value={editandoMonitor.horarioFim} onChange={v => setEditandoMonitor({ ...editandoMonitor, horarioFim: v })} tipo="time" />
-                    <CampoSelect label="Status" value={editandoMonitor.status} options={['ativo', 'inativo']} onChange={v => setEditandoMonitor({ ...editandoMonitor, status: v })} />
+
+                  <div className="p-4 bg-surface-container-high rounded-2xl border border-outline-variant/10">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-3 block">Horário de Almoço (Padrão da Semana)</label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <CampoTexto label="Início Almoço" value={editandoMonitor.almocoInicio || ''} onChange={v => setEditandoMonitor({ ...editandoMonitor, almocoInicio: v })} tipo="time" />
+                      <CampoTexto label="Fim Almoço" value={editandoMonitor.almocoFim || ''} onChange={v => setEditandoMonitor({ ...editandoMonitor, almocoFim: v })} tipo="time" />
+                    </div>
                   </div>
                 </div>
               )}
