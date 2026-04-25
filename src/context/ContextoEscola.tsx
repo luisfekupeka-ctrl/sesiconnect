@@ -2,8 +2,7 @@
 // SESI Connect — Contexto Global da Escola
 // Provedor de dados em tempo real (Supabase)
 // ============================================================
-import { useMemo } from 'react';
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 import {
   EstadoEscola,
   Sala,
