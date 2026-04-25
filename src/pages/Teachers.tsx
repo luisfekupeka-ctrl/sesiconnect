@@ -165,49 +165,54 @@ export default function TeachersPage() {
                     {dia.label}
                   </button>
                 ))}
-              </d
+              </div>
+
               {/* Agenda */}
-              <div classNamee= `${bloco.inicio} - ${bloco.fim}`;
-              const entrada = obterAgendaDia(profSelecionado.nome, diaGrade)
-                    .find(e => e.horario === range);
-              const ativo = estadoEscola.indiceBlocoAtual === bloco.indice && diaGrade === obterDiaSemana(hor
-              return (
-              <div key={bloco.indice} className={cn(
-                ary text - on - surface - bright shadow - lg" : "bg - surface - container - low / 50 hover:bg-surface-container-low"
+              <div className="p-8 space-y-3">
+                {blocos.map(bloco => {
+                  const range = `${bloco.inicio} - ${bloco.fim}`;
+                  const agendaDia = obterAgendaDia(profSelecionado.nome, diaGrade);
+                  const entrada = agendaDia.find(e => e.horario === range);
+                  const isHoje = diaGrade === obterDiaSemana(horaAtual);
+                  const ativo = isHoje && estadoEscola.indiceBlocoAtual === bloco.indice;
+
+                  return (
+                    <div key={bloco.indice} className={cn(
+                      "flex items-center gap-4 p-4 rounded-2xl transition-all",
+                      ativo ? "bg-primary text-on-surface-bright shadow-lg" : "bg-surface-container-low/50 hover:bg-surface-container-low"
                     )}>
-              <div className={cn(
-                "w-16 py-1.5 rounded-lg text-center shrink-0",
-                ativo ? "bg-surface-container-low/20" : "bg-surface-container-low border border-surface-container-low"
-              )}>
-                <Clock size={10} className={cn("mx-auto mb-0.5", ativo ? "text-on-surface-bright" : "text-primary")} />
-                <span className="text-[9px] font-mono font-black">{bloco.inicio}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                {entrada ? (
-                  <>
-                    <p className="text-sm font-black truncate">{entrada.materia}</p>
-                    <p className={cn("text-[10px] font-bold truncate", ativo ? "text-on-surface-bright/70" : "text-on-surface-variant")}>
-                      Sala {entrada.numeroSala.toString().padStart(2, '0')} • {entrada.turma}
-                    </p>
-                  </>
-                ) : (
-                  <p className={cn("text-sm font-bold", ativo ? "text-on-surface-bright/60" : "text-on-surface-variant/40")}>—</p>
-                )}
-              </div>
-            </div>
-          );
+                      <div className={cn(
+                        "w-16 py-1.5 rounded-lg text-center shrink-0",
+                        ativo ? "bg-surface-container-low/20" : "bg-surface-container-low border border-surface-container-low"
+                      )}>
+                        <Clock size={10} className={cn("mx-auto mb-0.5", ativo ? "text-on-surface-bright" : "text-primary")} />
+                        <span className="text-[9px] font-mono font-black">{bloco.inicio}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        {entrada ? (
+                          <>
+                            <p className="text-sm font-black truncate">{entrada.materia}</p>
+                            <p className={cn("text-[10px] font-bold truncate", ativo ? "text-on-surface-bright/70" : "text-on-surface-variant")}>
+                              Sala {entrada.numeroSala.toString().padStart(2, '0')} • {entrada.turma}
+                            </p>
+                          </>
+                        ) : (
+                          <p className={cn("text-sm font-bold", ativo ? "text-on-surface-bright/60" : "text-on-surface-variant/40")}>—</p>
+                        )}
+                      </div>
+                    </div>
+                  );
                 })}
+              </div>
+            </motion.div>
+          ) : (
+            <div className="bg-surface-container-low/30 rounded-[2.5rem] p-16 text-center border-2 border-dashed border-outline-variant/20">
+              <Users size={48} className="mx-auto text-on-surface-variant/20 mb-4" />
+              <p className="text-on-surface-variant font-black text-sm">Selecione um professor para ver a agenda completa</p>
+            </div>
+          )}
         </div>
+      </div>
     </motion.div>
-  ) : (
-    <div className="bg-surface-container-low/30 rounded-[2.5rem] p-16 text-center border-2 border-dashed border-outline-variant/20">
-      <Users size={48} className="mx-auto text-on-surface-variant/20 mb-4" />
-      <p className="text-on-surface-variant font-black text-sm">Selecione um professor para ver a agenda completa</p>
-    </div>
-  )
-}
-        </div >
-      </div >
-    </motion.div >
   );
 }

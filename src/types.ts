@@ -58,6 +58,7 @@ export interface EntradaGradeSala {
   turma: string;             // Alias de anoTurma
   materia: string;
   tipo: TipoBloco;
+  listaAlunos?: string[];
 }
 
 // --- Salas ---
