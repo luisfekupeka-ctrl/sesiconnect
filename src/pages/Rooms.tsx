@@ -365,43 +365,66 @@ export default function RoomsPage() {
                     {obterBlocosDeHorario().map(bloco => {
                       const range = `${bloco.inicio} - ${bloco.fim}`;
                       const entradasDia = gradeCompleta.filter(e => e.numeroSala === salaGradeModal.numero && e.diaSemana === diaGrade);
-                      const entrada = entradasDia.find(e => e.horario === range);
+                      const entradaRegular = entradasDia.find(e => e.horario === range);
+                      
+                      const lab = languageLab.find(l => l.sala.includes(salaGradeModal.numero.toString()) && l.diaSemana === diaGrade && l.horarioInicio <= bloco.inicio && l.horarioFim >= bloco.fim);
+                      const after = atividadesAfter.find(a => a.local.includes(salaGradeModal.numero.toString()) && a.dias.includes(diaGrade) && a.horarioInicio <= bloco.inicio && a.horarioFim >= bloco.fim);
+
+                      let entradaFinal: any = null;
+                      let labelEnsalamento = '';
+                      let listaAlunos: string = '';
+                      let tipoBloco = 'regular';
+
+                      if (after) {
+                        entradaFinal = { materia: after.nome, nomeProfessor: after.nomeProfessor };
+                        labelEnsalamento = `After School • ${after.categoria}`;
+                        listaAlunos = `${after.quantidadeAlunos} alunos (${after.grupoAlunos || 'Misto'})`;
+                        tipoBloco = 'after';
+                      } else if (lab) {
+                        entradaFinal = { materia: `Language Lab - ${lab.nivel}`, nomeProfessor: lab.professor };
+                        labelEnsalamento = `Turma: ${lab.turma}`;
+                        listaAlunos = `Alunos do nível ${lab.nivel}`;
+                        tipoBloco = 'language';
+                      } else if (entradaRegular) {
+                        entradaFinal = entradaRegular;
+                        if (entradaRegular.turma && entradaRegular.turma !== 'A DEFINIR') {
+                          const alunosDaTurma = alunos.filter(a => a.turma === entradaRegular.turma || a.ano === entradaRegular.turma);
+                          labelEnsalamento = `Ensalamento: ${entradaRegular.turma}`;
+                          listaAlunos = alunosDaTurma.length > 0 
+                            ? `${alunosDaTurma.length} alunos: ${alunosDaTurma.map(a => a.nome.split(' ')[0]).join(', ')}`
+                            : 'Nenhum aluno cadastrado nesta turma';
+                        }
+                      }
+
                       const isAgora = estadoEscola.indiceBlocoAtual === bloco.indice && diaGrade === obterDiaSemana(horaAtual);
-                      const alunosDaTurma = entrada?.turma ? alunos.filter(a => a.turma === entrada.turma || a.ano === entrada.turma) : [];
 
                       return (
                         <div key={bloco.indice} className={cn(
                           "p-5 rounded-3xl border-2 transition-all",
                           isAgora ? "bg-primary border-primary text-on-surface-bright shadow-xl shadow-primary/10" : 
-                          entrada ? "bg-surface-container-low border-transparent shadow-sm" : "bg-surface-container-low/30 border-transparent opacity-40"
+                          entradaFinal ? (tipoBloco === 'after' ? 'bg-amber-500/10 border-amber-500/20' : tipoBloco === 'language' ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-surface-container-low border-transparent shadow-sm') : "bg-surface-container-low/30 border-transparent opacity-40"
                         )}>
                           <div className="flex items-center justify-between mb-4">
                             <span className={cn("text-[10px] font-mono font-black", isAgora ? "text-on-surface-bright/60" : "text-outline")}>{bloco.inicio} — {bloco.fim}</span>
                             {isAgora && <div className="w-2 h-2 rounded-full bg-surface-container-low animate-pulse" />}
                           </div>
-                          <p className={cn("text-sm font-black mb-1", isAgora ? "text-on-surface-bright" : "text-on-surface")}>
-                            {entrada?.materia || 'Sala Livre'}
+                          <p className={cn("text-sm font-black mb-1", isAgora ? "text-on-surface-bright" : (tipoBloco === 'after' ? 'text-amber-700' : tipoBloco === 'language' ? 'text-indigo-700' : 'text-on-surface'))}>
+                            {entradaFinal?.materia || 'Sala Livre'}
                           </p>
                           <div className="flex items-center gap-2">
                             <Users size={12} className={isAgora ? "text-on-surface-bright/60" : "text-on-surface-variant"} />
                             <p className={cn("text-[10px] font-bold", isAgora ? "text-on-surface-bright/80" : "text-on-surface-variant")}>
-                              {entrada?.nomeProfessor || '—'}
+                              {entradaFinal?.nomeProfessor || '—'}
                             </p>
                           </div>
-                          {entrada?.turma && (
+                          {labelEnsalamento && (
                             <div className="mt-3 pt-3 border-t border-outline-variant/10">
-                              <p className={cn("text-[9px] font-black uppercase tracking-widest", isAgora ? "text-on-surface-bright/90" : "text-primary")}>
-                                Ensalamento: {entrada.turma}
+                              <p className={cn("text-[9px] font-black uppercase tracking-widest", isAgora ? "text-on-surface-bright/90" : (tipoBloco === 'after' ? 'text-amber-600' : tipoBloco === 'language' ? 'text-indigo-600' : 'text-primary'))}>
+                                {labelEnsalamento}
                               </p>
-                              {alunosDaTurma.length > 0 ? (
-                                <p className={cn("mt-1 text-[8px] font-medium leading-relaxed line-clamp-3", isAgora ? "text-on-surface-bright/70" : "text-on-surface-variant")}>
-                                  {alunosDaTurma.length} alunos: {alunosDaTurma.map(a => a.nome.split(' ')[0]).join(', ')}
-                                </p>
-                              ) : (
-                                <p className={cn("mt-1 text-[8px] italic", isAgora ? "text-on-surface-bright/50" : "text-outline")}>
-                                  Nenhum aluno cadastrado nesta turma
-                                </p>
-                              )}
+                              <p className={cn("mt-1 text-[8px] font-medium leading-relaxed line-clamp-3", isAgora ? "text-on-surface-bright/70" : "text-on-surface-variant")}>
+                                {listaAlunos}
+                              </p>
                             </div>
                           )}
                         </div>

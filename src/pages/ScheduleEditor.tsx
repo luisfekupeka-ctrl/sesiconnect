@@ -108,6 +108,12 @@ export default function ScheduleEditor() {
     setAutenticado(true);
   };
 
+  useEffect(() => {
+    if (!salaSelecionada && salas.length > 0) {
+      setSalaSelecionada(salas[0]);
+    }
+  }, [salas, salaSelecionada]);
+
   // Carregar linhas da sala/dia
   useEffect(() => {
     if (salaSelecionada) {

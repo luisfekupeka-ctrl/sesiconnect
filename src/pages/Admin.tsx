@@ -595,8 +595,6 @@ export default function Admin() {
                 </div>
               )}
             </ModalForm>
-          </motion.div>
-        )}
 
         {/* ===================== LANGUAGE LAB ===================== */}
         {abaAtiva === 'language-lab' && (
