@@ -96,22 +96,27 @@ export async function salvarGradeSala(entrada: Partial<EntradaGradeSala> | Parti
   const payloads = lista.map(grade => {
     const nSala = Number(grade.numeroSala);
     const diaFormatado = String(grade.diaSemana || '').toUpperCase().trim();
+    const horarioStr = String(grade.horario || '').trim();
+
+    if (!nSala || nSala <= 0 || !diaFormatado || !horarioStr) {
+      return null;
+    }
 
     return {
       numero_sala: nSala,
       dia_semana: diaFormatado,
-      horario: String(grade.horario || '').trim(),
+      horario: horarioStr,
       nome_professor: grade.nomeProfessor || '—',
       turma: grade.turma || grade.anoTurma || 'A DEFINIR',
       materia: grade.materia || 'A DEFINIR',
       tipo: grade.tipo || 'regular',
       lista_alunos: grade.listaAlunos || [],
     };
-  }).filter(p => p.numero_sala > 0 && p.dia_semana !== '' && p.horario !== '');
+  }).filter(p => p !== null);
 
   console.log('[DEBUG] Payload para salvar:', payloads);
 
-  if (payloads.length === 0) {
+  if (!payloads || payloads.length === 0) {
     console.error('[DEBUG] Nenhum registro válido para salvar na grade.');
     return false;
   }
