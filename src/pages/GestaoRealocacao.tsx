@@ -163,9 +163,9 @@ export default function GestaoRealocacao() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-32">
-      <header className="bg-surface-container-lowest p-10 rounded-[3.5rem] editorial-shadow border border-primary/5">
-        <h1 className="text-5xl font-black tracking-tighter">Smart Sub</h1>
-        <p className="text-primary font-black uppercase text-[10px] tracking-widest mt-2">Inteligência em Realocação</p>
+      <header className="bg-surface p-10 rounded-[3.5rem] editorial-shadow border border-blue-800">
+        <h1 className="text-5xl font-black tracking-tighter text-on-surface-bright">Smart Sub</h1>
+        <p className="text-accent-amber font-black uppercase text-[10px] tracking-widest mt-2">Inteligência em Realocação</p>
       </header>
 
       <AnimatePresence mode="wait">
@@ -174,34 +174,34 @@ export default function GestaoRealocacao() {
             <h2 className="text-2xl font-black mb-6">1. Selecione o Dia</h2>
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
               {DIAS_SEMANA.map(d => (
-                <button key={d} onClick={() => setDiaSel(d)} className={cn("p-4 rounded-xl font-black text-sm border-2 transition-all shadow-sm", diaSel === d ? "bg-primary text-white border-primary shadow-primary/20" : "bg-surface-container-highest border-outline-variant/40 text-on-surface hover:border-primary")}>
+                <button key={d} onClick={() => setDiaSel(d)} className={cn("p-4 rounded-xl font-black text-sm border-2 transition-all shadow-sm", diaSel === d ? "bg-amber-700 text-white border-amber-600" : "bg-surface-container-highest border-blue-800 text-on-surface hover:border-accent-amber")}>
                   {d}
                 </button>
               ))}
             </div>
-            <button onClick={() => setStep(2)} className="w-full mt-8 py-5 bg-primary text-white rounded-2xl font-black uppercase text-xs">Próximo Passo</button>
+            <button onClick={() => setStep(2)} className="w-full mt-8 py-5 bg-amber-700 text-white rounded-2xl font-black uppercase text-xs border border-amber-600 hover:bg-amber-600 transition-all">Próximo Passo</button>
           </motion.div>
         )}
 
         {step === 2 && (
           <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <button onClick={() => { setTipoFluxo('SALA'); setStep(3); }} className="p-10 bg-surface-container-low rounded-[3rem] hover:bg-primary hover:text-white transition-all group">
-              <DoorOpen size={48} className="mx-auto mb-4 group-hover:scale-110 transition-all" />
-              <h3 className="text-xl font-black uppercase">Por Sala</h3>
+            <button onClick={() => { setTipoFluxo('SALA'); setStep(3); }} className="p-10 bg-surface rounded-[3rem] hover:bg-blue-900/50 hover:border-accent-amber transition-all group border border-blue-800">
+              <DoorOpen size={48} className="mx-auto mb-4 group-hover:scale-110 transition-all text-accent-amber" />
+              <h3 className="text-xl font-black uppercase text-on-surface-bright">Por Sala</h3>
             </button>
-            <button onClick={() => { setTipoFluxo('PROFESSOR'); setStep(3); }} className="p-10 bg-surface-container-low rounded-[3rem] hover:bg-error hover:text-white transition-all group">
-              <UserMinus size={48} className="mx-auto mb-4 group-hover:scale-110 transition-all" />
-              <h3 className="text-xl font-black uppercase">Professor Faltou</h3>
+            <button onClick={() => { setTipoFluxo('PROFESSOR'); setStep(3); }} className="p-10 bg-surface rounded-[3rem] hover:bg-blue-900/50 hover:border-accent-amber transition-all group border border-blue-800">
+              <UserMinus size={48} className="mx-auto mb-4 group-hover:scale-110 transition-all text-accent-rose" />
+              <h3 className="text-xl font-black uppercase text-on-surface-bright">Professor Faltou</h3>
             </button>
           </motion.div>
         )}
 
         {step === 3 && (
-          <motion.div key="s3" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-surface-container-lowest p-10 rounded-[3.5rem] editorial-shadow">
+          <motion.div key="s3" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-surface p-10 rounded-[3.5rem] editorial-shadow border border-blue-800">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <div className="space-y-6">
-                <h2 className="text-3xl font-black">Configuração</h2>
-                <select value={targetId} onChange={e => setTargetId(e.target.value)} className="w-full bg-surface-container-low p-5 rounded-2xl font-black">
+                <h2 className="text-3xl font-black text-on-surface-bright">Configuração</h2>
+                <select value={targetId} onChange={e => setTargetId(e.target.value)} className="w-full bg-surface-container-low p-5 rounded-2xl font-black text-on-surface border border-blue-800">
                   <option value="">Selecione o Alvo...</option>
                   {tipoFluxo === 'SALA' ? salas.map(s => <option key={s.numero} value={s.numero}>Sala {s.numero}</option>) : professores.map(p => <option key={p.nome} value={p.nome}>{p.nome}</option>)}
                 </select>
@@ -243,12 +243,12 @@ export default function GestaoRealocacao() {
         )}
 
         {step === 4 && (
-          <motion.div key="s4" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-surface-container-lowest p-10 rounded-[3.5rem] editorial-shadow">
+          <motion.div key="s4" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-surface p-10 rounded-[3.5rem] editorial-shadow border border-blue-800">
             <div className="flex justify-between items-center mb-8">
-              <h2 className="text-3xl font-black text-on-surface">Sugestões de Substituição</h2>
-              <button onClick={() => window.print()} className="bg-primary text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest"><FileDown className="inline mr-2" size={16} /> Gerar PDF</button>
+              <h2 className="text-3xl font-black text-on-surface-bright">Sugestões de Substituição</h2>
+              <button onClick={() => window.print()} className="bg-amber-700 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest border border-amber-600 hover:bg-amber-600 transition-all"><FileDown className="inline mr-2" size={16} /> Gerar PDF</button>
             </div>
-            <div className="overflow-hidden rounded-3xl border border-outline-variant/10">
+            <div className="overflow-hidden rounded-3xl border border-blue-800">
               <table className="w-full text-left">
                 <thead className="bg-surface-container-low text-[10px] font-black uppercase tracking-widest text-on-surface">
                   <tr>
@@ -259,7 +259,7 @@ export default function GestaoRealocacao() {
                     <th className="p-5">Tipo</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-outline-variant/25">
+                <tbody className="divide-y divide-blue-800/30">
                   {resultados.map((r, i) => {
                     // Verificação de conflito: professor já possui aula na grade base neste horário
                     const temConflitoNaGrade = gradeCompleta.some(g =>
@@ -271,9 +271,9 @@ export default function GestaoRealocacao() {
                     const semProfessor = r.professorSubstituto === 'A DEFINIR';
 
                     return (
-                      <tr key={i} className={cn("text-sm font-medium transition-colors", semProfessor ? "bg-red-50" : "hover:bg-surface-container-low/50 even:bg-surface-container-low/20")}>
-                        <td className="p-5 font-black">{r.horario}</td>
-                        <td className="p-5">{r.turma}</td>
+                      <tr key={i} className={cn("text-sm font-medium transition-colors", semProfessor ? "bg-red-900/30" : "hover:bg-surface-container-low/50 even:bg-surface-container-low/20")}>
+                        <td className="p-5 font-black text-on-surface-bright">{r.horario}</td>
+                        <td className="p-5 text-on-surface">{r.turma}</td>
                         <td className="p-5 text-on-surface-variant line-through">{r.professorOriginal}</td>
                         <td className="p-5">
                           <div className="flex items-center gap-2">
@@ -282,14 +282,14 @@ export default function GestaoRealocacao() {
                                 value={r.professorSubstituto}
                                 onChange={(e) => mudarSubstituto(i, e.target.value)}
                                 className={cn("font-black px-3 py-2 rounded-xl outline-none appearance-none cursor-pointer pr-10 border transition-all shadow-md",
-                                  semProfessor ? "bg-red-100 text-red-700 border-red-300 animate-pulse" : "bg-primary/10 hover:bg-primary/20 text-primary border-primary/20 focus:border-primary")}
+                                  semProfessor ? "bg-red-900/40 text-red-400 border-red-700 animate-pulse" : "bg-blue-900/30 hover:bg-blue-900/50 text-on-surface-bright border-blue-800")}
                               >
                                 {semProfessor && <option value="A DEFINIR">SELECIONAR...</option>}
                                 {professores.map(p => (
-                                  <option key={p.id} value={p.nome} className="text-on-surface bg-surface-container-lowest">{p.nome}</option>
+                                  <option key={p.id} value={p.nome} className="text-on-surface bg-surface">{p.nome}</option>
                                 ))}
                               </select>
-                              <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary pointer-events-none opacity-60" />
+                              <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-accent-amber pointer-events-none opacity-60" />
                             </div>
                             {temConflitoNaGrade && (
                               <div className="group relative">
@@ -303,8 +303,8 @@ export default function GestaoRealocacao() {
                         </td>
                         <td className="p-5">
                           <span className={cn(
-                            "px-3 py-1 rounded-full text-[8px] font-black uppercase bg-primary/10 text-primary",
-                            temConflitoNaGrade && "bg-red-500/10 text-red-600"
+                            "px-3 py-1 rounded-full text-[8px] font-black uppercase bg-blue-900/30 text-accent-amber",
+                            temConflitoNaGrade && "bg-red-900/30 text-red-400"
                           )}>
                             {r.acao}
                           </span>
@@ -319,7 +319,7 @@ export default function GestaoRealocacao() {
               <button
                 onClick={() => handleFinalizar(true)}
                 disabled={carregando}
-                className="flex-1 py-6 bg-surface-container-high text-on-surface rounded-3xl font-black uppercase text-xs tracking-[0.1em] border border-outline-variant/20 hover:bg-surface-container-highest transition-all flex justify-center items-center gap-2"
+                className="flex-1 py-6 bg-surface-container-high text-on-surface rounded-3xl font-black uppercase text-xs tracking-[0.1em] border border-blue-800 hover:bg-blue-900/50 transition-all flex justify-center items-center gap-2"
               >
                 <FileText size={16} />
                 Salvar como Rascunho
@@ -327,7 +327,7 @@ export default function GestaoRealocacao() {
               <button
                 onClick={() => handleFinalizar(false)}
                 disabled={carregando}
-                className="flex-[2] py-6 bg-on-surface text-white rounded-3xl font-black uppercase text-xs tracking-[0.2em] shadow-2xl hover:bg-primary transition-all flex justify-center items-center gap-2"
+                className="flex-[2] py-6 bg-amber-700 text-white rounded-3xl font-black uppercase text-xs tracking-[0.2em] shadow-2xl hover:bg-amber-600 transition-all flex justify-center items-center gap-2 border border-amber-600"
               >
                 {carregando ? (
                   <RefreshCw className="animate-spin" size={16} />
