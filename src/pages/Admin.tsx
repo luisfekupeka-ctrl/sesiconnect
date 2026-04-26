@@ -152,13 +152,13 @@ export default function Admin() {
 
         if (tipo === 'alunos' && anoAlvo) {
           for (const nome of nomes) {
-            const sucesso = await salvarAluno({ id: 'novo', nome, turma: anoAlvo, ano: anoAlvo, numeroSala: 0 });
+            const sucesso = await salvarAluno({ nome, turma: anoAlvo, ano: anoAlvo, numeroSala: 0 });
             if (sucesso) ok++;
           }
           setMsg({ tipo: 'ok', texto: `${ok} alunos importados para ${anoAlvo}!` });
         } else if (tipo === 'monitores') {
           for (const nome of nomes) {
-            const sucesso = await salvarMonitor({ id: 'novo', nome, materia: '', turno: 'manha', horarioInicio: '08:00', horarioFim: '12:00', tipo: 'fixo', status: 'ativo', localPermanencia: '', localAlmoco: '' });
+            const sucesso = await salvarMonitor({ nome, materia: '', turno: 'manha', horarioInicio: '08:00', horarioFim: '12:00', tipo: 'fixo', status: 'ativo', localPermanencia: '', localAlmoco: '' });
             if (sucesso) ok++;
           }
           setMsg({ tipo: 'ok', texto: `${ok} monitores importados!` });
@@ -166,7 +166,7 @@ export default function Admin() {
           for (let i = 0; i < nomes.length; i++) {
             const nome = nomes[i];
             const cor = PALETA_CORES[i % PALETA_CORES.length];
-            const sucesso = await salvarProfessorCMS({ id: 'novo', nome, cor });
+            const sucesso = await salvarProfessorCMS({ nome, cor });
             if (sucesso) ok++;
           }
           setMsg({ tipo: 'ok', texto: `${ok} professores cadastrados com cores únicas!` });

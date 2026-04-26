@@ -128,17 +128,21 @@ export async function buscarAlunos(): Promise<Aluno[]> {
 }
 
 export async function salvarAluno(aluno: Partial<Aluno>): Promise<boolean> {
-  const payload = {
-    id: aluno.id !== 'novo' ? aluno.id : undefined,
+  const payload: any = {
     nome: aluno.nome,
     turma: aluno.turma,
     ano: aluno.ano,
     numero_sala: aluno.numeroSala,
   };
 
+  // Só adiciona ID se não for 'novo'
+  if (aluno.id && aluno.id !== 'novo') {
+    payload.id = aluno.id;
+  }
+
   const { error } = await supabase
     .from('alunos_cms')
-    .upsert([payload], { onConflict: 'id' });
+    .upsert([payload], { onConflict: 'nome' });
 
   if (error) {
     console.error('Erro ao salvar aluno:', error);
@@ -186,8 +190,7 @@ export async function buscarAtividadesAfter(): Promise<AtividadeAfter[]> {
 }
 
 export async function salvarAtividadeAfter(atividade: Partial<AtividadeAfter>): Promise<boolean> {
-  const payload = {
-    id: atividade.id !== 'novo' ? atividade.id : undefined,
+  const payload: any = {
     nome: atividade.nome,
     categoria: atividade.categoria,
     horario_inicio: atividade.horarioInicio,
@@ -201,6 +204,10 @@ export async function salvarAtividadeAfter(atividade: Partial<AtividadeAfter>): 
     vagas: atividade.vagas,
     lista_alunos: atividade.listaAlunos || []
   };
+
+  if (atividade.id && atividade.id !== 'novo') {
+    payload.id = atividade.id;
+  }
 
   const { error } = await supabase
     .from('atividades_after')
@@ -248,8 +255,7 @@ export async function buscarMonitores(): Promise<Monitor[]> {
 }
 
 export async function salvarMonitor(monitor: Partial<Monitor>): Promise<boolean> {
-  const payload = {
-    id: monitor.id !== 'novo' ? monitor.id : undefined,
+  const payload: any = {
     nome: monitor.nome,
     materia: monitor.materia,
     dia_semana: monitor.diaSemana,
@@ -264,11 +270,19 @@ export async function salvarMonitor(monitor: Partial<Monitor>): Promise<boolean>
     status: monitor.status
   };
 
+  if (monitor.id && monitor.id !== 'novo') {
+    payload.id = monitor.id;
+  }
+
   const { error } = await supabase
     .from('monitores')
     .upsert([payload], { onConflict: 'id' });
 
-  return !error;
+  if (error) {
+    console.error('Erro ao salvar monitor:', error);
+    return false;
+  }
+  return true;
 }
 
 export async function excluirMonitor(id: string): Promise<boolean> {
@@ -327,8 +341,7 @@ export async function buscarLanguageLab(): Promise<LanguageLabRecord[]> {
 }
 
 export async function salvarLanguageLab(record: Partial<LanguageLabRecord>): Promise<boolean> {
-  const payload = {
-    id: record.id !== 'novo' ? record.id : undefined,
+  const payload: any = {
     turma: record.turma,
     nivel: record.nivel,
     professor: record.professor,
@@ -339,11 +352,19 @@ export async function salvarLanguageLab(record: Partial<LanguageLabRecord>): Pro
     lista_alunos: record.listaAlunos || []
   };
 
+  if (record.id && record.id !== 'novo') {
+    payload.id = record.id;
+  }
+
   const { error } = await supabase
     .from('language_lab')
     .upsert([payload], { onConflict: 'id' });
 
-  return !error;
+  if (error) {
+    console.error('Erro ao salvar language lab:', error);
+    return false;
+  }
+  return true;
 }
 
 export async function excluirLanguageLab(id: string): Promise<boolean> {
@@ -374,18 +395,26 @@ export async function buscarProfessoresCMS(): Promise<ProfessorCMS[]> {
 }
 
 export async function salvarProfessorCMS(prof: Partial<ProfessorCMS>): Promise<boolean> {
-  const payload = {
-    id: prof.id !== 'novo' ? prof.id : undefined,
+  const payload: any = {
     nome: prof.nome,
     cor: prof.cor,
     especialidade: prof.especialidade
   };
 
+  // Só adiciona ID se não for 'novo'
+  if (prof.id && prof.id !== 'novo') {
+    payload.id = prof.id;
+  }
+
   const { error } = await supabase
     .from('professores_cms')
-    .upsert([payload], { onConflict: 'nome' }); // Upsert por nome se id for novo
+    .upsert([payload], { onConflict: 'nome' });
 
-  return !error;
+  if (error) {
+    console.error('Erro ao salvar professor:', error);
+    return false;
+  }
+  return true;
 }
 
 export async function excluirProfessorCMS(id: string): Promise<boolean> {
@@ -416,19 +445,26 @@ export async function buscarLocaisCMS(): Promise<LocalCMS[]> {
 }
 
 export async function salvarLocalCMS(local: Partial<LocalCMS>): Promise<boolean> {
-  const payload = {
-    id: local.id !== 'novo' ? local.id : undefined,
+  const payload: any = {
     nome: local.nome,
     numero: local.numero,
     tipo: local.tipo,
     capacidade: local.capacidade
   };
 
+  if (local.id && local.id !== 'novo') {
+    payload.id = local.id;
+  }
+
   const { error } = await supabase
     .from('locais_cms')
     .upsert([payload], { onConflict: 'nome' });
 
-  return !error;
+  if (error) {
+    console.error('Erro ao salvar local:', error);
+    return false;
+  }
+  return true;
 }
 
 export async function excluirLocalCMS(id: string): Promise<boolean> {
@@ -459,18 +495,25 @@ export async function buscarModelosFormulario(): Promise<ModeloFormulario[]> {
 }
 
 export async function salvarModeloFormulario(modelo: Partial<ModeloFormulario>): Promise<boolean> {
-  const payload = {
-    id: modelo.id !== 'novo' ? modelo.id : undefined,
+  const payload: any = {
     nome: modelo.nome,
     descricao: modelo.descricao,
     campos: modelo.campos
   };
 
+  if (modelo.id && modelo.id !== 'novo') {
+    payload.id = modelo.id;
+  }
+
   const { error } = await supabase
     .from('modelos_formulario')
     .upsert([payload], { onConflict: 'id' });
 
-  return !error;
+  if (error) {
+    console.error('Erro ao salvar modelo:', error);
+    return false;
+  }
+  return true;
 }
 
 export async function excluirModeloFormulario(id: string): Promise<boolean> {
@@ -566,14 +609,18 @@ export async function buscarPeriodosEscolares(): Promise<PeriodoConfig[]> {
 }
 
 export async function salvarPeriodo(periodo: Partial<PeriodoConfig>): Promise<boolean> {
-  const payload = {
-    id: periodo.id !== 'novo' ? parseInt(periodo.id!) : undefined,
+  const payload: any = {
     nome: periodo.nome,
     horario_inicio: periodo.horarioInicio,
     horario_fim: periodo.horarioFim,
     tipo: periodo.tipo,
-    segmento: periodo.segmento // Novo campo
+    segmento: periodo.segmento
   };
+
+  // Só adiciona ID se não for 'novo'
+  if (periodo.id && periodo.id !== 'novo') {
+    payload.id = parseInt(periodo.id);
+  }
 
   const { error } = await supabase
     .from('periodos_escolares')
@@ -598,8 +645,7 @@ export async function excluirPeriodo(id: string): Promise<boolean> {
 // --- Gestão de Grade Monitores (Escrita) ---
 
 export async function salvarGradeMonitor(grade: Partial<GradeMonitor>): Promise<boolean> {
-  const payload = {
-    id: grade.id !== 'novo' ? grade.id : undefined,
+  const payload: any = {
     monitor_nome: grade.monitorNome,
     dia_semana: grade.diaSemana,
     horario_inicio: grade.horarioInicio,
@@ -608,11 +654,19 @@ export async function salvarGradeMonitor(grade: Partial<GradeMonitor>): Promise<
     cor_etiqueta: grade.corEtiqueta
   };
 
+  if (grade.id && grade.id !== 'novo') {
+    payload.id = grade.id;
+  }
+
   const { error } = await supabase
     .from('grade_monitores')
     .upsert([payload], { onConflict: 'id' });
 
-  return !error;
+  if (error) {
+    console.error('Erro ao salvar grade monitor:', error);
+    return false;
+  }
+  return true;
 }
 
 export async function excluirGradeMonitor(id: string): Promise<boolean> {
@@ -648,7 +702,7 @@ export async function salvarGradeSala(entradas: Omit<EntradaGradeSala, 'id'>[]):
   // LOGICA EXTRA: Criar professor automaticamente se não existir
   const professoresUnicos = Array.from(new Set(entradas.map(e => e.nomeProfessor).filter(n => n && n !== '—' && n !== 'A DEFINIR')));
   for (const nome of professoresUnicos) {
-    await salvarProfessorCMS({ id: 'novo', nome, cor: '#3B82F6' });
+    await salvarProfessorCMS({ nome, cor: '#3B82F6' });
   }
 
   return true;
