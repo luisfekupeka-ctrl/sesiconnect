@@ -9,48 +9,48 @@
   --font-headline: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  /* === REFINED DARK PALETTE — deeper, premium, better contrast === */
-  --color-primary: #8ab4f8;
-  --color-primary-container: #3c5a85;
-  --color-on-primary: #041e49;
+  /* === CONTRASTE MELHORADO PARA LEITURA EM TELA PEQUENA === */
+  --color-primary: #a8c5fc;
+  --color-primary-container: #1e3a5f;
+  --color-on-primary: #0a1628;
   
-  --color-secondary: #c4ccd4;
-  --color-secondary-container: #3f474d;
+  --color-secondary: #d8e2ec;
+  --color-secondary-container: #2d3a47;
   
-  --color-tertiary: #fcc934;
-  --color-tertiary-container: #5d4a05;
-  --color-on-tertiary-container: #ffefc3;
+  --color-tertiary: #fdd835;
+  --color-tertiary-container: #4a3c00;
+  --color-on-tertiary-container: #fff8e1;
 
-  --color-background: #0b0f1a;
-  --color-surface: #101423;
-  --color-surface-container-lowest: #0b0f1a;
-  --color-surface-container-low: #0e1221;
-  --color-surface-container-high: #161b30;
-  --color-surface-container-highest: #1c223d;
+  --color-background: #06090f;
+  --color-surface: #0d1119;
+  --color-surface-container-lowest: #06090f;
+  --color-surface-container-low: #0d1119;
+  --color-surface-container-high: #151c28;
+  --color-surface-container-highest: #1c2535;
   
-  --color-on-surface: #e1e3e1;
-  --color-on-surface-variant: #94a3b8;
+  --color-on-surface: #f0f4f8;
+  --color-on-surface-variant: #a8b5c4;
   --color-on-surface-bright: #ffffff;
-  --color-outline: #334155;
-  --color-outline-variant: rgba(255, 255, 255, 0.05);
+  --color-outline: #2d3a4d;
+  --color-outline-variant: rgba(255, 255, 255, 0.08);
 
-  --color-hover: rgba(138, 180, 248, 0.1);
+  --color-hover: rgba(168, 197, 252, 0.15);
 
-  /* Accent colors — vibrant but balanced */
-  --color-accent-cyan: #4dd0e1;
-  --color-accent-purple: #b39ddb;
-  --color-accent-rose: #f48fb1;
+  /* Accent mais vibrantes para visibilidade mobile */
+  --color-accent-cyan: #4fcde8;
+  --color-accent-purple: #c4b5ea;
+  --color-accent-rose: #f5a0b5;
   --color-accent-emerald: #81c784;
 
-  --radius-xl: 3rem;
-  --radius-lg: 2rem;
-  --radius-md: 1rem;
+  --radius-xl: 2rem;
+  --radius-lg: 1.5rem;
+  --radius-md: 0.75rem;
 }
 
 @layer base {
   body {
     @apply bg-background text-on-surface font-sans;
-    background: radial-gradient(circle at top left, #1a1f35 0%, #0b0f1a 100%);
+    background: radial-gradient(circle at top left, #0f1520 0%, #06090f 100%);
     background-attachment: fixed;
     min-height: 100vh;
   }
@@ -62,17 +62,17 @@
 
 /* Glass cards */
 .editorial-shadow {
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.04);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.05);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .glass {
-  background: rgba(11, 15, 26, 0.8);
+  background: rgba(6, 9, 15, 0.85);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .text-vibrant {
@@ -80,10 +80,10 @@
 }
 
 .glass-card {
-  background: rgba(26, 37, 55, 0.6);
+  background: rgba(21, 28, 40, 0.7);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -94,37 +94,101 @@
   scrollbar-width: none;
 }
 
-/* Admin CMS Utilities */
+/* === COMPONENTES COM TAMANHOS MAIORES PARA MOBILE === */
+
+/* Botões maiores para toque */
 .btn-primary {
-  @apply px-5 py-3 bg-primary text-on-primary rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-primary/15 hover:scale-105 active:scale-95 transition-all flex items-center gap-2;
+  @apply px-6 py-4 bg-primary text-on-primary rounded-2xl font-black text-sm uppercase tracking-wider shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2;
 }
 .btn-secondary {
-  @apply px-5 py-3 bg-surface-container-low text-on-surface rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-hover transition-all flex items-center gap-2;
+  @apply px-6 py-4 bg-surface-container-high text-on-surface rounded-2xl font-black text-sm uppercase tracking-wider hover:bg-hover transition-all flex items-center gap-2;
 }
 .btn-emerald {
-  @apply px-5 py-3 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-600/15 hover:scale-105 transition-all flex items-center gap-2;
+  @apply px-6 py-4 bg-emerald-500 text-white rounded-2xl font-black text-sm uppercase tracking-wider shadow-xl shadow-emerald-500/25 hover:scale-105 transition-all flex items-center gap-2;
 }
 .btn-mini {
-  @apply px-3 py-1.5 bg-surface-container-low text-on-surface-variant rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-hover hover:text-primary transition-all flex items-center gap-2;
-}
-.campo-input-base {
-  @apply w-full bg-surface-container-low border-2 border-transparent focus:border-primary/30 focus:bg-surface-container-lowest rounded-2xl p-4 text-sm font-bold transition-all outline-none text-on-surface placeholder:text-outline;
-}
-.campo-input {
-  @apply w-full bg-surface-container-low border-2 border-transparent focus:border-primary/30 focus:bg-surface-container-lowest rounded-2xl p-4 text-sm font-bold transition-all outline-none text-on-surface placeholder:text-outline;
-}
-.mini-btn {
-  @apply flex items-center gap-1.5 px-3 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest shadow-sm hover:bg-primary hover:text-on-primary transition-all border border-outline-variant/10;
-  background: rgba(26, 37, 55, 0.8);
+  @apply px-4 py-2.5 bg-surface-container-high text-on-surface-variant rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-hover hover:text-primary transition-all flex items-center gap-2;
 }
 
-/* Ambient glow — subtler */
+/* Inputs maiores */
+.campo-input-base {
+  @apply w-full bg-surface-container-low border-2 border-transparent focus:border-primary/40 focus:bg-surface-container-lowest rounded-2xl p-5 text-base font-semibold transition-all outline-none text-on-surface placeholder:text-on-surface-variant/50;
+}
+.campo-input {
+  @apply w-full bg-surface-container-low border-2 border-transparent focus:border-primary/40 focus:bg-surface-container-lowest rounded-2xl p-5 text-base font-semibold transition-all outline-none text-on-surface placeholder:text-on-surface-variant/50;
+}
+
+.mini-btn {
+  @apply flex items-center gap-2 px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider shadow-sm hover:bg-primary hover:text-on-primary transition-all border border-outline-variant/15;
+  background: rgba(21, 28, 40, 0.9);
+}
+
+/* Glow mais suave */
 .glow-primary {
-  box-shadow: 0 0 40px rgba(123, 159, 204, 0.1);
+  box-shadow: 0 0 50px rgba(168, 197, 252, 0.15);
 }
 .glow-cyan {
-  box-shadow: 0 0 40px rgba(56, 189, 216, 0.08);
+  box-shadow: 0 0 50px rgba(79, 205, 232, 0.12);
 }
 .glow-purple {
-  box-shadow: 0 0 40px rgba(155, 130, 230, 0.08);
+  box-shadow: 0 0 50px rgba(196, 181, 234, 0.12);
+}
+
+/* === RESPONSIVO MOBILE OTIMIZADO === */
+@media (max-width: 768px) {
+  body {
+    font-size: 16px;
+  }
+  
+  h1 {
+    font-size: 2rem;
+  }
+  
+  .btn-primary,
+  .btn-secondary,
+  .btn-emerald {
+    padding: 1rem 1.5rem;
+    font-size: 0.875rem;
+  }
+  
+  .glass-card,
+  .editorial-shadow {
+    border-radius: 1.5rem;
+    padding: 1.25rem;
+  }
+  
+  /* Cards ocupam tela cheia no mobile */
+  main {
+    padding: 1rem;
+    padding-bottom: 7rem;
+  }
+  
+  /* Grid de 1 coluna no mobile */
+  .grid-cols-1 {
+    grid-template-columns: 1fr;
+  }
+  
+  .gap-6 {
+    gap: 1rem;
+  }
+  
+  .p-8 {
+    padding: 1.25rem;
+  }
+  
+  .rounded-\[2\.5rem\] {
+    border-radius: 1.5rem;
+  }
+}
+
+/* Tabela(scroll) no mobile */
+@media (max-width: 640px) {
+  .table-overflow {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .table-overflow table {
+    min-width: 600px;
+  }
 }
