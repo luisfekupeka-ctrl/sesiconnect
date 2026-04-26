@@ -117,24 +117,17 @@ export async function salvarGradeSala(entrada: Partial<EntradaGradeSala> | Parti
   }
 
   try {
-    // Inserir um por um para melhor controle de erros
+    // Tentativa individual para melhor controle
     let todosSalvos = true;
     
     for (const payload of payloads) {
-      console.log('[DEBUG] Salvando:', payload);
-      
-      const { data, error } = await supabase
+      const { error: insertError } = await supabase
         .from('mapa_salas')
-        .insert(payload)
-        .select()
-        .single();
+        .insert(payload);
 
-      if (error) {
-        console.log('[DEBUG] Erro no insert:', error.code, error.message);
-        
-        if (error.code === '23505') {
-          // Duplicado - faz UPDATE
-          console.log('[DEBUG] Registro existe, atualizando...');
+      if (insertError) {
+        if (insertError.code === '23505') {
+          // Duplicado - faz update
           const { error: updateError } = await supabase
             .from('mapa_salas')
             .update(payload)
@@ -145,18 +138,13 @@ export async function salvarGradeSala(entrada: Partial<EntradaGradeSala> | Parti
           if (updateError) {
             console.error('[DEBUG] Erro no update:', updateError);
             todosSalvos = false;
-          } else {
-            console.log('[DEBUG] Atualizado com sucesso!');
           }
         } else {
-          console.error('[DEBUG] Erro desconhecido:', error);
+          console.error('[DEBUG] Erro ao salvar grade:', insertError);
           todosSalvos = false;
         }
-      } else {
-        console.log('[DEBUG] Inserido com sucesso!', data);
       }
     }
-
     return todosSalvos;
   } catch (e) {
     console.error('[DEBUG] Exceção ao salvar grade:', e);
@@ -523,21 +511,58 @@ export async function buscarLocaisCMS(): Promise<LocalCMS[]> {
 }
 
 export async function salvarLocalCMS(local: Partial<LocalCMS>): Promise<boolean> {
-  const payload: any = {
-    nome: local.nome,
-    numero: local.numero,
-    tipo: local.tipo,
-    capacidade: local.capacidade
-  };
-
-  if (local.id && local.id !== 'novo') {
-    payload.id = local.id;
-    const { error } = await supabase.from('locais_cms').update(payload).eq('id', local.id);
-    return !error;
+  if (!local.nome?.trim()) {
+    console.error('[DEBUG] Nome do local é obrigatório');
+    return false;
   }
 
-  const { error } = await supabase.from('locais_cms').insert([payload]);
-  return !error;
+  const payload: any = {
+    nome: local.nome.trim(),
+    numero: local.numero ?? null,
+    tipo: local.tipo || 'sala',
+    capacidade: local.capacidade || 0
+  };
+
+  console.log('[DEBUG] Salvando local:', payload);
+
+  try {
+    // Primeiro tenta buscar se já existe
+    const { data: existente } = await supabase
+      .from('locais_cms')
+      .select('id')
+      .eq('nome', local.nome.trim())
+      .maybeSingle();
+
+    if (existente) {
+      // Atualiza
+      const { error } = await supabase
+        .from('locais_cms')
+        .update(payload)
+        .eq('id', existente.id);
+      
+      if (error) {
+        console.error('[DEBUG] Erro ao atualizar local:', error);
+        return false;
+      }
+      console.log('[DEBUG] Local atualizado com sucesso');
+      return true;
+    } else {
+      // Insere
+      const { error } = await supabase
+        .from('locais_cms')
+        .insert([payload]);
+      
+      if (error) {
+        console.error('[DEBUG] Erro ao inserir local:', error);
+        return false;
+      }
+      console.log('[DEBUG] Local inserido com sucesso');
+      return true;
+    }
+  } catch (e) {
+    console.error('[DEBUG] Exceção ao salvar local:', e);
+    return false;
+  }
 }
 
 export async function excluirLocalCMS(id: string): Promise<boolean> {
