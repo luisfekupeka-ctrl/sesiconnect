@@ -863,7 +863,7 @@ export default function Admin() {
                                       setEditandoModelo({ ...editandoModelo, campos: novos });
                                     }} className="sr-only peer" />
                                     <div className="w-8 h-4 bg-surface-container-highest rounded-full peer peer-checked:bg-primary transition-all"></div>
-                                    <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-white rounded-full peer-checked:left-4.5 transition-all"></div>
+                                    <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-surface-container-low rounded-full peer-checked:left-4.5 transition-all"></div>
                                   </div>
                                   <span className="text-[9px] font-black uppercase text-on-surface-variant">Obrigatório</span>
                                 </label>

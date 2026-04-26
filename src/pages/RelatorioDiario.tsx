@@ -154,8 +154,8 @@ export default function RelatorioDiario() {
                     <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Eficiência de Registro</p>
                     <div className="flex items-baseline gap-2">
                         <p className="text-4xl font-black">{stats.pct}%</p>
-                        <div className="flex-1 h-2 bg-white/20 rounded-full overflow-hidden">
-                            <div className="h-full bg-white" style={{ width: `${stats.pct}%` }} />
+                        <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-full bg-accent-amber" style={{ width: `${stats.pct}%` }} />
                         </div>
                     </div>
                 </div>
@@ -191,7 +191,7 @@ export default function RelatorioDiario() {
                         <div key={grupo.id} className="bg-surface-container-lowest rounded-[2.5rem] editorial-shadow border border-outline-variant/5 overflow-hidden">
                             <div className="p-6 bg-surface-container-low/50 border-b border-outline-variant/10 flex justify-between items-center">
                                 <h3 className="font-black text-lg tracking-tight">{grupo.titulo}</h3>
-                                <span className="text-[10px] font-black uppercase bg-white/50 px-3 py-1 rounded-full">
+                                <span className="text-[10px] font-black uppercase bg-white/20 px-3 py-1 rounded-full">
                                     {grupo.itens.filter((i: any) => i.status === 'concluida').length} / {grupo.itens.length} completas
                                 </span>
                             </div>

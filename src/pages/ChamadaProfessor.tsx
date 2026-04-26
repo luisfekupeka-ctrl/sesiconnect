@@ -204,7 +204,7 @@ export default function ChamadaProfessor() {
                   {subAqui && (
                     <div className={cn(
                       "flex items-center gap-1.5 px-2 py-1 rounded-lg mb-2 w-fit",
-                      isAgora ? "bg-white/20 text-white" : "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                      isAgora ? "bg-white/20 text-white" : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
                     )}>
                       <AlertCircle size={10} />
                       <span className="text-[7px] font-black uppercase tracking-widest">Substituindo: {subAqui.professorOriginal}</span>
@@ -250,7 +250,7 @@ export default function ChamadaProfessor() {
                     className={cn(
                       "mt-4 w-full py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2",
                       isAgora
-                        ? "bg-on-surface-bright text-primary hover:bg-white shadow-md"
+                        ? "bg-surface-container-high text-primary hover:bg-surface-container-highest shadow-md"
                         : chamadaFeita ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" : "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
                     )}
                   >

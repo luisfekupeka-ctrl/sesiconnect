@@ -213,7 +213,7 @@ export default function GestaoRealocacao() {
                       <span className="font-black text-amber-700">MODO PROVA</span>
                     </label>
                     {isModoProva && (
-                      <select value={profFixoProva} onChange={e => setProfFixoProva(e.target.value)} className="w-full mt-4 p-3 rounded-xl bg-white border-none">
+                      <select value={profFixoProva} onChange={e => setProfFixoProva(e.target.value)} className="w-full mt-4 p-3 rounded-xl bg-surface-container-high border-none text-on-surface">
                         <option value="">Fiscal da Prova...</option>
                         {professores.map(p => <option key={p.nome} value={p.nome}>{p.nome}</option>)}
                       </select>
