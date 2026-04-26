@@ -34,7 +34,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
       {/* Brand */}
       <div className="p-6 pb-8">
         <h1 className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent-cyan flex items-center justify-center text-on-primary font-black text-2xl shadow-lg shadow-primary/25">S</div>
+          <div className="w-12 h-12 rounded-2xl bg-surface-container-high flex items-center justify-center text-on-surface-bright font-black text-2xl border border-outline/20">S</div>
           <div>
             <p className="text-xl font-black tracking-tight text-on-surface-bright leading-none">SESI Connect</p>
             <p className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest mt-1">Gestão scolaire</p>
@@ -43,7 +43,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto">
+      <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
@@ -51,10 +51,10 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             onClick={() => setIsOpen?.(false)}
             className={({ isActive }) =>
               cn(
-                "flex items-center gap-4 px-5 py-4 rounded-2xl text-base font-bold transition-all group",
+                "flex items-center gap-4 px-5 py-4 rounded-2xl text-base font-bold transition-all",
                 isActive 
-                  ? "bg-primary text-on-primary shadow-xl shadow-primary/25" 
-                  : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+                  ? "bg-white/10 text-on-surface-bright border border-white/10" 
+                  : "text-on-surface-variant hover:bg-white/5 hover:text-on-surface"
               )
             }
           >
@@ -73,8 +73,8 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             cn(
               "flex items-center gap-4 px-5 py-5 rounded-2xl text-base font-bold transition-all border",
               isActive
-                ? "bg-accent-rose text-white border-transparent shadow-xl shadow-accent-rose/25"
-                : "bg-surface-container-low text-on-surface-variant border-outline/15 hover:border-accent-rose hover:text-accent-rose"
+                ? "bg-white/10 text-on-surface-bright border-white/10"
+                : "bg-surface-container-low text-on-surface-variant border-outline/15 hover:border-white/20 hover:text-on-surface"
             )
           }
         >
@@ -90,7 +90,7 @@ export function BottomNav() {
   const location = useLocation();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-xl border-t border-outline/10 px-2 pt-2 pb-6 md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-sm border-t border-outline/10 px-2 pt-2 pb-6 md:hidden">
       <div className="flex justify-around items-center">
         {navItems.slice(0, 5).map((item) => (
           <NavLink
@@ -100,7 +100,7 @@ export function BottomNav() {
               cn(
                 "flex flex-col items-center justify-center transition-all duration-200 gap-1 px-4 py-2 rounded-2xl",
                 isActive 
-                  ? "text-primary bg-primary/10" 
+                  ? "text-on-surface-bright bg-white/10" 
                   : "text-on-surface-variant"
               )
             }
