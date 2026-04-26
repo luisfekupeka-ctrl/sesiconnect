@@ -98,6 +98,83 @@ export async function buscarSalas(): Promise<Sala[]> {
   return salas.sort((a, b) => a.numero - b.numero);
 }
 
+export async function salvarGradeSala(entrada: Partial<EntradaGradeSala> | Partial<EntradaGradeSala>[] | any): Promise<boolean> {
+  const lista = Array.isArray(entrada) ? entrada : [entrada];
+
+  const payloads = lista.map(grade => {
+    const nSala = Number(grade.numeroSala);
+    const diaFormatado = String(grade.diaSemana || '').toUpperCase().trim();
+
+    const payload: any = {
+      numero_sala: nSala,
+      dia_semana: diaFormatado,
+      horario: String(grade.horario || '').trim(),
+      nome_professor: grade.nomeProfessor || '—',
+      turma: grade.turma || grade.anoTurma || 'A DEFINIR',
+      materia: grade.materia || 'A DEFINIR',
+      tipo: grade.tipo || 'regular',
+      lista_alunos: grade.listaAlunos || []
+    };
+
+    // Validação de UUID para evitar que IDs de importação quebrem o banco
+    const regexUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (grade.id && regexUUID.test(grade.id)) {
+      payload.id = grade.id;
+    }
+    return payload;
+  }).filter(p => p.numero_sala > 0 && p.dia_semana !== '' && p.horario !== '');
+
+  if (payloads.length === 0) {
+    console.error('[DEBUG] Nenhum registro válido para salvar na grade.');
+    return false;
+  }
+
+  try {
+    const { error, data } = await supabase
+      .from('mapa_salas')
+      .upsert(payloads, {
+        onConflict: 'numero_sala,dia_semana,horario'
+      })
+      .select();
+
+    if (error) {
+      console.error('[DEBUG] Erro Supabase mapa_salas:', error.code, error.message, error.details, error.hint);
+      return false;
+    }
+    console.log('[DEBUG] Grade salva!', data?.length, 'registros.');
+    return true;
+  } catch (e) {
+    console.error('[DEBUG] Exceção ao salvar grade:', e);
+    return false;
+  }
+}
+
+// --- Funções auxiliares para gerenciar alunos na grade ---
+
+/**
+ * Salva a lista de alunos de uma entrada da grade (Sala)
+ * Usado para atualizar quais alunos estão naquela sala/horário
+ */
+export async function salvarAlunosNaGrade(
+  numeroSala: number,
+  diaSemana: string,
+  horario: string,
+  listaAlunos: string[]
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('mapa_salas')
+    .update({ lista_alunos: listaAlunos })
+    .eq('numero_sala', numeroSala)
+    .eq('dia_semana', diaSemana.toUpperCase().trim())
+    .eq('horario', horario.trim());
+
+  if (error) {
+    console.error('[DEBUG] Erro ao salvar lista de alunos na grade:', error);
+    return false;
+  }
+  return true;
+}
+
 // --- Alunos ---
 
 export async function buscarAlunos(): Promise<Aluno[]> {
@@ -128,30 +205,45 @@ export async function buscarAlunos(): Promise<Aluno[]> {
 }
 
 export async function salvarAluno(aluno: Partial<Aluno>): Promise<boolean> {
-  // Remove campos undefined
-  const payload: any = {};
-  if (aluno.nome) payload.nome = aluno.nome;
-  if (aluno.turma) payload.turma = aluno.turma;
-  if (aluno.ano) payload.ano = aluno.ano;
-  if (aluno.numeroSala !== undefined) payload.numero_sala = aluno.numeroSala;
+  console.log('[DEBUG] salvarAluno - aluno:', aluno);
 
-  // Só adiciona ID se não for 'novo'
-  if (aluno.id && aluno.id !== 'novo') {
+  if (!aluno.nome) {
+    console.error('[DEBUG] ERRO: Nome está vazio!');
+    return false;
+  }
+
+  const payload: any = {
+    nome: String(aluno.nome).trim(),
+    turma: String(aluno.turma || aluno.ano || '').trim(),
+    ano: String(aluno.ano || aluno.turma || '').trim()
+  };
+  
+  if (aluno.numeroSala !== undefined && aluno.numeroSala !== null) {
+    payload.numero_sala = Number(aluno.numeroSala);
+  }
+
+  if (aluno.id && !aluno.id.includes('-imp')) {
     payload.id = aluno.id;
   }
 
-  console.log('Payload aluno:', payload);
+  try {
+    // Usar a constraint unique_alunos_cms_nome definida no banco
+    const { error, data } = await supabase
+      .from('alunos_cms')
+      .upsert([payload], { onConflict: 'nome' })
+      .select();
 
-  const { error } = await supabase
-    .from('alunos_cms')
-    .upsert([payload], { onConflict: 'nome' });
-
-  if (error) {
-    console.error('Erro ao salvar aluno:', error);
+    if (error) {
+      console.error('[DEBUG] Erro ao salvar aluno:', error.code, error.message, error.details);
+      return false;
+    }
+    
+    console.log('[DEBUG] Aluno salvo!', data?.length, 'registros.');
+    return true;
+  } catch (e) {
+    console.error('[DEBUG] Erro ao salvar aluno:', e);
     return false;
   }
-  console.log('Aluno salvo:', payload.nome);
-  return true;
 }
 
 export async function excluirAluno(id: string): Promise<boolean> {
@@ -398,26 +490,27 @@ export async function buscarProfessoresCMS(): Promise<ProfessorCMS[]> {
 }
 
 export async function salvarProfessorCMS(prof: Partial<ProfessorCMS>): Promise<boolean> {
-  const payload: any = {
-    nome: prof.nome,
-    cor: prof.cor,
-    especialidade: prof.especialidade
-  };
-
-  // Só adiciona ID se não for 'novo'
-  if (prof.id && prof.id !== 'novo') {
-    payload.id = prof.id;
-  }
-
-  const { error } = await supabase
-    .from('professores_cms')
-    .upsert([payload], { onConflict: 'nome' });
-
-  if (error) {
-    console.error('Erro ao salvar professor:', error);
+  if (!prof.nome) {
+    console.error('Nome do professor é obrigatório');
     return false;
   }
-  return true;
+
+  const payload = {
+    nome: prof.nome,
+    cor: prof.cor || '#3B82F6',
+    especialidade: prof.especialidade || ''
+  };
+
+  try {
+    const { error } = await supabase
+      .from('professores_cms')
+      .upsert(payload, { onConflict: 'nome' });
+
+    return !error;
+  } catch (e: any) {
+    console.error('Erro ao salvar professor CMS:', e);
+    return false;
+  }
 }
 
 export async function excluirProfessorCMS(id: string): Promise<boolean> {
@@ -677,71 +770,30 @@ export async function excluirGradeMonitor(id: string): Promise<boolean> {
   return !error;
 }
 
-// --- Gestão de Grade (Escrita) ---
-
-export async function salvarGradeSala(entradas: Omit<EntradaGradeSala, 'id'>[]): Promise<boolean> {
-  if (!entradas || entradas.length === 0) {
-    console.error('Nenhuma entrada para salvar');
-    return false;
-  }
-
-  const payload = entradas.map(e => ({
-    numero_sala: e.numeroSala,
-    dia_semana: e.diaSemana,
-    horario: e.horario,
-    materia: e.materia,
-    nome_professor: e.nomeProfessor,
-    turma: e.turma,
-    tipo: e.tipo || 'regular',
-    lista_alunos: e.listaAlunos || []
-  }));
-
-  console.log('Salvando grade:', payload.length, 'entradas');
-
-  const { error } = await supabase
-    .from('mapa_salas')
-    .upsert(payload, {
-      onConflict: 'numero_sala,dia_semana,horario'
-    });
-
-  if (error) {
-    console.error('Erro ao salvar grade:', error);
-    return false;
-  }
-
-  console.log('Grade salva com sucesso!');
-
-  // LOGICA EXTRA: Criar professor automaticamente se não existir
-  const professoresUnicos = Array.from(new Set(entradas.map(e => e.nomeProfessor).filter(n => n && n !== '—' && n !== 'A DEFINIR')));
-  for (const nome of professoresUnicos) {
-    await salvarProfessorCMS({ nome, cor: '#3B82F6' });
-  }
-
-  return true;
-}
-
-// --- Chamadas ---
+// --- Chamada Escolar ---
 
 export async function buscarChamadas(filtros?: {
   data?: string;
-  professor?: string;
   sala?: string;
-  materia?: string;
-  idAluno?: string;
   horario?: string;
+  professor?: string;
 }): Promise<RegistroChamada[]> {
   let query = supabase.from('chamadas').select('*');
 
-  if (filtros) {
-    if (filtros.data) query = query.eq('data', filtros.data);
-    if (filtros.professor) query = query.eq('professor', filtros.professor);
-    if (filtros.sala) query = query.eq('sala', filtros.sala);
-    if (filtros.materia) query = query.eq('materia', filtros.materia);
-    if (filtros.idAluno) query = query.eq('id_aluno', filtros.idAluno);
-    if (filtros.horario) query = query.eq('horario', filtros.horario);
+  if (filtros?.data) {
+    query = query.eq('data', filtros.data);
+  }
+  if (filtros?.sala) {
+    query = query.eq('sala', filtros.sala);
+  }
+  if (filtros?.horario) {
+    query = query.eq('horario', filtros.horario);
+  }
+  if (filtros?.professor) {
+    query = query.eq('professor', filtros.professor);
   }
 
-  const { data, error } = await query.order('criado_em', { ascending: false });
+  const { data, error } = await query.order('data', { ascending: false });
 
   if (error) {
     console.error('Erro ao buscar chamadas:', error);
@@ -763,8 +815,13 @@ export async function buscarChamadas(filtros?: {
   }));
 }
 
-export async function salvarChamadas(registros: RegistroChamada[]): Promise<boolean> {
-  const payload = registros.map(r => ({
+export async function salvarChamadas(registros: Partial<RegistroChamada>[]): Promise<boolean> {
+  if (!registros || registros.length === 0) {
+    console.error('[DEBUG] Nenhum registro de chamada para salvar.');
+    return false;
+  }
+
+  const payloads = registros.map(r => ({
     data: r.data,
     horario: r.horario,
     professor: r.professor,
@@ -776,12 +833,17 @@ export async function salvarChamadas(registros: RegistroChamada[]): Promise<bool
     status: r.status,
   }));
 
-  // Utilizamos upsert para garantir que se o professor enviar a chamada novamente,
-  // os registros existentes sejam atualizados em vez de duplicados.
-  // O 'onConflict' deve bater com a constraint UNIQUE que criamos no SQL.
   const { error } = await supabase
     .from('chamadas')
-    .upsert(payload, { onConflict: 'data,horario,sala,id_aluno' });
+    .upsert(payloads, {
+      onConflict: 'data,horario,sala,id_aluno'
+    });
 
-  return !error;
-}
+  if (error) {
+    console.error('[DEBUG] Erro ao salvar chamadas:', error.code, error.message);
+    return false;
+  }
+
+  console.log('[DEBUG] Chamadas salvas!', payloads.length, 'registros.');
+  return true;
+} 

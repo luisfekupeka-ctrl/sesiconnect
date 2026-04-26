@@ -113,6 +113,14 @@ export default function GestaoRealocacao() {
   const handleFinalizar = async (isDraft: boolean) => {
     setCarregando(true);
     const status: StatusEvento = isDraft ? 'RASCUNHO' : 'EFETIVADO';
+    console.log('[DEBUG] handleFinalizar - isDraft:', isDraft, 'status:', status);
+    
+    const resultadosComSegmento = resultados.map(r => ({
+      ...r,
+      eventoId: r.eventoId || 'temp',
+      segmento: r.segmento || segmentoSel
+    }));
+    
     try {
       const eventoId = await salvarEventoEscola({
         tipo: isModoProva ? 'PROVA' : 'FALTA',
@@ -122,14 +130,19 @@ export default function GestaoRealocacao() {
         status
       });
 
+      console.log('[DEBUG] eventoId retornado:', eventoId);
+      console.log('[DEBUG] resultados a salvar:', resultadosComSegmento.length);
+
       if (eventoId) {
-        await salvarRealocacoes(resultados.map(r => ({ ...r, eventoId, status })));
+        const ok = await salvarRealocacoes(resultadosComSegmento.map(r => ({ ...r, eventoId, status })));
+        console.log('[DEBUG] resultado salvarRealocacoes:', ok);
         alert(isDraft ? 'Rascunho salvo com sucesso!' : 'Realocações efetivadas com sucesso!');
         setStep(1);
         setResultados([]);
         carregarDados();
       }
     } catch (e) {
+      console.error('[DEBUG] Erro em handleFinalizar:', e);
       alert(isDraft ? 'Erro ao salvar rascunho.' : 'Erro ao efetivar.');
     } finally {
       setCarregando(false);

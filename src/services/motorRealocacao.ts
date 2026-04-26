@@ -203,6 +203,8 @@ export async function salvarProfessorConfig(config: Partial<ProfessorConfig>): P
 }
 
 export async function salvarEventoEscola(evento: Partial<EventoEscola>): Promise<string | null> {
+  console.log('[DEBUG]Salvando evento escola:', evento);
+  
   const payload = {
     tipo: evento.tipo,
     professor: evento.professor,
@@ -212,15 +214,20 @@ export async function salvarEventoEscola(evento: Partial<EventoEscola>): Promise
     status: evento.status || 'EFETIVADO'
   };
 
+  console.log('[DEBUG] Payload evento:', JSON.stringify(payload, null, 2));
+
   const { data, error } = await supabase.from('eventos_escola').insert([payload]).select().single();
   if (error || !data) {
-    console.error(error);
+    console.error('[DEBUG] Erro ao salvar evento:', error);
     return null;
   }
+  console.log('[DEBUG] Evento salvo com ID:', data.id);
   return data.id;
 }
 
 export async function salvarRealocacoes(realocacoes: ResultadoRealocacao[]): Promise<boolean> {
+  console.log('[DEBUG] Salvando realocacoes:', realocacoes.length);
+  
   const payload = realocacoes.map(r => ({
     evento_id: r.eventoId,
     tipo: r.tipo,
@@ -228,12 +235,20 @@ export async function salvarRealocacoes(realocacoes: ResultadoRealocacao[]): Pro
     professor_substituto: r.professorSubstituto,
     turma: r.turma,
     horario: r.horario,
+    segmento: r.segmento,
     acao: r.acao,
     status: r.status || 'EFETIVADO'
   }));
 
+  console.log('[DEBUG] Payload realocacoes:', JSON.stringify(payload, null, 2));
+
   const { error } = await supabase.from('realocacoes').insert(payload);
-  return !error;
+  if (error) {
+    console.error('[DEBUG] Erro ao salvar realocacoes:', error);
+    return false;
+  }
+  console.log('[DEBUG] Realocacoes salvas com sucesso!');
+  return true;
 }
 
 export async function buscarRealocacoes(): Promise<ResultadoRealocacao[]> {

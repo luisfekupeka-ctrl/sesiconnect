@@ -111,13 +111,18 @@ export default function Admin() {
   // Helpers
   const doSave = async (action: Promise<boolean>, close: Function) => {
     setCarregando(true);
-    console.log('Salvando...');
+    console.log('[ADMIN] doSave INICIO');
     const ok = await action;
-    console.log('Resultado:', ok);
-    if (ok) { atualizar(); close(null); setMsg({ tipo: 'ok', texto: 'Salvo com sucesso!' }); }
-    else { setMsg({ tipo: 'erro', texto: 'Erro ao salvar. Verifique os dados ou nome duplicado.' }); }
+    console.log('[ADMIN] doSave resultado:', ok);
+    if (ok) { 
+      console.log('[ADMIN] Chamando atualizar()...');
+      close(null); 
+      atualizar();
+      setMsg({ tipo: 'ok', texto: 'Salvo com sucesso!' }); 
+    }
+    else { setMsg({ tipo: 'erro', texto: 'Erro ao salvar. Verifique o console (F12).' }); }
     setCarregando(false);
-    setTimeout(() => setMsg(null), 3000);
+    setTimeout(() => setMsg(null), 5000);
   };
 
   const doDelete = async (action: Promise<boolean>) => {
