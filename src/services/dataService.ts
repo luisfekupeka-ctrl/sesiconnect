@@ -109,38 +109,55 @@ export async function salvarGradeSala(entrada: Partial<EntradaGradeSala> | Parti
     };
   }).filter(p => p.numero_sala > 0 && p.dia_semana !== '' && p.horario !== '');
 
+  console.log('[DEBUG] Payload para salvar:', payloads);
+
   if (payloads.length === 0) {
     console.error('[DEBUG] Nenhum registro válido para salvar na grade.');
     return false;
   }
 
   try {
-    // Usar INSERT simples - o UNIQUE constraint do banco vai evitar duplicatas
-    const { error } = await supabase
-      .from('mapa_salas')
-      .insert(payloads);
+    // Inserir um por um para melhor controle de erros
+    let todosSalvos = true;
+    
+    for (const payload of payloads) {
+      console.log('[DEBUG] Salvando:', payload);
+      
+      const { data, error } = await supabase
+        .from('mapa_salas')
+        .insert(payload)
+        .select()
+        .single();
 
-    if (error) {
-      // Se der erro de duplicata, tenta UPDATE
-      if (error.code === '23505') {
-        console.log('[DEBUG] Atualizando registros existentes...');
-        for (const payload of payloads) {
-          await supabase
+      if (error) {
+        console.log('[DEBUG] Erro no insert:', error.code, error.message);
+        
+        if (error.code === '23505') {
+          // Duplicado - faz UPDATE
+          console.log('[DEBUG] Registro existe, atualizando...');
+          const { error: updateError } = await supabase
             .from('mapa_salas')
             .update(payload)
             .eq('numero_sala', payload.numero_sala)
             .eq('dia_semana', payload.dia_semana)
             .eq('horario', payload.horario);
+          
+          if (updateError) {
+            console.error('[DEBUG] Erro no update:', updateError);
+            todosSalvos = false;
+          } else {
+            console.log('[DEBUG] Atualizado com sucesso!');
+          }
+        } else {
+          console.error('[DEBUG] Erro desconhecido:', error);
+          todosSalvos = false;
         }
-        console.log('[DEBUG] Grade atualizada!');
-        return true;
+      } else {
+        console.log('[DEBUG] Inserido com sucesso!', data);
       }
-      console.error('[DEBUG] Erro ao salvar grade:', error);
-      return false;
     }
 
-    console.log('[DEBUG] Grade salva!');
-    return true;
+    return todosSalvos;
   } catch (e) {
     console.error('[DEBUG] Exceção ao salvar grade:', e);
     return false;
