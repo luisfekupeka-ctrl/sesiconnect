@@ -29,7 +29,7 @@ import {
 type AbaAdmin =
   | 'alunos' | 'professores' | 'gestao-monitores' | 'substituicoes'
   | 'locais' | 'grade-professores'
-  | 'cronograma' | 'formularios' | 'language-lab' | 'after-school';
+  | 'formularios' | 'language-lab' | 'after-school';
 
 const ANOS_ESCOLARES = ['6º Ano', '7º Ano', '8º Ano', '9º Ano', '1º Ano EM', '2º Ano EM', '3º Ano EM'];
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
@@ -192,14 +192,13 @@ export default function Admin() {
   // ============================================================
   const abas: { id: AbaAdmin; rotulo: string; icone: any; badge?: number }[] = [
     { id: 'alunos', rotulo: 'Alunos', icone: Users, badge: (alunos || []).length },
-    { id: 'professores', rotulo: 'Professores Base', icone: UserPlus, badge: (professoresCMS || []).length },
-    { id: 'grade-professores', rotulo: 'Grade e Escala', icone: Calendar },
-    { id: 'gestao-monitores', rotulo: 'Gestão Monitores', icone: ClipboardList, badge: (monitores || []).length },
-    { id: 'locais', rotulo: 'Locais / Salas', icone: MapPin, badge: (locaisCMS || []).length },
-    { id: 'language-lab', rotulo: 'Language Lab', icone: BookOpen, badge: (languageLab || []).length },
+    { id: 'professores', rotulo: 'Professores', icone: UserPlus, badge: (professoresCMS || []).length },
+    { id: 'grade-professores', rotulo: 'Grade de Aulas', icone: Calendar },
+    { id: 'gestao-monitores', rotulo: 'Monitores', icone: ClipboardList, badge: (monitores || []).length },
+    { id: 'locais', rotulo: 'Salas', icone: MapPin, badge: (locaisCMS || []).length },
+    { id: 'language-lab', rotulo: 'Idioma', icone: BookOpen, badge: (languageLab || []).length },
     { id: 'after-school', rotulo: 'After School', icone: Clock, badge: (atividadesAfter || []).length },
-    { id: 'cronograma', rotulo: 'Horários Base', icone: Clock, badge: (periodos || []).length },
-    { id: 'formularios', rotulo: 'Formulários', icone: FileSpreadsheet, badge: (modelosFormulario || []).length },
+    { id: 'formularios', rotulo: 'Ocorrências', icone: FileSpreadsheet, badge: (modelosFormulario || []).length },
   ];
 
   // ============================================================
@@ -629,79 +628,6 @@ export default function Admin() {
                     ))}
                 </div>
               </Painel>
-            </motion.div>
-          )}
-
-          {/* ===================== CRONOGRAMA ===================== */}
-          {abaAtiva === 'cronograma' && (
-            <motion.div key="cron" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              <Painel titulo="Horários Base da Escola" subtitulo="Defina os períodos: aulas, intervalos, almoço, after school."
-                acao={<button onClick={() => setEditandoPeriodo({ id: 'novo', nome: '', horarioInicio: '', horarioFim: '', tipo: 'aula' })} className="btn-primary"><Plus size={14} /> Novo Período</button>}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  {['6º e 7º', '8º e 9º', 'Ensino Médio'].map(seg => {
-                    const periodosSeg = (periodos || []).filter(p => p.segmento === seg);
-                    return (
-                      <div key={seg} className="flex flex-col h-full">
-                        <div className="flex items-center gap-2 mb-4 px-2">
-                          <div className="w-1.5 h-6 bg-primary rounded-full" />
-                          <h3 className="text-xl font-black tracking-tighter uppercase">{seg}</h3>
-                        </div>
-                        <div className="bg-surface-container-low/40 rounded-[2rem] p-4 flex-1 border border-outline-variant/10 space-y-3">
-                          {periodosSeg.map(p => (
-                            <div key={p.id} className="bg-surface-container-highest p-4 rounded-2xl shadow-sm border border-transparent hover:border-primary/20 transition-all group">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className={cn("px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest",
-                                  p.tipo === 'aula' ? "bg-emerald-500/10 text-emerald-600" :
-                                    p.tipo === 'intervalo' ? "bg-red-500/10 text-red-600" :
-                                      p.tipo === 'almoco' ? "bg-amber-500/10 text-amber-600" : "bg-indigo-500/10 text-indigo-600"
-                                )}>
-                                  {p.tipo}
-                                </span>
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                  <button onClick={() => setEditandoPeriodo(p)} className="p-1 hover:text-primary transition-colors"><Eye size={12} /></button>
-                                  <button onClick={() => { if (confirm('Excluir?')) doDelete(excluirPeriodo(p.id)); }} className="p-1 hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
-                                </div>
-                              </div>
-                              <p className="text-sm font-black text-on-surface leading-tight">{p.nome}</p>
-                              <p className="text-[10px] font-bold text-on-surface-variant font-mono mt-1">
-                                {p.horarioInicio?.slice(0, 5)} — {p.horarioFim?.slice(0, 5)}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Seção Especializada */}
-                {(periodos || []).some(p => p.segmento === 'Especializado' || !p.segmento) && (
-                  <div className="mt-12 pt-8 border-t border-outline-variant/10">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-on-surface-variant mb-4 px-2 tracking-[0.2em]">Monitoria & Outros</h3>
-                    <div className="flex flex-wrap gap-4">
-                      {(periodos || []).filter(p => !['6º e 7º', '8º e 9º', 'Ensino Médio'].includes(p.segmento || '')).map(p => (
-                        <div key={p.id} onClick={() => setEditandoPeriodo(p)} className="bg-surface-container-low p-4 rounded-2xl min-w-[180px] border border-transparent hover:border-primary/20 cursor-pointer transition-all">
-                          <p className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest">{p.nome}</p>
-                          <p className="text-[10px] font-bold mt-1">{p.horarioInicio?.slice(0, 5)} - {p.horarioFim?.slice(0, 5)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </Painel>
-              <ModalForm aberto={!!editandoPeriodo} onClose={() => setEditandoPeriodo(null)}
-                titulo={editandoPeriodo?.id === 'novo' ? 'Novo Período' : 'Editar Período'}
-                onSalvar={() => doSave(salvarPeriodo(editandoPeriodo), setEditandoPeriodo)} carregando={carregando}>
-                {editandoPeriodo && <>
-                  <CampoTexto label="Nome (Ex: 1ª Aula)" value={editandoPeriodo.nome} onChange={v => setEditandoPeriodo({ ...editandoPeriodo, nome: v })} />
-                  <div className="grid grid-cols-2 gap-4">
-                    <CampoTexto label="Início" value={editandoPeriodo.horarioInicio} onChange={v => setEditandoPeriodo({ ...editandoPeriodo, horarioInicio: v })} tipo="time" />
-                    <CampoTexto label="Fim" value={editandoPeriodo.horarioFim} onChange={v => setEditandoPeriodo({ ...editandoPeriodo, horarioFim: v })} tipo="time" />
-                  </div>
-                  <CampoSelect label="Tipo" value={editandoPeriodo.tipo} options={['aula', 'intervalo', 'almoco', 'permanencia', 'after']} onChange={v => setEditandoPeriodo({ ...editandoPeriodo, tipo: v as any })} />
-                  <CampoSelect label="Segmento (Filtro)" value={editandoPeriodo.segmento || ''} options={['', '6º e 7º', '8º e 9º', 'Ensino Médio']} onChange={v => setEditandoPeriodo({ ...editandoPeriodo, segmento: v || undefined })} />
-                </>}
-              </ModalForm>
             </motion.div>
           )}
 

@@ -680,6 +680,11 @@ export async function excluirGradeMonitor(id: string): Promise<boolean> {
 // --- Gestão de Grade (Escrita) ---
 
 export async function salvarGradeSala(entradas: Omit<EntradaGradeSala, 'id'>[]): Promise<boolean> {
+  if (!entradas || entradas.length === 0) {
+    console.error('Nenhuma entrada para salvar');
+    return false;
+  }
+
   const payload = entradas.map(e => ({
     numero_sala: e.numeroSala,
     dia_semana: e.diaSemana,
@@ -691,6 +696,8 @@ export async function salvarGradeSala(entradas: Omit<EntradaGradeSala, 'id'>[]):
     lista_alunos: e.listaAlunos || []
   }));
 
+  console.log('Salvando grade:', payload.length, 'entradas');
+
   const { error } = await supabase
     .from('mapa_salas')
     .upsert(payload, {
@@ -701,6 +708,8 @@ export async function salvarGradeSala(entradas: Omit<EntradaGradeSala, 'id'>[]):
     console.error('Erro ao salvar grade:', error);
     return false;
   }
+
+  console.log('Grade salva com sucesso!');
 
   // LOGICA EXTRA: Criar professor automaticamente se não existir
   const professoresUnicos = Array.from(new Set(entradas.map(e => e.nomeProfessor).filter(n => n && n !== '—' && n !== 'A DEFINIR')));

@@ -96,7 +96,6 @@ export default function ScheduleEditor() {
   const atualizarCorProfessor = async (nome: string, cor: string) => {
     const profExistente = professoresCMS.find(p => p.nome === nome);
     const ok = await salvarProfessorCMS({
-      id: profExistente?.id || 'novo',
       nome,
       cor
     });
