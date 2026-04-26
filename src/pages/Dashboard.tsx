@@ -31,7 +31,6 @@ export default function Dashboard() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-8"
     >
-      {/* Título */}
       <header>
         <h1 className="text-3xl md:text-4xl font-black tracking-tight text-on-surface-bright">Agora</h1>
         <p className="text-on-surface-variant font-semibold mt-1 capitalize text-base">
@@ -42,12 +41,12 @@ export default function Dashboard() {
       {/* Cards de Métricas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
         {[
-          { rotulo: 'Aulas', valor: totalOcupadas, icone: Clock, cor: 'text-on-surface-bright', bg: 'bg-cyan-900/30' },
-          { rotulo: 'After School', valor: afterAtivo, icone: Sparkles, cor: 'text-accent-amber', bg: 'bg-amber-900/30' },
-          { rotulo: 'Alunos', valor: totalAlunos, icone: UserCheck, cor: 'text-accent-emerald', bg: 'bg-emerald-900/30' },
-          { rotulo: 'Ocorrências', valor: ocorrenciasHoje, icone: AlertTriangle, cor: 'text-accent-rose', bg: 'bg-rose-900/30' },
+          { rotulo: 'Aulas', valor: totalOcupadas, icone: Clock, cor: 'text-on-surface-bright', bg: 'bg-blue-900/20' },
+          { rotulo: 'After', valor: afterAtivo, icone: Sparkles, cor: 'text-accent-amber', bg: 'bg-amber-900/20' },
+          { rotulo: 'Alunos', valor: totalAlunos, icone: UserCheck, cor: 'text-accent-emerald', bg: 'bg-emerald-900/20' },
+          { rotulo: 'Ocorrências', valor: ocorrenciasHoje, icone: AlertTriangle, cor: 'text-accent-rose', bg: 'bg-rose-900/20' },
         ].map((m, i) => (
-          <div key={i} className="bg-surface p-5 md:p-7 rounded-2xl border border-cyan-900 flex items-center justify-between">
+          <div key={i} className="bg-surface p-5 md:p-7 rounded-2xl border border-blue-800 flex items-center justify-between">
             <div>
               <p className="text-[10px] md:text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">{m.rotulo}</p>
               <p className="text-2xl md:text-4xl font-black text-on-surface-bright">{m.valor}</p>
@@ -60,9 +59,9 @@ export default function Dashboard() {
       </div>
       
       {/* Próxima Transição */}
-      <div className="bg-surface border-2 border-dashed border-cyan-800 rounded-2xl p-5 md:p-7 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-surface border-2 border-dashed border-blue-800 rounded-2xl p-5 md:p-7 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-cyan-900/30 text-on-surface-bright rounded-2xl flex items-center justify-center border border-cyan-800">
+          <div className="w-14 h-14 bg-blue-900/30 text-on-surface-bright rounded-2xl flex items-center justify-center border border-blue-800">
             <Activity size={28} />
           </div>
           <div>
@@ -106,9 +105,9 @@ export default function Dashboard() {
         {salasExibidas.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {salasExibidas.map((sala) => (
-              <div key={sala.numeroSala} className="bg-surface p-6 md:p-7 rounded-2xl border border-cyan-900 group hover:border-accent-cyan transition-all">
+              <div key={sala.numeroSala} className="bg-surface p-6 md:p-7 rounded-2xl border border-blue-800 group hover:border-accent-cyan transition-all">
                 <div className="flex items-center justify-between mb-6">
-                   <div className="w-12 h-12 bg-cyan-900/30 rounded-2xl flex items-center justify-center text-on-surface-bright group-hover:bg-cyan-900/50 transition-all">
+                   <div className="w-12 h-12 bg-blue-900/30 rounded-2xl flex items-center justify-center text-on-surface-bright group-hover:bg-blue-900/50 transition-all">
                      <DoorOpen size={24} />
                    </div>
                    <div className="text-right">
@@ -128,7 +127,7 @@ export default function Dashboard() {
                     </div>
                     <span className="text-sm font-semibold text-on-surface-variant">{sala.professorAtual}</span>
                   </div>
-                  <div className="pt-3 border-t border-cyan-900 flex justify-between items-center">
+                  <div className="pt-3 border-t border-blue-800 flex justify-between items-center">
                     <span className="text-xs font-bold bg-surface-container-high px-3 py-1.5 rounded-lg uppercase tracking-wider">{sala.turmaAtual}</span>
                     <span className="text-xs font-bold text-accent-amber">{sala.horarioFim}</span>
                   </div>
@@ -137,14 +136,14 @@ export default function Dashboard() {
             ))}
           </div>
         ) : (
-          <div className="bg-surface border-2 border-dashed border-cyan-800 rounded-2xl p-12 md:p-16 text-center">
+          <div className="bg-surface border-2 border-dashed border-blue-800 rounded-2xl p-12 md:p-16 text-center">
             <p className="text-on-surface-variant font-bold text-sm uppercase tracking-wider">Nenhuma aula em andamento.</p>
           </div>
         )}
       </section>
 
       {/* Mapa de Ocupação */}
-      <section className="bg-surface/50 p-6 md:p-8 rounded-2xl border border-cyan-900">
+      <section className="bg-surface/50 p-6 md:p-8 rounded-2xl border border-blue-800">
         <h3 className="text-sm font-bold uppercase tracking-wider text-on-surface-variant mb-5">Mapa de Ocupação</h3>
         <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-2">
           {estadoEscola.salas.map((sala) => (
@@ -153,8 +152,8 @@ export default function Dashboard() {
               className={cn(
                 "w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-sm font-bold transition-all",
                 sala.estaOcupada 
-                  ? "bg-accent-amber text-gray-900 border border-amber-400 scale-105" 
-                  : "bg-surface text-on-surface-variant/40 border border-cyan-900"
+                  ? "bg-amber-700 text-white border border-amber-600 scale-105" 
+                  : "bg-surface text-on-surface-variant/40 border border-blue-800"
               )}
             >
               {sala.numeroSala}

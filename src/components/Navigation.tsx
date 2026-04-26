@@ -28,13 +28,12 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
   return (
     <aside className={cn(
-      "fixed left-0 top-0 h-screen w-72 bg-surface border-r border-cyan-900 flex flex-col z-50 transition-transform duration-300",
+      "fixed left-0 top-0 h-screen w-72 bg-surface border-r border-blue-800 flex flex-col z-50 transition-transform duration-300",
       isOpen !== undefined ? (isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0") : "hidden md:flex"
     )}>
-      {/* Brand */}
       <div className="p-6 pb-8">
         <h1 className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-accent-amber flex items-center justify-center text-gray-900 font-black text-2xl border border-amber-400">S</div>
+          <div className="w-12 h-12 rounded-2xl bg-accent-amber flex items-center justify-center text-white font-black text-2xl border border-amber-600">S</div>
           <div>
             <p className="text-xl font-black tracking-tight text-on-surface-bright leading-none">SESI Connect</p>
             <p className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest mt-1">Gestão escolar</p>
@@ -42,7 +41,6 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         </h1>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => (
           <NavLink
@@ -53,8 +51,8 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
               cn(
                 "flex items-center gap-4 px-5 py-4 rounded-2xl text-base font-bold transition-all",
                 isActive 
-                  ? "bg-accent-amber text-gray-900 border border-amber-400" 
-                  : "text-on-surface-variant hover:bg-cyan-900/50 hover:text-on-surface-bright"
+                  ? "bg-amber-700 text-white border border-amber-600" 
+                  : "text-on-surface-variant hover:bg-blue-800/50 hover:text-on-surface-bright"
               )
             }
           >
@@ -64,7 +62,6 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Admin Section */}
       <div className="p-4 mt-auto">
         <NavLink
           to="/admin"
@@ -73,8 +70,8 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             cn(
               "flex items-center gap-4 px-5 py-5 rounded-2xl text-base font-bold transition-all border",
               isActive
-                ? "bg-accent-amber text-gray-900 border-amber-400"
-                : "bg-surface-container-low text-on-surface-variant border-cyan-900 hover:border-accent-cyan hover:text-on-surface-bright"
+                ? "bg-amber-700 text-white border-amber-600"
+                : "bg-surface-container-low text-on-surface-variant border-blue-800 hover:border-accent-cyan hover:text-on-surface-bright"
             )
           }
         >
@@ -87,10 +84,8 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 }
 
 export function BottomNav() {
-  const location = useLocation();
-
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-sm border-t border-cyan-900 px-2 pt-2 pb-6 md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-sm border-t border-blue-800 px-2 pt-2 pb-6 md:hidden">
       <div className="flex justify-around items-center">
         {navItems.slice(0, 5).map((item) => (
           <NavLink
@@ -100,7 +95,7 @@ export function BottomNav() {
               cn(
                 "flex flex-col items-center justify-center transition-all duration-200 gap-1 px-4 py-2 rounded-2xl",
                 isActive 
-                  ? "text-accent-amber bg-amber-950" 
+                  ? "text-accent-amber bg-amber-900/30" 
                   : "text-on-surface-variant"
               )
             }

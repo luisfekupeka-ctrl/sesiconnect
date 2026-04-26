@@ -228,7 +228,7 @@ export default function GestaoRealocacao() {
                 <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto pr-2">
                   {gradeCompleta.filter(g => g.diaSemana === diaSel && (tipoFluxo === 'SALA' ? g.numeroSala === Number(targetId) : g.nomeProfessor === targetId)).map(g => (
                     <button key={g.id} onClick={() => setHorariosSel(prev => prev.includes(g.horario) ? prev.filter(h => h !== g.horario) : [...prev, g.horario])}
-                      className={cn("p-4 rounded-xl text-xs font-black text-left transition-all border-2", horariosSel.includes(g.horario) ? "bg-primary text-white border-primary shadow-md" : "bg-surface-container-highest border-outline-variant/30 text-on-surface")}>
+                      className={cn("p-4 rounded-xl text-xs font-black text-left transition-all border-2", horariosSel.includes(g.horario) ? "bg-amber-700 text-white border-amber-600 shadow-md" : "bg-surface-container-highest border-blue-800 text-on-surface")}>
                       {g.horario} - {g.turma}
                     </button>
                   ))}
@@ -237,7 +237,7 @@ export default function GestaoRealocacao() {
             </div>
             <div className="flex gap-4 mt-12">
               <button onClick={() => setStep(2)} className="px-8 py-5 font-black uppercase text-xs">Voltar</button>
-              <button onClick={handleCalcular} disabled={horariosSel.length === 0 || carregando} className="flex-1 py-5 bg-on-surface text-white rounded-2xl font-black uppercase text-xs">Calcular Realocação</button>
+              <button onClick={handleCalcular} disabled={horariosSel.length === 0 || carregando} className="flex-1 py-5 bg-blue-800 text-white rounded-2xl font-black uppercase text-xs">Calcular Realocação</button>
             </div>
           </motion.div>
         )}

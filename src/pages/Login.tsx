@@ -41,17 +41,17 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-background relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-30">
-        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-cyan-900/50 blur-[120px]" />
+        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-blue-900/50 blur-[120px]" />
         <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full bg-amber-900/30 blur-[120px]" />
       </div>
 
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md bg-surface p-8 rounded-3xl border border-cyan-900 relative z-10"
+        className="w-full max-w-md bg-surface p-8 rounded-3xl border border-blue-800 relative z-10"
       >
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-cyan-900/30 rounded-2xl flex items-center justify-center text-on-surface-bright mx-auto mb-4">
+          <div className="w-16 h-16 bg-blue-900/30 rounded-2xl flex items-center justify-center text-on-surface-bright mx-auto mb-4">
             <Shield size={36} />
           </div>
           <h1 className="text-2xl font-black tracking-tight mb-2 text-on-surface-bright">Acesso Restrito</h1>
@@ -67,7 +67,7 @@ export default function LoginPage() {
                 type="text" 
                 value={usuario}
                 onChange={e => setUsuario(e.target.value)}
-                className="w-full bg-surface-container-low border-2 border-cyan-900 focus:border-accent-cyan rounded-2xl py-4 pl-12 pr-4 text-base font-medium transition-all outline-none text-on-surface"
+                className="w-full bg-surface-container-low border-2 border-blue-800 focus:border-accent-cyan rounded-2xl py-4 pl-12 pr-4 text-base font-medium transition-all outline-none text-on-surface"
                 placeholder="admin"
                 required
               />
@@ -82,7 +82,7 @@ export default function LoginPage() {
                 type="password" 
                 value={senha}
                 onChange={e => setSenha(e.target.value)}
-                className="w-full bg-surface-container-low border-2 border-cyan-900 focus:border-accent-cyan rounded-2xl py-4 pl-12 pr-4 text-base font-medium transition-all outline-none text-on-surface"
+                className="w-full bg-surface-container-low border-2 border-blue-800 focus:border-accent-cyan rounded-2xl py-4 pl-12 pr-4 text-base font-medium transition-all outline-none text-on-surface"
                 placeholder="••••••••"
                 required
               />
@@ -103,7 +103,7 @@ export default function LoginPage() {
           <button 
             type="submit"
             disabled={carregando}
-            className="w-full bg-accent-amber text-gray-900 py-4 rounded-2xl font-semibold text-base flex items-center justify-center gap-2 transition-all hover:bg-amber-400 disabled:opacity-50 border border-amber-400"
+            className="w-full bg-amber-700 text-white py-4 rounded-2xl font-semibold text-base flex items-center justify-center gap-2 transition-all hover:bg-amber-600 disabled:opacity-50 border border-amber-600"
           >
             {carregando ? 'Verificando...' : 'Entrar'}
             {!carregando && <ArrowRight size={18} />}

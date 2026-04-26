@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar, BottomNav } from './components/Navigation';
-import { Search, Bell, User, Clock, Menu, X } from 'lucide-react';
+import { Search, User, Clock, Menu, X } from 'lucide-react';
 
 export function Layout() {
   const [time, setTime] = useState(new Date());
@@ -23,7 +23,7 @@ export function Layout() {
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-surface/95 backdrop-blur-sm z-50 border-b border-cyan-900 px-4 flex items-center justify-between">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-surface/95 backdrop-blur-sm z-50 border-b border-blue-800 px-4 flex items-center justify-between">
         <button 
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="p-2 -ml-2 text-on-surface-bright"
@@ -49,15 +49,13 @@ export function Layout() {
         />
       )}
       
-      {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
       
-      {/* Main Content */}
       <div className="md:pl-72 flex flex-col min-h-screen pt-16 md:pt-0">
         {/* Desktop Header */}
-        <header className="hidden md:flex h-20 px-8 items-center justify-between sticky top-0 bg-surface/80 backdrop-blur-sm z-40 border-b border-cyan-900">
+        <header className="hidden md:flex h-20 px-8 items-center justify-between sticky top-0 bg-surface/80 backdrop-blur-sm z-40 border-b border-blue-800">
           <div className="relative w-96 group">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant/50 group-focus-within:text-on-surface-bright transition-colors" size={18} />
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant/50 group-focus-within:text-accent-cyan transition-colors" size={18} />
             <input 
               type="text" 
               placeholder="Buscar..." 
@@ -66,26 +64,25 @@ export function Layout() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 px-5 py-3 bg-surface-container-low rounded-2xl border border-cyan-900">
+            <div className="flex items-center gap-3 px-5 py-3 bg-surface-container-low rounded-2xl border border-blue-800">
               <Clock size={16} className="text-accent-amber" />
               <span className="text-sm font-bold tracking-tight text-on-surface-bright">
                 {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </span>
             </div>
             
-            <div className="flex items-center gap-3 pl-5 border-l border-cyan-900">
+            <div className="flex items-center gap-3 pl-5 border-l border-blue-800">
               <div className="text-right">
                 <p className="text-xs font-black text-on-surface-bright leading-none">Coordenador</p>
                 <p className="text-[10px] font-bold text-accent-emerald uppercase tracking-widest mt-0.5">Online</p>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-surface-container-low border border-cyan-900 flex items-center justify-center text-on-surface-variant overflow-hidden">
+              <div className="w-12 h-12 rounded-2xl bg-surface-container-low border border-blue-800 flex items-center justify-center text-on-surface-variant overflow-hidden">
                 <User size={24} />
               </div>
             </div>
           </div>
         </header>
 
-        {/* Page Content */}
         <main className="flex-1 p-4 md:p-8 pb-32 md:pb-8 max-w-full">
           <Outlet />
         </main>
