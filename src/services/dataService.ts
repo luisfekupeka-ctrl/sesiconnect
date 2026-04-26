@@ -117,17 +117,19 @@ export async function salvarGradeSala(entrada: Partial<EntradaGradeSala> | Parti
   }
 
   try {
-    // Tentativa individual para melhor controle
     let todosSalvos = true;
     
     for (const payload of payloads) {
+      console.log('[DEBUG] Salvando grade:', payload);
+      
       const { error: insertError } = await supabase
         .from('mapa_salas')
         .insert(payload);
 
       if (insertError) {
+        console.log('[DEBUG] Erro no insert:', insertError.code, insertError.message);
+        
         if (insertError.code === '23505') {
-          // Duplicado - faz update
           const { error: updateError } = await supabase
             .from('mapa_salas')
             .update(payload)
@@ -138,13 +140,18 @@ export async function salvarGradeSala(entrada: Partial<EntradaGradeSala> | Parti
           if (updateError) {
             console.error('[DEBUG] Erro no update:', updateError);
             todosSalvos = false;
+          } else {
+            console.log('[DEBUG] Atualizado com sucesso');
           }
         } else {
           console.error('[DEBUG] Erro ao salvar grade:', insertError);
           todosSalvos = false;
         }
+      } else {
+        console.log('[DEBUG] Inserido com sucesso');
       }
     }
+    console.log('[DEBUG] Resultado final:', todosSalvos);
     return todosSalvos;
   } catch (e) {
     console.error('[DEBUG] Exceção ao salvar grade:', e);
