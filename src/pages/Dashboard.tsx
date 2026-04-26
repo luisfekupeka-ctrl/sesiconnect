@@ -42,12 +42,12 @@ export default function Dashboard() {
       {/* Cards de Métricas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
         {[
-          { rotulo: 'Aulas', valor: totalOcupadas, icone: Clock, cor: 'text-on-surface-bright', bg: 'bg-white/10' },
-          { rotulo: 'After School', valor: afterAtivo, icone: Sparkles, cor: 'text-accent-amber', bg: 'bg-amber-500/15' },
-          { rotulo: 'Alunos', valor: totalAlunos, icone: UserCheck, cor: 'text-accent-emerald', bg: 'bg-emerald-500/15' },
-          { rotulo: 'Ocorrências', valor: ocorrenciasHoje, icone: AlertTriangle, cor: 'text-accent-rose', bg: 'bg-rose-500/15' },
+          { rotulo: 'Aulas', valor: totalOcupadas, icone: Clock, cor: 'text-on-surface-bright', bg: 'bg-white/20' },
+          { rotulo: 'After School', valor: afterAtivo, icone: Sparkles, cor: 'text-accent-amber', bg: 'bg-amber-500/20' },
+          { rotulo: 'Alunos', valor: totalAlunos, icone: UserCheck, cor: 'text-accent-emerald', bg: 'bg-emerald-500/20' },
+          { rotulo: 'Ocorrências', valor: ocorrenciasHoje, icone: AlertTriangle, cor: 'text-accent-rose', bg: 'bg-rose-500/20' },
         ].map((m, i) => (
-          <div key={i} className="bg-surface-container-low p-5 md:p-7 rounded-2xl border border-outline/10 flex items-center justify-between">
+          <div key={i} className="bg-surface p-5 md:p-7 rounded-2xl border border-white/10 flex items-center justify-between">
             <div>
               <p className="text-[10px] md:text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">{m.rotulo}</p>
               <p className="text-2xl md:text-4xl font-black text-on-surface-bright">{m.valor}</p>
@@ -60,9 +60,9 @@ export default function Dashboard() {
       </div>
       
       {/* Próxima Transição */}
-      <div className="bg-surface-container-low border-2 border-dashed border-outline/20 rounded-2xl p-5 md:p-7 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-surface border-2 border-dashed border-white/20 rounded-2xl p-5 md:p-7 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-white/10 text-on-surface-bright rounded-2xl flex items-center justify-center border border-outline/20">
+          <div className="w-14 h-14 bg-white/20 text-on-surface-bright rounded-2xl flex items-center justify-center border border-white/20">
             <Activity size={28} />
           </div>
           <div>
@@ -86,7 +86,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2">
               <button 
                 onClick={() => setPaginaAtual(p => Math.max(1, p - 1))} 
-                className="p-2 bg-surface-container-low rounded-xl active:scale-95 transition-all"
+                className="p-2 bg-surface rounded-xl active:scale-95 transition-all"
                 disabled={paginaAtual === 1}
               >
                 <ChevronLeft size={18} />
@@ -94,7 +94,7 @@ export default function Dashboard() {
               <span className="text-xs font-bold px-2">{paginaAtual}/{totalPaginas}</span>
               <button 
                 onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))} 
-                className="p-2 bg-surface-container-low rounded-xl active:scale-95 transition-all"
+                className="p-2 bg-surface rounded-xl active:scale-95 transition-all"
                 disabled={paginaAtual === totalPaginas}
               >
                 <ChevronRight size={18} />
@@ -106,9 +106,9 @@ export default function Dashboard() {
         {salasExibidas.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {salasExibidas.map((sala) => (
-              <div key={sala.numeroSala} className="bg-surface-container-low p-6 md:p-7 rounded-2xl border border-outline/10 group hover:border-white/20 transition-all">
+              <div key={sala.numeroSala} className="bg-surface p-6 md:p-7 rounded-2xl border border-white/10 group hover:border-white/30 transition-all">
                 <div className="flex items-center justify-between mb-6">
-                   <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-on-surface-bright group-hover:bg-white/15 transition-all">
+                   <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-on-surface-bright group-hover:bg-white/30 transition-all">
                      <DoorOpen size={24} />
                    </div>
                    <div className="text-right">
@@ -128,7 +128,7 @@ export default function Dashboard() {
                     </div>
                     <span className="text-sm font-semibold text-on-surface-variant">{sala.professorAtual}</span>
                   </div>
-                  <div className="pt-3 border-t border-outline/10 flex justify-between items-center">
+                  <div className="pt-3 border-t border-white/10 flex justify-between items-center">
                     <span className="text-xs font-bold bg-surface-container-high px-3 py-1.5 rounded-lg uppercase tracking-wider">{sala.turmaAtual}</span>
                     <span className="text-xs font-bold text-on-surface-variant">{sala.horarioFim}</span>
                   </div>
@@ -137,14 +137,14 @@ export default function Dashboard() {
             ))}
           </div>
         ) : (
-          <div className="bg-surface-container-low border-2 border-dashed border-outline/15 rounded-2xl p-12 md:p-16 text-center">
+          <div className="bg-surface border-2 border-dashed border-white/20 rounded-2xl p-12 md:p-16 text-center">
             <p className="text-on-surface-variant font-bold text-sm uppercase tracking-wider">Nenhuma aula em andamento.</p>
           </div>
         )}
       </section>
 
       {/* Mapa de Ocupação */}
-      <section className="bg-surface-container-low/30 p-6 md:p-8 rounded-2xl border border-outline/10">
+      <section className="bg-surface/50 p-6 md:p-8 rounded-2xl border border-white/10">
         <h3 className="text-sm font-bold uppercase tracking-wider text-on-surface-variant mb-5">Mapa de Ocupação</h3>
         <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-2">
           {estadoEscola.salas.map((sala) => (
@@ -153,8 +153,8 @@ export default function Dashboard() {
               className={cn(
                 "w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-sm font-bold transition-all",
                 sala.estaOcupada 
-                  ? "bg-white/15 text-on-surface-bright border border-white/10 scale-105" 
-                  : "bg-surface-container-low text-on-surface-variant/40 border border-outline/10"
+                  ? "bg-white/20 text-on-surface-bright border border-white/20 scale-105" 
+                  : "bg-surface text-on-surface-variant/40 border border-white/10"
               )}
             >
               {sala.numeroSala}

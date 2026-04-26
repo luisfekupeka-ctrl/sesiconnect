@@ -78,8 +78,8 @@ export default function RoomsPage() {
       <header className="space-y-8">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
           <div className="max-w-2xl">
-            <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-on-surface mb-3">Salas</h1>
-            <p className="text-on-surface-variant text-lg font-medium leading-relaxed">
+            <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-on-surface-bright-bright mb-3">Salas</h1>
+            <p className="text-on-surface-bright-variant text-lg font-medium leading-relaxed">
               Base principal do sistema. Grade completa de horários por sala com blocos de 45 minutos.
             </p>
           </div>
@@ -92,7 +92,7 @@ export default function RoomsPage() {
               placeholder="Buscar sala..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              className="w-full pl-12 pr-5 py-4 bg-surface-container-low border-none rounded-2xl text-on-surface focus:ring-4 focus:ring-primary/10 transition-all font-bold text-sm placeholder:text-outline"
+              className="w-full pl-12 pr-5 py-4 bg-surface-container-low border-none rounded-2xl text-on-surface-bright focus:ring-4 focus:ring-primary/10 transition-all font-bold text-sm placeholder:text-outline"
             />
           </div>
         </div>
@@ -106,7 +106,7 @@ export default function RoomsPage() {
                 onClick={() => setFiltroStatus(f)}
                 className={cn(
                   "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                  filtroStatus === f ? "bg-surface-container-low text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"
+                  filtroStatus === f ? "bg-surface-container-low text-primary shadow-sm" : "text-on-surface-bright-variant hover:text-on-surface-bright"
                 )}
               >
                 {f === 'todas' ? 'Todas' : f === 'livres' ? 'Livres' : 'Ocupadas'}
@@ -121,7 +121,7 @@ export default function RoomsPage() {
                 onClick={() => setFiltroSegmento(seg)}
                 className={cn(
                   "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
-                  filtroSegmento === seg ? "bg-surface-container-low text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"
+                  filtroSegmento === seg ? "bg-surface-container-low text-primary shadow-sm" : "text-on-surface-bright-variant hover:text-on-surface-bright"
                 )}
               >
                 <GraduationCap size={12} />
@@ -143,7 +143,7 @@ export default function RoomsPage() {
                 onClick={() => setViewMode(m.id as any)}
                 className={cn(
                   "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2",
-                  viewMode === m.id ? "bg-primary text-on-surface-bright shadow-lg shadow-primary/20" : "text-on-surface-variant hover:text-on-surface"
+                  viewMode === m.id ? "bg-primary text-on-surface-bright-bright shadow-lg shadow-primary/20" : "text-on-surface-bright-variant hover:text-on-surface-bright"
                 )}
               >
                 <m.icon size={12} />
@@ -180,16 +180,16 @@ export default function RoomsPage() {
                     </div>
                     <div className={cn(
                       "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest",
-                      ocupada ? "bg-primary/10 text-primary" : "bg-surface-container-high text-on-surface-variant"
+                      ocupada ? "bg-primary/10 text-primary" : "bg-surface-container-high text-on-surface-bright-variant"
                     )}>
                       {ocupada ? 'Ocupada' : 'Livre'}
                     </div>
                   </div>
 
-                  <h4 className="font-black text-lg tracking-tight text-on-surface mb-1 leading-tight">
+                  <h4 className="font-black text-lg tracking-tight text-on-surface-bright mb-1 leading-tight">
                     {estadoSala?.nomeSala || sala.nome}
                   </h4>
-                  <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-4">
+                  <p className="text-[10px] font-black text-on-surface-bright-variant uppercase tracking-widest mb-4">
                     {estadoSala?.tipoBlocoAtual === 'after' ? 'Atividade Extra' : sala.segmento}
                   </p>
 
@@ -268,12 +268,12 @@ export default function RoomsPage() {
                             {viewMode === 'regular' ? 'Aula Regular' : viewMode === 'after' ? 'After School' : 'Language Lab'}
                           </span>
                         </div>
-                        <p className="text-sm font-black text-on-surface">{infoAtividade.materia}</p>
+                        <p className="text-sm font-black text-on-surface-bright">{infoAtividade.materia}</p>
                         <div className="flex items-center gap-2">
-                          <Users size={11} className="text-on-surface-variant" />
-                          <span className="text-[10px] font-bold text-on-surface-variant">{infoAtividade.professor}</span>
+                          <Users size={11} className="text-on-surface-bright-variant" />
+                          <span className="text-[10px] font-bold text-on-surface-bright-variant">{infoAtividade.professor}</span>
                         </div>
-                        <span className="text-[9px] font-bold text-on-surface-variant">{infoAtividade.turma} • até {infoAtividade.fim}</span>
+                        <span className="text-[9px] font-bold text-on-surface-bright-variant">{infoAtividade.turma} • até {infoAtividade.fim}</span>
                       </div>
                     );
                   })()}
@@ -332,11 +332,11 @@ export default function RoomsPage() {
                     </span>
                     <span className="text-[10px] font-bold text-outline uppercase">{salaGradeModal.segmento}</span>
                   </div>
-                  <h3 className="text-3xl font-black tracking-tighter text-on-surface">{salaGradeModal.nome}</h3>
+                  <h3 className="text-3xl font-black tracking-tighter text-on-surface-bright">{salaGradeModal.nome}</h3>
                 </div>
                 <button
                   onClick={() => setSalaGradeModal(null)}
-                  className="w-12 h-12 rounded-full hover:bg-surface-container-low flex items-center justify-center text-on-surface-variant transition-colors"
+                  className="w-12 h-12 rounded-full hover:bg-surface-container-low flex items-center justify-center text-on-surface-bright-variant transition-colors"
                 >
                   <Search className="rotate-45" size={24} />
                 </button>
@@ -350,7 +350,7 @@ export default function RoomsPage() {
                     onClick={() => setDiaGrade(dia)}
                     className={cn(
                       "px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shrink-0",
-                      diaGrade === dia ? "bg-primary text-on-surface-bright shadow-xl shadow-primary/20" : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
+                      diaGrade === dia ? "bg-primary text-on-surface-bright-bright shadow-xl shadow-primary/20" : "bg-surface-container-low text-on-surface-bright-variant hover:bg-surface-container-high"
                     )}
                   >
                     {DIAS_SEMANA_NOMES[dia]}
@@ -428,28 +428,28 @@ export default function RoomsPage() {
                       return (
                         <div key={bloco.indice} className={cn(
                           "p-5 rounded-3xl border-2 transition-all",
-                          isAgora ? "bg-primary border-primary text-on-surface-bright shadow-xl shadow-primary/10" :
+                          isAgora ? "bg-primary border-primary text-on-surface-bright-bright shadow-xl shadow-primary/10" :
                             entradaFinal ? (tipoBloco === 'after' ? 'bg-amber-500/10 border-amber-500/20' : tipoBloco === 'language' ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-surface-container-low border-transparent shadow-sm') : "bg-surface-container-low/30 border-transparent opacity-40"
                         )}>
                           <div className="flex items-center justify-between mb-4">
-                            <span className={cn("text-[10px] font-mono font-black", isAgora ? "text-on-surface-bright/60" : "text-outline")}>{bloco.inicio} — {bloco.fim}</span>
+                            <span className={cn("text-[10px] font-mono font-black", isAgora ? "text-on-surface-bright-bright/60" : "text-outline")}>{bloco.inicio} — {bloco.fim}</span>
                             {isAgora && <div className="w-2 h-2 rounded-full bg-surface-container-low animate-pulse" />}
                           </div>
-                          <p className={cn("text-sm font-black mb-1", isAgora ? "text-on-surface-bright" : (tipoBloco === 'after' ? 'text-amber-700' : tipoBloco === 'language' ? 'text-indigo-700' : 'text-on-surface'))}>
+                          <p className={cn("text-sm font-black mb-1", isAgora ? "text-on-surface-bright-bright" : (tipoBloco === 'after' ? 'text-amber-700' : tipoBloco === 'language' ? 'text-indigo-700' : 'text-on-surface-bright'))}>
                             {entradaFinal?.materia || 'Sala Livre'}
                           </p>
                           <div className="flex items-center gap-2">
-                            <Users size={12} className={isAgora ? "text-on-surface-bright/60" : "text-on-surface-variant"} />
-                            <p className={cn("text-[10px] font-bold", isAgora ? "text-on-surface-bright/80" : "text-on-surface-variant")}>
+                            <Users size={12} className={isAgora ? "text-on-surface-bright-bright/60" : "text-on-surface-bright-variant"} />
+                            <p className={cn("text-[10px] font-bold", isAgora ? "text-on-surface-bright-bright/80" : "text-on-surface-bright-variant")}>
                               {entradaFinal?.nomeProfessor || '—'}
                             </p>
                           </div>
                           {labelEnsalamento && (
                             <div className="mt-3 pt-3 border-t border-outline-variant/10">
-                              <p className={cn("text-[9px] font-black uppercase tracking-widest", isAgora ? "text-on-surface-bright/90" : (tipoBloco === 'after' ? 'text-amber-600' : tipoBloco === 'language' ? 'text-indigo-600' : 'text-primary'))}>
+                              <p className={cn("text-[9px] font-black uppercase tracking-widest", isAgora ? "text-on-surface-bright-bright/90" : (tipoBloco === 'after' ? 'text-amber-600' : tipoBloco === 'language' ? 'text-indigo-600' : 'text-primary'))}>
                                 {labelEnsalamento}
                               </p>
-                              <p className={cn("mt-1 text-[8px] font-medium leading-relaxed line-clamp-3", isAgora ? "text-on-surface-bright/70" : "text-on-surface-variant")}>
+                              <p className={cn("mt-1 text-[8px] font-medium leading-relaxed line-clamp-3", isAgora ? "text-on-surface-bright-bright/70" : "text-on-surface-bright-variant")}>
                                 {listaAlunos}
                               </p>
                             </div>
@@ -469,14 +469,14 @@ export default function RoomsPage() {
                               <Clock size={24} />
                             </div>
                             <div>
-                              <p className="text-lg font-black text-on-surface">{ativ.nome}</p>
-                              <p className="text-xs text-on-surface-variant font-bold">{ativ.categoria} • {ativ.grupoAlunos}</p>
+                              <p className="text-lg font-black text-on-surface-bright">{ativ.nome}</p>
+                              <p className="text-xs text-on-surface-bright-variant font-bold">{ativ.categoria} • {ativ.grupoAlunos}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-6">
                             <div className="text-right">
                               <p className="text-xs font-black text-amber-600 uppercase tracking-widest">{ativ.horarioInicio} — {ativ.horarioFim}</p>
-                              <p className="text-[10px] text-on-surface-variant font-bold uppercase">{ativ.nomeProfessor}</p>
+                              <p className="text-[10px] text-on-surface-bright-variant font-bold uppercase">{ativ.nomeProfessor}</p>
                             </div>
                             <div className="px-4 py-2 bg-amber-500/10 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest">
                               {ativ.quantidadeAlunos} Alunos
@@ -502,14 +502,14 @@ export default function RoomsPage() {
                               <Users size={24} />
                             </div>
                             <div>
-                              <p className="text-lg font-black text-on-surface">{lab.turma}</p>
-                              <p className="text-xs text-on-surface-variant font-bold">Language Lab • {lab.nivel}</p>
+                              <p className="text-lg font-black text-on-surface-bright">{lab.turma}</p>
+                              <p className="text-xs text-on-surface-bright-variant font-bold">Language Lab • {lab.nivel}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-6">
                             <div className="text-right">
                               <p className="text-xs font-black text-indigo-600 uppercase tracking-widest">{lab.horarioInicio} — {lab.horarioFim}</p>
-                              <p className="text-[10px] text-on-surface-variant font-bold uppercase">{lab.professor}</p>
+                              <p className="text-[10px] text-on-surface-bright-variant font-bold uppercase">{lab.professor}</p>
                             </div>
                           </div>
                         </div>

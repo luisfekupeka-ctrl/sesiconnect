@@ -9,41 +9,41 @@
   --font-headline: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  /* === TEMA ESCURO NEUTRO - SEM AZUL EXCESSIVO === */
-  --color-primary: #e2e8f0;
-  --color-primary-container: #1e293b;
-  --color-on-primary: #0f172a;
+  /* === TEMA ESCURO - CONTRASTE ALTO === */
+  --color-primary: #f1f5f9;
+  --color-primary-container: #0f172a;
+  --color-on-primary: #f8fafc;
   
-  --color-secondary: #cbd5e1;
-  --color-secondary-container: #334155;
+  --color-secondary: #e2e8f0;
+  --color-secondary-container: #1e293b;
   
-  --color-tertiary: #fbbf24;
+  --color-tertiary: #fcd34d;
   --color-tertiary-container: #451a03;
   --color-on-tertiary-container: #fef3c7;
 
-  /* Fundos escuros neutros */
-  --color-background: #030712;
-  --color-surface: #0f172a;
-  --color-surface-container-lowest: #030712;
-  --color-surface-container-low: #0f172a;
-  --color-surface-container-high: #1e293b;
-  --color-surface-container-highest: #334155;
+  /* Fundos MUITO escuros */
+  --color-background: #020617;
+  --color-surface: #0b1120;
+  --color-surface-container-lowest: #020617;
+  --color-surface-container-low: #0b1120;
+  --color-surface-container-high: #162032;
+  --color-surface-container-highest: #1e2a42;
   
   /* Textos claros */
   --color-on-surface: #f1f5f9;
   --color-on-surface-variant: #94a3b8;
   --color-on-surface-bright: #ffffff;
-  --color-outline: #334155;
-  --color-outline-variant: rgba(255, 255, 255, 0.1);
+  --color-outline: #1e3a5f;
+  --color-outline-variant: rgba(255, 255, 255, 0.12);
 
-  --color-hover: rgba(255, 255, 255, 0.08);
+  --color-hover: rgba(255, 255, 255, 0.1);
 
-  /* Accent - cores diversas sem dominar azul */
+  /* Accent */
   --color-accent-cyan: #22d3ee;
   --color-accent-purple: #a78bfa;
   --color-accent-rose: #f472b6;
   --color-accent-emerald: #34d399;
-  --color-accent-amber: #fbbf24;
+  --color-accent-amber: #fcd34d;
 
   --radius-xl: 1.5rem;
   --radius-lg: 1rem;
@@ -53,7 +53,7 @@
 @layer base {
   body {
     @apply bg-background text-on-surface font-sans;
-    background: #030712;
+    background: #020617;
     min-height: 100vh;
   }
   
@@ -62,15 +62,15 @@
   }
 }
 
-/* Cards escuros neutros */
+/* Cards escuros */
 .editorial-shadow {
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .glass {
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(11, 17, 32, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .text-vibrant {
@@ -78,8 +78,8 @@
 }
 
 .glass-card {
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(22, 32, 50, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -93,38 +93,38 @@
 /* === COMPONENTES ESCUROS === */
 
 .btn-primary {
-  @apply px-6 py-4 bg-surface-container-high text-on-surface rounded-2xl font-bold text-sm tracking-wide border border-outline/20 hover:bg-white/10 transition-all flex items-center gap-2;
+  @apply px-6 py-4 bg-surface-container-high text-on-surface-bright rounded-2xl font-bold text-sm tracking-wide border border-white/10 hover:bg-white/20 transition-all flex items-center gap-2;
 }
 .btn-secondary {
-  @apply px-6 py-4 bg-surface-container-high text-on-surface-variant rounded-2xl font-bold text-sm tracking-wide border border-outline/20 hover:bg-white/10 hover:text-on-surface transition-all flex items-center gap-2;
+  @apply px-6 py-4 bg-surface-container-high text-on-surface-variant rounded-2xl font-bold text-sm tracking-wide border border-white/10 hover:bg-white/20 hover:text-on-surface transition-all flex items-center gap-2;
 }
 .btn-emerald {
   @apply px-6 py-4 bg-emerald-600 text-white rounded-2xl font-bold text-sm tracking-wide hover:bg-emerald-500 transition-all flex items-center gap-2;
 }
 .btn-mini {
-  @apply px-4 py-2.5 bg-surface-container-high text-on-surface-variant rounded-xl text-xs font-semibold tracking-wider hover:bg-white/10 hover:text-on-surface transition-all flex items-center gap-2;
+  @apply px-4 py-2.5 bg-surface-container-high text-on-surface-variant rounded-xl text-xs font-semibold tracking-wider hover:bg-white/20 hover:text-on-surface transition-all flex items-center gap-2;
 }
 
 .campo-input-base {
-  @apply w-full bg-surface-container-low border-2 border-transparent focus:border-white/20 focus:bg-surface-container-lowest rounded-2xl p-5 text-base font-semibold transition-all outline-none text-on-surface placeholder:text-on-surface-variant/40;
+  @apply w-full bg-surface-container-low border-2 border-white/10 focus:border-white/30 rounded-2xl p-5 text-base font-semibold transition-all outline-none text-on-surface placeholder:text-on-surface-variant/40;
 }
 .campo-input {
-  @apply w-full bg-surface-container-low border-2 border-transparent focus:border-white/20 focus:bg-surface-container-lowest rounded-2xl p-5 text-base font-semibold transition-all outline-none text-on-surface placeholder:text-on-surface-variant/40;
+  @apply w-full bg-surface-container-low border-2 border-white/10 focus:border-white/30 rounded-2xl p-5 text-base font-semibold transition-all outline-none text-on-surface placeholder:text-on-surface-variant/40;
 }
 
 .mini-btn {
-  @apply flex items-center gap-2 px-4 py-3 rounded-2xl text-xs font-semibold tracking-wider shadow-sm hover:bg-white/10 transition-all border border-outline/20;
-  background: rgba(30, 41, 59, 0.8);
+  @apply flex items-center gap-2 px-4 py-3 rounded-2xl text-xs font-semibold tracking-wider shadow-sm hover:bg-white/20 transition-all border border-white/10;
+  background: rgba(22, 32, 50, 0.8);
 }
 
 .glow-primary {
-  box-shadow: 0 0 30px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
 }
 .glow-cyan {
-  box-shadow: 0 0 30px rgba(34, 211, 238, 0.1);
+  box-shadow: 0 0 30px rgba(34, 211, 238, 0.15);
 }
 .glow-purple {
-  box-shadow: 0 0 30px rgba(167, 139, 250, 0.1);
+  box-shadow: 0 0 30px rgba(167, 139, 250, 0.15);
 }
 
 /* === RESPONSIVO === */

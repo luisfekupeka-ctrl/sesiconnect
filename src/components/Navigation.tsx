@@ -1,8 +1,8 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
-  Home, Users, DoorOpen, Languages, Sparkles, 
-  BookOpen, FileText, Shield, LayoutGrid, ClipboardCheck, RefreshCw
+  LayoutGrid, Users, DoorOpen, Languages, Sparkles, 
+  BookOpen, FileText, Shield, ClipboardCheck, RefreshCw
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -12,10 +12,10 @@ const navItems = [
   { to: '/teachers', icon: Users, label: 'Professores' },
   { to: '/monitores', icon: BookOpen, label: 'Monitores' },
   { to: '/language-lab', icon: Languages, label: 'Idioma' },
-  { to: '/after', icon: Sparkles, label: 'After' },
+  { to: '/after', icon: Sparkles, label: 'After School' },
   { to: '/forms', icon: FileText, label: 'Ocorrências' },
   { to: '/controle-faltas', icon: ClipboardCheck, label: 'Chamadas' },
-  { to: '/realocacao', icon: RefreshCw, label: 'Realoca' },
+  { to: '/realocacao', icon: RefreshCw, label: 'Realocação' },
 ];
 
 interface SidebarProps {
@@ -28,16 +28,16 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
   return (
     <aside className={cn(
-      "fixed left-0 top-0 h-screen w-72 bg-surface border-r border-outline/10 flex flex-col z-50 transition-transform duration-300",
+      "fixed left-0 top-0 h-screen w-72 bg-surface border-r border-white/10 flex flex-col z-50 transition-transform duration-300",
       isOpen !== undefined ? (isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0") : "hidden md:flex"
     )}>
       {/* Brand */}
       <div className="p-6 pb-8">
         <h1 className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-surface-container-high flex items-center justify-center text-on-surface-bright font-black text-2xl border border-outline/20">S</div>
+          <div className="w-12 h-12 rounded-2xl bg-surface-container-high flex items-center justify-center text-on-surface-bright font-black text-2xl border border-white/10">S</div>
           <div>
             <p className="text-xl font-black tracking-tight text-on-surface-bright leading-none">SESI Connect</p>
-            <p className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest mt-1">Gestão scolaire</p>
+            <p className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest mt-1">Gestão escolar</p>
           </div>
         </h1>
       </div>
@@ -53,8 +53,8 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
               cn(
                 "flex items-center gap-4 px-5 py-4 rounded-2xl text-base font-bold transition-all",
                 isActive 
-                  ? "bg-white/10 text-on-surface-bright border border-white/10" 
-                  : "text-on-surface-variant hover:bg-white/5 hover:text-on-surface"
+                  ? "bg-white/20 text-on-surface-bright border border-white/20" 
+                  : "text-on-surface-variant hover:bg-white/10 hover:text-on-surface"
               )
             }
           >
@@ -73,8 +73,8 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             cn(
               "flex items-center gap-4 px-5 py-5 rounded-2xl text-base font-bold transition-all border",
               isActive
-                ? "bg-white/10 text-on-surface-bright border-white/10"
-                : "bg-surface-container-low text-on-surface-variant border-outline/15 hover:border-white/20 hover:text-on-surface"
+                ? "bg-white/20 text-on-surface-bright border-white/20"
+                : "bg-surface-container-low text-on-surface-variant border-white/10 hover:border-white/30 hover:text-on-surface"
             )
           }
         >
@@ -90,7 +90,7 @@ export function BottomNav() {
   const location = useLocation();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-sm border-t border-outline/10 px-2 pt-2 pb-6 md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-sm border-t border-white/10 px-2 pt-2 pb-6 md:hidden">
       <div className="flex justify-around items-center">
         {navItems.slice(0, 5).map((item) => (
           <NavLink
@@ -100,7 +100,7 @@ export function BottomNav() {
               cn(
                 "flex flex-col items-center justify-center transition-all duration-200 gap-1 px-4 py-2 rounded-2xl",
                 isActive 
-                  ? "text-on-surface-bright bg-white/10" 
+                  ? "text-on-surface-bright bg-white/20" 
                   : "text-on-surface-variant"
               )
             }
