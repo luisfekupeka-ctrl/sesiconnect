@@ -1,14 +1,37 @@
 -- ============================================================
--- SESI Connect — Schema do Banco de Dados
--- Execute este SQL no Supabase SQL Editor (tudo de uma vez)
+-- SESI Connect — Schema Completo do Supabase
+-- Execute todo este arquivo no Supabase SQL Editor
 -- ============================================================
 
 -- ============================================================
--- 1. CRIAÇÃO DAS TABELAS
+-- 1. DROPAR TABELAS EXISTENTES (só para recomeçar do zero)
+-- ============================================================
+DROP TABLE IF EXISTS chamadas CASCADE;
+DROP TABLE IF EXISTS mapa_salas CASCADE;
+DROP TABLE IF EXISTS salas CASCADE;
+DROP TABLE IF EXISTS alunos_cms CASCADE;
+DROP TABLE IF EXISTS professores_cms CASCADE;
+DROP TABLE IF EXISTS atividades_after CASCADE;
+DROP TABLE IF EXISTS monitores CASCADE;
+DROP TABLE IF EXISTS grade_monitores CASCADE;
+DROP TABLE IF EXISTS language_lab CASCADE;
+DROP TABLE IF EXISTS locais_cms CASCADE;
+DROP TABLE IF EXISTS periodos_escolares CASCADE;
+DROP TABLE IF EXISTS ocorrencias CASCADE;
+DROP TABLE IF EXISTS modelos_formulario CASCADE;
+DROP TABLE IF EXISTS realocacoes CASCADE;
+DROP TABLE IF EXISTS eventos_escola CASCADE;
+DROP TABLE IF EXISTS professores_config CASCADE;
+
+DROP TYPE IF EXISTS tipo_periodo CASCADE;
+DROP TYPE IF EXISTS tipo_monitor CASCADE;
+
+-- ============================================================
+-- 2. CRIAÇÃO DAS TABELAS
 -- ============================================================
 
--- Tabela mapa_salas (Grade de Salas)
-CREATE TABLE IF NOT EXISTS mapa_salas (
+-- Tabela mapa_salas (Grade de Salas/Aulas)
+CREATE TABLE mapa_salas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   numero_sala INTEGER NOT NULL,
   dia_semana TEXT NOT NULL,
@@ -17,20 +40,21 @@ CREATE TABLE IF NOT EXISTS mapa_salas (
   turma TEXT DEFAULT 'A DEFINIR',
   materia TEXT DEFAULT 'A DEFINIR',
   tipo TEXT DEFAULT 'regular',
-  lista_alunos JSONB DEFAULT '[]',
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  lista_alunos TEXT[] DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(numero_sala, dia_semana, horario)
 );
 
 -- Tabela chamadas (Registro de Presença)
-CREATE TABLE IF NOT EXISTS chamadas (
+CREATE TABLE chamadas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   data TEXT NOT NULL,
   horario TEXT NOT NULL,
-  professor TEXT NOT NULL,
+  professor TEXT NOT NULL DEFAULT '',
   sala TEXT NOT NULL,
   materia TEXT DEFAULT '',
   id_aluno TEXT NOT NULL,
-  nome_aluno TEXT NOT NULL,
+  nome_aluno TEXT NOT NULL DEFAULT '',
   turma_aluno TEXT DEFAULT '',
   status TEXT NOT NULL CHECK (status IN ('presente', 'falta', 'atraso', 'justificado')),
   criado_em TIMESTAMPTZ DEFAULT NOW(),
@@ -38,35 +62,38 @@ CREATE TABLE IF NOT EXISTS chamadas (
 );
 
 -- Tabela salas (Cadastro de Salas)
-CREATE TABLE IF NOT EXISTS salas (
-  id TEXT PRIMARY KEY,
+CREATE TABLE salas (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   numero INTEGER UNIQUE NOT NULL,
   nome TEXT NOT NULL,
   segmento TEXT DEFAULT '6º e 7º',
-  ano TEXT DEFAULT 'A DEFINIR'
+  ano TEXT DEFAULT 'A DEFINIR',
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Tabela alunos_cms (Alunos)
-CREATE TABLE IF NOT EXISTS alunos_cms (
+CREATE TABLE alunos_cms (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nome TEXT NOT NULL,
   turma TEXT DEFAULT '',
   ano TEXT DEFAULT '',
   numero_sala INTEGER,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(nome)
 );
 
 -- Tabela professores_cms (Professores)
-CREATE TABLE IF NOT EXISTS professores_cms (
+CREATE TABLE professores_cms (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nome TEXT NOT NULL,
   cor TEXT DEFAULT '#3B82F6',
   especialidade TEXT DEFAULT '',
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(nome)
 );
 
 -- Tabela atividades_after (After School)
-CREATE TABLE IF NOT EXISTS atividades_after (
+CREATE TABLE atividades_after (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nome TEXT NOT NULL,
   categoria TEXT DEFAULT '',
@@ -84,7 +111,7 @@ CREATE TABLE IF NOT EXISTS atividades_after (
 );
 
 -- Tabela monitores (Monitores)
-CREATE TABLE IF NOT EXISTS monitores (
+CREATE TABLE monitores (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nome TEXT NOT NULL,
   materia TEXT DEFAULT '',
@@ -101,8 +128,8 @@ CREATE TABLE IF NOT EXISTS monitores (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Tabela grade_monitores (Grade de Monitores)
-CREATE TABLE IF NOT EXISTS grade_monitores (
+-- Tabela grade_monitores (Grade Detalhada de Monitores)
+CREATE TABLE grade_monitores (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   monitor_nome TEXT NOT NULL,
   dia_semana TEXT NOT NULL,
@@ -113,8 +140,8 @@ CREATE TABLE IF NOT EXISTS grade_monitores (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Tabela language_lab (Language Lab)
-CREATE TABLE IF NOT EXISTS language_lab (
+-- Tabela language_lab (Language Lab/Inglês)
+CREATE TABLE language_lab (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   turma TEXT NOT NULL,
   nivel TEXT DEFAULT '',
@@ -127,8 +154,8 @@ CREATE TABLE IF NOT EXISTS language_lab (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Tabela locais_cms (Locais)
-CREATE TABLE IF NOT EXISTS locais_cms (
+-- Tabela locais_cms (Locais/Salas CMS)
+CREATE TABLE locais_cms (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nome TEXT NOT NULL,
   numero INTEGER,
@@ -137,8 +164,8 @@ CREATE TABLE IF NOT EXISTS locais_cms (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Tabela periodos_escolares (Períodos Escolares)
-CREATE TABLE IF NOT EXISTS periodos_escolares (
+-- Tabela periodos_escolares (Períodos/Horários)
+CREATE TABLE periodos_escolares (
   id SERIAL PRIMARY KEY,
   nome TEXT NOT NULL,
   horario_inicio TEXT NOT NULL,
@@ -148,8 +175,8 @@ CREATE TABLE IF NOT EXISTS periodos_escolares (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Tabela ocorrencias (Ocorrências)
-CREATE TABLE IF NOT EXISTS ocorrencias (
+-- Tabela ocorrencias (Registro de Ocorrências)
+CREATE TABLE ocorrencias (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   modelo_id TEXT,
   nome_modelo TEXT NOT NULL,
@@ -163,7 +190,7 @@ CREATE TABLE IF NOT EXISTS ocorrencias (
 );
 
 -- Tabela modelos_formulario (Modelos de Formulário)
-CREATE TABLE IF NOT EXISTS modelos_formulario (
+CREATE TABLE modelos_formulario (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nome TEXT NOT NULL,
   descricao TEXT DEFAULT '',
@@ -171,30 +198,54 @@ CREATE TABLE IF NOT EXISTS modelos_formulario (
   criado_em TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Tabela professores_config (Config de Professores - para realocação)
+CREATE TABLE professores_config (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome TEXT NOT NULL UNIQUE,
+  cor TEXT DEFAULT '#3B82F6',
+  materia TEXT DEFAULT '',
+  ativo BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Tabela eventos_escola (Eventos da Escola)
+CREATE TABLE eventos_escola (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  titulo TEXT NOT NULL,
+  data TEXT NOT NULL,
+  tipo TEXT DEFAULT 'evento',
+  descricao TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Tabela realocacoes (Registro de Troca de Aulas)
+CREATE TABLE realocacoes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  professor_original TEXT NOT NULL,
+  professor_substituto TEXT DEFAULT '',
+  sala TEXT NOT NULL,
+  materia TEXT DEFAULT '',
+  turma TEXT DEFAULT '',
+  data TEXT NOT NULL,
+  horario TEXT NOT NULL,
+  motivo TEXT DEFAULT '',
+  status TEXT DEFAULT 'pendente',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 -- ============================================================
--- 2. CONSTRAINTS E ÍNDICES
+-- 3. ÍNDICES PARA PERFORMANCE
 -- ============================================================
-
--- Constraints UNIQUE (usando nome de constraint único para evitar conflitos)
-ALTER TABLE mapa_salas ADD CONSTRAINT unique_mapa_salas_key UNIQUE (numero_sala, dia_semana, horario);
-ALTER TABLE mapa_salas DROP CONSTRAINT IF EXISTS unique_mapa_salas;
-ALTER TABLE alunos_cms ADD CONSTRAINT unique_alunos_cms_nome UNIQUE (nome);
-ALTER TABLE professores_cms ADD CONSTRAINT unique_professores_cms_nome UNIQUE (nome);
-
--- Índices para buscas
-CREATE INDEX IF NOT EXISTS idx_chamadas_data_sala ON chamadas(data, sala);
-CREATE INDEX IF NOT EXISTS idx_chamadas_data_aluno ON chamadas(data, id_aluno);
-CREATE INDEX IF NOT EXISTS idx_mapa_salas_numero ON mapa_salas(numero_sala);
-CREATE INDEX IF NOT EXISTS idx_mapa_salas_dia ON mapa_salas(dia_semana);
-CREATE INDEX IF NOT EXISTS idx_mapa_salas_professor ON mapa_salas(nome_professor);
-
+CREATE INDEX idx_chamadas_data_sala ON chamadas(data, sala);
+CREATE INDEX idx_chamadas_data_aluno ON chamadas(data, id_aluno);
+CREATE INDEX idx_mapa_salas_numero ON mapa_salas(numero_sala);
+CREATE INDEX idx_mapa_salas_dia ON mapa_salas(dia_semana);
+CREATE INDEX idx_mapa_salas_professor ON mapa_salas(nome_professor);
+CREATE INDEX idx_realocacoes_data ON realocacoes(data);
 
 -- ============================================================
--- 3. ROW LEVEL SECURITY (RLS) - Policies Completas
+-- 4. ROW LEVEL SECURITY (RLS)
 -- ============================================================
-
--- Habilitar RLS em todas as tabelas
 ALTER TABLE mapa_salas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chamadas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE salas ENABLE ROW LEVEL SECURITY;
@@ -208,57 +259,46 @@ ALTER TABLE locais_cms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE periodos_escolares ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ocorrencias ENABLE ROW LEVEL SECURITY;
 ALTER TABLE modelos_formulario ENABLE ROW LEVEL SECURITY;
+ALTER TABLE professores_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE eventos_escola ENABLE ROW LEVEL SECURITY;
+ALTER TABLE realocacoes ENABLE ROW LEVEL SECURITY;
 
--- ========== POLICIES ==========
+-- Policies para todas as tabelas (permissão total para desenvolvimento)
+CREATE POLICY "allow_all_mapa_salas" ON mapa_salas FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_chamadas" ON chamadas FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_salas" ON salas FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_alunos_cms" ON alunos_cms FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_professores_cms" ON professores_cms FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_atividades_after" ON atividades_after FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_monitores" ON monitores FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_grade_monitores" ON grade_monitores FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_language_lab" ON language_lab FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_locais_cms" ON locais_cms FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_periodos_escolares" ON periodos_escolares FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_ocorrencias" ON ocorrencias FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_modelos_formulario" ON modelos_formulario FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_professores_config" ON professores_config FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_eventos_escola" ON eventos_escola FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_realocacoes" ON realocacoes FOR ALL USING (true) WITH CHECK (true);
 
--- mapa_salas: todas operações (leitura + escrita)
-DROP POLICY IF EXISTS "Allow all mapa_salas" ON mapa_salas;
-CREATE POLICY "Allow all mapa_salas" ON mapa_salas FOR ALL USING (true);
+-- ============================================================
+-- 5. DADOS INICIAIS (opcional - descomente se quiser)
+-- ============================================================
 
--- chamadas: todas operações
-DROP POLICY IF EXISTS "Allow all chamadas" ON chamadas;
-CREATE POLICY "Allow all chamadas" ON chamadas FOR ALL USING (true);
+-- Períodos escolares padrão
+-- INSERT INTO periodos_escolares (nome, horario_inicio, horario_fim, tipo, segmento) VALUES
+-- ('1ª Aula', '07:30', '08:20', 'aula', '6e7'),
+-- ('2ª Aula', '08:20', '09:10', 'aula', '6e7'),
+-- ('Intervalo', '09:10', '09:30', 'intervalo', '6e7'),
+-- ('3ª Aula', '09:30', '10:20', 'aula', '6e7'),
+-- ('4ª Aula', '10:20', '11:10', 'aula', '6e7'),
+-- ('5ª Aula', '11:10', '12:00', 'aula', '6e7');
 
--- salas: todas operações
-DROP POLICY IF EXISTS "Allow all salas" ON salas;
-CREATE POLICY "Allow all salas" ON salas FOR ALL USING (true);
+-- Professores padrão
+-- INSERT INTO professores_cms (nome, cor, especialidade) VALUES
+-- ('Luis Kim', '#3B82F6', 'Matemática'),
+-- ('Patricia Santos', '#EF4444', 'Português');
 
--- alunos_cms: todas operações
-DROP POLICY IF EXISTS "Allow all alunos_cms" ON alunos_cms;
-CREATE POLICY "Allow all alunos_cms" ON alunos_cms FOR ALL USING (true);
-
--- professores_cms: todas operações
-DROP POLICY IF EXISTS "Allow all professores_cms" ON professores_cms;
-CREATE POLICY "Allow all professores_cms" ON professores_cms FOR ALL USING (true);
-
--- atividades_after: todas operações
-DROP POLICY IF EXISTS "Allow all atividades_after" ON atividades_after;
-CREATE POLICY "Allow all atividades_after" ON atividades_after FOR ALL USING (true);
-
--- monitores: todas operações
-DROP POLICY IF EXISTS "Allow all monitores" ON monitores;
-CREATE POLICY "Allow all monitores" ON monitores FOR ALL USING (true);
-
--- grade_monitores: todas operações
-DROP POLICY IF EXISTS "Allow all grade_monitores" ON grade_monitores;
-CREATE POLICY "Allow all grade_monitores" ON grade_monitores FOR ALL USING (true);
-
--- language_lab: todas operações
-DROP POLICY IF EXISTS "Allow all language_lab" ON language_lab;
-CREATE POLICY "Allow all language_lab" ON language_lab FOR ALL USING (true);
-
--- locais_cms: todas operações
-DROP POLICY IF EXISTS "Allow all locais_cms" ON locais_cms;
-CREATE POLICY "Allow all locais_cms" ON locais_cms FOR ALL USING (true);
-
--- periodos_escolares: todas operações
-DROP POLICY IF EXISTS "Allow all periodos_escolares" ON periodos_escolares;
-CREATE POLICY "Allow all periodos_escolares" ON periodos_escolares FOR ALL USING (true);
-
--- ocorrencias: todas operações
-DROP POLICY IF EXISTS "Allow all ocorrencias" ON ocorrencias;
-CREATE POLICY "Allow all ocorrencias" ON ocorrencias FOR ALL USING (true);
-
--- modelos_formulario: todas operações
-DROP POLICY IF EXISTS "Allow all modelos_formulario" ON modelos_formulario;
-CREATE POLICY "Allow all modelos_formulario" ON modelos_formulario FOR ALL USING (true);
+-- ============================================================
+-- FIM DO MIGRATION
+-- ============================================================

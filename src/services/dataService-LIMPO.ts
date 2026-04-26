@@ -1,6 +1,6 @@
 // ============================================================
 // SESI Connect — Serviço de Dados (Supabase)
-// Gerencia a comunicação com o backend em tempo real.
+// Limpo e completo - só o que é usado
 // ============================================================
 
 import { supabase } from '../lib/supabase';
@@ -27,9 +27,7 @@ import {
 // ============================================================
 
 export async function buscarMapaSalas(): Promise<EntradaGradeSala[]> {
-  const { data, error } = await supabase
-    .from('mapa_salas')
-    .select('*');
+  const { data, error } = await supabase.from('mapa_salas').select('*');
 
   if (error) {
     console.error('[DEBUG] Erro ao buscar mapa de salas:', error);
@@ -60,7 +58,6 @@ export async function buscarSalas(): Promise<Sala[]> {
   const rawSalas = salasResult.data || [];
   const grade = gradeResult || [];
 
-  // Mapear salas do banco
   const salas: Sala[] = rawSalas.map(s => ({
     id: s.id,
     numero: s.numero,
@@ -70,7 +67,6 @@ export async function buscarSalas(): Promise<Sala[]> {
     grade: []
   }));
 
-  // Se vazio, criar lista padrão
   if (salas.length === 0) {
     for (let i = 1; i <= 31; i++) {
       salas.push({
@@ -84,13 +80,10 @@ export async function buscarSalas(): Promise<Sala[]> {
     }
   }
 
-  // Preencher grade em cada sala
   grade.forEach(item => {
     const sala = salas.find(s => s.numero === item.numeroSala);
     if (sala) {
-      if (item.anoTurma && item.anoTurma !== 'A DEFINIR') {
-        sala.ano = item.anoTurma;
-      }
+      if (item.anoTurma && item.anoTurma !== 'A DEFINIR') sala.ano = item.anoTurma;
       sala.grade.push(item);
     }
   });
@@ -98,9 +91,6 @@ export async function buscarSalas(): Promise<Sala[]> {
   return salas.sort((a, b) => a.numero - b.numero);
 }
 
-/**
- * Salva uma ou mais entradas da grade de sala
- */
 export async function salvarGradeSala(entrada: Partial<EntradaGradeSala> | Partial<EntradaGradeSala>[]): Promise<boolean> {
   const lista = Array.isArray(entrada) ? entrada : [entrada];
 
@@ -120,27 +110,20 @@ export async function salvarGradeSala(entrada: Partial<EntradaGradeSala> | Parti
     };
   }).filter(p => p.numero_sala > 0 && p.dia_semana !== '' && p.horario !== '');
 
-  if (payloads.length === 0) {
-    console.error('[DEBUG] Nenhum registro válido para salvar na grade.');
-    return false;
-  }
+  if (payloads.length === 0) return false;
 
   const { error } = await supabase
     .from('mapa_salas')
     .upsert(payloads, { onConflict: 'numero_sala,dia_semana,horario' });
 
   if (error) {
-    console.error('[DEBUG] Erro ao salvar grade:', error.code, error.message);
+    console.error('[DEBUG] Erro ao salvar grade:', error.message);
     return false;
   }
 
-  console.log('[DEBUG] Grade salva!', payloads.length, 'registros.');
   return true;
 }
 
-/**
- * Atualiza só a lista de alunos de uma entrada da grade
- */
 export async function salvarAlunosNaGrade(
   numeroSala: number,
   diaSemana: string,
@@ -154,11 +137,7 @@ export async function salvarAlunosNaGrade(
     .eq('dia_semana', diaSemana.toUpperCase().trim())
     .eq('horario', horario.trim());
 
-  if (error) {
-    console.error('[DEBUG] Erro ao salvar lista de alunos:', error);
-    return false;
-  }
-  return true;
+  return !error;
 }
 
 // ============================================================
@@ -166,9 +145,7 @@ export async function salvarAlunosNaGrade(
 // ============================================================
 
 export async function buscarAlunos(): Promise<Aluno[]> {
-  const { data, error } = await supabase
-    .from('alunos_cms')
-    .select('*');
+  const { data, error } = await supabase.from('alunos_cms').select('*');
 
   if (error) {
     console.error('[DEBUG] Erro ao buscar alunos:', error);
@@ -185,10 +162,7 @@ export async function buscarAlunos(): Promise<Aluno[]> {
 }
 
 export async function salvarAluno(aluno: Partial<Aluno>): Promise<boolean> {
-  if (!aluno.nome?.trim()) {
-    console.error('[DEBUG] Nome do aluno vazio!');
-    return false;
-  }
+  if (!aluno.nome?.trim()) return false;
 
   const payload: any = {
     nome: aluno.nome.trim(),
@@ -209,12 +183,7 @@ export async function salvarAluno(aluno: Partial<Aluno>): Promise<boolean> {
     .upsert([payload], { onConflict: 'nome' })
     .select();
 
-  if (error) {
-    console.error('[DEBUG] Erro ao salvar aluno:', error.message);
-    return false;
-  }
-
-  return true;
+  return !error;
 }
 
 export async function excluirAluno(id: string): Promise<boolean> {
@@ -232,10 +201,7 @@ export async function buscarProfessoresCMS(): Promise<ProfessorCMS[]> {
     .select('*')
     .order('nome', { ascending: true });
 
-  if (error) {
-    console.error('[DEBUG] Erro ao buscar professores:', error);
-    return [];
-  }
+  if (error) return [];
 
   return (data || []).map(p => ({
     id: p.id,
@@ -272,11 +238,7 @@ export async function excluirProfessorCMS(id: string): Promise<boolean> {
 
 export async function buscarAtividadesAfter(): Promise<AtividadeAfter[]> {
   const { data, error } = await supabase.from('atividades_after').select('*');
-
-  if (error) {
-    console.error('[DEBUG] Erro ao buscar atividades:', error);
-    return [];
-  }
+  if (error) return [];
 
   return (data || []).map(item => ({
     id: item.id,
@@ -311,9 +273,7 @@ export async function salvarAtividadeAfter(atividade: Partial<AtividadeAfter>): 
     lista_alunos: atividade.listaAlunos || []
   };
 
-  if (atividade.id && atividade.id !== 'novo') {
-    payload.id = atividade.id;
-  }
+  if (atividade.id && atividade.id !== 'novo') payload.id = atividade.id;
 
   const { error } = await supabase.from('atividades_after').upsert([payload], { onConflict: 'id' });
   return !error;
@@ -330,11 +290,7 @@ export async function excluirAtividadeAfter(id: string): Promise<boolean> {
 
 export async function buscarMonitores(): Promise<Monitor[]> {
   const { data, error } = await supabase.from('monitores').select('*');
-
-  if (error) {
-    console.error('[DEBUG] Erro ao buscar monitores:', error);
-    return [];
-  }
+  if (error) return [];
 
   return (data || []).map(item => ({
     id: item.id,
@@ -369,9 +325,7 @@ export async function salvarMonitor(monitor: Partial<Monitor>): Promise<boolean>
     status: monitor.status
   };
 
-  if (monitor.id && monitor.id !== 'novo') {
-    payload.id = monitor.id;
-  }
+  if (monitor.id && monitor.id !== 'novo') payload.id = monitor.id;
 
   const { error } = await supabase.from('monitores').upsert([payload], { onConflict: 'id' });
   return !error;
@@ -392,10 +346,7 @@ export async function buscarGradeMonitores(): Promise<GradeMonitor[]> {
     .select('*')
     .order('horario_inicio', { ascending: true });
 
-  if (error) {
-    console.error('[DEBUG] Erro ao buscar grade de monitores:', error);
-    return [];
-  }
+  if (error) return [];
 
   return (data || []).map(item => ({
     id: item.id,
@@ -418,14 +369,9 @@ export async function salvarGradeMonitor(grade: Partial<GradeMonitor>): Promise<
     cor_etiqueta: grade.corEtiqueta
   };
 
-  if (grade.id && grade.id !== 'novo') {
-    payload.id = grade.id;
-  }
+  if (grade.id && grade.id !== 'novo') payload.id = grade.id;
 
-  const { error } = await supabase
-    .from('grade_monitores')
-    .upsert([payload], { onConflict: 'id' });
-
+  const { error } = await supabase.from('grade_monitores').upsert([payload], { onConflict: 'id' });
   return !error;
 }
 
@@ -444,10 +390,7 @@ export async function buscarLanguageLab(): Promise<LanguageLabRecord[]> {
     .select('*')
     .order('horario_inicio', { ascending: true });
 
-  if (error) {
-    console.error('[DEBUG] Erro ao buscar Language Lab:', error);
-    return [];
-  }
+  if (error) return [];
 
   return (data || []).map(item => ({
     id: item.id,
@@ -474,14 +417,9 @@ export async function salvarLanguageLab(record: Partial<LanguageLabRecord>): Pro
     lista_alunos: record.listaAlunos || []
   };
 
-  if (record.id && record.id !== 'novo') {
-    payload.id = record.id;
-  }
+  if (record.id && record.id !== 'novo') payload.id = record.id;
 
-  const { error } = await supabase
-    .from('language_lab')
-    .upsert([payload], { onConflict: 'id' });
-
+  const { error } = await supabase.from('language_lab').upsert([payload], { onConflict: 'id' });
   return !error;
 }
 
@@ -500,10 +438,7 @@ export async function buscarLocaisCMS(): Promise<LocalCMS[]> {
     .select('*')
     .order('numero', { ascending: true });
 
-  if (error) {
-    console.error('[DEBUG] Erro ao buscar locais:', error);
-    return [];
-  }
+  if (error) return [];
 
   return (data || []).map(l => ({
     id: l.id,
@@ -522,9 +457,7 @@ export async function salvarLocalCMS(local: Partial<LocalCMS>): Promise<boolean>
     capacidade: local.capacidade
   };
 
-  if (local.id && local.id !== 'novo') {
-    payload.id = local.id;
-  }
+  if (local.id && local.id !== 'novo') payload.id = local.id;
 
   const { error } = await supabase.from('locais_cms').upsert([payload], { onConflict: 'nome' });
   return !error;
@@ -545,10 +478,7 @@ export async function buscarPeriodosEscolares(): Promise<PeriodoConfig[]> {
     .select('*')
     .order('horario_inicio', { ascending: true });
 
-  if (error) {
-    console.error('[DEBUG] Erro ao buscar períodos:', error);
-    return [];
-  }
+  if (error) return [];
 
   return (data || []).map(p => ({
     id: p.id.toString(),
@@ -569,14 +499,9 @@ export async function salvarPeriodo(periodo: Partial<PeriodoConfig>): Promise<bo
     segmento: periodo.segmento
   };
 
-  if (periodo.id && periodo.id !== 'novo') {
-    payload.id = parseInt(periodo.id);
-  }
+  if (periodo.id && periodo.id !== 'novo') payload.id = parseInt(periodo.id);
 
-  const { error } = await supabase
-    .from('periodos_escolares')
-    .upsert([payload], { onConflict: 'id' });
-
+  const { error } = await supabase.from('periodos_escolares').upsert([payload], { onConflict: 'id' });
   return !error;
 }
 
@@ -595,10 +520,7 @@ export async function buscarOcorrencias(): Promise<RegistroOcorrencia[]> {
     .select('*')
     .order('criado_em', { ascending: false });
 
-  if (error) {
-    console.error('[DEBUG] Erro ao buscar ocorrências:', error);
-    return [];
-  }
+  if (error) return [];
 
   return (data || []).map(item => ({
     id: item.id,
@@ -629,6 +551,23 @@ export async function salvarOcorrencia(ocorrencia: Partial<RegistroOcorrencia>):
   return !error;
 }
 
+export async function registrarAtrasoProfessor(payload: {
+  sala: number;
+  professor: string;
+  materia: string;
+  turma: string
+}): Promise<boolean> {
+  const { error } = await supabase.from('ocorrencias').insert([{
+    nome_modelo: 'Atraso de Professor',
+    nome_aluno: 'SALA ' + payload.sala,
+    turma_aluno: payload.turma,
+    sala_aluno: payload.sala,
+    professor_atual: payload.professor,
+    dados: { materia: payload.materia, tipo: 'atraso_imediato' }
+  }]);
+  return !error;
+}
+
 // ============================================================
 // MODELOS DE FORMULÁRIO
 // ============================================================
@@ -639,10 +578,7 @@ export async function buscarModelosFormulario(): Promise<ModeloFormulario[]> {
     .select('*')
     .order('criado_em', { ascending: false });
 
-  if (error) {
-    console.error('[DEBUG] Erro ao buscar modelos:', error);
-    return [];
-  }
+  if (error) return [];
 
   return (data || []).map(item => ({
     id: item.id,
@@ -660,9 +596,7 @@ export async function salvarModeloFormulario(modelo: Partial<ModeloFormulario>):
     campos: modelo.campos
   };
 
-  if (modelo.id && modelo.id !== 'novo') {
-    payload.id = modelo.id;
-  }
+  if (modelo.id && modelo.id !== 'novo') payload.id = modelo.id;
 
   const { error } = await supabase.from('modelos_formulario').upsert([payload], { onConflict: 'id' });
   return !error;
@@ -691,11 +625,7 @@ export async function buscarChamadas(filtros?: {
   if (filtros?.professor) query = query.eq('professor', filtros.professor);
 
   const { data, error } = await query.order('data', { ascending: false });
-
-  if (error) {
-    console.error('[DEBUG] Erro ao buscar chamadas:', error);
-    return [];
-  }
+  if (error) return [];
 
   return (data || []).map(item => ({
     id: item.id,
@@ -731,21 +661,15 @@ export async function salvarChamadas(registros: Partial<RegistroChamada>[]): Pro
     .from('chamadas')
     .upsert(payloads, { onConflict: 'data,horario,sala,id_aluno' });
 
-  if (error) {
-    console.error('[DEBUG] Erro ao salvar chamadas:', error.message);
-    return false;
-  }
-
-  return true;
+  return !error;
 }
 
 // ============================================================
-// PROFESSORES CONFIG (para realocação)
+// PROFESSORES CONFIG (realocação)
 // ============================================================
 
 export async function buscarProfessoresConfig(): Promise<any[]> {
-  const { data, error } = await supabase.from('professores_config').select('*');
-  if (error) return [];
+  const { data } = await supabase.from('professores_config').select('*');
   return data || [];
 }
 
@@ -764,26 +688,8 @@ export async function salvarProfessorConfig(prof: any): Promise<boolean> {
 // EVENTOS E REALOCAÇÕES
 // ============================================================
 
-export async function registrarAtrasoProfessor(payload: {
-  sala: number;
-  professor: string;
-  materia: string;
-  turma: string
-}): Promise<boolean> {
-  const { error } = await supabase.from('ocorrencias').insert([{
-    nome_modelo: 'Atraso de Professor',
-    nome_aluno: 'SALA ' + payload.sala,
-    turma_aluno: payload.turma,
-    sala_aluno: payload.sala,
-    professor_atual: payload.professor,
-    dados: { materia: payload.materia, tipo: 'atraso_imediato' }
-  }]);
-  return !error;
-}
-
 export async function buscarEventosEscola(): Promise<any[]> {
-  const { data, error } = await supabase.from('eventos_escola').select('*');
-  if (error) return [];
+  const { data } = await supabase.from('eventos_escola').select('*');
   return data || [];
 }
 
@@ -800,8 +706,7 @@ export async function salvarEvento(evento: any): Promise<boolean> {
 }
 
 export async function buscarRealocacoes(): Promise<any[]> {
-  const { data, error } = await supabase.from('realocacoes').select('*');
-  if (error) return [];
+  const { data } = await supabase.from('realocacoes').select('*');
   return data || [];
 }
 
