@@ -128,17 +128,19 @@ export async function buscarAlunos(): Promise<Aluno[]> {
 }
 
 export async function salvarAluno(aluno: Partial<Aluno>): Promise<boolean> {
-  const payload: any = {
-    nome: aluno.nome,
-    turma: aluno.turma,
-    ano: aluno.ano,
-    numero_sala: aluno.numeroSala,
-  };
+  // Remove campos undefined
+  const payload: any = {};
+  if (aluno.nome) payload.nome = aluno.nome;
+  if (aluno.turma) payload.turma = aluno.turma;
+  if (aluno.ano) payload.ano = aluno.ano;
+  if (aluno.numeroSala !== undefined) payload.numero_sala = aluno.numeroSala;
 
   // Só adiciona ID se não for 'novo'
   if (aluno.id && aluno.id !== 'novo') {
     payload.id = aluno.id;
   }
+
+  console.log('Payload aluno:', payload);
 
   const { error } = await supabase
     .from('alunos_cms')
@@ -148,6 +150,7 @@ export async function salvarAluno(aluno: Partial<Aluno>): Promise<boolean> {
     console.error('Erro ao salvar aluno:', error);
     return false;
   }
+  console.log('Aluno salvo:', payload.nome);
   return true;
 }
 

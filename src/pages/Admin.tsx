@@ -111,9 +111,11 @@ export default function Admin() {
   // Helpers
   const doSave = async (action: Promise<boolean>, close: Function) => {
     setCarregando(true);
+    console.log('Salvando...');
     const ok = await action;
+    console.log('Resultado:', ok);
     if (ok) { atualizar(); close(null); setMsg({ tipo: 'ok', texto: 'Salvo com sucesso!' }); }
-    else { setMsg({ tipo: 'erro', texto: 'Erro ao salvar.' }); }
+    else { setMsg({ tipo: 'erro', texto: 'Erro ao salvar. Verifique os dados ou nome duplicado.' }); }
     setCarregando(false);
     setTimeout(() => setMsg(null), 3000);
   };
