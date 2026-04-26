@@ -530,7 +530,7 @@ export async function salvarLocalCMS(local: Partial<LocalCMS>): Promise<boolean>
 
   const payload: any = {
     nome: local.nome.trim(),
-    numero: local.numero ?? null,
+    numero: local.numero ?? undefined,
     tipo: local.tipo || 'sala',
     capacidade: local.capacidade || 0
   };
@@ -538,39 +538,33 @@ export async function salvarLocalCMS(local: Partial<LocalCMS>): Promise<boolean>
   console.log('[DEBUG] Salvando local:', payload);
 
   try {
-    // Primeiro tenta buscar se já existe
-    const { data: existente } = await supabase
+    const { error } = await supabase
       .from('locais_cms')
-      .select('id')
-      .eq('nome', local.nome.trim())
-      .maybeSingle();
-
-    if (existente) {
-      // Atualiza
-      const { error } = await supabase
-        .from('locais_cms')
-        .update(payload)
-        .eq('id', existente.id);
+      .insert([payload]);
+    
+    if (error) {
+      console.log('[DEBUG] Erro no insert:', error.code, error.message);
       
-      if (error) {
-        console.error('[DEBUG] Erro ao atualizar local:', error);
-        return false;
+      if (error.code === '23505') {
+        const { error: updateError } = await supabase
+          .from('locais_cms')
+          .update(payload)
+          .eq('nome', local.nome.trim());
+        
+        if (updateError) {
+          console.error('[DEBUG] Erro no update local:', updateError);
+          return false;
+        }
+        console.log('[DEBUG] Local atualizado com sucesso');
+        return true;
       }
-      console.log('[DEBUG] Local atualizado com sucesso');
-      return true;
-    } else {
-      // Insere
-      const { error } = await supabase
-        .from('locais_cms')
-        .insert([payload]);
       
-      if (error) {
-        console.error('[DEBUG] Erro ao inserir local:', error);
-        return false;
-      }
-      console.log('[DEBUG] Local inserido com sucesso');
-      return true;
+      console.error('[DEBUG] Erro ao inserir local:', error);
+      return false;
     }
+    
+    console.log('[DEBUG] Local inserido com sucesso');
+    return true;
   } catch (e) {
     console.error('[DEBUG] Exceção ao salvar local:', e);
     return false;
