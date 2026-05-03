@@ -384,7 +384,8 @@ export async function buscarMonitores(): Promise<Monitor[]> {
     almocoInicio: item.almoco_inicio || '',
     almocoFim: item.almoco_fim || '',
     tipo: (item.tipo || 'fixo') as 'volante' | 'fixo' | 'hibrido',
-    status: item.status as 'ativo' | 'inativo'
+    status: item.status as 'ativo' | 'inativo',
+    cor: item.cor || '#3B82F6'
   }));
 }
 
@@ -401,7 +402,8 @@ export async function salvarMonitor(monitor: Partial<Monitor>): Promise<boolean>
     local_permanencia: monitor.localPermanencia,
     local_almoco: monitor.localAlmoco,
     tipo: monitor.tipo,
-    status: monitor.status
+    status: monitor.status,
+    cor: monitor.cor || '#3B82F6'
   };
 
   if (monitor.id && monitor.id !== 'novo') {

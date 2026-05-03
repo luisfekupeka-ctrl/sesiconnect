@@ -106,6 +106,8 @@ export default function Admin() {
   const [editandoLanguageLab, setEditandoLanguageLab] = useState<any>(null);
   const [editandoAfter, setEditandoAfter] = useState<any>(null);
   const [editandoGradeMonitor, setEditandoGradeMonitor] = useState<any>(null);
+  const [diaMonitor, setDiaMonitor] = useState('SEGUNDA');
+  const [subAbaMonitor, setSubAbaMonitor] = useState<'EQUIPE' | 'ESCALA' | 'DASHBOARD'>('EQUIPE');
 
   // 2. FUNÇÕES DE SUPORTE
   const handleLogin = (e: React.FormEvent) => {
@@ -540,78 +542,174 @@ export default function Admin() {
           {abaAtiva === 'gestao-monitores' && (
             <motion.div key="gestao-monitores" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-12">
 
-              {/* Passo 1: Cadastro */}
-              <div>
-                <Painel titulo="Passo 1: Quem são os Monitores?" subtitulo="Primeiro, certifique-se de que o monitor existe no banco (Nome, Tipo e Horário Base)."
-                  acao={<button onClick={() => setEditandoMonitor({ id: 'novo', nome: '', materia: '', diaSemana: 'SEGUNDA', turno: 'manha', horarioInicio: '08:00', horarioFim: '12:00', tipo: 'fixo', status: 'ativo', localPermanencia: '', localAlmoco: '' })} className="btn-primary"><Plus size={14} /> Cadastrar Monitor</button>}>
+              <div className="flex items-center justify-between">
+                <div className="flex gap-2 p-1 bg-surface-container-low rounded-xl">
+                  {(['EQUIPE', 'ESCALA', 'DASHBOARD'] as const).map(sub => (
+                    <button key={sub} onClick={() => { setSubAbaMonitor(sub); setBusca(''); }}
+                      className={cn("px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                        subAbaMonitor === sub ? "bg-primary text-on-primary shadow-md" : "text-on-surface-variant hover:bg-hover")}>
+                      {sub}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {subAbaMonitor === 'EQUIPE' && (
+                <div>
+                  <Painel titulo="Equipe de Monitores" subtitulo="Cadastro básico de monitores e horários padrão."
+                    acao={<button onClick={() => setEditandoMonitor({ id: 'novo', nome: '', materia: '', diaSemana: 'SEGUNDA', turno: 'manha', horarioInicio: '08:00', horarioFim: '12:00', tipo: 'fixo', status: 'ativo', localPermanencia: '', localAlmoco: '', cor: '#3B82F6' })} className="btn-primary"><Plus size={14} /> Cadastrar Monitor</button>}>
 
                   <div className="relative mb-6">
                     <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
                     <input type="text" placeholder="Buscar monitor..." value={busca} onChange={e => setBusca(e.target.value)} className="campo-input pl-10" />
                   </div>
 
-                  {Array.isArray(monitores) && monitores.length === 0 ? (
-                    <VazioMsg texto="Nenhum monitor cadastrado ainda." />
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {(Array.isArray(monitores) ? monitores : []).filter(m => {
-                        const b = busca.toLowerCase();
-                        return !busca || (m.nome?.toLowerCase() || '').includes(b);
-                      }).map(m => (
-                        <div key={m.id} className="bg-surface-container-low p-5 rounded-2xl group transition-all hover:bg-surface-container-high border border-transparent hover:border-primary/10">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black", m.tipo === 'volante' ? "bg-amber-500/10 text-amber-600" : "bg-primary/10 text-primary")}>
-                                {m.nome.charAt(0)}
+                    {Array.isArray(monitores) && monitores.length === 0 ? (
+                      <VazioMsg texto="Nenhum monitor cadastrado ainda." />
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {(Array.isArray(monitores) ? monitores : []).filter(m => !busca || m.nome.toLowerCase().includes(busca.toLowerCase())).map(m => (
+                          <div key={m.id} className="bg-surface-container-low p-5 rounded-2xl group transition-all hover:bg-surface-container-high border-l-4" style={{ borderLeftColor: m.cor || '#3B82F6' }}>
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black" style={{ backgroundColor: `${m.cor || '#3B82F6'}15`, color: m.cor || '#3B82F6' }}>
+                                  {m.nome.charAt(0)}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-black truncate max-w-[150px]">{m.nome}</p>
+                                  <p className="text-[10px] text-on-surface-variant font-black uppercase tracking-widest leading-none mb-1">{m.tipo}</p>
+                                </div>
                               </div>
-                              <div>
-                                <p className="text-sm font-black truncate max-w-[150px]">{m.nome}</p>
-                                <p className="text-[10px] text-on-surface-variant font-black uppercase tracking-widest leading-none mb-1">{m.tipo}</p>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100">
+                                <button onClick={() => setEditandoMonitor(m)} className="p-1.5 bg-surface-container-high rounded-lg shadow-sm hover:text-primary"><Eye size={12} /></button>
+                                <button onClick={() => { if (confirm('Excluir?')) doDelete(excluirMonitor(m.id)); }} className="p-1.5 bg-surface-container-high rounded-lg shadow-sm hover:text-red-500"><Trash2 size={12} /></button>
                               </div>
                             </div>
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100">
-                              <button onClick={() => setEditandoMonitor(m)} className="p-1.5 bg-surface-container-high rounded-lg shadow-sm hover:text-primary"><Eye size={12} /></button>
-                              <button onClick={() => { if (confirm('Excluir?')) doDelete(excluirMonitor(m.id)); }} className="p-1.5 bg-surface-container-high rounded-lg shadow-sm hover:text-red-500"><Trash2 size={12} /></button>
+                            <div className="mt-4 pt-3 border-t border-outline-variant/10">
+                              <span className="text-[10px] font-bold text-on-surface-variant">Trabalha das {m.horarioInicio} às {m.horarioFim}</span>
                             </div>
                           </div>
-                          <div className="mt-4 pt-3 border-t border-outline-variant/10">
-                            <span className="text-[10px] font-bold text-on-surface-variant">Trabalha das {m.horarioInicio} às {m.horarioFim}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </Painel>
-              </div>
+                        ))}
+                      </div>
+                    )}
+                  </Painel>
+                </div>
+              )}
 
-              {/* Passo 2: Escala (Fixa) */}
-              <div>
-                <Painel titulo="Passo 2: Onde eles vão ficar? (Plantões Fixos)" subtitulo="Com o monitor cadastrado, adicione a escala. A escala é fixa: uma vez montada, vale para sempre até que você a exclua."
-                  acao={<button onClick={() => setEditandoGradeMonitor({ id: 'novo', monitorNome: '', diaSemana: 'FIXO', horarioInicio: '08:00', horarioFim: '09:30', posto: '', corEtiqueta: '#3B82F6' })} className="btn-primary"><Plus size={14} /> Alocar em um Posto</button>}>
+              {subAbaMonitor === 'ESCALA' && (
+                <div>
+                  <Painel titulo="Grade de Postos (Grade)" subtitulo="Alocação detalhada por horário, local e função."
+                    acao={<button onClick={() => setEditandoGradeMonitor({ id: 'novo', monitorNome: '', diaSemana: 'SEGUNDA', horarioInicio: '08:00', horarioFim: '09:30', posto: '', funcao: 'Monitoria Geral', corEtiqueta: '#3B82F6' })} className="btn-primary"><Plus size={14} /> Alocar em um Posto</button>}>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {gradeMonitores.length === 0 ? <VazioMsg texto="Nenhuma escala detalhada cadastrada. Adicione postos no botão acima." /> :
-                      gradeMonitores.map(gm => (
-                        <div key={gm.id} className="bg-surface-container-low p-4 rounded-2xl border-l-4 group" style={{ borderLeftColor: gm.corEtiqueta || '#3B82F6' }}>
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="text-sm font-black">{gm.monitorNome}</p>
-                              <p className="text-[10px] font-bold text-primary uppercase tracking-widest">{gm.posto}</p>
-                            </div>
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                              <button onClick={() => setEditandoGradeMonitor(gm)} className="p-1.5 bg-surface-container-high rounded-lg hover:text-primary"><Eye size={12} /></button>
-                              <button onClick={() => { if (confirm('Excluir este plantão?')) doDelete(excluirGradeMonitor(gm.id)); }} className="p-1.5 bg-surface-container-high rounded-lg hover:text-red-500"><Trash2 size={12} /></button>
-                            </div>
-                          </div>
-                          <div className="mt-3 flex items-center justify-between text-[10px] font-bold text-on-surface-variant">
-                            <span>{gm.diaSemana}</span>
-                            <span>{gm.horarioInicio} - {gm.horarioFim}</span>
-                          </div>
-                        </div>
-                      ))}
+                  <div className="relative mb-6">
+                    <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
+                    <input type="text" placeholder="Buscar por monitor ou posto..." value={busca} onChange={e => setBusca(e.target.value)} className="campo-input pl-10" />
                   </div>
-                </Painel>
-              </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {gradeMonitores.length === 0 ? <VazioMsg texto="Nenhuma escala detalhada cadastrada. Adicione postos no botão acima." /> :
+                        gradeMonitores.filter(gm => !busca || gm.monitorNome.toLowerCase().includes(busca.toLowerCase()) || gm.posto.toLowerCase().includes(busca.toLowerCase())).map(gm => {
+                          const mCor = monitores.find(m => m.nome === gm.monitorNome)?.cor || gm.corEtiqueta || '#3B82F6';
+                          return (
+                            <div key={gm.id} className="bg-surface-container-low p-4 rounded-2xl border-l-4 group" style={{ borderLeftColor: mCor }}>
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="text-sm font-black">{gm.monitorNome}</p>
+                                  <p className="text-[10px] font-bold text-primary uppercase tracking-widest">{gm.posto} · {gm.funcao}</p>
+                                </div>
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                  <button onClick={() => setEditandoGradeMonitor(gm)} className="p-1.5 bg-surface-container-high rounded-lg hover:text-primary"><Eye size={12} /></button>
+                                  <button onClick={() => { if (confirm('Excluir este plantão?')) doDelete(excluirGradeMonitor(gm.id)); }} className="p-1.5 bg-surface-container-high rounded-lg hover:text-red-500"><Trash2 size={12} /></button>
+                                </div>
+                              </div>
+                              <div className="mt-3 flex items-center justify-between text-[10px] font-bold text-on-surface-variant">
+                                <span>{gm.diaSemana}</span>
+                                <span>{gm.horarioInicio} - {gm.horarioFim}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </Painel>
+                </div>
+              )}
+
+              {subAbaMonitor === 'DASHBOARD' && (
+                <div className="space-y-8">
+                   <div className="flex items-center justify-between bg-surface-container-low p-6 rounded-3xl border border-primary/5">
+                      <div>
+                         <h3 className="text-lg font-black italic tracking-tighter">Dashboard Colorido</h3>
+                         <p className="text-xs text-on-surface-variant font-medium">Visualize a escala completa ou individual.</p>
+                      </div>
+                      <div className="flex gap-2">
+                         <select value={anoFiltro} onChange={e => setAnoFiltro(e.target.value)} 
+                           className="bg-surface-container-high border-none rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest outline-none ring-2 ring-primary/5 focus:ring-primary/20">
+                            <option value="Todos">Todos os Monitores</option>
+                            {monitores.map(m => <option key={m.id} value={m.nome}>{m.nome}</option>)}
+                         </select>
+                         <div className="flex gap-1 bg-surface-container-high p-1 rounded-xl">
+                            {['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'].map(dia => (
+                               <button key={dia} onClick={() => setDiaMonitor(dia)}
+                                 className={cn("px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all",
+                                   diaMonitor === dia ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:bg-hover")}>
+                                 {dia.slice(0, 3)}
+                               </button>
+                            ))}
+                         </div>
+                      </div>
+                   </div>
+
+                   <div className="bg-surface-container-low rounded-[2rem] border border-primary/5 overflow-hidden p-6">
+                      {(() => {
+                         const diaSel = diaMonitor;
+                         const gradeDia = gradeMonitores.filter(g => g.diaSemana === diaSel && (anoFiltro === 'Todos' || g.monitorNome === anoFiltro));
+                         const monsNoDia = Array.from(new Set(gradeDia.map(g => g.monitorNome)));
+                         const horas = ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
+                         const inicio = 7 * 60;
+                         const total = 11 * 60;
+
+                         if (gradeDia.length === 0) return <VazioMsg texto="Nenhuma escala para este dia/filtro." />;
+
+                         return (
+                            <div className="space-y-1">
+                               <div className="flex border-b border-outline-variant/10 mb-4 pb-4">
+                                  <div className="w-32 shrink-0 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Monitor</div>
+                                  <div className="flex-1 flex">
+                                     {horas.map(h => <div key={h} className="flex-1 text-center text-[8px] font-black text-on-surface-variant/30">{h}</div>)}
+                                  </div>
+                               </div>
+                               {monsNoDia.map(nome => {
+                                  const mObj = monitores.find(m => m.nome === nome);
+                                  const cor = mObj?.cor || '#3B82F6';
+                                  const postos = gradeDia.filter(g => g.monitorNome === nome);
+                                  return (
+                                     <div key={nome} className="flex items-center group py-2 hover:bg-primary/5 transition-all rounded-xl">
+                                        <div className="w-32 shrink-0 flex items-center gap-3">
+                                           <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black" style={{ backgroundColor: `${cor}20`, color: cor }}>{nome.charAt(0)}</div>
+                                           <span className="text-[10px] font-black truncate">{nome.split(' ')[0]}</span>
+                                        </div>
+                                        <div className="flex-1 relative h-10">
+                                           {postos.map(p => {
+                                              const parseH = (h: string) => { const [hh, mm] = h.split(':').map(Number); return hh * 60 + mm; };
+                                              const l = ((parseH(p.horarioInicio) - inicio) / total) * 100;
+                                              const w = ((parseH(p.horarioFim) - parseH(p.horarioInicio)) / total) * 100;
+                                              return (
+                                                 <div key={p.id} className="absolute h-8 top-1 rounded-lg flex items-center px-2 shadow-sm overflow-hidden border border-white/10"
+                                                   style={{ left: `${l}%`, width: `${w}%`, backgroundColor: cor }}>
+                                                    <span className="text-[7px] font-black text-white uppercase truncate">{p.posto}</span>
+                                                 </div>
+                                              );
+                                           })}
+                                        </div>
+                                     </div>
+                                  );
+                               })}
+                            </div>
+                         );
+                      })()}
+                   </div>
+                </div>
+              )}
 
               <ModalForm aberto={!!editandoMonitor} onClose={() => setEditandoMonitor(null)}
                 titulo={editandoMonitor?.id === 'novo' ? 'Cadastrar Monitor' : 'Editar Monitor'}
@@ -629,7 +727,18 @@ export default function Admin() {
                 {editandoMonitor && (
                   <div className="space-y-4">
                     <CampoTexto label="Nome do monitor" value={editandoMonitor.nome} onChange={v => setEditandoMonitor({ ...editandoMonitor, nome: v })} />
-                    <CampoSelect label="Tipo" value={editandoMonitor.tipo || 'fixo'} options={['fixo', 'volante']} onChange={v => setEditandoMonitor({ ...editandoMonitor, tipo: v as any })} />
+                    <CampoSelect label="Tipo" value={editandoMonitor.tipo || 'fixo'} options={['fixo', 'volante', 'hibrido']} onChange={v => setEditandoMonitor({ ...editandoMonitor, tipo: v as any })} />
+
+                    <div className="p-4 bg-surface-container-high rounded-2xl border border-outline-variant/10">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-3 block">Identidade Visual</label>
+                      <div className="flex flex-wrap gap-2">
+                        {PALETA_CORES.slice(0, 15).map(c => (
+                          <button key={c} onClick={() => setEditandoMonitor({ ...editandoMonitor, cor: c })}
+                            className={cn("w-8 h-8 rounded-xl border-2 transition-all hover:scale-110", editandoMonitor.cor === c ? "border-white shadow-lg" : "border-transparent")}
+                            style={{ backgroundColor: c }} />
+                        ))}
+                      </div>
+                    </div>
 
                     <div className="p-4 bg-surface-container-high rounded-2xl border border-outline-variant/10">
                       <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-3 block">Horário de Trabalho (Padrão)</label>

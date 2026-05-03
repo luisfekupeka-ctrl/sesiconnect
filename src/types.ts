@@ -145,6 +145,7 @@ export interface Monitor {
   localAlmoco: string;
   tipo: 'volante' | 'fixo' | 'hibrido';
   status: 'ativo' | 'inativo';
+  cor: string;
 }
 
 export interface GradeMonitor {
