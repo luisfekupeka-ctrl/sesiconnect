@@ -262,7 +262,9 @@ export default function MonitorScheduleEditor() {
                   <div className="flex gap-2">
                     <button onClick={() => setModalCopiaAberto(true)} className="px-5 py-3 bg-surface-container-low rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-primary/10 transition-all flex items-center gap-2 border border-transparent hover:border-primary/20"><Copy size={12} /> Copiar Dias</button>
                   </div>
-                   <div className="space-y-2">
+                </div>
+
+                <div className="space-y-2">
                   {linhas.map((linha, idx) => {
                     const ehAlmoco = linha.tipo === 'almoco';
                     return (
@@ -314,6 +316,8 @@ export default function MonitorScheduleEditor() {
                               <Trash2 size={16} />
                             </button>
                           </div>
+                        </div>
+                      </motion.div>
                     );
                   })}
                   
