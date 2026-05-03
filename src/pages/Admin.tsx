@@ -972,6 +972,7 @@ export default function Admin() {
                 <SeletorAlunos
                   alunos={alunosBase}
                   selecionados={editandoLocal.lista_alunos || []}
+                  turmaAlvo={editandoLocal.segmento}
                   onChange={v => setEditandoLocal({ ...editandoLocal, lista_alunos: v })}
                 />
               </div>
@@ -1268,7 +1269,7 @@ function SeletorAlunos({ alunos, selecionados, onChange, turmaAlvo }: { alunos: 
   const alunosFiltrados = useMemo(() => {
     return alunos.filter(a => {
       const matchesBusca = !busca || a.nome.toLowerCase().includes(busca.toLowerCase());
-      const matchesTurma = mostrarTodos || (turmaAlvo && a.turma === turmaAlvo);
+      const matchesTurma = mostrarTodos || (turmaAlvo && (a.turma === turmaAlvo || a.ano === turmaAlvo));
       return matchesBusca && matchesTurma;
     }).sort((a,b) => a.nome.localeCompare(b.nome));
   }, [alunos, busca, mostrarTodos, turmaAlvo]);
