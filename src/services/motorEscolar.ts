@@ -53,8 +53,13 @@ export function obterDiaSemana(data: Date): string {
 }
 
 export function estaNoHorario(horaAtual: string, horarioRange: string): boolean {
+  if (!horaAtual || !horarioRange || typeof horarioRange !== 'string') return false;
   if (!horarioRange.includes('-')) return false;
-  const [inicio, fim] = horarioRange.split('-').map(s => s.trim());
+  
+  const parts = horarioRange.split('-');
+  const inicio = parts[0]?.trim();
+  const fim = parts[1]?.trim();
+  if (!inicio || !fim) return false;
 
   const minAtual = horaParaMinutos(horaAtual);
   const minInicio = horaParaMinutos(inicio);

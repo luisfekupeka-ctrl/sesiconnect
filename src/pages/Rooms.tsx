@@ -122,13 +122,30 @@ export default function RoomsPage() {
 function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, languageLab, atividadesAfter, buscaFiltro }: any) {
   const [expandido, setExpandido] = useState(false);
 
-  const range = `${bloco.inicio} - ${bloco.fim}`;
-  const entradasDia = gradeCompleta.filter((e: any) => e.numeroSala === salaSelecionada.numero && e.diaSemana === diaGrade);
-  const entradaRegular = entradasDia.find((e: any) => e.horario === range);
-  
-  const lab = languageLab.find((l: any) => l.sala.includes(salaSelecionada.numero.toString()) && l.diaSemana === diaGrade && l.horarioInicio <= bloco.inicio && l.horarioFim >= bloco.fim);
-  const after = atividadesAfter.find((a: any) => a.local.includes(salaSelecionada.numero.toString()) && a.dias.includes(diaGrade) && a.horarioInicio <= bloco.inicio && a.horarioFim >= bloco.fim);
+  const entradasDia = useMemo(() => {
+    if (!salaSelecionada || !gradeCompleta) return [];
+    return gradeCompleta.filter((e: any) => 
+      String(e.numeroSala) === String(salaSelecionada.numero) && 
+      String(e.diaSemana).toUpperCase() === String(diaGrade).toUpperCase()
+    );
+  }, [gradeCompleta, salaSelecionada, diaGrade]);
 
+  const lab = (languageLab || []).find((l: any) => 
+    (l.sala || '').includes(String(salaSelecionada?.numero)) && 
+    l.diaSemana === diaGrade && 
+    l.horarioInicio <= bloco.inicio && 
+    l.horarioFim >= bloco.fim
+  );
+
+  const after = (atividadesAfter || []).find((a: any) => 
+    (a.local || '').includes(String(salaSelecionada?.numero)) && 
+    (a.dias || []).includes(diaGrade) && 
+    a.horarioInicio <= bloco.inicio && 
+    a.horarioFim >= bloco.fim
+  );
+
+  const entradaRegular = entradasDia.find((e: any) => estaNoHorario(bloco.inicio, e.horario));
+  
   let entradaFinal: any = null;
   let alunosNoBloco: string[] = [];
   let tipo = 'regular';

@@ -289,13 +289,14 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
   const gradeProcessada = useMemo(() => {
     return gradeCompleta.map(slot => {
       const tipoAtividade = slot.tipo || 'regular';
+      const slotInicio = slot.horario?.split('-')[0]?.trim() || '';
 
       // 1. Matriz Language Lab
       if (tipoAtividade === 'language_lab') {
         const labMatch = languageLab.find(lab => 
           lab.diaSemana === slot.diaSemana &&
           (lab.sala.includes(slot.numeroSala.toString()) || lab.sala.includes(slot.nomeSala || '')) &&
-          estaNoHorario(slot.horario, lab.horarioInicio, lab.horarioFim)
+          lab.horarioInicio <= slotInicio && lab.horarioFim > slotInicio
         );
         if (labMatch) {
           return { ...slot, materia: `Lab: ${labMatch.nivel}`, nomeProfessor: labMatch.professor, listaAlunos: labMatch.listaAlunos || [], tipo: 'language_lab' };
@@ -307,22 +308,25 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
         const afterMatch = atividadesAfter.find(after => 
           (after.dias || []).includes(slot.diaSemana) &&
           (after.local.includes(slot.numeroSala.toString()) || after.local.includes(slot.nomeSala || '')) &&
-          estaNoHorario(slot.horario, after.horarioInicio, after.horarioFim)
+          after.horarioInicio <= slotInicio && after.horarioFim > slotInicio
         );
         if (afterMatch) {
           return { ...slot, materia: `After: ${afterMatch.nome}`, nomeProfessor: afterMatch.nomeProfessor, listaAlunos: afterMatch.listaAlunos || [], tipo: 'after_school' };
         }
       }
 
-      // 3. Matriz de Sala (Aula Regular)
-      const salaBase = locaisCMS.find(l => l.numero === slot.numeroSala || l.nome === slot.nomeSala);
-      if (salaBase && salaBase.lista_alunos && salaBase.lista_alunos.length > 0) {
-        return { ...slot, listaAlunos: salaBase.lista_alunos, tipo: 'regular' };
+      // 3. Matriz de Sala (Aula Regular) - Busca nos locais cadastrados no CMS
+      const localCmsMatch = locaisCMS.find(l => l.numero === slot.numeroSala || l.nome === slot.nomeSala);
+      if (localCmsMatch && localCmsMatch.lista_alunos && localCmsMatch.lista_alunos.length > 0) {
+        // Se a entrada da grade não tiver alunos próprios, herda da sala
+        if (!slot.listaAlunos || slot.listaAlunos.length === 0) {
+          return { ...slot, listaAlunos: localCmsMatch.lista_alunos, tipo: 'regular' };
+        }
       }
 
-      // Fallback: Turma Base (Se não houver matriz de sala)
+      // Fallback: Turma Base (Se não houver matriz de sala nem alunos na grade)
       if (!slot.listaAlunos || slot.listaAlunos.length === 0) {
-        const alunosDaTurma = alunos.filter(a => a.turma === slot.turma).map(a => a.nome);
+        const alunosDaTurma = (alunos || []).filter(a => a.turma === slot.turma).map(a => a.nome);
         return { ...slot, listaAlunos: alunosDaTurma, tipo: 'regular' };
       }
 
