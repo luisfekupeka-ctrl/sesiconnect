@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import * as XLSX from 'xlsx';
 import {
   Shield, Upload, Check, X, Plus, Search, Eye, Trash2,
-  DoorOpen, Users, BookOpen, Clock, Calendar, UserPlus,
+  DoorOpen, Users, BookOpen, Clock, Calendar, UserPlus, Coffee,
   MapPin, FileSpreadsheet, ClipboardList, BarChart3, RefreshCw, FileText,
   AlignLeft, List, ChevronDownSquare, CircleDot, CheckSquare, GraduationCap
 } from 'lucide-react';
@@ -30,8 +30,14 @@ import {
 // ============================================================
 type AbaAdmin =
   | 'alunos' | 'professores' | 'gestao-monitores' | 'substituicoes'
-  | 'locais' | 'grade-professores'
+  | 'locais' | 'grade-professores' | 'horarios'
   | 'formularios' | 'language-lab' | 'after-school';
+
+const SEGMENTOS_HORARIO = [
+  { id: '6e7', label: '6º e 7º Ano' },
+  { id: '8e9', label: '8º e 9º Ano' },
+  { id: 'medio', label: 'Ensino Médio' },
+];
 
 const ANOS_ESCOLARES = ['6º Ano', '7º Ano', '8º Ano', '9º Ano', '1º Ano EM', '2º Ano EM', '3º Ano EM'];
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
@@ -336,6 +342,7 @@ export default function Admin() {
     { id: 'professores', rotulo: 'Professores', icone: UserPlus, badge: (professoresCMS || []).length },
     { id: 'grade-professores', rotulo: 'Grade de Aulas', icone: Calendar },
     { id: 'gestao-monitores', rotulo: 'Monitores', icone: ClipboardList, badge: (monitores || []).length },
+    { id: 'horarios', rotulo: 'Horários', icone: Clock, badge: (periodos || []).length },
     { id: 'locais', rotulo: 'Salas', icone: MapPin, badge: (locaisCMS || []).length },
     { id: 'language-lab', rotulo: 'Idioma', icone: BookOpen, badge: (languageLab || []).length },
     { id: 'after-school', rotulo: 'After School', icone: Clock, badge: (atividadesAfter || []).length },
@@ -425,10 +432,10 @@ export default function Admin() {
           )}
         </AnimatePresence>
 
-        <div className="flex flex-wrap gap-1.5 p-2 bg-surface-container-low rounded-2xl">
+        <div className="flex gap-1.5 p-2 bg-surface-container-low rounded-2xl overflow-x-auto scrollbar-hide">
           {abas.map(a => (
             <button key={a.id} onClick={() => { setAbaAtiva(a.id); setBusca(''); setAnoFiltro('Todos'); }}
-              className={cn("flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all",
+              className={cn("flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0",
                 abaAtiva === a.id ? "bg-primary text-on-primary shadow-lg shadow-primary/20" : "text-on-surface-variant hover:bg-hover")}>
               <a.icone size={13} />
               {a.rotulo}
@@ -612,6 +619,92 @@ export default function Admin() {
             </motion.div>
           )}
 
+          {/* ===================== HORÁRIOS POR SEGMENTO ===================== */}
+          {abaAtiva === 'horarios' && (
+            <motion.div key="horarios" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
+              <Painel titulo="Horários por Segmento" subtitulo="Defina os períodos de aula, intervalo e almoço para cada segmento escolar. Esses horários serão usados como base para salas e escalas."
+                acao={<button onClick={() => setEditandoPeriodo({ id: 'novo', nome: '', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: '6e7' })} className="btn-primary"><Plus size={14} /> Novo Período</button>}>
+
+                <div className="space-y-8">
+                  {SEGMENTOS_HORARIO.map(seg => {
+                    const periodosSegmento = periodos.filter(p => p.segmento === seg.id).sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
+                    return (
+                      <div key={seg.id} className="bg-surface-container-low rounded-2xl md:rounded-[2rem] p-4 md:p-6 border border-white/5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-primary/10 flex items-center justify-center">
+                              <Clock size={20} className="text-primary" />
+                            </div>
+                            <div>
+                              <h3 className="text-base md:text-lg font-black tracking-tighter">{seg.label}</h3>
+                              <p className="text-[10px] text-on-surface-variant font-black uppercase tracking-widest">{periodosSegmento.length} Períodos</p>
+                            </div>
+                          </div>
+                          <button onClick={() => setEditandoPeriodo({ id: 'novo', nome: '', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: seg.id })} className="btn-mini">
+                            <Plus size={12} /> Adicionar
+                          </button>
+                        </div>
+
+                        {periodosSegmento.length === 0 ? (
+                          <div className="p-6 text-center bg-surface-container rounded-xl border border-dashed border-outline-variant/20">
+                            <p className="text-on-surface-variant text-xs font-medium">Nenhum período cadastrado para este segmento.</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {periodosSegmento.map((p, idx) => {
+                              const ehPausa = p.tipo === 'intervalo' || p.tipo === 'almoco';
+                              return (
+                                <div key={p.id} className={cn(
+                                  "flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl md:rounded-2xl group transition-all",
+                                  ehPausa ? "bg-amber-500/5 border border-amber-500/10" : "bg-white/[0.02] hover:bg-primary/5 border border-transparent"
+                                )}>
+                                  <div className={cn(
+                                    "w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center text-[10px] md:text-xs font-black shrink-0",
+                                    ehPausa ? "bg-amber-500/20 text-amber-500" : "bg-primary/10 text-primary"
+                                  )}>
+                                    {ehPausa ? <Coffee size={16} /> : (idx + 1)}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs md:text-sm font-black truncate">{p.nome}</p>
+                                    <p className="text-[9px] md:text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
+                                      {p.horarioInicio} — {p.horarioFim} · {p.tipo}
+                                    </p>
+                                  </div>
+                                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                                    <button onClick={() => setEditandoPeriodo(p)} className="p-1.5 md:p-2 bg-surface-container-high rounded-lg hover:text-primary"><Eye size={12} /></button>
+                                    <button onClick={() => { if (confirm('Excluir período?')) doDelete(excluirPeriodo(p.id)); }} className="p-1.5 md:p-2 bg-surface-container-high rounded-lg hover:text-red-500"><Trash2 size={12} /></button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </Painel>
+
+              <ModalForm aberto={!!editandoPeriodo} onClose={() => setEditandoPeriodo(null)}
+                titulo={editandoPeriodo?.id === 'novo' ? 'Novo Período' : 'Editar Período'}
+                onSalvar={() => doSave(salvarPeriodo(editandoPeriodo), setEditandoPeriodo)} carregando={carregando}>
+                {editandoPeriodo && (
+                  <div className="space-y-4">
+                    <CampoTexto label="Nome do Período" value={editandoPeriodo.nome} onChange={v => setEditandoPeriodo({ ...editandoPeriodo, nome: v })} placeholder="Ex: 1ª Aula, Intervalo, Almoço..." />
+                    <div className="grid grid-cols-2 gap-4">
+                      <CampoTexto label="Início" value={editandoPeriodo.horarioInicio} onChange={v => setEditandoPeriodo({ ...editandoPeriodo, horarioInicio: v })} tipo="time" />
+                      <CampoTexto label="Fim" value={editandoPeriodo.horarioFim} onChange={v => setEditandoPeriodo({ ...editandoPeriodo, horarioFim: v })} tipo="time" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <CampoSelect label="Tipo" value={editandoPeriodo.tipo} options={['aula', 'intervalo', 'almoco']} onChange={v => setEditandoPeriodo({ ...editandoPeriodo, tipo: v })} />
+                      <CampoSelect label="Segmento" value={editandoPeriodo.segmento} options={['6e7', '8e9', 'medio']} onChange={v => setEditandoPeriodo({ ...editandoPeriodo, segmento: v })} />
+                    </div>
+                  </div>
+                )}
+              </ModalForm>
+            </motion.div>
+          )}
+
           {/* ===================== GRADE E ESCALA (SALAS + PROFS) ===================== */}
           {abaAtiva === 'grade-professores' && (
             <motion.div key="grade-prof" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
@@ -776,22 +869,22 @@ export default function Admin() {
               )}
 
               {subAbaMonitor === 'DASHBOARD' && (
-                <div className="space-y-8">
-                   <div className="flex items-center justify-between bg-surface-container-low p-6 rounded-3xl border border-primary/5">
+                <div className="space-y-6">
+                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface-container-low p-4 md:p-6 rounded-2xl md:rounded-3xl border border-primary/5">
                       <div>
-                         <h3 className="text-lg font-black italic tracking-tighter">Dashboard Colorido</h3>
-                         <p className="text-xs text-on-surface-variant font-medium">Visualize a escala completa ou individual.</p>
+                         <h3 className="text-base md:text-lg font-black italic tracking-tighter">Dashboard Colorido</h3>
+                         <p className="text-[10px] md:text-xs text-on-surface-variant font-medium">Visualize a escala completa ou individual.</p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                          <select value={anoFiltro} onChange={e => setAnoFiltro(e.target.value)} 
-                           className="bg-surface-container-high border-none rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest outline-none ring-2 ring-primary/5 focus:ring-primary/20">
+                           className="bg-surface-container-high border-none rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none">
                             <option value="Todos">Todos os Monitores</option>
                             {monitores.map(m => <option key={m.id} value={m.nome}>{m.nome}</option>)}
                          </select>
-                         <div className="flex gap-1 bg-surface-container-high p-1 rounded-xl">
+                         <div className="flex gap-1 bg-surface-container-high p-1 rounded-xl overflow-x-auto">
                             {['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'].map(dia => (
                                <button key={dia} onClick={() => setDiaMonitor(dia)}
-                                 className={cn("px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all",
+                                 className={cn("px-2 md:px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all shrink-0",
                                    diaMonitor === dia ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:bg-hover")}>
                                  {dia.slice(0, 3)}
                                </button>
@@ -800,51 +893,91 @@ export default function Admin() {
                       </div>
                    </div>
 
-                   <div className="bg-surface-container-low rounded-[2rem] border border-primary/5 overflow-hidden p-6">
+                   <div className="bg-surface-container-low rounded-2xl md:rounded-[2rem] border border-primary/5 overflow-hidden p-4 md:p-6">
                       {(() => {
                          const diaSel = diaMonitor;
                          const gradeDia = gradeMonitores.filter(g => g.diaSemana === diaSel && (anoFiltro === 'Todos' || g.monitorNome === anoFiltro));
                          const monsNoDia = Array.from(new Set(gradeDia.map(g => g.monitorNome)));
-                         const horas = ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
+                         const horas = ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00'];
                          const inicio = 7 * 60;
-                         const total = 11 * 60;
+                         const total = 7 * 60;
 
                          if (gradeDia.length === 0) return <VazioMsg texto="Nenhuma escala para este dia/filtro." />;
 
                          return (
-                            <div className="space-y-1">
-                               <div className="flex border-b border-outline-variant/10 mb-4 pb-4">
-                                  <div className="w-32 shrink-0 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Monitor</div>
-                                  <div className="flex-1 flex">
-                                     {horas.map(h => <div key={h} className="flex-1 text-center text-[8px] font-black text-on-surface-variant/30">{h}</div>)}
-                                  </div>
+                            <div className="space-y-3">
+                               {/* DESKTOP: Timeline */}
+                               <div className="hidden md:block">
+                                 <div className="flex border-b border-outline-variant/10 mb-4 pb-4">
+                                    <div className="w-32 shrink-0 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Monitor</div>
+                                    <div className="flex-1 flex">
+                                       {horas.map(h => <div key={h} className="flex-1 text-center text-[8px] font-black text-on-surface-variant/30">{h}</div>)}
+                                    </div>
+                                 </div>
+                                 {monsNoDia.map(nome => {
+                                    const mObj = monitores.find(m => m.nome === nome);
+                                    const cor = mObj?.cor || '#3B82F6';
+                                    const postos = gradeDia.filter(g => g.monitorNome === nome);
+                                    return (
+                                       <div key={nome} className="flex items-center group py-2 hover:bg-primary/5 transition-all rounded-xl">
+                                          <div className="w-32 shrink-0 flex items-center gap-3">
+                                             <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black" style={{ backgroundColor: `${cor}20`, color: cor }}>{nome.charAt(0)}</div>
+                                             <span className="text-[10px] font-black truncate">{nome.split(' ')[0]}</span>
+                                          </div>
+                                          <div className="flex-1 relative h-10">
+                                             {postos.map(p => {
+                                                const parseH = (h: string) => { const [hh, mm] = h.split(':').map(Number); return hh * 60 + mm; };
+                                                const l = ((parseH(p.horarioInicio) - inicio) / total) * 100;
+                                                const w = ((parseH(p.horarioFim) - parseH(p.horarioInicio)) / total) * 100;
+                                                return (
+                                                   <div key={p.id} className="absolute h-8 top-1 rounded-lg flex items-center px-2 shadow-sm overflow-hidden border border-white/10"
+                                                     style={{ left: `${Math.max(0, l)}%`, width: `${Math.min(100 - l, w)}%`, backgroundColor: cor }}>
+                                                      <span className="text-[7px] font-black text-white uppercase truncate">{p.posto}</span>
+                                                   </div>
+                                                );
+                                             })}
+                                          </div>
+                                       </div>
+                                    );
+                                 })}
                                </div>
-                               {monsNoDia.map(nome => {
-                                  const mObj = monitores.find(m => m.nome === nome);
-                                  const cor = mObj?.cor || '#3B82F6';
-                                  const postos = gradeDia.filter(g => g.monitorNome === nome);
-                                  return (
-                                     <div key={nome} className="flex items-center group py-2 hover:bg-primary/5 transition-all rounded-xl">
-                                        <div className="w-32 shrink-0 flex items-center gap-3">
-                                           <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black" style={{ backgroundColor: `${cor}20`, color: cor }}>{nome.charAt(0)}</div>
-                                           <span className="text-[10px] font-black truncate">{nome.split(' ')[0]}</span>
-                                        </div>
-                                        <div className="flex-1 relative h-10">
-                                           {postos.map(p => {
-                                              const parseH = (h: string) => { const [hh, mm] = h.split(':').map(Number); return hh * 60 + mm; };
-                                              const l = ((parseH(p.horarioInicio) - inicio) / total) * 100;
-                                              const w = ((parseH(p.horarioFim) - parseH(p.horarioInicio)) / total) * 100;
-                                              return (
-                                                 <div key={p.id} className="absolute h-8 top-1 rounded-lg flex items-center px-2 shadow-sm overflow-hidden border border-white/10"
-                                                   style={{ left: `${l}%`, width: `${w}%`, backgroundColor: cor }}>
-                                                    <span className="text-[7px] font-black text-white uppercase truncate">{p.posto}</span>
-                                                 </div>
-                                              );
-                                           })}
-                                        </div>
-                                     </div>
-                                  );
-                               })}
+                               {/* MOBILE: Cards */}
+                               <div className="md:hidden space-y-4">
+                                 {monsNoDia.map(nome => {
+                                    const mObj = monitores.find(m => m.nome === nome);
+                                    const cor = mObj?.cor || '#3B82F6';
+                                    const postos = gradeDia.filter(g => g.monitorNome === nome);
+                                    return (
+                                       <div key={nome} className="bg-surface-container-highest rounded-2xl p-4 border-l-4" style={{ borderLeftColor: cor }}>
+                                          <div className="flex items-center gap-3 mb-3">
+                                             <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black text-white" style={{ backgroundColor: cor }}>{nome.charAt(0)}</div>
+                                             <span className="text-sm font-black">{nome}</span>
+                                          </div>
+                                          <div className="space-y-1.5">
+                                             {postos.map(p => (
+                                                <div key={p.id} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ backgroundColor: `${cor}15` }}>
+                                                   <span className="text-[10px] font-black text-on-surface-variant w-20 shrink-0">{p.horarioInicio}-{p.horarioFim}</span>
+                                                   <span className="text-[10px] font-black uppercase truncate" style={{ color: cor }}>{p.posto || '—'}</span>
+                                                </div>
+                                             ))}
+                                          </div>
+                                       </div>
+                                    );
+                                 })}
+                               </div>
+
+                               {/* Legenda */}
+                               <div className="flex flex-wrap gap-2 pt-4 border-t border-white/5">
+                                 {monsNoDia.map(nome => {
+                                    const cor = monitores.find(m => m.nome === nome)?.cor || '#3B82F6';
+                                    return (
+                                       <div key={nome} className="flex items-center gap-1.5">
+                                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cor }} />
+                                          <span className="text-[9px] font-black uppercase tracking-widest">{nome.split(' ')[0]}</span>
+                                       </div>
+                                    );
+                                 })}
+                               </div>
                             </div>
                          );
                       })()}
