@@ -45,9 +45,10 @@ function LabCard({ lab, selecionado, onSelect }: { lab: any, selecionado: boolea
   return (
     <motion.div
       layout
+      onClick={onSelect}
       className={cn(
-        "bg-[#0d1117] p-10 rounded-[3.5rem] shadow-2xl border-2 transition-all relative overflow-hidden group",
-        selecionado ? "border-indigo-500 shadow-[0_0_50px_rgba(99,102,241,0.2)]" : "border-[#30363d] hover:border-indigo-500/30"
+        "bg-[#0d1117] p-10 rounded-[3.5rem] shadow-2xl border-2 transition-all relative overflow-hidden group cursor-pointer h-fit",
+        selecionado ? "border-indigo-500 bg-indigo-500/5 shadow-[0_0_50px_rgba(99,102,241,0.2)]" : "border-[#30363d] hover:border-indigo-500/30"
       )}
     >
       {/* Header do Card */}
@@ -92,14 +93,13 @@ function LabCard({ lab, selecionado, onSelect }: { lab: any, selecionado: boolea
       <div className="pt-8 border-t border-white/5 space-y-6 relative z-10">
           <div className="flex justify-between items-center">
             <button 
-              onClick={onSelect}
               className="text-[11px] font-black uppercase tracking-[0.3em] text-indigo-400 flex items-center gap-2 hover:text-white transition-colors"
             >
               <Users size={16} /> {alunosNoBloco.length} Alunos Ensalados
               <ChevronDown size={14} className={cn("transition-transform", selecionado && "rotate-180")} />
             </button>
             {selecionado && (
-              <div className="relative group w-32">
+              <div className="relative group w-32" onClick={(e) => e.stopPropagation()}>
                   <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
                   <input 
                     type="text" 
@@ -121,21 +121,28 @@ function LabCard({ lab, selecionado, onSelect }: { lab: any, selecionado: boolea
                 className="overflow-hidden"
               >
                   <div className="grid gap-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar pb-4">
-                    {alunosFiltrados.map((aluno: string, i: number) => (
-                        <motion.div 
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          key={i} 
-                          className="text-[12px] font-black py-4 px-6 bg-white/[0.03] rounded-[1.5rem] flex items-center justify-between group/item hover:bg-indigo-500 hover:text-black transition-all border border-white/5"
-                        >
-                          <span className="italic tracking-tight">{aluno}</span>
-                          <span className="text-[9px] opacity-30 font-black group-hover/item:opacity-60">#{i+1}</span>
-                        </motion.div>
-                    ))}
+                    {alunosFiltrados.length === 0 ? (
+                      <p className="text-[10px] italic opacity-30 text-center py-10">Nenhum aluno encontrado.</p>
+                    ) : (
+                      alunosFiltrados.map((aluno: string, i: number) => (
+                          <motion.div 
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            key={i} 
+                            className="text-[12px] font-black py-4 px-6 bg-white/[0.03] rounded-[1.5rem] flex items-center justify-between group/item hover:bg-indigo-500 hover:text-black transition-all border border-white/5"
+                          >
+                            <span className="italic tracking-tight">{aluno}</span>
+                            <span className="text-[9px] opacity-30 font-black group-hover/item:opacity-60">#{i+1}</span>
+                          </motion.div>
+                      ))
+                    )}
                   </div>
                   
                   <button 
-                    onClick={() => alert('Abrindo chamada digital para ' + lab.nivel)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      alert('Abrindo chamada digital para ' + lab.nivel);
+                    }}
                     className="w-full py-5 bg-indigo-500 text-black text-[10px] font-black uppercase tracking-[0.3em] rounded-2xl mt-4 shadow-xl shadow-indigo-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
                   >
                     <CheckCircle2 size={18} /> Registrar Chamada
