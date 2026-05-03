@@ -21,7 +21,7 @@ function horaParaMinutos(hora: string): number {
 }
 
 export default function Monitores() {
-  const { monitores, horaAtual } = useEscola();
+  const { monitores, horaAtual, gradeMonitores } = useEscola();
   const [busca, setBusca] = useState('');
   const [monitorSelecionado, setMonitorSelecionado] = useState<Monitor | null>(null);
   const [visualizacao, setVisualizacao] = useState<'cards' | 'timeline'>('timeline');
@@ -157,80 +157,78 @@ export default function Monitores() {
               </div>
             </div>
 
-            {/* Linhas dos monitores */}
-            {monitoresFiltrados.map((monitor) => {
-              const ativo = estaAtivoAgora(monitor.horarioInicio, monitor.horarioFim) && monitor.status === 'ativo';
-              const minInicio = horaParaMinutos(monitor.horarioInicio);
-              const minFim = horaParaMinutos(monitor.horarioFim);
-              const leftPct = Math.max(0, ((minInicio - ESCALA_INICIO) / ESCALA_TOTAL) * 100);
-              const widthPct = Math.min(100 - leftPct, ((minFim - minInicio) / ESCALA_TOTAL) * 100);
-              const duracao = calcularDuracao(monitor.horarioInicio, monitor.horarioFim);
-              const selecionado = monitorSelecionado?.id === monitor.id;
+             {/* Linhas dos monitores */}
+             {monitoresFiltrados.map((monitor) => {
+               const ativo = estaAtivoAgora(monitor.horarioInicio, monitor.horarioFim) && monitor.status === 'ativo';
+               const minInicio = horaParaMinutos(monitor.horarioInicio);
+               const minFim = horaParaMinutos(monitor.horarioFim);
+               const leftPct = Math.max(0, ((minInicio - ESCALA_INICIO) / ESCALA_TOTAL) * 100);
+               const widthPct = Math.min(100 - leftPct, ((minFim - minInicio) / ESCALA_TOTAL) * 100);
+               const selecionado = monitorSelecionado?.id === monitor.id;
 
-              return (
-                <div
-                  key={monitor.id}
-                  onClick={() => setMonitorSelecionado(selecionado ? null : monitor)}
-                  className={cn(
-                    "flex border-b border-surface-container-low/50 cursor-pointer transition-all hover:bg-primary/5",
-                    selecionado && "bg-primary/5",
-                    ativo && "bg-emerald-500/5"
-                  )}
-                >
-                   {/* Info do monitor */}
-                   <div className="w-56 shrink-0 p-4 border-r border-surface-container-low flex items-center gap-3">
-                     <div className={cn(
-                       "w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black transition-colors shrink-0",
-                       ativo ? "bg-emerald-500 text-on-surface-bright shadow-lg shadow-emerald-500/20" : 
-                       monitor.tipo === 'volante' ? "bg-amber-500/10 text-amber-600" :
-                       monitor.status === 'inativo' ? "bg-surface-container-high text-on-surface-variant/50" : "bg-primary/10 text-primary"
-                     )}>
-                       {(monitor.nome || 'M').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                     </div>
-                     <div className="min-w-0">
-                       <p className={cn("text-[11px] font-black truncate", monitor.status === 'inativo' ? "text-on-surface-variant/50" : "text-on-surface")}>{monitor.nome}</p>
-                       <p className="text-[9px] text-on-surface-variant font-bold truncate uppercase tracking-tighter">{monitor.tipo === 'hibrido' ? 'HÍBRIDO' : monitor.tipo === 'volante' ? 'VOLANTE' : 'FIXO'}</p>
-                     </div>
-                   </div>
+               return (
+                 <div
+                   key={monitor.id}
+                   onClick={() => setMonitorSelecionado(selecionado ? null : monitor)}
+                   className={cn(
+                     "flex border-b border-surface-container-low/50 cursor-pointer transition-all hover:bg-primary/5",
+                     selecionado && "bg-primary/5",
+                     ativo && "bg-emerald-500/5"
+                   )}
+                 >
+                    {/* Info do monitor */}
+                    <div className="w-56 shrink-0 p-4 border-r border-surface-container-low flex items-center gap-3">
+                      <div className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black transition-colors shrink-0",
+                        ativo ? "bg-emerald-500 text-on-surface-bright shadow-lg shadow-emerald-500/20" : 
+                        monitor.tipo === 'volante' ? "bg-amber-500/10 text-amber-600" :
+                        monitor.status === 'inativo' ? "bg-surface-container-high text-on-surface-variant/50" : "bg-primary/10 text-primary"
+                      )}>
+                        {(monitor.nome || 'M').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className={cn("text-[11px] font-black truncate", monitor.status === 'inativo' ? "text-on-surface-variant/50" : "text-on-surface")}>{monitor.nome}</p>
+                        <p className="text-[9px] text-on-surface-variant font-bold truncate uppercase tracking-tighter">{monitor.tipo === 'hibrido' ? 'HÍBRIDO' : monitor.tipo === 'volante' ? 'VOLANTE' : 'FIXO'}</p>
+                      </div>
+                    </div>
 
-                   {/* Barra de horário */}
-                   <div className="flex-1 relative p-2 flex items-center">
-                     {monitor.status === 'ativo' ? (
-                       <motion.div
-                         initial={{ width: 0, opacity: 0 }}
-                         animate={{ width: `${widthPct}%`, opacity: 1 }}
-                         transition={{ duration: 0.6, ease: 'easeOut' }}
-                         className={cn(
-                           "absolute h-10 rounded-xl flex flex-col justify-center px-4 gap-0 shadow-sm overflow-hidden",
-                           ativo
-                             ? "bg-primary text-on-surface-bright shadow-lg shadow-primary/20"
-                             : "bg-surface-container-high text-on-surface-variant"
-                         )}
-                         style={{ left: `${leftPct}%` }}
-                       >
-                         <div className="flex items-center gap-1.5">
-                           <Clock size={10} strokeWidth={3} />
-                           <span className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap">
-                             {monitor.horarioInicio} — {monitor.horarioFim}
-                           </span>
-                         </div>
-                         <span className="text-[7px] font-black opacity-70 uppercase tracking-tighter truncate max-w-full">
-                           {monitor.tipo === 'volante' ? '📍 VOLANTE' : `🏠 ${monitor.localPermanencia || 'POSTO FIXO'}`}
-                         </span>
-                       </motion.div>
-                     ) : (
-                       <div
-                         className="absolute h-10 rounded-xl bg-surface-container-high/30 flex items-center px-4 gap-2 border border-dashed border-outline-variant/10"
-                         style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
-                       >
-                         <span className="text-[9px] font-black text-on-surface-variant/30 uppercase tracking-widest whitespace-nowrap">Ausente</span>
-                       </div>
-                     )}
-                   </div>
-                </div>
-              );
-            })}
-            </div>
+                    {/* Barra de horário */}
+                    <div className="flex-1 relative p-2 flex items-center">
+                      {monitor.status === 'ativo' ? (
+                        <motion.div
+                          initial={{ width: 0, opacity: 0 }}
+                          animate={{ width: `${widthPct}%`, opacity: 1 }}
+                          transition={{ duration: 0.6, ease: 'easeOut' }}
+                          className={cn(
+                            "absolute h-10 rounded-xl flex flex-col justify-center px-4 gap-0 shadow-sm overflow-hidden",
+                            ativo
+                              ? "bg-primary text-on-surface-bright shadow-lg shadow-primary/20"
+                              : "bg-surface-container-high text-on-surface-variant"
+                          )}
+                          style={{ left: `${leftPct}%` }}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <Clock size={10} strokeWidth={3} />
+                            <span className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap">
+                              {monitor.horarioInicio} — {monitor.horarioFim}
+                            </span>
+                          </div>
+                          <span className="text-[7px] font-black opacity-70 uppercase tracking-tighter truncate max-w-full">
+                            {monitor.tipo === 'volante' ? '📍 VOLANTE' : `🏠 ${monitor.localPermanencia || 'POSTO FIXO'}`}
+                          </span>
+                        </motion.div>
+                      ) : (
+                        <div
+                          className="absolute h-10 rounded-xl bg-surface-container-high/30 flex items-center px-4 gap-2 border border-dashed border-outline-variant/10"
+                          style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                        >
+                          <span className="text-[9px] font-black text-on-surface-variant/30 uppercase tracking-widest whitespace-nowrap">Ausente</span>
+                        </div>
+                      )}
+                    </div>
+                 </div>
+               );
+             })}
           </div>
 
           {/* Painel de detalhes */}

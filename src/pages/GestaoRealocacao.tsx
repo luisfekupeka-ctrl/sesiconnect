@@ -378,6 +378,36 @@ export default function GestaoRealocacao() {
         )}
 
         {step === 4 && (
+          <motion.div key="s4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-surface-container-lowest p-6 md:p-10 rounded-[2.5rem] md:rounded-[3rem] editorial-shadow border border-blue-800">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-black text-on-surface-bright italic">4. Conferência Final</h2>
+                <p className="text-on-surface-variant text-xs md:text-sm font-medium mt-2">Revise as substituições sugeridas pelo algoritmo e ajuste se necessário.</p>
+              </div>
+              <div className="px-5 py-3 bg-amber-700/10 border border-amber-700/30 rounded-2xl flex items-center gap-3">
+                 <ShieldCheck className="text-amber-500" size={18} />
+                 <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">{regraSub === 'LIVRE' ? 'Análise Livre' : 'Análise Direcionada'}</span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-3xl border border-blue-800/50 shadow-2xl">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-surface-container-low text-on-surface-variant text-[10px] font-black uppercase tracking-[0.2em] text-left">
+                    <th className="p-5">Horário</th>
+                    <th className="p-5">Turma</th>
+                    <th className="p-5">Original</th>
+                    <th className="p-5">Substituto</th>
+                    <th className="p-5">Ação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {resultados.map((r, i) => {
+                    const temConflitoNaGrade = gradeCompleta.some(g => 
+                      g.nomeProfessor === r.professorSubstituto && 
+                      g.diaSemana === diaSel && 
+                      g.horario === r.horario &&
+                      g.numeroSala !== Number(targetId)
                     );
 
                     const semProfessor = r.professorSubstituto === 'A DEFINIR';

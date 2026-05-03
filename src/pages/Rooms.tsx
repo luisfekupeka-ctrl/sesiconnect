@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { DoorOpen, Clock, Users, GraduationCap, AlertTriangle, Search, ChevronLeft, ChevronRight, UserCheck } from 'lucide-react';
+import { DoorOpen, Clock, Users, GraduationCap, AlertTriangle, Search, ChevronLeft, ChevronRight, UserCheck, ChevronDown, ClipboardCheck } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 import { obterBlocosDeHorario, obterDiaSemana } from '../services/motorEscolar';
@@ -118,7 +118,6 @@ export default function RoomsPage() {
                  </div>
                )}
 
-               {/* Efeito Visual */}
                <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-[#42a0f5]/5 rounded-full blur-3xl" />
             </motion.div>
           );
@@ -134,7 +133,6 @@ export default function RoomsPage() {
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="bg-[#0d1117] w-full max-w-6xl rounded-[4rem] border border-[#30363d] shadow-[0_50px_150px_rgba(0,0,0,1)] overflow-hidden flex flex-col max-h-[92vh]"
             >
-              {/* Header Modal - Visual SESI */}
               <div className="p-12 bg-[#42a0f5] text-white relative">
                 <button onClick={() => setSalaGradeModal(null)} className="absolute top-10 right-10 w-16 h-16 bg-white/10 rounded-[1.5rem] flex items-center justify-center hover:bg-white/20 transition-all text-3xl font-light">✕</button>
                 <div className="flex items-center gap-10">
@@ -149,7 +147,6 @@ export default function RoomsPage() {
                 </div>
               </div>
 
-              {/* Corpo Modal */}
               <div className="flex-1 overflow-hidden flex flex-col p-12 space-y-10 bg-surface-container-lowest">
                  <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-8">
                     <div className="flex gap-2 p-2 bg-surface-container-low rounded-[2rem] border border-[#30363d] w-fit">
@@ -176,7 +173,9 @@ export default function RoomsPage() {
                         className="w-full pl-14 pr-8 py-5 bg-surface-container-low border-none rounded-[2rem] text-sm font-black focus:ring-8 focus:ring-[#42a0f5]/5 shadow-inner"
                        />
                     </div>
-                               <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pr-4 custom-scrollbar">
+                 </div>
+
+                 <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pr-4 custom-scrollbar pb-10">
                     {obterBlocosDeHorario(periodos).map(bloco => (
                       <BlocoHorarioSala 
                         key={bloco.indice}
@@ -188,8 +187,8 @@ export default function RoomsPage() {
                         atividadesAfter={atividadesAfter}
                       />
                     ))}
-                  </div>
-               </div>
+                 </div>
+              </div>
             </motion.div>
           </div>
         )}
@@ -252,7 +251,6 @@ function BlocoHorarioSala({ bloco, salaGradeModal, diaGrade, gradeCompleta, lang
         expandido && "border-[#42a0f5] bg-[#42a0f5]/5"
       )}
      >
-        {/* Badge de Horário Flutuante */}
         <div className="flex justify-between items-center relative z-10">
            <div className="flex items-center gap-3">
               <div className={cn("w-2 h-2 rounded-full", isActive ? "bg-[#42a0f5] animate-pulse shadow-[0_0_10px_rgba(66,160,245,0.5)]" : "bg-white/20")} />
@@ -279,10 +277,10 @@ function BlocoHorarioSala({ bloco, salaGradeModal, diaGrade, gradeCompleta, lang
         {isActive && (
           <div className="pt-8 border-t border-white/5 space-y-6 relative z-10">
              <div className="flex justify-between items-center">
-                <p className="text-[11px] font-black uppercase tracking-[0.3em] text-[#42a0f5] flex items-center gap-2">
+                <div className="text-[11px] font-black uppercase tracking-[0.3em] text-[#42a0f5] flex items-center gap-2">
                   <Users size={14} /> {alunosNoBloco.length} Alunos Ensalados
                   <ChevronDown size={14} className={cn("transition-transform", expandido && "rotate-180")} />
-                </p>
+                </div>
                 {expandido && (
                   <div className="relative group w-32" onClick={(e) => e.stopPropagation()}>
                      <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
@@ -338,18 +336,7 @@ function BlocoHorarioSala({ bloco, salaGradeModal, diaGrade, gradeCompleta, lang
           </div>
         )}
 
-        {/* Efeito Visual de Fundo */}
         <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-[#42a0f5]/5 rounded-full blur-[80px] group-hover:bg-[#42a0f5]/10 transition-all" />
      </motion.div>
-  );
-}
-                })}
-                 </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </motion.div>
   );
 }

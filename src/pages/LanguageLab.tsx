@@ -157,9 +157,3 @@ function LabCard({ lab, selecionado, onSelect }: { lab: any, selecionado: boolea
     </motion.div>
   );
 }
-;
-        })}
-      </div>
-    </motion.div>
-  );
-}

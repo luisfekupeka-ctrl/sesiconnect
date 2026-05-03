@@ -942,7 +942,6 @@ export default function Admin() {
                 <CampoSelect label="Tipo de Atividade" value={editandoGrade.tipo || 'regular'} options={['regular', 'after_school', 'language_lab']} onChange={v => setEditandoGrade({ ...editandoGrade, tipo: v })} />
               </div>
                 <CampoTexto label="Horário (Ex: 07:30)" value={editandoGrade.horario} onChange={v => setEditandoGrade({ ...editandoGrade, horario: v })} />
-              </div>
               <div className="grid grid-cols-2 gap-4">
                 <CampoTexto label="Turma" value={editandoGrade.turma} onChange={v => setEditandoGrade({ ...editandoGrade, turma: v })} />
                 <CampoTexto label="Número da Sala" value={editandoGrade.numeroSala?.toString()} tipo="number" onChange={v => setEditandoGrade({ ...editandoGrade, numeroSala: parseInt(v) })} />
