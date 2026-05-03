@@ -1,161 +1,164 @@
-import { useState } from 'react';
-import { motion } from 'motion/react';
-import { Languages, GraduationCap, MapPin, Clock, Users } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Languages, GraduationCap, MapPin, Clock, Users, Search, ChevronDown, User } from 'lucide-react';
 import { useEscola } from '../context/ContextoEscola';
 import { cn } from '../lib/utils';
 
 export default function LanguageLab() {
   const { languageLab } = useEscola();
   const [labSelecionado, setLabSelecionado] = useState<string | null>(null);
-  const [busca, setBusca] = useState('');
+  const [buscaAlunos, setBuscaAlunos] = useState('');
 
-  const labAberto = languageLab.find(n => n.id === labSelecionado);
+  // Agrupar labs por nível para uma visão mais organizada
+  const labsAgrupados = useMemo(() => {
+    const grupos: Record<string, any[]> = {};
+    languageLab.forEach(lab => {
+      if (!grupos[lab.nivel]) grupos[lab.nivel] = [];
+      grupos[lab.nivel].push(lab);
+    });
+    return grupos;
+  }, [languageLab]);
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="space-y-10"
+      className="space-y-12 pb-32"
     >
-      <header>
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-full mb-4">
-          <Languages size={14} />
-          <span className="text-[10px] font-black uppercase tracking-tighter">Language Lab</span>
+      <header className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
+        <div className="max-w-3xl">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-500/10 text-indigo-400 rounded-full mb-4 border border-indigo-500/20 shadow-sm">
+            <Languages size={16} />
+            <span className="text-[10px] font-black uppercase tracking-widest">Ensalamento de Idiomas</span>
+          </div>
+          <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-on-surface-bright mb-4 italic">Language <span className="text-indigo-500">Labs</span></h1>
+          <p className="text-on-surface-variant text-xl font-medium leading-relaxed">
+            Consulte os níveis de proficiência por ano. Clique em um card para ver a lista nominal de alunos ensalados.
+          </p>
         </div>
-        <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-on-surface mb-2">Language Lab</h1>
-        <p className="text-on-surface-variant text-lg font-medium leading-relaxed max-w-2xl">
-          Ensalamento especial por níveis de proficiência. Substitui a lógica das salas durante o horário de inglês.
-        </p>
       </header>
 
-      {/* Cards de Níveis */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {languageLab.map((lab) => {
-          const selecionado = labSelecionado === lab.id;
-          return (
-            <motion.div
-              key={lab.id}
-              whileHover={{ y: -6, scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setLabSelecionado(selecionado ? null : lab.id)}
-              className={cn(
-                "bg-surface-container-lowest p-8 rounded-[2.5rem] shadow-xl border-2 transition-all group cursor-pointer relative overflow-hidden",
-                selecionado ? "border-primary shadow-primary/10" : "border-transparent hover:border-primary/10"
-              )}
-            >
-              <div className="absolute -right-6 -top-6 w-32 h-32 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors" />
-
-              <div className="flex justify-between items-start mb-6 relative z-10">
-                <div className={cn(
-                  "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 shadow-sm",
-                  selecionado ? "bg-primary text-on-surface-bright" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-on-surface-bright"
-                )}>
-                  <GraduationCap size={28} />
-                </div>
-                <div className="text-right">
-                  <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest mb-1 opacity-60">Horário</p>
-                  <div className="flex items-center gap-1.5 text-on-surface font-black bg-surface-container-low px-3 py-1.5 rounded-xl">
-                    <Clock size={14} className="text-primary" />
-                    <span className="text-xs">{lab.horarioInicio} - {lab.horarioFim}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-5 relative z-10">
-                <div className="flex justify-between items-start">
-                  <h3 className="text-xl font-black text-on-surface leading-tight tracking-tighter group-hover:text-primary transition-colors">
-                    {lab.nivel}
-                  </h3>
-                  <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-1 rounded-lg">{lab.turma}</span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-surface-container-low">
-                  <div>
-                    <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest opacity-60 flex items-center gap-1">
-                      <MapPin size={10} /> Local
-                    </p>
-                    <p className="text-sm font-black text-on-surface truncate">{lab.sala}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest opacity-60 flex items-center gap-1">
-                      <GraduationCap size={10} /> Docente
-                    </p>
-                    <p className="text-sm font-black text-on-surface truncate">{lab.professor}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 rounded-xl">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{lab.diaSemana}</span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Painel de Alunos Expandido */}
-      {labAberto && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-surface-container-lowest rounded-[3rem] p-8 md:p-10 editorial-shadow border border-primary/10"
-        >
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10">
+      {/* Seções por Nível */}
+      <div className="space-y-16">
+        {Object.entries(labsAgrupados).map(([nivel, labs]) => (
+          <section key={nivel} className="space-y-8">
             <div className="flex items-center gap-6">
-              <div className="w-20 h-20 rounded-[2rem] bg-primary flex items-center justify-center text-on-surface-bright shadow-2xl shadow-primary/20">
-                <GraduationCap size={36} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-1">Ensalamento Nominal</p>
-                <h3 className="text-4xl font-black text-on-surface tracking-tighter italic leading-none">{labAberto.nivel}</h3>
-                <p className="text-sm text-on-surface-variant font-bold mt-2">
-                   {labAberto.turma} • {labAberto.professor} • <span className="text-primary">{labAberto.sala}</span>
-                </p>
-              </div>
+               <h2 className="text-3xl font-black tracking-tighter text-white italic uppercase whitespace-nowrap">{nivel}</h2>
+               <div className="h-px bg-gradient-to-r from-indigo-500/30 to-transparent w-full" />
             </div>
 
-            <div className="relative group min-w-[300px]">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">
-                 <Users size={18} />
-              </div>
-              <input 
-                type="text"
-                placeholder="Pesquisar aluno no lab..."
-                onChange={(e) => setBusca(e.target.value)}
-                className="w-full pl-12 pr-6 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-black focus:ring-4 focus:ring-primary/10 transition-all shadow-inner"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {labs.map((lab) => {
+                const selecionado = labSelecionado === lab.id;
+                return (
+                  <motion.div
+                    layout
+                    key={lab.id}
+                    onClick={() => setLabSelecionado(selecionado ? null : lab.id)}
+                    className={cn(
+                      "bg-surface-container-lowest p-10 rounded-[3.5rem] shadow-2xl border-2 transition-all cursor-pointer relative overflow-hidden group",
+                      selecionado ? "border-indigo-500 shadow-indigo-500/20" : "border-transparent hover:border-indigo-500/20"
+                    )}
+                  >
+                    <div className="absolute -right-10 -top-10 w-48 h-48 bg-indigo-500/5 rounded-full blur-[80px]" />
+
+                    <div className="flex justify-between items-start mb-10 relative z-10">
+                      <div className={cn(
+                        "w-20 h-20 rounded-[2rem] flex items-center justify-center transition-all duration-700 shadow-2xl",
+                        selecionado ? "bg-indigo-600 text-white" : "bg-surface-container-low text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white"
+                      )}>
+                        <GraduationCap size={40} />
+                      </div>
+                      <div className="text-right">
+                         <span className="text-[11px] font-black bg-indigo-500/10 text-indigo-400 px-4 py-2 rounded-2xl uppercase tracking-[0.2em] border border-indigo-500/20 shadow-inner">
+                            {lab.turma}
+                         </span>
+                      </div>
+                    </div>
+
+                    <div className="relative z-10 space-y-6">
+                       <div>
+                          <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest opacity-40 mb-1">Instrutor Responsável</p>
+                          <h3 className="text-2xl font-black text-white italic tracking-tighter truncate leading-tight">{lab.professor}</h3>
+                       </div>
+
+                       <div className="grid grid-cols-2 gap-6 py-6 border-y border-white/5">
+                          <div className="space-y-1">
+                             <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest opacity-40 flex items-center gap-1">
+                                <MapPin size={10} /> Localização
+                             </p>
+                             <p className="text-sm font-black text-white italic">{lab.sala}</p>
+                          </div>
+                          <div className="space-y-1">
+                             <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest opacity-40 flex items-center gap-1">
+                                <Clock size={10} /> Período
+                             </p>
+                             <p className="text-sm font-black text-white italic">{lab.horarioInicio} - {lab.horarioFim}</p>
+                          </div>
+                       </div>
+
+                       <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-indigo-400">
+                             <Users size={16} />
+                             <span className="text-xs font-black uppercase tracking-widest">{lab.listaAlunos?.length || 0} Matriculados</span>
+                          </div>
+                          <ChevronDown className={cn("text-outline transition-transform duration-500", selecionado && "rotate-180 text-indigo-500")} />
+                       </div>
+                    </div>
+
+                    {/* LISTA NOMINAL PESQUISÁVEL */}
+                    <AnimatePresence>
+                      {selecionado && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden mt-8 pt-8 border-t border-white/10"
+                        >
+                           <div className="flex items-center justify-between gap-4 mb-8">
+                              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-500">Alunos por Ano</h4>
+                              <div className="relative group flex-1 max-w-[200px]">
+                                 <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-indigo-500" />
+                                 <input 
+                                    type="text"
+                                    placeholder="Buscar por nome..."
+                                    value={buscaAlunos}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => setBuscaAlunos(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-3 bg-surface-container-low border-none rounded-2xl text-[10px] font-black focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-inner"
+                                 />
+                              </div>
+                           </div>
+
+                           <div className="grid grid-cols-1 gap-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                              {(lab.listaAlunos || [])
+                                .filter(a => a.toLowerCase().includes(buscaAlunos.toLowerCase()))
+                                .map((aluno, idx) => (
+                                <div key={idx} className="flex items-center gap-5 p-5 bg-surface-container-low/50 rounded-3xl hover:bg-indigo-500/10 transition-all group border border-transparent hover:border-indigo-500/20">
+                                   <div className="w-10 h-10 rounded-2xl bg-surface-container-high text-on-surface-variant flex items-center justify-center text-[10px] font-black group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                                      {idx + 1}
+                                   </div>
+                                   <div className="flex-1 min-w-0">
+                                      <p className="font-black text-sm text-on-surface-variant group-hover:text-white transition-colors italic truncate">{aluno}</p>
+                                      <p className="text-[8px] font-black uppercase text-indigo-500/40 tracking-widest">{lab.turma}</p>
+                                   </div>
+                                   <User size={14} className="text-outline group-hover:text-indigo-500 transition-colors" />
+                                </div>
+                              ))}
+                              {(lab.listaAlunos || []).length === 0 && (
+                                 <div className="p-10 text-center opacity-20 italic font-black text-xs">Nenhum aluno ensalado neste nível</div>
+                              )}
+                           </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                );
+              })}
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-            {(labAberto.listaAlunos || [])
-              .filter(a => a.toLowerCase().includes(busca.toLowerCase()))
-              .map((aluno, idx) => (
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.01 }}
-                key={idx} 
-                className="flex items-center gap-4 p-4 bg-surface-container-low rounded-2xl border border-transparent hover:border-primary/20 transition-all group"
-              >
-                 <div className="w-8 h-8 bg-surface-container-high text-on-surface-variant rounded-xl flex items-center justify-center text-[10px] font-black group-hover:bg-primary group-hover:text-on-surface-bright transition-all shadow-sm">
-                    {(idx + 1).toString().padStart(2, '0')}
-                 </div>
-                 <span className="font-bold text-on-surface group-hover:text-primary transition-colors">{aluno}</span>
-              </motion.div>
-            ))}
-
-            {(labAberto.listaAlunos || []).length === 0 && (
-              <div className="col-span-full py-20 text-center opacity-30 italic font-medium">
-                 Nenhum aluno registrado neste nível de Language Lab.
-              </div>
-            )}
-          </div>
-        </motion.div>
-      )}
+          </section>
+        ))}
+      </div>
     </motion.div>
   );
 }
