@@ -9,7 +9,7 @@ import { Sala } from '../types';
 const LISTA_DIAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
 export default function RoomsPage() {
-  const { salas, estadoEscola, gradeCompleta, languageLab, atividadesAfter, horaAtual, periodos } = useEscola();
+  const { salas, estadoEscola, gradeCompleta, languageLab, atividadesAfter, horaAtual, periodos, alunos } = useEscola();
   const [busca, setBusca] = useState('');
   const [diaGrade, setDiaGrade] = useState(obterDiaSemana(horaAtual));
   const [salaSelecionada, setSalaSelecionada] = useState<Sala | null>(null);
@@ -58,7 +58,7 @@ export default function RoomsPage() {
              {/* Blocos Verticais */}
              <div className="flex flex-col gap-3">
                 {obterBlocosDeHorario(periodos).map(bloco => (
-                  <BlocoHorarioSala key={bloco.indice} bloco={bloco} salaSelecionada={salaSelecionada} diaGrade={diaGrade} gradeCompleta={gradeCompleta} languageLab={languageLab} atividadesAfter={atividadesAfter} buscaFiltro={buscaAlunos} />
+                  <BlocoHorarioSala key={bloco.indice} bloco={bloco} salaSelecionada={salaSelecionada} diaGrade={diaGrade} gradeCompleta={gradeCompleta} languageLab={languageLab} atividadesAfter={atividadesAfter} buscaFiltro={buscaAlunos} alunos={alunos} />
                 ))}
              </div>
           </div>
@@ -119,7 +119,7 @@ export default function RoomsPage() {
   );
 }
 
-function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, languageLab, atividadesAfter, buscaFiltro }: any) {
+function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, languageLab, atividadesAfter, buscaFiltro, alunos }: any) {
   const [expandido, setExpandido] = useState(false);
 
   const entradasDia = useMemo(() => {
@@ -129,6 +129,12 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
       String(e.diaSemana).toUpperCase() === String(diaGrade).toUpperCase()
     );
   }, [gradeCompleta, salaSelecionada, diaGrade]);
+
+  // Lista de alunos baseada no ANO da sala (fallback principal)
+  const alunosDaSala = useMemo(() => {
+    if (!salaSelecionada?.ano || !alunos) return [];
+    return (alunos || []).filter((a: any) => a.ano === salaSelecionada.ano || a.turma === salaSelecionada.ano).map((a: any) => a.nome);
+  }, [alunos, salaSelecionada]);
 
   const lab = (languageLab || []).find((l: any) => 
     (l.sala || '').includes(String(salaSelecionada?.numero)) && 
@@ -154,7 +160,7 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
   else if (after) tipo = 'after_school';
   else if (lab) tipo = 'language_lab';
 
-  // Tenta encontrar por vínculo direto (ID) primeiro, ou cai no fallback por sala/dia/horário
+  // Tenta encontrar por vínculo direto (ID) primeiro
   const entradaComVinculo = entradaRegular?.vinculado_id ? (
     languageLab.find((l: any) => l.id === entradaRegular.vinculado_id) || 
     atividadesAfter.find((a: any) => a.id === entradaRegular.vinculado_id)
@@ -176,11 +182,10 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
      alunosNoBloco = lab?.listaAlunos || entradaRegular?.listaAlunos || [];
   } else if (entradaRegular) {
      entradaFinal = { materia: entradaRegular.materia, prof: entradaRegular.nomeProfessor };
-     // Se for regular, tenta puxar da lista base da SALA se a entrada da grade estiver vazia
-     const listaBaseSala = salaSelecionada.lista_alunos || [];
-     alunosNoBloco = (entradaRegular.lista_alunos && entradaRegular.lista_alunos.length > 0) 
-       ? entradaRegular.lista_alunos 
-       : listaBaseSala;
+     // Prioridade: listaAlunos da grade > alunos pelo ANO da sala
+     alunosNoBloco = (entradaRegular.listaAlunos && entradaRegular.listaAlunos.length > 0)
+       ? entradaRegular.listaAlunos
+       : alunosDaSala;
   }
 
   if (!entradaFinal) return (
