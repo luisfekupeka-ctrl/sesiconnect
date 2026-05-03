@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as XLSX from 'xlsx';
 import {
@@ -79,6 +79,13 @@ export default function Admin() {
     languageLab, atividadesAfter, gradeMonitores, atualizar
   } = useEscola();
 
+  // 1. TODOS OS HOOKS NO TOPO
+  const [autenticado, setAutenticado] = useState(() => {
+    return localStorage.getItem('sesi_admin_auth') === 'true';
+  });
+  const [usuario, setUsuario] = useState('');
+  const [senha, setSenha] = useState('');
+  const [erroLogin, setErroLogin] = useState(false);
   const [abaAtiva, setAbaAtiva] = useState<AbaAdmin>('alunos');
   const [carregando, setCarregando] = useState(false);
   const [busca, setBusca] = useState('');
@@ -86,23 +93,77 @@ export default function Admin() {
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [autenticado, setAutenticado] = useState(false);
-  const [usuario, setUsuario] = useState('');
-  const [senha, setSenha] = useState('');
-  const [erroLogin, setErroLogin] = useState(false);
+  const [editandoAluno, setEditandoAluno] = useState<any>(null);
+  const [editandoMonitor, setEditandoMonitor] = useState<any>(null);
+  const [editandoPeriodo, setEditandoPeriodo] = useState<any>(null);
+  const [editandoLocal, setEditandoLocal] = useState<any>(null);
+  const [editandoProfessor, setEditandoProfessor] = useState<any>(null);
+  const [editingAlunos, setEditingAlunos] = useState<any>(null);
+  const [alunosTurma, setAlunosTurma] = useState<any[]>([]);
+  const [selectedAlunos, setSelectedAlunos] = useState<string[]>([]);
+  const [editandoModelo, setEditandoModelo] = useState<any>(null);
+  const [editandoGrade, setEditandoGrade] = useState<any>(null);
+  const [editandoLanguageLab, setEditandoLanguageLab] = useState<any>(null);
+  const [editandoAfter, setEditandoAfter] = useState<any>(null);
+  const [editandoGradeMonitor, setEditandoGradeMonitor] = useState<any>(null);
 
+  // 2. FUNÇÕES DE SUPORTE
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Credenciais simples para o painel administrativo
     if (usuario === 'admin' && senha === 'admin2024') {
       setAutenticado(true);
+      localStorage.setItem('sesi_admin_auth', 'true');
       setErroLogin(false);
     } else {
       setErroLogin(true);
     }
   };
 
-  // Se não estiver autenticado, mostra tela de login
+  const handleLogout = () => {
+    setAutenticado(false);
+    localStorage.removeItem('sesi_admin_auth');
+  };
+
+  const handleOpenAlunos = async (item: any) => {
+    setEditingAlunos(item);
+    const alunos = await getAlunosPorTurma(item.turma);
+    setAlunosTurma(alunos);
+    setSelectedAlunos(item.lista_alunos || []);
+  };
+
+  const handleSaveAlunos = async () => {
+    if (!editingAlunos) return;
+    try {
+      await atualizarListaAlunosGrade(editingAlunos.id, selectedAlunos);
+      alert('Lista de alunos atualizada!');
+      setEditingAlunos(null);
+      atualizar();
+    } catch (e) {
+      alert('Erro ao salvar lista.');
+    }
+  };
+
+  const doSave = async (action: Promise<boolean>, close: Function) => {
+    setCarregando(true);
+    const ok = await action;
+    if (ok) { 
+      close(null); 
+      atualizar();
+      setMsg({ tipo: 'ok', texto: 'Salvo com sucesso!' }); 
+    }
+    else { setMsg({ tipo: 'erro', texto: 'Erro ao salvar. Verifique o console (F12).' }); }
+    setCarregando(false);
+    setTimeout(() => setMsg(null), 5000);
+  };
+
+  const doDelete = async (action: Promise<boolean>) => {
+    setCarregando(true);
+    await action;
+    atualizar();
+    setCarregando(false);
+  };
+
+  // 3. SE NÃO AUTENTICADO, RETORNA LOGIN (AGORA DEPOIS DOS HOOKS)
   if (!autenticado) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center p-6 font-sans">
@@ -163,60 +224,6 @@ export default function Admin() {
       </div>
     );
   }
-
-  const handleOpenAlunos = async (item: any) => {
-    setEditingAlunos(item);
-    const alunos = await getAlunosPorTurma(item.turma);
-    setAlunosTurma(alunos);
-    setSelectedAlunos(item.lista_alunos || []);
-  };
-
-  const handleSaveAlunos = async () => {
-    if (!editingAlunos) return;
-    try {
-      await atualizarListaAlunosGrade(editingAlunos.id, selectedAlunos);
-      alert('Lista de alunos atualizada!');
-      setEditingAlunos(null);
-      atualizar();
-    } catch (e) {
-      alert('Erro ao salvar lista.');
-    }
-  };
-
-  const [editandoAluno, setEditandoAluno] = useState<any>(null);
-  const [editandoMonitor, setEditandoMonitor] = useState<any>(null);
-  const [editandoPeriodo, setEditandoPeriodo] = useState<any>(null);
-  const [editandoLocal, setEditandoLocal] = useState<any>(null);
-  const [editandoProfessor, setEditandoProfessor] = useState<any>(null);
-  const [editingAlunos, setEditingAlunos] = useState<any>(null);
-  const [alunosTurma, setAlunosTurma] = useState<any[]>([]);
-  const [selectedAlunos, setSelectedAlunos] = useState<string[]>([]);
-  const [editandoModelo, setEditandoModelo] = useState<any>(null);
-  const [editandoGrade, setEditandoGrade] = useState<any>(null);
-  const [editandoLanguageLab, setEditandoLanguageLab] = useState<any>(null);
-  const [editandoAfter, setEditandoAfter] = useState<any>(null);
-  const [editandoGradeMonitor, setEditandoGradeMonitor] = useState<any>(null);
-
-  const doSave = async (action: Promise<boolean>, close: Function) => {
-    setCarregando(true);
-    const ok = await action;
-    if (ok) { 
-      close(null); 
-      atualizar();
-      setMsg({ tipo: 'ok', texto: 'Salvo com sucesso!' }); 
-    }
-    else { setMsg({ tipo: 'erro', texto: 'Erro ao salvar. Verifique o console (F12).' }); }
-    setCarregando(false);
-    setTimeout(() => setMsg(null), 5000);
-  };
-
-  const doDelete = async (action: Promise<boolean>) => {
-    setCarregando(true);
-    await action;
-    atualizar();
-    setCarregando(false);
-  };
-
   const listaProfessores = Array.from(new Set(
     gradeCompleta.map(e => e.nomeProfessor).filter(n => n && n !== '—' && n !== 'A DEFINIR')
   )).sort();
