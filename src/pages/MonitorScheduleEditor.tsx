@@ -30,6 +30,7 @@ export default function MonitorScheduleEditor() {
 
   const [monitorSelecionado, setMonitorSelecionado] = useState<Monitor | null>(null);
   const [diaSelecionado, setDiaSelecionado] = useState(DIAS_SEMANA[0]);
+  const [segmentoSelecionado, setSegmentoSelecionado] = useState<'6e7' | '8e9' | 'medio'>('6e7');
   const [linhas, setLinhas] = useState<LinhaGradeMonitor[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
@@ -37,24 +38,48 @@ export default function MonitorScheduleEditor() {
   const [modalCopiaAberto, setModalCopiaAberto] = useState(false);
   const [buscaMonitor, setBuscaMonitor] = useState('');
 
+  const SEGMENTOS = [
+    { id: '6e7' as const, label: '6E7' },
+    { id: '8e9' as const, label: '8E9' },
+    { id: 'medio' as const, label: 'MÉDIO' },
+  ];
+
   const periodosFallback = useMemo(() => [
-    { id: 'f1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: '6e7' },
-    { id: 'f2', nome: '2ª Aula', horarioInicio: '08:20', horarioFim: '09:10', tipo: 'aula', segmento: '6e7' },
-    { id: 'f3', nome: 'Intervalo', horarioInicio: '09:10', horarioFim: '09:30', tipo: 'intervalo', segmento: '6e7' },
-    { id: 'f4', nome: '3ª Aula', horarioInicio: '09:30', horarioFim: '10:20', tipo: 'aula', segmento: '6e7' },
-    { id: 'f5', nome: '4ª Aula', horarioInicio: '10:20', horarioFim: '11:10', tipo: 'aula', segmento: '6e7' },
-    { id: 'f6', nome: '5ª Aula', horarioInicio: '11:10', horarioFim: '12:00', tipo: 'aula', segmento: '6e7' },
-    { id: 'f7', nome: 'Almoço', horarioInicio: '12:00', horarioFim: '13:00', tipo: 'almoco', segmento: '6e7' },
-    { id: 'f8', nome: '6ª Aula', horarioInicio: '13:00', horarioFim: '13:50', tipo: 'aula', segmento: '6e7' },
+    // 6e7
+    { id: '67-1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: '6e7' },
+    { id: '67-2', nome: '2ª Aula', horarioInicio: '08:20', horarioFim: '09:10', tipo: 'aula', segmento: '6e7' },
+    { id: '67-int', nome: 'Intervalo', horarioInicio: '09:10', horarioFim: '09:30', tipo: 'intervalo', segmento: '6e7' },
+    { id: '67-3', nome: '3ª Aula', horarioInicio: '09:30', horarioFim: '10:20', tipo: 'aula', segmento: '6e7' },
+    { id: '67-4', nome: '4ª Aula', horarioInicio: '10:20', horarioFim: '11:10', tipo: 'aula', segmento: '6e7' },
+    { id: '67-5', nome: '5ª Aula', horarioInicio: '11:10', horarioFim: '12:00', tipo: 'aula', segmento: '6e7' },
+    { id: '67-alm', nome: 'Almoço', horarioInicio: '12:00', horarioFim: '13:00', tipo: 'almoco', segmento: '6e7' },
+    { id: '67-6', nome: '6ª Aula', horarioInicio: '13:00', horarioFim: '13:50', tipo: 'aula', segmento: '6e7' },
+    // 8e9
+    { id: '89-1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: '8e9' },
+    { id: '89-2', nome: '2ª Aula', horarioInicio: '08:20', horarioFim: '09:10', tipo: 'aula', segmento: '8e9' },
+    { id: '89-3', nome: '3ª Aula', horarioInicio: '09:10', horarioFim: '10:00', tipo: 'aula', segmento: '8e9' },
+    { id: '89-int', nome: 'Intervalo', horarioInicio: '10:00', horarioFim: '10:20', tipo: 'intervalo', segmento: '8e9' },
+    { id: '89-4', nome: '4ª Aula', horarioInicio: '10:20', horarioFim: '11:10', tipo: 'aula', segmento: '8e9' },
+    { id: '89-5', nome: '5ª Aula', horarioInicio: '11:10', horarioFim: '12:00', tipo: 'aula', segmento: '8e9' },
+    { id: '89-alm', nome: 'Almoço', horarioInicio: '12:00', horarioFim: '13:00', tipo: 'almoco', segmento: '8e9' },
+    { id: '89-6', nome: '6ª Aula', horarioInicio: '13:00', horarioFim: '13:50', tipo: 'aula', segmento: '8e9' },
+    // medio
+    { id: 'med-1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: 'medio' },
+    { id: 'med-2', nome: '2ª Aula', horarioInicio: '08:20', horarioFim: '09:10', tipo: 'aula', segmento: 'medio' },
+    { id: 'med-3', nome: '3ª Aula', horarioInicio: '09:10', horarioFim: '10:00', tipo: 'aula', segmento: 'medio' },
+    { id: 'med-int', nome: 'Intervalo', horarioInicio: '10:00', horarioFim: '10:20', tipo: 'intervalo', segmento: 'medio' },
+    { id: 'med-4', nome: '4ª Aula', horarioInicio: '10:20', horarioFim: '11:10', tipo: 'aula', segmento: 'medio' },
+    { id: 'med-5', nome: '5ª Aula', horarioInicio: '11:10', horarioFim: '12:00', tipo: 'aula', segmento: 'medio' },
+    { id: 'med-6', nome: '6ª Aula', horarioInicio: '12:00', horarioFim: '12:50', tipo: 'aula', segmento: 'medio' },
   ], []);
 
-  // Sincronizar linhas quando monitor ou dia muda
+  // Sincronizar linhas quando monitor, dia ou segmento muda
   useEffect(() => {
     if (monitorSelecionado) {
       const periodosAlvo = (periodos && periodos.length > 0) ? periodos : periodosFallback;
-      // Pegar apenas um conjunto de horários únicos para não duplicar aulas de segmentos diferentes
-      const horáriosUnicos = Array.from(new Set(periodosAlvo.map(p => p.horarioInicio))).map(h => periodosAlvo.find(p => p.horarioInicio === h)!);
-      const finalPeriodos = horáriosUnicos.sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio)).slice(0, 10);
+      // Filtrar por segmento selecionado
+      const periodosSegmento = periodosAlvo.filter(p => p.segmento === segmentoSelecionado);
+      const finalPeriodos = periodosSegmento.sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
 
       const baseLinhas: LinhaGradeMonitor[] = finalPeriodos.map((p, i) => ({
         id: `l-${i}`,
@@ -81,7 +106,7 @@ export default function MonitorScheduleEditor() {
 
       setLinhas(baseLinhas);
     }
-  }, [monitorSelecionado, diaSelecionado, gradeMonitores, periodos, periodosFallback]);
+  }, [monitorSelecionado, diaSelecionado, segmentoSelecionado, gradeMonitores, periodos, periodosFallback]);
 
   const atualizarLinha = (id: string, campo: keyof LinhaGradeMonitor, valor: any) => {
     setLinhas(prev => prev.map(l => l.id === id ? { ...l, [campo]: valor } : l));
@@ -216,6 +241,21 @@ export default function MonitorScheduleEditor() {
                       className={cn("py-3 rounded-lg text-[8px] font-black transition-all border",
                         diaSelecionado === dia ? "bg-primary text-black border-primary" : "bg-surface-container-low text-on-surface-variant border-transparent")}>
                       {dia.slice(0, 3)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-white/5 space-y-4">
+                <label className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant flex items-center gap-2"><LayoutGrid size={14} /> Segmento Selecionado</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {SEGMENTOS.map(seg => (
+                    <button key={seg.id} onClick={() => setSegmentoSelecionado(seg.id)}
+                      className={cn("py-3 rounded-xl text-[9px] font-black transition-all border-2",
+                        segmentoSelecionado === seg.id 
+                          ? "bg-primary text-black border-primary shadow-lg shadow-primary/20" 
+                          : "bg-surface-container-low text-on-surface-variant border-transparent hover:border-white/10")}>
+                      {seg.label}
                     </button>
                   ))}
                 </div>
