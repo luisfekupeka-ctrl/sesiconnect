@@ -530,9 +530,9 @@ export async function salvarLocalCMS(local: Partial<LocalCMS>): Promise<boolean>
 
   const payload: any = {
     nome: local.nome.trim(),
-    numero: local.numero ?? undefined,
+    numero: (local.numero !== undefined && local.numero !== null && local.numero !== '') ? Number(local.numero) : null,
     tipo: local.tipo || 'sala',
-    capacidade: local.capacidade || 0
+    capacidade: (local.capacidade !== undefined && local.capacidade !== null && local.capacidade !== '') ? Number(local.capacidade) : 0
   };
 
   console.log('[DEBUG] Salvando local:', payload);
