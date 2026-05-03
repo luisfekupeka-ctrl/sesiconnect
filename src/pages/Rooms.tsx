@@ -175,13 +175,15 @@ export default function RoomsPage() {
                        );
 
                        const alunosFiltrados = alunosNoBloco.filter(a => a.toLowerCase().includes(buscaAlunosModal.toLowerCase()));
+                       const isActive = entradaFinal.materia && entradaFinal.materia !== 'A DEFINIR';
 
                        return (
                           <motion.div 
                             key={bloco.indice} 
-                            whileHover={{ y: -5 }}
+                            whileHover={isActive ? { y: -5 } : {}}
                             className={cn(
                              "p-10 rounded-[4rem] border-2 transition-all flex flex-col gap-8 shadow-2xl relative overflow-hidden group",
+                             !isActive ? "bg-white/[0.02] border-dashed border-white/5 opacity-20" :
                              tipo === 'after_school' ? "bg-amber-500/[0.03] border-amber-500/20 shadow-amber-500/5" : 
                              tipo === 'language_lab' ? "bg-indigo-500/[0.03] border-indigo-500/20 shadow-indigo-500/5" : 
                              "bg-surface-container-low/40 border-[#30363d] shadow-black/40"
@@ -190,53 +192,71 @@ export default function RoomsPage() {
                              {/* Badge de Horário Flutuante */}
                              <div className="flex justify-between items-center relative z-10">
                                 <div className="flex items-center gap-3">
-                                   <div className="w-2 h-2 rounded-full bg-[#42a0f5] animate-pulse shadow-[0_0_10px_rgba(66,160,245,0.5)]" />
+                                   <div className={cn("w-2 h-2 rounded-full", isActive ? "bg-[#42a0f5] animate-pulse shadow-[0_0_10px_rgba(66,160,245,0.5)]" : "bg-white/20")} />
                                    <span className="text-[12px] font-black uppercase tracking-[0.3em] opacity-50">{bloco.inicio} — {bloco.fim}</span>
                                 </div>
-                                <span className={cn(
-                                  "text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em] border shadow-sm",
-                                  tipo === 'after_school' ? "bg-amber-500/20 text-amber-500 border-amber-500/20" :
-                                  tipo === 'language_lab' ? "bg-indigo-500/20 text-indigo-500 border-indigo-500/20" : 
-                                  "bg-[#42a0f5]/20 text-[#42a0f5] border-[#42a0f5]/20"
-                                )}>{tipo === 'regular' ? 'Aula Regular' : tipo.replace('_', ' ').toUpperCase()}</span>
+                                {isActive && (
+                                  <span className={cn(
+                                    "text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em] border shadow-sm",
+                                    tipo === 'after_school' ? "bg-amber-500/20 text-amber-500 border-amber-500/20" :
+                                    tipo === 'language_lab' ? "bg-indigo-500/20 text-indigo-500 border-indigo-500/20" : 
+                                    "bg-[#42a0f5]/20 text-[#42a0f5] border-[#42a0f5]/20"
+                                  )}>{tipo === 'regular' ? 'Aula Regular' : tipo.replace('_', ' ').toUpperCase()}</span>
+                                )}
                              </div>
                              
-                             <div className="relative z-10">
-                                <h4 className="text-3xl font-black text-white italic tracking-tighter leading-none mb-3 group-hover:text-[#42a0f5] transition-colors">{entradaFinal.materia}</h4>
-                                <div className="flex items-center gap-3 text-on-surface-variant">
-                                   <div className="p-2 bg-white/5 rounded-xl"><UserCheck size={16} className="text-[#42a0f5]" /></div>
-                                   <p className="text-sm font-black italic tracking-tight">{entradaFinal.prof}</p>
-                                </div>
-                             </div>
-                             
-                             <div className="pt-8 border-t border-white/5 space-y-6 relative z-10">
-                                <div className="flex justify-between items-center">
-                                   <p className="text-[11px] font-black uppercase tracking-[0.3em] text-[#42a0f5] flex items-center gap-2">
-                                     <Users size={14} /> {alunosNoBloco.length} Alunos Ensalados
-                                   </p>
-                                </div>
-                                
-                                <div className="max-h-[160px] overflow-y-auto pr-3 custom-scrollbar grid gap-3">
-                                   {alunosFiltrados.length === 0 && buscaAlunosModal ? (
-                                      <p className="text-[10px] italic opacity-30 text-center py-6">Nenhum aluno encontrado.</p>
-                                   ) : (
-                                     alunosFiltrados.map((aluno, i) => (
-                                       <motion.div 
-                                         initial={{ opacity: 0, x: -10 }}
-                                         animate={{ opacity: 1, x: 0 }}
-                                         key={i} 
-                                         className="text-[12px] font-black py-4 px-6 bg-white/[0.03] rounded-[1.5rem] flex items-center justify-between group/item hover:bg-[#42a0f5] hover:text-black transition-all border border-white/5"
-                                       >
-                                          <span className="italic tracking-tight">{aluno}</span>
-                                          <span className="text-[9px] opacity-30 font-black group-hover/item:opacity-60">#{i+1}</span>
-                                       </motion.div>
-                                     ))
-                                   )}
-                                </div>
-                             </div>
+                             {isActive ? (
+                               <>
+                                 <div className="relative z-10">
+                                    <h4 className="text-3xl font-black text-white italic tracking-tighter leading-none mb-3 group-hover:text-[#42a0f5] transition-colors">{entradaFinal.materia}</h4>
+                                    <div className="flex items-center gap-3 text-on-surface-variant">
+                                       <div className="p-2 bg-white/5 rounded-xl"><UserCheck size={16} className="text-[#42a0f5]" /></div>
+                                       <p className="text-sm font-black italic tracking-tight">{entradaFinal.prof}</p>
+                                    </div>
+                                 </div>
+                                 
+                                 <div className="pt-8 border-t border-white/5 space-y-6 relative z-10">
+                                    <div className="flex justify-between items-center">
+                                       <p className="text-[11px] font-black uppercase tracking-[0.3em] text-[#42a0f5] flex items-center gap-2">
+                                         <Users size={14} /> {alunosNoBloco.length} Alunos Ensalados
+                                       </p>
+                                    </div>
+                                    
+                                    <div className="max-h-[160px] overflow-y-auto pr-3 custom-scrollbar grid gap-3">
+                                       {alunosFiltrados.length === 0 && buscaAlunosModal ? (
+                                          <p className="text-[10px] italic opacity-30 text-center py-6">Nenhum aluno encontrado.</p>
+                                       ) : (
+                                         alunosFiltrados.map((aluno, i) => (
+                                           <motion.div 
+                                             initial={{ opacity: 0, x: -10 }}
+                                             animate={{ opacity: 1, x: 0 }}
+                                             key={i} 
+                                             className="text-[12px] font-black py-4 px-6 bg-white/[0.03] rounded-[1.5rem] flex items-center justify-between group/item hover:bg-[#42a0f5] hover:text-black transition-all border border-white/5"
+                                           >
+                                              <span className="italic tracking-tight">{aluno}</span>
+                                              <span className="text-[9px] opacity-30 font-black group-hover/item:opacity-60">#{i+1}</span>
+                                           </motion.div>
+                                         ))
+                                       )}
+                                    </div>
 
-                             {/* Efeito Visual de Fundo */}
-                             <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-[#42a0f5]/5 rounded-full blur-[80px] group-hover:bg-[#42a0f5]/10 transition-all" />
+                                    <button 
+                                      onClick={() => alert('Iniciando chamada digital para ' + entradaFinal.materia)}
+                                      className="w-full py-5 bg-[#42a0f5] text-black text-[10px] font-black uppercase tracking-[0.3em] rounded-2xl mt-2 shadow-xl shadow-[#42a0f5]/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+                                    >
+                                       <ClipboardCheck size={18} /> Registrar Chamada
+                                    </button>
+                                 </div>
+
+                                 {/* Efeito Visual de Fundo */}
+                                 <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-[#42a0f5]/5 rounded-full blur-[80px] group-hover:bg-[#42a0f5]/10 transition-all" />
+                               </>
+                             ) : (
+                               <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center py-10 opacity-40 group-hover:opacity-60 transition-all">
+                                  <DoorOpen size={32} className="text-white/20" />
+                                  <p className="text-sm font-black uppercase tracking-[0.3em] italic">Ambiente Disponível</p>
+                               </div>
+                             )}
                           </motion.div>
                        );
                     })}
