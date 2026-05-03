@@ -11,7 +11,7 @@ import { useEscola } from '../context/ContextoEscola';
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
 export default function TeachersPage() {
-  const { professores, gradeCompleta, languageLab, atividadesAfter } = useEscola();
+  const { professores, gradeCompleta, languageLab, atividadesAfter, salas } = useEscola();
   const [busca, setBusca] = useState('');
   const [profSelecionadoId, setProfSelecionadoId] = useState<string | null>(null);
   const [diaFiltro, setDiaFiltro] = useState('SEGUNDA');
@@ -63,8 +63,14 @@ export default function TeachersPage() {
       if (match) return match.listaAlunos || [];
     }
 
-    return aulaParaChamada.listaAlunos || [];
-  }, [aulaParaChamada, languageLab, atividadesAfter, diaFiltro]);
+    // Se for regular, tenta puxar da lista base da SALA
+    const salaObj = salas.find(s => s.numero === aulaParaChamada.numeroSala);
+    if (salaObj && (!aulaParaChamada.lista_alunos || aulaParaChamada.lista_alunos.length === 0)) {
+       return salaObj.lista_alunos || [];
+    }
+
+    return aulaParaChamada.lista_alunos || aulaParaChamada.listaAlunos || [];
+  }, [aulaParaChamada, languageLab, atividadesAfter, diaFiltro, salas]);
 
   const alternarPresenca = (aluno: string) => {
     setChamada(prev => ({

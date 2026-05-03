@@ -159,7 +159,11 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
      alunosNoBloco = lab?.listaAlunos || entradaRegular?.listaAlunos || [];
   } else if (entradaRegular) {
      entradaFinal = { materia: entradaRegular.materia, prof: entradaRegular.nomeProfessor };
-     alunosNoBloco = entradaRegular.listaAlunos || [];
+     // Se for regular, tenta puxar da lista base da SALA se a entrada da grade estiver vazia
+     const listaBaseSala = salaSelecionada.lista_alunos || [];
+     alunosNoBloco = (entradaRegular.lista_alunos && entradaRegular.lista_alunos.length > 0) 
+       ? entradaRegular.lista_alunos 
+       : listaBaseSala;
   }
 
   if (!entradaFinal) return (
