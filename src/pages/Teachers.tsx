@@ -23,7 +23,14 @@ export default function TeachersPage() {
 
   const professorAtivo = professores.find(p => p.id === profSelecionadoId);
 
-  // Sub-página: Chamada Digital (Estilo Premium)
+  const alternarPresenca = (aluno: string) => {
+    setChamada(prev => ({
+      ...prev,
+      [aluno]: prev[aluno] === undefined ? true : prev[aluno] === true ? false : true
+    }));
+  };
+
+  // Sub-página: Chamada Digital (Grade de Presença)
   if (aulaParaChamada) {
     const alunos = aulaParaChamada.listaAlunos || [];
     const filtrados = alunos.filter((a: string) => a.toLowerCase().includes(buscaAlunos.toLowerCase()));
@@ -31,7 +38,7 @@ export default function TeachersPage() {
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="min-h-screen pb-32 pt-2 md:pt-10 px-2 md:px-10 space-y-6 md:space-y-10">
         <div className="bg-[#0a0a0a] rounded-[2.5rem] md:rounded-[4.5rem] border border-white/5 overflow-hidden shadow-premium">
-          <div className="p-8 md:p-12 bg-[#059669] text-white relative">
+          <div className="p-8 md:p-12 bg-emerald-600 text-white relative">
              <button 
                onClick={() => { setAulaParaChamada(null); setChamada({}); setBuscaAlunos(''); }}
                className="absolute top-6 right-6 md:top-10 md:right-10 w-12 h-12 md:w-16 md:h-16 bg-black/10 rounded-2xl flex items-center justify-center hover:bg-black/20 transition-all shadow-xl"
@@ -63,40 +70,37 @@ export default function TeachersPage() {
                    </div>
                 </div>
                 <div className="relative group w-full md:w-96">
-                   <Search size={22} className="absolute left-6 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-emerald-500" />
+                   <Search size={22} className="absolute left-6 top-1/2 -translate-y-1/2 text-white/30" />
                    <input 
-                    type="text"
-                    placeholder="Filtrar por nome..."
-                    value={buscaAlunos}
-                    onChange={(e) => setBuscaAlunos(e.target.value)}
-                    className="w-full pl-16 pr-8 py-5 md:py-6 bg-black border border-white/5 rounded-[2rem] text-xs md:text-sm font-black focus:ring-8 focus:ring-emerald-500/10 shadow-inner outline-none"
+                    type="text" placeholder="Filtrar por nome..." value={buscaAlunos} onChange={(e) => setBuscaAlunos(e.target.value)}
+                    className="w-full pl-16 pr-8 py-5 md:py-6 bg-black border border-white/5 rounded-[2rem] text-xs md:text-sm font-black outline-none"
                    />
                 </div>
              </div>
 
+             {/* Chamada em Grade */}
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {filtrados.map((aluno: string, idx: number) => (
                   <motion.div 
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     key={aluno}
-                    onClick={() => setChamada(prev => ({ ...prev, [aluno]: !prev[aluno] }))}
+                    onClick={() => alternarPresenca(aluno)}
                     className={cn(
-                      "p-6 md:p-10 rounded-[2.5rem] md:rounded-[3rem] border-2 cursor-pointer transition-all shadow-xl flex items-center justify-between group/item",
-                      chamada[aluno] === false ? "bg-red-500/5 border-red-500/30" : 
-                      chamada[aluno] === true ? "bg-emerald-500/5 border-emerald-500/30" : "bg-[#0d0d0d] border-white/5 hover:border-white/20"
+                      "p-8 rounded-[2.5rem] border-2 cursor-pointer transition-all shadow-xl flex items-center justify-between group/item",
+                      chamada[aluno] === true ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500" :
+                      chamada[aluno] === false ? "bg-red-500/10 border-red-500/30 text-red-500" : 
+                      "bg-[#0d0d0d] border-white/5 hover:border-white/20"
                     )}
                   >
-                    <div className="flex items-center gap-6">
-                       <div className="w-12 h-12 md:w-16 md:h-16 bg-white/5 rounded-2xl flex items-center justify-center text-xs md:text-sm font-black">
-                          {(idx + 1).toString().padStart(2, '0')}
-                       </div>
-                       <span className="text-lg md:text-2xl font-black italic tracking-tight">{aluno}</span>
+                    <div className="flex items-center gap-5">
+                       <span className="text-[10px] font-black opacity-30">{idx+1}</span>
+                       <span className="text-lg md:text-xl font-black italic tracking-tight">{aluno}</span>
                     </div>
-                    <div>
-                       {chamada[aluno] === true && <CheckCircle2 className="text-emerald-500" size={32} md:size={48} />}
-                       {chamada[aluno] === false && <XCircle className="text-red-500" size={32} md:size={48} />}
-                       {chamada[aluno] === undefined && <div className="w-8 h-8 md:w-12 md:h-12 rounded-full border-2 border-white/10 group-hover/item:border-white/20 transition-colors" />}
+                    <div className="flex items-center gap-3">
+                       {chamada[aluno] === true && <CheckCircle2 className="text-emerald-500" size={24} />}
+                       {chamada[aluno] === false && <XCircle className="text-red-500" size={24} />}
+                       {chamada[aluno] === undefined && <div className="w-6 h-6 rounded-full border-2 border-white/10 group-hover/item:border-white/20 transition-colors" />}
                     </div>
                   </motion.div>
                 ))}
@@ -109,18 +113,18 @@ export default function TeachersPage() {
                      alunos.forEach((n: string) => nova[n] = true);
                      setChamada(nova);
                   }}
-                  className="flex-1 py-6 md:py-8 bg-black rounded-[2rem] md:rounded-[3rem] text-[10px] md:text-xs font-black uppercase tracking-[0.3em] hover:bg-white/5 transition-all shadow-inner border border-white/5"
+                  className="flex-1 py-6 md:py-8 bg-black rounded-[2rem] text-[10px] md:text-xs font-black uppercase tracking-[0.3em] hover:bg-white/5 transition-all border border-white/5"
                 >
-                   Presente Geral
+                   Marcar Todos como Presente
                 </button>
                 <button 
                   onClick={() => {
                      alert('Frequência registrada com sucesso!');
                      setAulaParaChamada(null);
                   }}
-                  className="flex-1 py-6 md:py-8 bg-[#10b981] text-black rounded-[2rem] md:rounded-[3rem] text-[10px] md:text-xs font-black uppercase tracking-[0.3em] shadow-glow-emerald hover:scale-[1.02] transition-all border border-white/10"
+                  className="flex-1 py-6 md:py-8 bg-emerald-500 text-black rounded-[2rem] md:rounded-[3rem] text-[10px] md:text-xs font-black uppercase tracking-[0.3em] shadow-glow-emerald hover:scale-[1.02] transition-all border border-white/10"
                 >
-                   Finalizar Chamada
+                   Finalizar Chamada Digital
                 </button>
              </div>
           </div>
@@ -129,7 +133,7 @@ export default function TeachersPage() {
     );
   }
 
-  // Sub-página: Perfil do Professor (Estilo Premium Black/Blue/Yellow)
+  // Sub-página: Perfil do Professor
   if (professorAtivo) {
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="min-h-screen pb-32 pt-2 md:pt-10 px-2 md:px-10 space-y-6 md:space-y-10">

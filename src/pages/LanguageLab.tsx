@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Languages, MapPin, Clock, Users, Search, ChevronLeft, User, CheckCircle2, BookOpen, Globe } from 'lucide-react';
+import { Languages, MapPin, Clock, Users, Search, ChevronLeft, User, CheckCircle2, BookOpen, Globe, XCircle, ClipboardCheck } from 'lucide-react';
 import { useEscola } from '../context/ContextoEscola';
 import { cn } from '../lib/utils';
 
@@ -8,9 +8,18 @@ export default function LanguageLab() {
   const { languageLab } = useEscola();
   const [labSelecionado, setLabSelecionado] = useState<any | null>(null);
   const [busca, setBusca] = useState('');
+  const [presencas, setPresencas] = useState<Record<string, boolean>>({});
+
+  const alternarPresenca = (aluno: string) => {
+    setPresencas(prev => ({
+      ...prev,
+      [aluno]: prev[aluno] === undefined ? true : prev[aluno] === true ? false : true
+    }));
+  };
 
   if (labSelecionado) {
-    const alunosFiltrados = (labSelecionado.listaAlunos || []).filter((a: string) => a.toLowerCase().includes(busca.toLowerCase()));
+    const alunos = labSelecionado.listaAlunos || [];
+    const alunosFiltrados = alunos.filter((a: string) => a.toLowerCase().includes(busca.toLowerCase()));
 
     return (
       <motion.div 
@@ -21,7 +30,7 @@ export default function LanguageLab() {
         <div className="bg-[#0a0a0a] rounded-[2.5rem] md:rounded-[4.5rem] border border-white/5 overflow-hidden shadow-premium">
           <div className="p-8 md:p-12 bg-[#42a0f5] text-black relative">
              <button 
-               onClick={() => setLabSelecionado(null)}
+               onClick={() => { setLabSelecionado(null); setPresencas({}); }}
                className="absolute top-6 right-6 md:top-12 md:right-12 w-12 h-12 md:w-16 md:h-16 bg-black/10 rounded-2xl flex items-center justify-center hover:bg-black/20 transition-all shadow-xl"
              >
                <ChevronLeft size={24} className="md:size-32" />
@@ -63,20 +72,18 @@ export default function LanguageLab() {
              <div className="space-y-8 md:space-y-12">
                 <div className="flex flex-col md:flex-row items-center justify-between gap-8">
                    <h3 className="text-3xl md:text-4xl font-black italic tracking-tighter text-white flex items-center gap-4">
-                      <Users size={32} className="text-[#42a0f5] md:size-48" /> Alunos Ensalados
+                      <Users size={32} className="text-[#42a0f5] md:size-48" /> Chamada Digital
                    </h3>
                    <div className="relative group w-full md:w-96">
                       <Search size={22} className="absolute left-6 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-[#42a0f5]" />
                       <input 
-                       type="text"
-                       placeholder="Buscar por nome..."
-                       value={busca}
-                       onChange={(e) => setBusca(e.target.value)}
-                       className="w-full pl-16 pr-8 py-5 md:py-7 bg-black border border-white/5 rounded-[2rem] md:rounded-[2.5rem] text-sm md:text-base font-black focus:ring-8 focus:ring-[#42a0f5]/5 shadow-inner outline-none"
+                       type="text" placeholder="Filtrar alunos..." value={busca} onChange={(e) => setBusca(e.target.value)}
+                       className="w-full pl-16 pr-8 py-5 md:py-7 bg-black border border-white/5 rounded-[2rem] md:rounded-[2.5rem] text-sm md:text-base font-black outline-none"
                       />
                    </div>
                 </div>
 
+                {/* Grade de Chamada Digital */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                    {alunosFiltrados.length === 0 ? (
                       <div className="col-span-full py-20 text-center opacity-30 italic text-xl border-2 border-dashed border-white/5 rounded-[3rem]">Nenhum aluno encontrado.</div>
@@ -86,21 +93,46 @@ export default function LanguageLab() {
                          initial={{ opacity: 0, y: 10 }}
                          animate={{ opacity: 1, y: 0 }}
                          key={i} 
-                         className="p-6 md:p-8 bg-black rounded-[2rem] md:rounded-[2.5rem] border border-white/5 flex items-center justify-between hover:bg-[#42a0f5] hover:text-black transition-all cursor-default group/item shadow-lg"
+                         onClick={() => alternarPresenca(aluno)}
+                         className={cn(
+                           "p-8 rounded-[2.5rem] border-2 flex items-center justify-between transition-all cursor-pointer group shadow-lg",
+                           presencas[aluno] === true ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500" :
+                           presencas[aluno] === false ? "bg-red-500/10 border-red-500/30 text-red-500" :
+                           "bg-black border-white/5 text-white/70 hover:border-[#42a0f5]/40"
+                         )}
                        >
-                          <span className="text-base md:text-lg font-black italic tracking-tight">{aluno}</span>
-                          <span className="text-[10px] md:text-[11px] font-black opacity-30 group-hover/item:opacity-60">#{i+1}</span>
+                          <div className="flex items-center gap-5">
+                             <span className="text-[10px] font-black opacity-30">#{i+1}</span>
+                             <span className="text-lg md:text-xl font-black italic tracking-tight">{aluno}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                             {presencas[aluno] === true && <CheckCircle2 size={24} />}
+                             {presencas[aluno] === false && <XCircle size={24} />}
+                             {presencas[aluno] === undefined && <div className="w-6 h-6 rounded-full border-2 border-white/10 group-hover:border-[#42a0f5]/40" />}
+                          </div>
                        </motion.div>
                      ))
                    )}
                 </div>
 
-                <button 
-                  onClick={() => alert('Salvando chamada digital para ' + labSelecionado.nivel)}
-                  className="w-full py-6 md:py-10 bg-[#42a0f5] text-black rounded-[2.5rem] md:rounded-[3.5rem] text-xs md:text-sm font-black uppercase tracking-[0.4em] shadow-glow-blue hover:scale-[1.01] transition-all flex items-center justify-center gap-4 border border-white/10"
-                >
-                   <CheckCircle2 size={24} className="md:size-32" /> Lançar Frequência Digital
-                </button>
+                <div className="flex flex-col md:flex-row gap-6">
+                   <button 
+                     onClick={() => {
+                        const nova: Record<string, boolean> = {};
+                        alunos.forEach((a: string) => nova[a] = true);
+                        setPresencas(nova);
+                     }}
+                     className="flex-1 py-6 bg-black rounded-[2.5rem] text-[10px] md:text-xs font-black uppercase tracking-[0.4em] text-white/40 hover:bg-white/5 border border-white/5 transition-all"
+                   >
+                      Marcar Todos Presentes
+                   </button>
+                   <button 
+                     onClick={() => alert('Frequência de laboratório salva com sucesso!')}
+                     className="flex-[2] py-6 md:py-10 bg-[#42a0f5] text-black rounded-[2.5rem] md:rounded-[3.5rem] text-xs md:text-sm font-black uppercase tracking-[0.4em] shadow-glow-blue hover:scale-[1.01] transition-all flex items-center justify-center gap-4 border border-white/10"
+                   >
+                      <ClipboardCheck size={24} className="md:size-32" /> Finalizar Registro de Aula
+                   </button>
+                </div>
              </div>
           </div>
         </div>

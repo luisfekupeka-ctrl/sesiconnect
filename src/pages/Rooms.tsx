@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, ChevronLeft, ChevronRight, UserCheck, ChevronDown, ClipboardCheck, Users, Clock, DoorOpen, LayoutGrid } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, UserCheck, ChevronDown, ClipboardCheck, Users, Clock, DoorOpen, LayoutGrid, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 import { obterBlocosDeHorario, obterDiaSemana } from '../services/motorEscolar';
@@ -29,7 +29,6 @@ export default function RoomsPage() {
         animate={{ opacity: 1, x: 0 }}
         className="min-h-screen pb-32 pt-2 md:pt-10 px-2 md:px-10 space-y-6 md:space-y-10"
       >
-        {/* Painel Superior Minimalista */}
         <div className="bg-[#0a0a0a] rounded-[2.5rem] md:rounded-[4rem] border border-white/5 overflow-hidden shadow-premium">
           <div className="p-8 md:p-12 bg-[#fbbf24] text-black relative">
              <button 
@@ -51,9 +50,8 @@ export default function RoomsPage() {
              </div>
           </div>
 
-          <div className="p-6 md:p-12 space-y-8 md:space-y-12">
+          <div className="p-6 md:p-12 space-y-8 md:space-y-12 bg-surface-container-lowest">
              <div className="flex flex-col xl:flex-row gap-6 md:items-center justify-between">
-                {/* Seletor de Dia Compacto (Mobile Friendly) */}
                 <div className="flex gap-1 p-1.5 bg-black rounded-[1.5rem] border border-white/5 overflow-x-auto no-scrollbar">
                    {LISTA_DIAS.map(dia => (
                       <button
@@ -70,13 +68,10 @@ export default function RoomsPage() {
                 </div>
                 
                 <div className="relative group w-full xl:w-80">
-                   <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-[#fbbf24]" />
+                   <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-white/30" />
                    <input 
-                    type="text"
-                    placeholder="Filtrar alunos..."
-                    value={buscaAlunos}
-                    onChange={(e) => setBuscaAlunos(e.target.value)}
-                    className="w-full pl-12 pr-6 py-4 md:py-5 bg-black border border-white/5 rounded-2xl text-xs md:text-sm font-black focus:ring-4 focus:ring-[#fbbf24]/10 shadow-inner outline-none"
+                    type="text" placeholder="Filtrar alunos..." value={buscaAlunos} onChange={(e) => setBuscaAlunos(e.target.value)}
+                    className="w-full pl-12 pr-6 py-4 md:py-5 bg-black border border-white/5 rounded-2xl text-xs md:text-sm font-black outline-none"
                    />
                 </div>
              </div>
@@ -112,7 +107,7 @@ export default function RoomsPage() {
           <h1 className="text-5xl md:text-8xl font-black tracking-tighter text-white mb-4 italic leading-none">
             Salas <span className="text-[#fbbf24]">&</span> Ambientes
           </h1>
-          <p className="text-white/40 text-base md:text-2xl font-medium leading-relaxed italic max-w-2xl border-l-4 border-[#fbbf24]/30 pl-6 md:pl-10">
+          <p className="text-white/40 text-base md:text-2xl font-medium leading-relaxed italic border-l-4 border-[#fbbf24]/30 pl-6 md:pl-10">
             Monitoramento de ocupação e ensalamento dinâmico. Clique para gerenciar presenças.
           </p>
         </div>
@@ -184,7 +179,6 @@ export default function RoomsPage() {
                  )}
                </div>
 
-               {/* Glow de Fundo */}
                <div className={cn(
                  "absolute -bottom-20 -right-20 w-80 h-80 rounded-full blur-[100px] transition-all duration-700",
                  ocupada ? "bg-[#fbbf24]/10" : "bg-white/5 group-hover:bg-[#fbbf24]/10"
@@ -199,6 +193,7 @@ export default function RoomsPage() {
 
 function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, languageLab, atividadesAfter, buscaFiltro }: any) {
   const [expandido, setExpandido] = useState(false);
+  const [presencas, setPresencas] = useState<Record<string, boolean>>({});
 
   const range = `${bloco.inicio} - ${bloco.fim}`;
   const entradasDia = gradeCompleta.filter((e: any) => e.numeroSala === salaSelecionada.numero && e.diaSemana === diaGrade);
@@ -228,7 +223,7 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
   }
 
   if (!entradaFinal) return (
-     <div className="p-10 md:p-12 rounded-[2.5rem] md:rounded-[4rem] bg-black border-2 border-dashed border-white/5 opacity-20 flex flex-col items-center justify-center gap-4 transition-all h-fit">
+     <div className="p-10 rounded-[2.5rem] bg-black border-2 border-dashed border-white/5 opacity-20 flex flex-col items-center justify-center gap-4 transition-all h-fit">
         <span className="text-[11px] font-black uppercase tracking-[0.4em] mb-1">{bloco.inicio} — {bloco.fim}</span>
         <p className="text-xs font-black uppercase tracking-[0.3em] italic">Disponível</p>
      </div>
@@ -236,6 +231,13 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
 
   const alunosFiltrados = alunosNoBloco.filter(a => a.toLowerCase().includes(buscaFiltro.toLowerCase()));
   const isActive = entradaFinal.materia && entradaFinal.materia !== 'A DEFINIR';
+
+  const alternarPresenca = (aluno: string) => {
+    setPresencas(prev => ({
+      ...prev,
+      [aluno]: prev[aluno] === undefined ? true : prev[aluno] === true ? false : true
+    }));
+  };
 
   return (
      <motion.div 
@@ -246,7 +248,7 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
         tipo === 'after_school' ? "bg-[#fbbf24]/5 border-[#fbbf24]/20" : 
         tipo === 'language_lab' ? "bg-indigo-500/5 border-indigo-500/20" : 
         "bg-[#0a0a0a] border-white/5",
-        expandido && "border-[#fbbf24] bg-[#fbbf24]/10"
+        expandido && "border-[#fbbf24] bg-[#fbbf24]/10 ring-4 ring-[#fbbf24]/10"
       )}
      >
         <div className="flex justify-between items-center relative z-10">
@@ -273,13 +275,16 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
         </div>
 
         {isActive && (
-          <div className="pt-6 border-t border-white/5 space-y-4 relative z-10">
+          <div className="pt-6 border-t border-white/5 space-y-6 relative z-10">
              <button 
                onClick={() => setExpandido(!expandido)}
                className="w-full flex justify-between items-center text-[10px] font-black uppercase tracking-[0.3em] text-[#fbbf24] hover:opacity-80 transition-opacity"
              >
                 <span className="flex items-center gap-2"><Users size={16} /> {alunosNoBloco.length} Matriculados</span>
-                <ChevronDown size={18} className={cn("transition-transform duration-500", expandido && "rotate-180")} />
+                <div className="flex items-center gap-2">
+                   <span className="opacity-50">Lançar Chamada</span>
+                   <ChevronDown size={18} className={cn("transition-transform duration-500", expandido && "rotate-180")} />
+                </div>
              </button>
              
              <AnimatePresence>
@@ -288,27 +293,57 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
                    initial={{ height: 0, opacity: 0 }}
                    animate={{ height: 'auto', opacity: 1 }}
                    exit={{ height: 0, opacity: 0 }}
-                   className="overflow-hidden space-y-4"
+                   className="overflow-hidden space-y-6"
                  >
-                    <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar grid gap-2">
+                    {/* Grade de Chamada Digital (Chamada em Grade) */}
+                    <div className="grid grid-cols-1 gap-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                        {alunosFiltrados.length === 0 ? (
                           <p className="text-[10px] italic opacity-30 text-center py-6">Nenhum aluno encontrado.</p>
                        ) : (
                          alunosFiltrados.map((aluno, i) => (
-                           <div key={i} className="text-[13px] font-black py-4 px-6 bg-white/[0.03] rounded-2xl flex items-center justify-between border border-white/5 hover:bg-[#fbbf24] hover:text-black transition-all cursor-default">
-                              <span className="italic">{aluno}</span>
-                              <span className="text-[10px] opacity-30">#{i+1}</span>
-                           </div>
+                           <motion.div 
+                              key={i} 
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => alternarPresenca(aluno)}
+                              className={cn(
+                                "p-5 rounded-2xl flex items-center justify-between border transition-all cursor-pointer group",
+                                presencas[aluno] === true ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500" :
+                                presencas[aluno] === false ? "bg-red-500/10 border-red-500/30 text-red-500" :
+                                "bg-white/[0.03] border-white/5 text-white/70 hover:bg-white/5"
+                              )}
+                           >
+                              <div className="flex items-center gap-4">
+                                 <span className="text-[10px] font-black opacity-30">{i+1}</span>
+                                 <span className="text-sm font-black italic tracking-tight">{aluno}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                 {presencas[aluno] === true && <CheckCircle2 size={18} />}
+                                 {presencas[aluno] === false && <XCircle size={18} />}
+                                 {presencas[aluno] === undefined && <div className="w-5 h-5 rounded-full border-2 border-white/10 group-hover:border-[#fbbf24]/40" />}
+                              </div>
+                           </motion.div>
                          ))
                        )}
                     </div>
 
-                    <button 
-                      onClick={() => alert('Lançando chamada para ' + entradaFinal.materia)}
-                      className="w-full py-5 bg-[#fbbf24] text-black text-[10px] font-black uppercase tracking-[0.3em] rounded-2xl shadow-glow-yellow hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
-                    >
-                       <ClipboardCheck size={20} /> Registrar Chamada Digital
-                    </button>
+                    <div className="flex gap-3">
+                       <button 
+                         onClick={() => {
+                            const nova: Record<string, boolean> = {};
+                            alunosNoBloco.forEach(a => nova[a] = true);
+                            setPresencas(nova);
+                         }}
+                         className="flex-1 py-4 bg-white/5 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all border border-white/5"
+                       >
+                          Todos Presentes
+                       </button>
+                       <button 
+                         onClick={() => alert('Chamada enviada com sucesso!')}
+                         className="flex-[2] py-4 bg-[#fbbf24] text-black text-[9px] font-black uppercase tracking-widest rounded-xl shadow-glow-yellow hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+                       >
+                          <ClipboardCheck size={16} /> Finalizar Chamada
+                       </button>
+                    </div>
                  </motion.div>
                )}
              </AnimatePresence>
