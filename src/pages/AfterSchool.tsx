@@ -4,7 +4,7 @@ import { Clock, Users, ChevronLeft, User, DoorOpen, Search, Star, ChevronRight }
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 
-const DIAS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
+const DIAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
 export default function AfterSchool() {
   const { atividadesAfter } = useEscola();
@@ -12,7 +12,9 @@ export default function AfterSchool() {
   const [ativSelecionada, setAtivSelecionada] = useState<any | null>(null);
   const [busca, setBusca] = useState('');
 
-  const atividadesDoDia = atividadesAfter.filter(a => a.dias.includes(diaFiltro));
+  const atividadesDoDia = atividadesAfter.filter(a => 
+    (a.dias || []).some((d: string) => d.toUpperCase() === diaFiltro.toUpperCase())
+  );
 
   if (ativSelecionada) {
     const alunos = ativSelecionada.listaAlunos || [];
