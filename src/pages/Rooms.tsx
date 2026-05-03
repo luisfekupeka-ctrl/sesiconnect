@@ -52,34 +52,74 @@ export default function RoomsPage() {
         {salasFiltradas.map((sala) => {
           const estadoSala = estadoEscola.salas.find(s => s.numeroSala === sala.numero);
           const ocupada = estadoSala?.estaOcupada || false;
+          const aulaAtual = estadoSala?.aulaAtual;
+          const alunosNoBloco = estadoSala?.listaAlunos || [];
 
           return (
             <motion.div
               key={sala.numero}
               whileHover={{ y: -8, scale: 1.02 }}
               onClick={() => setSalaGradeModal(sala)}
-              className="bg-surface-container-lowest rounded-[3rem] editorial-shadow p-8 cursor-pointer group border-2 border-transparent hover:border-[#42a0f5]/30 transition-all shadow-xl"
+              className={cn(
+                "bg-[#0d1117] rounded-[3rem] shadow-2xl p-8 cursor-pointer group border-2 transition-all relative overflow-hidden",
+                ocupada ? "border-[#42a0f5]/30 shadow-[#42a0f5]/5" : "border-[#30363d] hover:border-[#42a0f5]/20"
+              )}
             >
-               <div className="flex justify-between items-start mb-8">
-                  <div className="w-16 h-16 bg-[#42a0f5]/10 text-[#42a0f5] rounded-2xl flex items-center justify-center text-3xl font-black shadow-inner">
+               <div className="flex justify-between items-start mb-8 relative z-10">
+                  <div className={cn(
+                    "w-16 h-16 rounded-2xl flex items-center justify-center text-3xl font-black shadow-inner",
+                    ocupada ? "bg-[#42a0f5] text-black" : "bg-[#42a0f5]/10 text-[#42a0f5]"
+                  )}>
                     {sala.numero}
                   </div>
                   <div className={cn(
                     "px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest",
-                    ocupada ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/10" : "bg-surface-container-high text-on-surface-variant"
+                    ocupada ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/10" : "bg-white/5 text-on-surface-variant opacity-40"
                   )}>
-                    {ocupada ? 'Ocupada' : 'Livre'}
+                    {ocupada ? '● EM AULA' : 'DISPONÍVEL'}
                   </div>
                </div>
-               <h3 className="text-2xl font-black text-white tracking-tighter leading-tight mb-2 italic">{sala.nome}</h3>
-               <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] opacity-60">{sala.segmento}</p>
-               
-               <div className="mt-10 pt-6 border-t border-white/5 flex items-center justify-between">
-                  <span className="text-[10px] font-black text-[#42a0f5] uppercase tracking-[0.3em] flex items-center gap-2">
-                    <Clock size={14} /> Grade Semanal
-                  </span>
-                  <ChevronRight size={18} className="text-outline group-hover:translate-x-2 transition-all" />
+
+               <div className="relative z-10">
+                  <h3 className="text-2xl font-black text-white tracking-tighter leading-tight mb-1 italic group-hover:text-[#42a0f5] transition-colors">{sala.nome}</h3>
+                  <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] opacity-40">{sala.segmento}</p>
                </div>
+               
+               {ocupada && aulaAtual && (
+                 <div className="mt-8 pt-6 border-t border-white/5 space-y-4 relative z-10">
+                    <div>
+                       <p className="text-[9px] font-black uppercase text-[#42a0f5] tracking-widest mb-1">Aula Atual</p>
+                       <h4 className="text-lg font-black text-white italic truncate leading-none">{aulaAtual.materia}</h4>
+                       <p className="text-[11px] font-bold text-on-surface-variant opacity-60 truncate">{aulaAtual.professor}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                       <p className="text-[9px] font-black uppercase text-on-surface-variant tracking-widest opacity-40">{alunosNoBloco.length} Alunos</p>
+                       <div className="flex flex-wrap gap-1">
+                          {alunosNoBloco.slice(0, 3).map((aluno, i) => (
+                            <span key={i} className="text-[9px] font-black bg-white/5 px-2 py-1 rounded-lg text-on-surface-variant italic truncate max-w-[80px]">
+                               {aluno.split(' ')[0]}
+                            </span>
+                          ))}
+                          {alunosNoBloco.length > 3 && (
+                            <span className="text-[9px] font-black text-[#42a0f5]">+ {alunosNoBloco.length - 3}</span>
+                          )}
+                       </div>
+                    </div>
+                 </div>
+               )}
+
+               {!ocupada && (
+                 <div className="mt-10 pt-6 border-t border-white/5 flex items-center justify-between opacity-30">
+                    <span className="text-[10px] font-black text-white uppercase tracking-[0.3em] flex items-center gap-2">
+                      <Clock size={14} /> Grade Semanal
+                    </span>
+                    <ChevronRight size={18} className="text-outline group-hover:translate-x-2 transition-all" />
+                 </div>
+               )}
+
+               {/* Efeito Visual */}
+               <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-[#42a0f5]/5 rounded-full blur-3xl" />
             </motion.div>
           );
         })}
