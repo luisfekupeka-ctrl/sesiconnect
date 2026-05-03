@@ -214,47 +214,66 @@ export default function GestaoRealocacao() {
       <AnimatePresence mode="wait">
         {step === 1 && (
           <motion.div key="s1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-surface-container-lowest p-10 rounded-[3rem] editorial-shadow border border-blue-800">
-            <h2 className="text-3xl font-black mb-8 text-on-surface-bright">1. Selecione a Data</h2>
-            <div className="flex flex-col gap-6">
-              <div className="relative group">
-                <input 
-                  type="date" 
-                  value={dataSelecionada} 
-                  onChange={e => setDataSelecionada(e.target.value)}
-                  className="w-full bg-surface-container-low p-6 rounded-3xl font-black text-2xl text-on-surface border-2 border-blue-800 focus:border-accent-amber transition-all outline-none"
-                />
-                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <span className="bg-amber-700 text-white px-4 py-2 rounded-xl text-xs font-black uppercase">
-                    {diaSel}
-                  </span>
+            <header className="mb-10">
+              <h2 className="text-3xl font-black text-on-surface-bright">1. Selecione a Data</h2>
+              <p className="text-on-surface-variant text-sm font-medium mt-2">Escolha qualquer dia do ano para gerenciar as substituições.</p>
+            </header>
+            
+            <div className="flex flex-col gap-8">
+              {/* SELETOR DE DATA PRINCIPAL */}
+              <div className="space-y-4">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-amber ml-2">Calendário Completo</label>
+                <div className="relative group">
+                  <input 
+                    type="date" 
+                    value={dataSelecionada} 
+                    onChange={e => setDataSelecionada(e.target.value)}
+                    className="w-full bg-surface-container-low p-8 rounded-[2rem] font-black text-4xl text-on-surface border-2 border-blue-800 focus:border-accent-amber transition-all outline-none shadow-inner cursor-pointer hover:bg-blue-900/10"
+                  />
+                  <div className="absolute right-8 top-1/2 -translate-y-1/2 pointer-events-none flex flex-col items-end">
+                    <span className="bg-amber-700 text-white px-6 py-3 rounded-2xl text-sm font-black uppercase shadow-xl">
+                      {diaSel}
+                    </span>
+                  </div>
                 </div>
               </div>
               
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {[-1, 0, 1, 2, 3].map(offset => {
-                  const d = new Date();
-                  d.setDate(d.getDate() + offset);
-                  const iso = d.toISOString().split('T')[0];
-                  const diasCompact = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
-                  return (
-                    <button 
-                      key={iso}
-                      onClick={() => setDataSelecionada(iso)}
-                      className={cn(
-                        "flex-1 min-w-[100px] p-4 rounded-2xl border-2 font-black transition-all",
-                        dataSelecionada === iso 
-                          ? "bg-amber-700 border-amber-600 text-white shadow-lg scale-105" 
-                          : "bg-surface-container-high border-blue-800 text-on-surface opacity-60 hover:opacity-100"
-                      )}
-                    >
-                      <div className="text-[10px] uppercase opacity-70">{diasCompact[d.getDay()]}</div>
-                      <div className="text-lg">{d.getDate()}</div>
-                    </button>
-                  );
-                })}
+              {/* ATALHOS RÁPIDOS */}
+              <div className="space-y-4">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 ml-2">Acesso Rápido</label>
+                <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
+                  {[-1, 0, 1, 2, 3, 4, 5, 6, 7].map(offset => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + offset);
+                    const iso = d.toISOString().split('T')[0];
+                    const diasCompact = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+                    const isSelected = dataSelecionada === iso;
+                    return (
+                      <button 
+                        key={iso}
+                        onClick={() => setDataSelecionada(iso)}
+                        className={cn(
+                          "flex-shrink-0 w-24 h-24 rounded-[1.5rem] border-2 font-black transition-all flex flex-col items-center justify-center gap-1",
+                          isSelected 
+                            ? "bg-amber-700 border-amber-600 text-white shadow-2xl scale-110 z-10" 
+                            : "bg-surface-container-high border-blue-800 text-on-surface opacity-40 hover:opacity-100 hover:border-accent-amber"
+                        )}
+                      >
+                        <span className="text-[10px] uppercase tracking-tighter">{diasCompact[d.getDay()]}</span>
+                        <span className="text-2xl">{d.getDate()}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-            <button onClick={() => setStep(2)} className="w-full mt-10 py-6 bg-blue-800 text-white rounded-3xl font-black uppercase text-xs tracking-widest border border-blue-700 hover:bg-blue-700 shadow-2xl transition-all">Próximo Passo</button>
+
+            <button 
+              onClick={() => setStep(2)} 
+              className="w-full mt-8 py-7 bg-blue-800 text-white rounded-[2rem] font-black uppercase text-sm tracking-[0.3em] border border-blue-700 hover:bg-blue-700 shadow-2xl transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3"
+            >
+              Próximo Passo <ChevronRight size={20} />
+            </button>
           </motion.div>
         )}
 
