@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, ChevronLeft, ChevronRight, UserCheck, ChevronDown, ClipboardCheck, Users, Clock, DoorOpen, LayoutGrid, CheckCircle2, XCircle } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, UserCheck, ChevronDown, Users, Clock, DoorOpen, LayoutGrid } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 import { obterBlocosDeHorario, obterDiaSemana } from '../services/motorEscolar';
@@ -31,7 +31,7 @@ export default function RoomsPage() {
              <div className="flex items-center gap-6">
                 <div className="w-16 h-16 bg-black text-[#fbbf24] rounded-2xl flex items-center justify-center text-3xl font-black">{salaSelecionada.numero}</div>
                 <div>
-                  <p className="text-[8px] font-black uppercase tracking-[0.4em] opacity-60 mb-1">Ensalamento</p>
+                  <p className="text-[8px] font-black uppercase tracking-[0.4em] opacity-60 mb-1">Consulta de Ensalamento</p>
                   <h2 className="text-2xl md:text-4xl font-black tracking-tighter italic leading-none">{salaSelecionada.nome}</h2>
                   <p className="text-xs md:text-sm font-bold opacity-70 mt-2 italic">{salaSelecionada.segmento}</p>
                 </div>
@@ -51,7 +51,7 @@ export default function RoomsPage() {
                 <div className="relative group w-full md:w-64">
                    <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
                    <input 
-                    type="text" placeholder="Filtrar..." value={buscaAlunos} onChange={(e) => setBuscaAlunos(e.target.value)}
+                    type="text" placeholder="Filtrar alunos..." value={buscaAlunos} onChange={(e) => setBuscaAlunos(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 bg-black border border-white/5 rounded-xl text-[11px] font-black outline-none"
                    />
                 </div>
@@ -76,7 +76,7 @@ export default function RoomsPage() {
              <span className="text-[9px] font-black uppercase tracking-widest italic">Visão de Ambientes</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white mb-2 italic leading-none">Salas <span className="text-[#fbbf24]">&</span> Ambientes</h1>
-          <p className="text-white/40 text-sm md:text-lg font-medium italic border-l-4 border-[#fbbf24]/30 pl-4 max-w-xl">Monitoramento e ensalamento dinâmico.</p>
+          <p className="text-white/40 text-sm md:text-lg font-medium italic border-l-4 border-[#fbbf24]/20 pl-4 max-w-xl">Monitoramento e consulta de ensalamento.</p>
         </div>
         <div className="relative group w-full lg:w-[350px]">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-[#fbbf24]" size={20} />
@@ -128,7 +128,6 @@ export default function RoomsPage() {
 
 function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, languageLab, atividadesAfter, buscaFiltro }: any) {
   const [expandido, setExpandido] = useState(false);
-  const [presencas, setPresencas] = useState<Record<string, boolean>>({});
 
   const range = `${bloco.inicio} - ${bloco.fim}`;
   const entradasDia = gradeCompleta.filter((e: any) => e.numeroSala === salaSelecionada.numero && e.diaSemana === diaGrade);
@@ -166,13 +165,6 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
   const alunosFiltrados = alunosNoBloco.filter(a => a.toLowerCase().includes(buscaFiltro.toLowerCase()));
   const isActive = entradaFinal.materia && entradaFinal.materia !== 'A DEFINIR';
 
-  const alternarPresenca = (aluno: string) => {
-    setPresencas(prev => ({
-      ...prev,
-      [aluno]: prev[aluno] === undefined ? true : prev[aluno] === true ? false : true
-    }));
-  };
-
   return (
      <motion.div layout className={cn("p-6 rounded-[2rem] border-2 transition-all flex flex-col gap-4 relative overflow-hidden h-fit shadow-premium",
         !isActive ? "bg-black border-dashed border-white/5 opacity-20" :
@@ -190,7 +182,7 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
         {isActive && (
           <div className="pt-4 border-t border-white/5 space-y-4 relative z-10">
              <button onClick={() => setExpandido(!expandido)} className="w-full flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-[#fbbf24]">
-                <span className="flex items-center gap-2"><Users size={14} /> {alunosNoBloco.length} Alunos</span>
+                <span className="flex items-center gap-2"><Users size={14} /> {alunosNoBloco.length} Matriculados</span>
                 <ChevronDown size={14} className={cn("transition-transform duration-500", expandido && "rotate-180")} />
              </button>
              <AnimatePresence>
@@ -198,16 +190,11 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-4">
                     <div className="grid grid-cols-1 gap-1.5 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
                        {alunosFiltrados.map((aluno, i) => (
-                         <div key={i} onClick={() => alternarPresenca(aluno)}
-                            className={cn("p-3 rounded-xl flex items-center justify-between border text-xs cursor-pointer",
-                              presencas[aluno] === true ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500" :
-                              presencas[aluno] === false ? "bg-red-500/10 border-red-500/30 text-red-500" : "bg-white/[0.03] border-white/5 text-white/60")}>
+                         <div key={i} className="p-3 rounded-xl bg-white/[0.03] border border-white/5 text-xs text-white/60">
                             <span className="font-black italic">{aluno}</span>
-                            <div className="flex items-center gap-2">{presencas[aluno] === true && <CheckCircle2 size={14} />}{presencas[aluno] === false && <XCircle size={14} />}</div>
                          </div>
                        ))}
                     </div>
-                    <button onClick={() => alert('Chamada enviada!')} className="w-full py-3 bg-[#fbbf24] text-black text-[9px] font-black uppercase tracking-widest rounded-xl">Finalizar Chamada</button>
                  </motion.div>
                )}
              </AnimatePresence>

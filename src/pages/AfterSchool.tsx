@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Clock, Users, ChevronLeft, User, DoorOpen, Search, ClipboardCheck, ArrowRight, Star, CheckCircle2, XCircle, ChevronRight } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Clock, Users, ChevronLeft, User, DoorOpen, Search, ArrowRight, Star, ChevronRight } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 
@@ -11,16 +11,8 @@ export default function AfterSchool() {
   const [diaFiltro, setDiaFiltro] = useState<string>(DIAS[0]);
   const [ativSelecionada, setAtivSelecionada] = useState<any | null>(null);
   const [busca, setBusca] = useState('');
-  const [presencas, setPresencas] = useState<Record<string, boolean>>({});
 
   const atividadesDoDia = atividadesAfter.filter(a => a.dias.includes(diaFiltro));
-
-  const alternarPresenca = (aluno: string) => {
-    setPresencas(prev => ({
-      ...prev,
-      [aluno]: prev[aluno] === undefined ? true : prev[aluno] === true ? false : true
-    }));
-  };
 
   if (ativSelecionada) {
     const alunos = ativSelecionada.listaAlunos || [];
@@ -30,11 +22,11 @@ export default function AfterSchool() {
       <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="min-h-screen pb-20 px-2 md:px-8 pt-4 space-y-6">
         <div className="bg-[#0a0a0a] rounded-[1.5rem] md:rounded-[2.5rem] border border-white/5 overflow-hidden shadow-premium">
           <div className="p-6 md:p-10 bg-[#fbbf24] text-black relative">
-             <button onClick={() => { setAtivSelecionada(null); setPresencas({}); }} className="absolute top-6 right-6 w-10 h-10 bg-black/10 rounded-xl flex items-center justify-center hover:bg-black/20 transition-all"><ChevronLeft size={20} /></button>
+             <button onClick={() => setAtivSelecionada(null)} className="absolute top-6 right-6 w-10 h-10 bg-black/10 rounded-xl flex items-center justify-center hover:bg-black/20 transition-all"><ChevronLeft size={20} /></button>
              <div className="flex items-center gap-6">
                 <div className="w-16 h-16 bg-black text-[#fbbf24] rounded-2xl flex items-center justify-center text-3xl font-black">{ativSelecionada.nome.charAt(0)}</div>
                 <div>
-                  <p className="text-[8px] font-black uppercase tracking-[0.3em] opacity-60 mb-1">Extracurricular Activity</p>
+                  <p className="text-[8px] font-black uppercase tracking-[0.3em] opacity-60 mb-1">Activity Consultation</p>
                   <h2 className="text-3xl md:text-5xl font-black tracking-tighter italic leading-none">{ativSelecionada.nome}</h2>
                   <p className="text-sm md:text-xl font-bold opacity-70 mt-1 italic">{ativSelecionada.categoria}</p>
                 </div>
@@ -48,26 +40,18 @@ export default function AfterSchool() {
              </div>
              <div className="space-y-6">
                 <div className="flex items-center justify-between gap-4">
-                   <h3 className="text-2xl font-black italic tracking-tighter text-white flex items-center gap-3"><Users size={24} className="text-[#fbbf24]" /> Registro de Oficina</h3>
+                   <h3 className="text-2xl font-black italic tracking-tighter text-white flex items-center gap-3"><Users size={24} className="text-[#fbbf24]" /> Lista de Oficina</h3>
                    <div className="relative group w-48 md:w-64">
                       <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
                       <input type="text" placeholder="Filtrar..." value={busca} onChange={(e) => setBusca(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-black border border-white/5 rounded-xl text-[11px] font-black outline-none" />
                    </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                    {alunosFiltrados.map((aluno: string, i: number) => (
-                     <div key={i} onClick={() => alternarPresenca(aluno)}
-                        className={cn("p-5 rounded-2xl border-2 flex items-center justify-between transition-all cursor-pointer text-sm font-black italic",
-                        presencas[aluno] === true ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500" :
-                        presencas[aluno] === false ? "bg-red-500/10 border-red-500/30 text-red-500" : "bg-black border-white/5 text-white/70")}>
+                     <div key={i} className="p-5 rounded-2xl bg-white/[0.03] border border-white/5 text-sm font-black italic text-white/70">
                         <span>{aluno}</span>
-                        <div className="flex items-center gap-2">{presencas[aluno] === true && <CheckCircle2 size={18} />}{presencas[aluno] === false && <XCircle size={18} />}</div>
                      </div>
                    ))}
-                </div>
-                <div className="flex gap-4 pt-4">
-                   <button onClick={() => { const n: any = {}; alunos.forEach((a: any) => n[a] = true); setPresencas(n); }} className="flex-1 py-4 bg-white/5 rounded-xl text-[9px] font-black uppercase tracking-widest text-white/40 border border-white/5 transition-all">Presença em Massa</button>
-                   <button onClick={() => alert('Frequência salva!')} className="flex-[2] py-4 bg-[#fbbf24] text-black rounded-xl text-[10px] font-black uppercase tracking-widest shadow-glow-yellow transition-all flex items-center justify-center gap-2 border border-white/10"><ClipboardCheck size={18} /> Finalizar Chamada</button>
                 </div>
              </div>
           </div>
@@ -85,7 +69,7 @@ export default function AfterSchool() {
             <span className="text-[9px] font-black uppercase tracking-[0.2em] italic">Full Day Experience</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white mb-2 italic leading-none">After <span className="text-[#fbbf24]">School</span></h1>
-          <p className="text-white/40 text-sm md:text-lg font-medium italic border-l-4 border-[#fbbf24]/20 pl-4">Atividades e oficinas extracurriculares.</p>
+          <p className="text-white/40 text-sm md:text-lg font-medium italic border-l-4 border-[#fbbf24]/20 pl-4">Consulta de oficinas extracurriculares.</p>
         </div>
         <div className="flex gap-1 p-1 bg-[#0a0a0a] rounded-xl border border-white/5 overflow-x-auto no-scrollbar">
           {DIAS.map(dia => (
