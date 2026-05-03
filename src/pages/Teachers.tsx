@@ -8,10 +8,13 @@ import {
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 
+const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
+
 export default function TeachersPage() {
-  const { professores } = useEscola();
+  const { professores, gradeCompleta } = useEscola();
   const [busca, setBusca] = useState('');
   const [profSelecionadoId, setProfSelecionadoId] = useState<string | null>(null);
+  const [diaFiltro, setDiaFiltro] = useState('SEGUNDA');
   const [aulaParaChamada, setAulaParaChamada] = useState<any | null>(null);
   const [chamada, setChamada] = useState<Record<string, boolean>>({});
   const [buscaAlunos, setBuscaAlunos] = useState('');
@@ -23,6 +26,15 @@ export default function TeachersPage() {
 
   const professorAtivo = professores.find(p => p.id === profSelecionadoId);
 
+  // Filtra as aulas do professor com base no dia selecionado
+  const aulasDoDia = useMemo(() => {
+    if (!professorAtivo) return [];
+    return gradeCompleta.filter(aula => 
+      aula.nomeProfessor.toLowerCase() === professorAtivo.nome.toLowerCase() &&
+      aula.diaSemana.toUpperCase() === diaFiltro
+    ).sort((a, b) => a.horario.localeCompare(b.horario));
+  }, [professorAtivo, diaFiltro, gradeCompleta]);
+
   const alternarPresenca = (aluno: string) => {
     setChamada(prev => ({
       ...prev,
@@ -30,6 +42,7 @@ export default function TeachersPage() {
     }));
   };
 
+  // Sub-página: Chamada Digital (Grade de Presença)
   if (aulaParaChamada) {
     const alunos = aulaParaChamada.listaAlunos || [];
     const filtrados = alunos.filter((a: string) => a.toLowerCase().includes(buscaAlunos.toLowerCase()));
@@ -65,7 +78,7 @@ export default function TeachersPage() {
                    <input type="text" placeholder="Filtrar..." value={buscaAlunos} onChange={(e) => setBuscaAlunos(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-black border border-white/5 rounded-xl text-[11px] font-black outline-none" />
                 </div>
              </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 {filtrados.map((aluno: string, i: number) => (
                   <div key={aluno} onClick={() => alternarPresenca(aluno)}
                     className={cn("p-5 rounded-2xl border-2 flex items-center justify-between transition-all cursor-pointer text-sm font-black italic",
@@ -86,6 +99,7 @@ export default function TeachersPage() {
     );
   }
 
+  // Sub-página: Perfil do Professor
   if (professorAtivo) {
     return (
       <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="min-h-screen pb-20 px-2 md:px-8 pt-4 space-y-6">
@@ -97,7 +111,6 @@ export default function TeachersPage() {
                  <div>
                     <div className="flex items-center gap-2 mb-1">
                        <span className="px-3 py-0.5 bg-black/10 rounded-md text-[8px] font-black uppercase tracking-widest border border-black/5">Docente Sesi</span>
-                       <div className={cn("w-2 h-2 rounded-full animate-pulse", professorAtivo.status === 'em_aula' ? "bg-emerald-600" : "bg-[#fbbf24]")} />
                     </div>
                     <h2 className="text-3xl md:text-5xl font-black tracking-tighter italic leading-none">{professorAtivo.nome}</h2>
                     <p className="text-sm md:text-xl font-bold opacity-70 mt-1 italic">{professorAtivo.materia}</p>
@@ -105,15 +118,30 @@ export default function TeachersPage() {
               </div>
            </div>
            <div className="p-6 md:p-10 space-y-10 bg-surface-container-lowest">
-              <div className="flex items-center justify-between border-b border-white/5 pb-6">
-                 <h3 className="text-xl md:text-3xl font-black italic tracking-tighter text-white">Agenda do Dia</h3>
-                 <div className="flex gap-2">
-                    <button className="p-3 bg-black rounded-xl text-[#42a0f5] border border-white/5"><Download size={18} /></button>
-                    <button className="p-3 bg-black rounded-xl text-[#42a0f5] border border-white/5"><Share2 size={18} /></button>
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-white/5 pb-6">
+                 <div className="flex flex-col gap-1">
+                    <h3 className="text-xl md:text-3xl font-black italic tracking-tighter text-white">Cronograma Docente</h3>
+                    <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Selecione o dia para ver as aulas</p>
+                 </div>
+                 
+                 <div className="flex gap-1 p-1 bg-black rounded-xl border border-white/5 overflow-x-auto no-scrollbar">
+                    {DIAS_SEMANA.map(dia => (
+                       <button 
+                         key={dia} 
+                         onClick={() => setDiaFiltro(dia)}
+                         className={cn(
+                           "px-4 py-2 rounded-lg text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all",
+                           diaFiltro === dia ? "bg-[#42a0f5] text-black shadow-md" : "text-white/40 hover:bg-white/5"
+                         )}
+                       >
+                          {dia.slice(0, 3)}
+                       </button>
+                    ))}
                  </div>
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                 {professorAtivo.agendaDoDia.map((aula, i) => (
+                 {aulasDoDia.map((aula, i) => (
                     <div key={i} onClick={() => setAulaParaChamada(aula)}
                       className="p-8 bg-[#0d0d0d] rounded-[2rem] border-2 border-white/5 hover:border-[#42a0f5] transition-all group cursor-pointer flex flex-col justify-between h-[220px] shadow-premium">
                        <div className="flex justify-between items-start">
@@ -123,9 +151,17 @@ export default function TeachersPage() {
                           </div>
                           <div className="px-2 py-1 bg-black rounded-md border border-white/5 text-[8px] font-black uppercase opacity-60">Sala {aula.numeroSala}</div>
                        </div>
-                       <div className="pt-4 border-t border-white/5 flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-[#42a0f5] opacity-0 group-hover:opacity-100 transition-all">Iniciar Chamada <ArrowRight size={16} /></div>
+                       <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-white/30 flex items-center gap-2">
+                             <Users size={12} /> {aula.listaAlunos?.length || 0} Alunos
+                          </span>
+                          <span className="text-[9px] font-black uppercase tracking-widest text-[#42a0f5] opacity-0 group-hover:opacity-100 transition-all">Abrir Chamada <ArrowRight size={16} /></span>
+                       </div>
                     </div>
                  ))}
+                 {aulasDoDia.length === 0 && (
+                    <div className="col-span-full py-20 text-center opacity-20 italic font-black text-xl border-2 border-dashed border-white/5 rounded-[3rem]">Sem aulas para esta {diaFiltro.toLowerCase()}.</div>
+                 )}
               </div>
            </div>
         </div>
@@ -142,7 +178,7 @@ export default function TeachersPage() {
              <span className="text-[9px] font-black uppercase tracking-[0.2em] italic">Staff Management</span>
            </div>
            <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white mb-2 italic leading-none">Corpo <span className="text-[#42a0f5]">Docente</span></h1>
-           <p className="text-white/40 text-sm md:text-lg font-medium italic border-l-4 border-[#42a0f5]/20 pl-4">Gestão de agendas e frequência.</p>
+           <p className="text-white/40 text-sm md:text-lg font-medium italic border-l-4 border-[#42a0f5]/20 pl-4">Gestão de agendas e frequência digital.</p>
         </div>
         <div className="relative group w-full lg:w-[350px]">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-[#42a0f5]" size={20} />
