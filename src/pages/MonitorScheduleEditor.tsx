@@ -37,21 +37,36 @@ export default function MonitorScheduleEditor() {
   const [modalCopiaAberto, setModalCopiaAberto] = useState(false);
   const [buscaMonitor, setBuscaMonitor] = useState('');
 
-  // Sincronizar linhas quando monitor ou dia muda
+  const [segmentoSelecionado, setSegmentoSelecionado] = useState<string>('6e7');
+
+  const periodosFallback = useMemo(() => [
+    { id: 'f1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: '6e7' },
+    { id: 'f2', nome: '2ª Aula', horarioInicio: '08:20', horarioFim: '09:10', tipo: 'aula', segmento: '6e7' },
+    { id: 'f3', nome: 'Intervalo', horarioInicio: '09:10', horarioFim: '09:30', tipo: 'intervalo', segmento: '6e7' },
+    { id: 'f4', nome: '3ª Aula', horarioInicio: '09:30', horarioFim: '10:20', tipo: 'aula', segmento: '6e7' },
+    { id: 'f5', nome: '4ª Aula', horarioInicio: '10:20', horarioFim: '11:10', tipo: 'aula', segmento: '6e7' },
+    { id: 'f6', nome: '5ª Aula', horarioInicio: '11:10', horarioFim: '12:00', tipo: 'aula', segmento: '6e7' },
+    { id: 'f7', nome: 'Almoço', horarioInicio: '12:00', horarioFim: '13:00', tipo: 'almoco', segmento: '6e7' },
+    { id: 'f8', nome: '6ª Aula', horarioInicio: '13:00', horarioFim: '13:50', tipo: 'aula', segmento: '6e7' },
+  ], []);
+
+  // Sincronizar linhas quando monitor, dia ou segmento muda
   useEffect(() => {
     if (monitorSelecionado) {
-      // Usar os períodos padrão como base
-      const periodosFiltrados = periodos.filter(p => p.segmento === '6e7'); // Padrão base
-      const baseLinhas: LinhaGradeMonitor[] = periodosFiltrados.map((p, i) => ({
+      const periodosAlvo = (periodos && periodos.length > 0) ? periodos : periodosFallback;
+      const periodosFiltrados = periodosAlvo.filter(p => p.segmento === segmentoSelecionado);
+      const finalPeriodos = periodosFiltrados.length > 0 ? periodosFiltrados : periodosAlvo.slice(0, 8);
+
+      const baseLinhas: LinhaGradeMonitor[] = finalPeriodos.map((p, i) => ({
         id: `l-${i}`,
         horarioInicio: p.horarioInicio.slice(0, 5),
         horarioFim: p.horarioFim.slice(0, 5),
         posto: '',
-        funcao: 'Monitoria Geral',
+        funcao: p.tipo === 'intervalo' ? 'INTERVALO' : p.tipo === 'almoco' ? 'ALMOÇO' : 'Monitoria Geral',
         tipo: p.tipo === 'almoco' || p.tipo === 'intervalo' ? 'almoco' : 'servico'
       }));
 
-      // Preencher com dados existentes
+      // Preencher com dados existentes do banco
       const existentes = gradeMonitores.filter(
         e => e.monitorNome === monitorSelecionado.nome && e.diaSemana === diaSelecionado
       );
@@ -61,13 +76,13 @@ export default function MonitorScheduleEditor() {
         if (idx >= 0) {
           baseLinhas[idx].posto = e.posto;
           baseLinhas[idx].funcao = e.funcao;
-          baseLinhas[idx].tipo = e.funcao === 'ALMOÇO' ? 'almoco' : 'servico';
+          baseLinhas[idx].tipo = (e.funcao === 'ALMOÇO' || e.funcao === 'INTERVALO') ? 'almoco' : 'servico';
         }
       });
 
       setLinhas(baseLinhas);
     }
-  }, [monitorSelecionado, diaSelecionado, gradeMonitores, periodos]);
+  }, [monitorSelecionado, diaSelecionado, gradeMonitores, periodos, segmentoSelecionado, periodosFallback]);
 
   const atualizarLinha = (id: string, campo: keyof LinhaGradeMonitor, valor: any) => {
     setLinhas(prev => prev.map(l => l.id === id ? { ...l, [campo]: valor } : l));
@@ -195,7 +210,18 @@ export default function MonitorScheduleEditor() {
               </div>
 
               <div className="pt-6 border-t border-white/5 space-y-4">
-                <label className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant flex items-center gap-2"><Calendar size={14} /> Dia da Semana</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant flex items-center gap-2"><Calendar size={14} /> Dia da Semana</label>
+                  <div className="flex gap-1">
+                    {['6e7', '8e9', 'medio'].map(s => (
+                      <button key={s} onClick={() => setSegmentoSelecionado(s)}
+                        className={cn("px-2 py-1 rounded-md text-[8px] font-black uppercase transition-all",
+                          segmentoSelecionado === s ? "bg-primary text-black" : "bg-white/5 text-on-surface-variant")}>
+                        {s.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="grid grid-cols-5 gap-1">
                   {DIAS_SEMANA.map(dia => (
                     <button key={dia} onClick={() => setDiaSelecionado(dia)}
@@ -225,63 +251,78 @@ export default function MonitorScheduleEditor() {
                       {monitorSelecionado.nome.charAt(0)}
                     </div>
                     <div>
-                      <h2 className="text-3xl font-black italic leading-none">{monitorSelecionado.nome}</h2>
-                      <p className="text-[10px] text-on-surface-variant font-black uppercase tracking-[0.3em] mt-2">{diaSelecionado} • {monitorSelecionado.tipo}</p>
+                      <h2 className="text-3xl font-black italic leading-none tracking-tighter">{monitorSelecionado.nome}</h2>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[10px] text-on-surface-variant font-black uppercase tracking-[0.3em]">{diaSelecionado}</span>
+                        <span className="w-1 h-1 rounded-full bg-white/20" />
+                        <span className="text-[10px] font-black uppercase tracking-widest py-0.5 px-2 rounded-md bg-white/5 text-primary">{monitorSelecionado.tipo}</span>
+                      </div>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => setModalCopiaAberto(true)} className="px-5 py-3 bg-surface-container-low rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-primary/10 transition-all flex items-center gap-2 border border-transparent hover:border-primary/20"><Copy size={12} /> Copiar Dias</button>
                   </div>
-                </div>
-
-                <div className="space-y-3">
+                   <div className="space-y-2">
                   {linhas.map((linha, idx) => {
                     const ehAlmoco = linha.tipo === 'almoco';
                     return (
                       <motion.div key={linha.id}
                         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.03 }}
-                        className={cn("rounded-2xl transition-all border-2",
-                          ehAlmoco ? "bg-amber-500/5 border-amber-500/10" : "bg-surface-container-low border-transparent hover:border-white/5")}
+                        className={cn("rounded-2xl transition-all border-2 group/row",
+                          ehAlmoco ? "bg-amber-500/5 border-amber-500/10" : "bg-[#0d1117] border-transparent hover:border-white/5")}
                       >
-                        <div className="grid grid-cols-1 md:grid-cols-[60px_180px_1fr_1fr_60px] items-center gap-6 p-5">
-                          <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center text-[10px] font-black",
+                        <div className="grid grid-cols-[50px_140px_1fr_1fr_80px] items-center gap-4 p-4">
+                          {/* Índice / Ícone */}
+                          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black shrink-0",
                             ehAlmoco ? "bg-amber-500/20 text-amber-500" : "bg-surface-container-high text-on-surface-variant")}>
-                            {ehAlmoco ? <Coffee size={20} /> : idx + 1}
+                            {ehAlmoco ? <Coffee size={16} /> : idx + 1}
                           </div>
 
-                          <div className="flex items-center gap-2 bg-black/20 p-2 rounded-xl">
+                          {/* Horário */}
+                          <div className="flex items-center gap-2 bg-white/5 p-2 rounded-xl border border-white/5">
                             <input type="time" value={linha.horarioInicio} onChange={e => atualizarLinha(linha.id, 'horarioInicio', e.target.value)}
-                              className="bg-transparent border-none text-xs font-black text-center outline-none w-full" />
-                            <span className="text-[10px] opacity-20">/</span>
+                              className="bg-transparent border-none text-[10px] font-black text-center outline-none w-full" />
+                            <span className="text-[10px] opacity-10">/</span>
                             <input type="time" value={linha.horarioFim} onChange={e => atualizarLinha(linha.id, 'horarioFim', e.target.value)}
-                              className="bg-transparent border-none text-xs font-black text-center outline-none w-full" />
+                              className="bg-transparent border-none text-[10px] font-black text-center outline-none w-full" />
                           </div>
 
-                          <div className="relative group">
-                            <label className="text-[8px] font-black uppercase text-on-surface-variant absolute -top-2 left-3 bg-surface-container-lowest px-1 flex items-center gap-1"><Briefcase size={8} /> Função</label>
-                            <input type="text" value={linha.funcao} placeholder="Ex: Monitoria Geral"
+                          {/* Função */}
+                          <div className="relative">
+                            <Briefcase size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
+                            <input type="text" value={linha.funcao} placeholder="Função..."
                               onChange={e => atualizarLinha(linha.id, 'funcao', e.target.value)}
-                              className="w-full bg-black/20 border-none rounded-xl py-3 px-4 text-xs font-black outline-none placeholder:opacity-20" />
+                              className="w-full bg-white/5 border-none rounded-xl py-3 pl-10 pr-4 text-xs font-black outline-none italic placeholder:opacity-20 focus:ring-2 focus:ring-primary/20 transition-all" />
                           </div>
 
-                          <div className="relative group">
-                            <label className="text-[8px] font-black uppercase text-on-surface-variant absolute -top-2 left-3 bg-surface-container-lowest px-1 flex items-center gap-1"><MapPin size={8} /> Local / Posto</label>
-                            <input type="text" value={linha.posto} placeholder="Ex: Pátio Central"
+                          {/* Local / Posto */}
+                          <div className="relative">
+                            <MapPin size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
+                            <input type="text" value={linha.posto} placeholder="Local / Posto..."
                               onChange={e => atualizarLinha(linha.id, 'posto', e.target.value)}
-                              className="w-full bg-black/20 border-none rounded-xl py-3 px-4 text-xs font-black outline-none placeholder:opacity-20" />
+                              className="w-full bg-white/5 border-none rounded-xl py-3 pl-10 pr-4 text-xs font-black outline-none italic placeholder:opacity-20 focus:ring-2 focus:ring-primary/20 transition-all" />
                           </div>
 
-                          <div className="flex justify-center">
+                          {/* Botões de Ação */}
+                          <div className="flex justify-end gap-1">
                             <button onClick={() => toggleAlmoco(linha.id)} 
-                              className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all",
-                                ehAlmoco ? "bg-amber-500 text-black shadow-lg" : "bg-surface-container-high text-on-surface-variant hover:text-amber-500")}>
-                              <Coffee size={18} />
+                              className={cn("p-2 rounded-lg transition-all",
+                                ehAlmoco ? "text-amber-500 bg-amber-500/10 shadow-lg" : "text-white/10 hover:text-amber-500 hover:bg-amber-500/5")}>
+                              <Coffee size={16} />
+                            </button>
+                            <button onClick={() => atualizarLinha(linha.id, 'funcao', '')} className="p-2 text-white/10 hover:text-red-500 hover:bg-red-500/5 rounded-lg transition-all">
+                              <Trash2 size={16} />
                             </button>
                           </div>
-                        </div>
-                      </motion.div>
                     );
                   })}
+                  
+                  <div className="mt-4 flex justify-center">
+                    <button onClick={() => setLinhas(prev => [...prev, { id: `l-${prev.length}`, horarioInicio: '00:00', horarioFim: '00:00', posto: '', funcao: 'Monitoria Geral', tipo: 'servico' }])}
+                      className="px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/10 hover:text-primary transition-all flex items-center gap-2 group">
+                      <Plus size={14} className="group-hover:rotate-90 transition-transform" /> Adicionar Novo Horário
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
