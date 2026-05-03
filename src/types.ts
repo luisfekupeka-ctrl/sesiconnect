@@ -154,7 +154,9 @@ export interface GradeMonitor {
   horarioInicio: string;
   horarioFim: string;
   posto: string;
-  corEtiqueta?: string;
+  funcao: string;
+  instrucoes?: string;
+  corEtiqueta: string;
 }
 
 export interface ProfessorCMS {

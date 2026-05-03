@@ -7,6 +7,7 @@ import { cn } from '../lib/utils';
 export default function LanguageLab() {
   const { languageLab } = useEscola();
   const [labSelecionado, setLabSelecionado] = useState<string | null>(null);
+  const [busca, setBusca] = useState('');
 
   const labAberto = languageLab.find(n => n.id === labSelecionado);
 
@@ -95,24 +96,63 @@ export default function LanguageLab() {
         })}
       </div>
 
-      {/* Painel de Alunos Expandido (Opcional se houver dados) */}
+      {/* Painel de Alunos Expandido */}
       {labAberto && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-surface-container-lowest rounded-[2.5rem] p-8 editorial-shadow text-center"
+          className="bg-surface-container-lowest rounded-[3rem] p-8 md:p-10 editorial-shadow border border-primary/10"
         >
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center text-primary">
-              <GraduationCap size={32} />
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10">
+            <div className="flex items-center gap-6">
+              <div className="w-20 h-20 rounded-[2rem] bg-primary flex items-center justify-center text-on-surface-bright shadow-2xl shadow-primary/20">
+                <GraduationCap size={36} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-1">Ensalamento Nominal</p>
+                <h3 className="text-4xl font-black text-on-surface tracking-tighter italic leading-none">{labAberto.nivel}</h3>
+                <p className="text-sm text-on-surface-variant font-bold mt-2">
+                   {labAberto.turma} • {labAberto.professor} • <span className="text-primary">{labAberto.sala}</span>
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-2xl font-black text-on-surface">{labAberto.nivel}</h3>
-              <p className="text-sm text-on-surface-variant font-bold">Turma: {labAberto.turma} • Professor: {labAberto.professor}</p>
+
+            <div className="relative group min-w-[300px]">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">
+                 <Users size={18} />
+              </div>
+              <input 
+                type="text"
+                placeholder="Pesquisar aluno no lab..."
+                onChange={(e) => setBusca(e.target.value)}
+                className="w-full pl-12 pr-6 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-black focus:ring-4 focus:ring-primary/10 transition-all shadow-inner"
+              />
             </div>
-            <div className="px-6 py-2 bg-primary text-on-surface-bright text-xs font-black rounded-full uppercase tracking-widest">
-              Local: {labAberto.sala}
-            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+            {(labAberto.listaAlunos || [])
+              .filter(a => a.toLowerCase().includes(busca.toLowerCase()))
+              .map((aluno, idx) => (
+              <motion.div 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.01 }}
+                key={idx} 
+                className="flex items-center gap-4 p-4 bg-surface-container-low rounded-2xl border border-transparent hover:border-primary/20 transition-all group"
+              >
+                 <div className="w-8 h-8 bg-surface-container-high text-on-surface-variant rounded-xl flex items-center justify-center text-[10px] font-black group-hover:bg-primary group-hover:text-on-surface-bright transition-all shadow-sm">
+                    {(idx + 1).toString().padStart(2, '0')}
+                 </div>
+                 <span className="font-bold text-on-surface group-hover:text-primary transition-colors">{aluno}</span>
+              </motion.div>
+            ))}
+
+            {(labAberto.listaAlunos || []).length === 0 && (
+              <div className="col-span-full py-20 text-center opacity-30 italic font-medium">
+                 Nenhum aluno registrado neste nível de Language Lab.
+              </div>
+            )}
           </div>
         </motion.div>
       )}

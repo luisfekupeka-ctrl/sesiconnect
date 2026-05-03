@@ -20,7 +20,9 @@ import {
   salvarLanguageLab, excluirLanguageLab,
   salvarAtividadeAfter, excluirAtividadeAfter,
   salvarGradeMonitor, excluirGradeMonitor,
-  salvarGradeSala
+  salvarGradeSala, getSalas,
+  atualizarListaAlunosGrade,
+  getAlunosPorTurma
 } from '../services/dataService';
 
 // ============================================================
@@ -55,7 +57,6 @@ function lerNomesExcel(arquivo: File): Promise<string[]> {
         const wb = XLSX.read(dados, { type: 'array' });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json<any>(ws);
-        // Pegar primeira coluna que tiver dados (nome, Nome, etc.)
         const nomes = json.map((row: any) => {
           return String(row['nome'] || row['Nome'] || row['NOME'] || Object.values(row)[0] || '').trim();
         }).filter(Boolean);
@@ -85,37 +86,48 @@ export default function Admin() {
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Segurança removida a pedido do usuário
   const [autenticado, setAutenticado] = useState(true);
   const [usuario, setUsuario] = useState('');
   const [senha, setSenha] = useState('');
   const [erroLogin, setErroLogin] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setAutenticado(true);
+  const handleOpenAlunos = async (item: any) => {
+    setEditingAlunos(item);
+    const alunos = await getAlunosPorTurma(item.turma);
+    setAlunosTurma(alunos);
+    setSelectedAlunos(item.lista_alunos || []);
   };
 
-  // Modais
+  const handleSaveAlunos = async () => {
+    if (!editingAlunos) return;
+    try {
+      await atualizarListaAlunosGrade(editingAlunos.id, selectedAlunos);
+      alert('Lista de alunos atualizada!');
+      setEditingAlunos(null);
+      atualizar();
+    } catch (e) {
+      alert('Erro ao salvar lista.');
+    }
+  };
+
   const [editandoAluno, setEditandoAluno] = useState<any>(null);
   const [editandoMonitor, setEditandoMonitor] = useState<any>(null);
   const [editandoPeriodo, setEditandoPeriodo] = useState<any>(null);
   const [editandoLocal, setEditandoLocal] = useState<any>(null);
   const [editandoProfessor, setEditandoProfessor] = useState<any>(null);
+  const [editingAlunos, setEditingAlunos] = useState<any>(null);
+  const [alunosTurma, setAlunosTurma] = useState<any[]>([]);
+  const [selectedAlunos, setSelectedAlunos] = useState<string[]>([]);
   const [editandoModelo, setEditandoModelo] = useState<any>(null);
   const [editandoGrade, setEditandoGrade] = useState<any>(null);
   const [editandoLanguageLab, setEditandoLanguageLab] = useState<any>(null);
   const [editandoAfter, setEditandoAfter] = useState<any>(null);
   const [editandoGradeMonitor, setEditandoGradeMonitor] = useState<any>(null);
 
-  // Helpers
   const doSave = async (action: Promise<boolean>, close: Function) => {
     setCarregando(true);
-    console.log('[ADMIN] doSave INICIO');
     const ok = await action;
-    console.log('[ADMIN] doSave resultado:', ok);
     if (ok) { 
-      console.log('[ADMIN] Chamando atualizar()...');
       close(null); 
       atualizar();
       setMsg({ tipo: 'ok', texto: 'Salvo com sucesso!' }); 
@@ -132,7 +144,6 @@ export default function Admin() {
     setCarregando(false);
   };
 
-  // Listas derivadas
   const listaProfessores = Array.from(new Set(
     gradeCompleta.map(e => e.nomeProfessor).filter(n => n && n !== '—' && n !== 'A DEFINIR')
   )).sort();
@@ -144,7 +155,6 @@ export default function Admin() {
     return mb && ma;
   });
 
-  // Upload Excel de nomes simples
   const handleUploadNomes = async (tipo: 'alunos' | 'professores' | 'monitores', anoAlvo?: string) => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -188,13 +198,6 @@ export default function Admin() {
     input.click();
   };
 
-  // Login Screen Removida a pedido do usuário
-
-
-
-  // ============================================================
-  // TAB CONFIG
-  // ============================================================
   const abas: { id: AbaAdmin; rotulo: string; icone: any; badge?: number }[] = [
     { id: 'alunos', rotulo: 'Alunos', icone: Users, badge: (alunos || []).length },
     { id: 'professores', rotulo: 'Professores', icone: UserPlus, badge: (professoresCMS || []).length },
@@ -206,13 +209,9 @@ export default function Admin() {
     { id: 'formularios', rotulo: 'Ocorrências', icone: FileSpreadsheet, badge: (modelosFormulario || []).length },
   ];
 
-  // ============================================================
-  // RENDER
-  // ============================================================
   return (
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8 pb-20">
-        {/* Header */}
         <header>
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-500/10 text-red-600 rounded-full mb-4 font-black text-xs uppercase tracking-widest">
             <Shield size={14} /> Master CMS
@@ -221,7 +220,6 @@ export default function Admin() {
           <p className="text-on-surface-variant font-medium mt-2">Cadastre listas, configure grades e crie formulários.</p>
         </header>
 
-        {/* Feedback */}
         <AnimatePresence>
           {msg && (
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -232,7 +230,6 @@ export default function Admin() {
           )}
         </AnimatePresence>
 
-        {/* Tabs */}
         <div className="flex flex-wrap gap-1.5 p-2 bg-surface-container-low rounded-2xl">
           {abas.map(a => (
             <button key={a.id} onClick={() => { setAbaAtiva(a.id); setBusca(''); setAnoFiltro('Todos'); }}
@@ -245,15 +242,12 @@ export default function Admin() {
           ))}
         </div>
 
-        {/* Content */}
         <AnimatePresence mode="wait">
-          {/* ===================== ALUNOS ===================== */}
           {abaAtiva === 'alunos' && (
             <motion.div key="alunos" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
               <Painel titulo="Gestão de Alunos" subtitulo="Suba uma lista Excel de nomes por ano escolar."
                 acao={<button onClick={() => setEditandoAluno({ id: 'novo', nome: '', turma: '', ano: '6º Ano', numeroSala: 0 })} className="btn-primary"><Plus size={14} /> Novo Aluno</button>}>
 
-                {/* Filtros por ano */}
                 <div className="flex flex-wrap gap-2 mb-6">
                   <div className="relative flex-1 min-w-[200px]">
                     <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
@@ -268,7 +262,6 @@ export default function Admin() {
                   ))}
                 </div>
 
-                {/* Cards por ano com botão upload */}
                 {anoFiltro === 'Todos' ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {ANOS_ESCOLARES.map(ano => {
@@ -894,6 +887,14 @@ export default function Admin() {
               <CampoSelect label="Ano Escolar / Turma" value={editandoLocal.segmento || ''} options={ANOS_ESCOLARES} onChange={v => setEditandoLocal({ ...editandoLocal, segmento: v })} />
               <CampoTexto label="Tipo (sala, quadra, etc)" value={editandoLocal.tipo} onChange={v => setEditandoLocal({ ...editandoLocal, tipo: v })} />
               <CampoTexto label="Capacidade" value={editandoLocal.capacidade?.toString() || ''} onChange={v => setEditandoLocal({ ...editandoLocal, capacidade: v ? parseInt(v) : undefined })} tipo="number" />
+              
+              <div className="mt-6 pt-4 border-t border-white/5">
+                <SeletorAlunos
+                  alunos={alunosBase}
+                  selecionados={editandoLocal.lista_alunos || []}
+                  onChange={v => setEditandoLocal({ ...editandoLocal, lista_alunos: v })}
+                />
+              </div>
             </div>
           )}
         </ModalForm>
@@ -938,6 +939,8 @@ export default function Admin() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <CampoSelect label="Dia" value={editandoGrade.diaSemana} options={DIAS_SEMANA} onChange={v => setEditandoGrade({ ...editandoGrade, diaSemana: v })} />
+                <CampoSelect label="Tipo de Atividade" value={editandoGrade.tipo || 'regular'} options={['regular', 'after_school', 'language_lab']} onChange={v => setEditandoGrade({ ...editandoGrade, tipo: v })} />
+              </div>
                 <CampoTexto label="Horário (Ex: 07:30)" value={editandoGrade.horario} onChange={v => setEditandoGrade({ ...editandoGrade, horario: v })} />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -945,10 +948,51 @@ export default function Admin() {
                 <CampoTexto label="Número da Sala" value={editandoGrade.numeroSala?.toString()} tipo="number" onChange={v => setEditandoGrade({ ...editandoGrade, numeroSala: parseInt(v) })} />
               </div>
               <div className="mt-6 pt-4 border-t border-outline-variant/20">
+                <div className="p-5 bg-blue-800/5 rounded-2xl border border-blue-800/20 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black uppercase text-blue-400 tracking-widest flex items-center gap-2">
+                      <RefreshCw size={12} /> Origem do Ensalamento
+                    </label>
+                    <button 
+                      onClick={() => setEditandoGrade({ ...editandoGrade, lista_alunos: null, vinculado_id: null })}
+                      className="text-[8px] font-black uppercase bg-surface-container-high px-2 py-1 rounded-md hover:bg-red-500 transition-all"
+                    >
+                      Resetar para Turma Completa
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <select 
+                      className="bg-surface-container-high p-3 rounded-xl text-[10px] font-black uppercase outline-none"
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        const lab = languageLab.find(l => l.id === id);
+                        if (lab) setEditandoGrade({ ...editandoGrade, vinculado_id: id, lista_alunos: lab.listaAlunos });
+                      }}
+                    >
+                      <option value="">Vincular Language Lab...</option>
+                      {languageLab.map(l => <option key={l.id} value={l.id}>{l.nivel} - {l.professor}</option>)}
+                    </select>
+
+                    <select 
+                      className="bg-surface-container-high p-3 rounded-xl text-[10px] font-black uppercase outline-none"
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        const after = atividadesAfter.find(a => a.id === id);
+                        if (after) setEditandoGrade({ ...editandoGrade, vinculado_id: id, lista_alunos: after.listaAlunos });
+                      }}
+                    >
+                      <option value="">Vincular After School...</option>
+                      {atividadesAfter.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
+                    </select>
+                  </div>
+                </div>
+
                 <SeletorAlunos
                   alunos={alunosBase}
-                  selecionados={editandoGrade.listaAlunos || []}
-                  onChange={v => setEditandoGrade({ ...editandoGrade, listaAlunos: v })}
+                  selecionados={editandoGrade.lista_alunos || []}
+                  turmaAlvo={editandoGrade.turma}
+                  onChange={v => setEditandoGrade({ ...editandoGrade, lista_alunos: v })}
                 />
               </div>
             </div>
@@ -1094,56 +1138,66 @@ function CampoSelect({ label, value, options, onChange }: { label: string; value
   );
 }
 
-function SeletorAlunos({ alunos, selecionados, onChange }: { alunos: any[]; selecionados: string[]; onChange: (selecionados: string[]) => void }) {
+function SeletorAlunos({ alunos, selecionados, onChange, turmaAlvo }: { alunos: any[]; selecionados: string[]; onChange: (selecionados: string[]) => void; turmaAlvo?: string }) {
   const [busca, setBusca] = useState('');
+  const [mostrarTodos, setMostrarTodos] = useState(!turmaAlvo);
 
-  const alunosFiltrados = alunos.filter(a =>
-    !busca ||
-    a.nome.toLowerCase().includes(busca.toLowerCase()) ||
-    (a.turma && a.turma.toLowerCase().includes(busca.toLowerCase()))
-  );
+  const alunosFiltrados = alunos.filter(a => {
+    const matchesBusca = !busca || a.nome.toLowerCase().includes(busca.toLowerCase());
+    const matchesTurma = mostrarTodos || (turmaAlvo && a.turma === turmaAlvo);
+    return matchesBusca && matchesTurma;
+  });
 
-  const toggleAluno = (id: string) => {
-    if (selecionados.includes(id)) {
-      onChange(selecionados.filter(s => s !== id));
+  const toggleAluno = (nome: string) => {
+    if (selecionados.includes(nome)) {
+      onChange(selecionados.filter(s => s !== nome));
     } else {
-      onChange([...selecionados, id]);
+      onChange([...selecionados, nome]);
     }
   };
 
   return (
-    <div className="border border-outline-variant/20 rounded-xl overflow-hidden bg-surface-container-lowest">
-      <div className="p-3 border-b border-outline-variant/20 bg-surface-container-low">
-        <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2 block flex justify-between">
-          <span>Selecionar Alunos Matriculados</span>
-          <span className="text-primary">{selecionados.length} selecionados</span>
-        </label>
-        <input
-          type="text"
-          placeholder="Buscar aluno por nome ou turma..."
-          value={busca}
-          onChange={e => setBusca(e.target.value)}
-          className="w-full text-xs p-2 rounded bg-surface-container focus:outline-none focus:ring-1 focus:ring-primary"
-        />
+    <div className="border-2 border-blue-800/30 rounded-[2rem] overflow-hidden bg-surface-container-low shadow-inner">
+      <div className="p-5 border-b border-white/5 bg-blue-800/5">
+        <div className="flex justify-between items-center mb-4">
+          <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
+            <Users size={14} className="text-blue-400" /> 
+            <span>Selecionar Alunos ({selecionados.length})</span>
+          </label>
+          {turmaAlvo && (
+            <button onClick={() => setMostrarTodos(!mostrarTodos)} className="text-[8px] font-black uppercase tracking-widest px-3 py-1 bg-surface-container-high rounded-full hover:bg-blue-800 transition-all">
+              {mostrarTodos ? 'Ver apenas ' + turmaAlvo : 'Ver todos os anos'}
+            </button>
+          )}
+        </div>
+        <div className="relative">
+          <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
+          <input type="text" placeholder="Buscar aluno por nome..." value={busca} onChange={e => setBusca(e.target.value)}
+            className="w-full bg-surface-container-high p-4 pl-12 rounded-2xl text-xs font-black outline-none border border-transparent focus:border-blue-500 transition-all" />
+        </div>
       </div>
-      <div className="max-h-48 overflow-y-auto p-2 space-y-1">
+      <div className="max-h-64 overflow-y-auto p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 custom-scrollbar">
         {alunosFiltrados.length === 0 ? (
-          <p className="text-xs text-center p-4 text-on-surface-variant">Nenhum aluno encontrado.</p>
+          <div className="col-span-full py-10 text-center opacity-30 italic text-[10px] uppercase font-black tracking-widest">Nenhum aluno encontrado</div>
         ) : (
-          alunosFiltrados.map(a => (
-            <label key={a.id} className="flex items-center gap-3 p-2 hover:bg-surface-container rounded-lg cursor-pointer transition-colors">
-              <input
-                type="checkbox"
-                checked={selecionados.includes(a.id)}
-                onChange={() => toggleAluno(a.id)}
-                className="rounded text-primary focus:ring-primary h-4 w-4"
-              />
-              <div className="flex flex-col">
-                <span className="text-xs font-bold">{a.nome}</span>
-                <span className="text-[9px] font-black text-on-surface-variant tracking-widest uppercase">{a.turma}</span>
-              </div>
-            </label>
-          ))
+          alunosFiltrados.sort((a,b) => a.nome.localeCompare(b.nome)).map(a => {
+            const isSelected = selecionados.includes(a.nome);
+            return (
+              <button key={a.id} onClick={() => toggleAluno(a.nome)}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-xl transition-all text-left border-2",
+                  isSelected ? "bg-blue-800 border-blue-600 text-white shadow-md" : "bg-surface-container-high border-transparent text-on-surface opacity-60 hover:opacity-100"
+                )}>
+                <div className={cn("w-4 h-4 rounded border-2 flex items-center justify-center transition-all", isSelected ? "bg-white border-white text-blue-800" : "border-white/20")}>
+                  {isSelected && <Check size={10} strokeWidth={4} />}
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] font-black truncate uppercase tracking-tight">{a.nome}</span>
+                  <span className="text-[7px] font-black opacity-50 uppercase">{a.turma}</span>
+                </div>
+              </button>
+            );
+          })
         )}
       </div>
     </div>

@@ -283,9 +283,56 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
     return () => clearInterval(intervalo);
   }, []);
 
+  // ============================================================
+  // MOTOR DE CRUZAMENTO INTELIGENTE (HERANÇA DE DADOS)
+  // ============================================================
+  const gradeProcessada = useMemo(() => {
+    return gradeCompleta.map(slot => {
+      const tipoAtividade = slot.tipo || 'regular';
+
+      // 1. Matriz Language Lab
+      if (tipoAtividade === 'language_lab') {
+        const labMatch = languageLab.find(lab => 
+          lab.diaSemana === slot.diaSemana &&
+          (lab.sala.includes(slot.numeroSala.toString()) || lab.sala.includes(slot.nomeSala || '')) &&
+          estaNoHorario(slot.horario, lab.horarioInicio, lab.horarioFim)
+        );
+        if (labMatch) {
+          return { ...slot, materia: `Lab: ${labMatch.nivel}`, nomeProfessor: labMatch.professor, listaAlunos: labMatch.listaAlunos || [], tipo: 'language_lab' };
+        }
+      }
+
+      // 2. Matriz After School
+      if (tipoAtividade === 'after_school') {
+        const afterMatch = atividadesAfter.find(after => 
+          (after.dias || []).includes(slot.diaSemana) &&
+          (after.local.includes(slot.numeroSala.toString()) || after.local.includes(slot.nomeSala || '')) &&
+          estaNoHorario(slot.horario, after.horarioInicio, after.horarioFim)
+        );
+        if (afterMatch) {
+          return { ...slot, materia: `After: ${afterMatch.nome}`, nomeProfessor: afterMatch.nomeProfessor, listaAlunos: afterMatch.listaAlunos || [], tipo: 'after_school' };
+        }
+      }
+
+      // 3. Matriz de Sala (Aula Regular)
+      const salaBase = locaisCMS.find(l => l.numero === slot.numeroSala || l.nome === slot.nomeSala);
+      if (salaBase && salaBase.lista_alunos && salaBase.lista_alunos.length > 0) {
+        return { ...slot, listaAlunos: salaBase.lista_alunos, tipo: 'regular' };
+      }
+
+      // Fallback: Turma Base (Se não houver matriz de sala)
+      if (!slot.listaAlunos || slot.listaAlunos.length === 0) {
+        const alunosDaTurma = alunos.filter(a => a.turma === slot.turma).map(a => a.nome);
+        return { ...slot, listaAlunos: alunosDaTurma, tipo: 'regular' };
+      }
+
+      return slot;
+    });
+  }, [gradeCompleta, languageLab, atividadesAfter, alunos, locaisCMS]);
+
   let estadoEscola: EstadoEscola;
   try {
-    estadoEscola = obterEstadoAtualDaEscola(horaAtual, salas || [], gradeCompleta || [], periodos || []);
+    estadoEscola = obterEstadoAtualDaEscola(horaAtual, salas || [], gradeProcessada || [], periodos || []);
   } catch (err) {
     console.error('Erro crítico no motor escolar:', err);
     estadoEscola = {
@@ -299,12 +346,12 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
   }
 
   const professores: Professor[] = useMemo(() => {
-    const nomes = extrairProfessores(gradeCompleta);
+    const nomes = extrairProfessores(gradeProcessada);
     const diaSemana = obterDiaSemana(horaAtual);
 
     return nomes.map((nome, i) => {
-      const localizacao = obterLocalizacaoProfessor(nome, horaAtual, gradeCompleta);
-      const agenda = obterAgendaProfessor(nome, diaSemana, gradeCompleta);
+      const localizacao = obterLocalizacaoProfessor(nome, horaAtual, gradeProcessada);
+      const agenda = obterAgendaProfessor(nome, diaSemana, gradeProcessada);
       const horaStr = `${horaAtual.getHours().toString().padStart(2, '0')}:${horaAtual.getMinutes().toString().padStart(2, '0')}`;
       const periodoLabel = obterPeriodoEscolar(horaStr, periodos);
 
@@ -351,7 +398,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
       estadoEscola,
       horaAtual,
       salas,
-      gradeCompleta,
+      gradeCompleta: gradeProcessada,
       alunos,
       languageLab,
       atividadesAfter,

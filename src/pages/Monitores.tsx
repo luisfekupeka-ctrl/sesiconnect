@@ -233,68 +233,81 @@ export default function Monitores() {
             </div>
           </div>
 
-          {/* Painel de detalhes do monitor selecionado */}
+          {/* Painel de detalhes */}
           {monitorSelecionado && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="bg-surface-container-lowest rounded-[2.5rem] editorial-shadow p-8"
             >
-              <div className="flex items-center gap-6 mb-6">
+              <div className="flex flex-col md:flex-row items-center gap-6 mb-10 pb-10 border-b border-white/5">
                 <div className={cn(
-                  "w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-black",
-                  monitorSelecionado.status === 'ativo' ? "bg-primary text-on-surface-bright shadow-lg shadow-primary/20" : "bg-surface-container-high text-on-surface-variant"
+                  "w-20 h-20 rounded-[2rem] flex items-center justify-center text-2xl font-black shadow-2xl",
+                  monitorSelecionado.status === 'ativo' ? "bg-primary text-on-surface-bright" : "bg-surface-container-high text-on-surface-variant"
                 )}>
                   {(monitorSelecionado.nome || 'M').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
-                <div>
-                  <h3 className="text-2xl font-black text-on-surface mb-1">{monitorSelecionado.nome}</h3>
-                  <p className="text-on-surface-variant font-bold">{monitorSelecionado.tipo === 'hibrido' ? 'Híbrido' : monitorSelecionado.tipo === 'volante' ? 'Volante' : 'Fixo'} · {monitorSelecionado.localPermanencia || 'Sem posto fixo'}</p>
-                </div>
-                {estaAtivoAgora(monitorSelecionado.horarioInicio, monitorSelecionado.horarioFim) && monitorSelecionado.status === 'ativo' && (
-                  <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 ml-auto">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Em Plantão Agora</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-primary/5 p-5 rounded-2xl border border-primary/10">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock size={14} className="text-primary" />
-                    <p className="text-[9px] font-black text-primary uppercase tracking-widest">Início do Plantão</p>
-                  </div>
-                  <p className="text-2xl font-black text-on-surface">{monitorSelecionado.horarioInicio}</p>
-                </div>
-
-                <div className="bg-red-500/5 p-5 rounded-2xl border border-red-500/10">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock size={14} className="text-red-500" />
-                    <p className="text-[9px] font-black text-red-500 uppercase tracking-widest">Fim do Plantão</p>
-                  </div>
-                  <p className="text-2xl font-black text-on-surface">{monitorSelecionado.horarioFim}</p>
-                </div>
-
-                <div className="bg-tertiary-container/5 p-5 rounded-2xl border border-tertiary-container/10">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Calendar size={14} className="text-tertiary-container" />
-                    <p className="text-[9px] font-black text-tertiary-container uppercase tracking-widest">Duração</p>
-                  </div>
-                  <p className="text-2xl font-black text-on-surface">
-                    {(() => {
-                      const d = calcularDuracao(monitorSelecionado.horarioInicio, monitorSelecionado.horarioFim);
-                      return `${Math.floor(d / 60)}h${d % 60 > 0 ? ` ${d % 60}min` : ''}`;
-                    })()}
+                <div className="text-center md:text-left">
+                  <h3 className="text-3xl font-black text-on-surface mb-1">{monitorSelecionado.nome}</h3>
+                  <p className="text-on-surface-variant font-bold uppercase tracking-widest text-xs">
+                    {monitorSelecionado.tipo} · {monitorSelecionado.turno}
                   </p>
                 </div>
+                <div className="md:ml-auto flex gap-3">
+                   <div className="px-6 py-3 bg-surface-container-high rounded-2xl text-center">
+                      <p className="text-[8px] font-black uppercase opacity-50">Status</p>
+                      <p className={cn("text-xs font-black uppercase", monitorSelecionado.status === 'ativo' ? "text-emerald-500" : "text-red-500")}>{monitorSelecionado.status}</p>
+                   </div>
+                </div>
+              </div>
 
-                <div className="bg-surface-container-low p-5 rounded-2xl">
-                  <div className="flex items-center gap-2 mb-2">
-                    <BookOpen size={14} className="text-on-surface-variant" />
-                    <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest">Turno</p>
-                  </div>
-                  <p className="text-2xl font-black text-on-surface capitalize">{monitorSelecionado.turno === 'manha' ? 'Manhã' : monitorSelecionado.turno === 'tarde' ? 'Tarde' : 'Noite'}</p>
+              {/* ROTEIRO DO DIA (GRADE DETALHADA) */}
+              <div className="space-y-6">
+                <h4 className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2 mb-6">
+                   <Clock size={16} /> Roteiro de Postos e Funções
+                </h4>
+                
+                <div className="relative border-l-4 border-primary/10 ml-4 pl-8 space-y-8">
+                  {gradeMonitores
+                    .filter(g => g.monitorNome === monitorSelecionado.nome)
+                    .sort((a,b) => a.horarioInicio.localeCompare(b.horarioInicio))
+                    .map((slot, idx) => (
+                      <div key={slot.id} className="relative">
+                        {/* Indicador na linha do tempo */}
+                        <div className="absolute -left-[38px] top-2 w-4 h-4 rounded-full bg-surface-container-lowest border-4 border-primary shadow-sm" style={{ borderColor: slot.corEtiqueta }} />
+                        
+                        <div className={cn(
+                          "p-6 rounded-3xl border-2 transition-all hover:scale-[1.01]",
+                          "bg-surface-container-low border-transparent hover:border-primary/20"
+                        )} style={{ borderLeftColor: slot.corEtiqueta, borderLeftWidth: '8px' }}>
+                          <div className="flex flex-wrap justify-between items-start gap-4 mb-4">
+                            <div>
+                              <span className="text-[10px] font-black bg-surface-container-high px-3 py-1 rounded-full text-on-surface-variant uppercase tracking-widest mb-2 inline-block">
+                                {slot.horarioInicio} — {slot.horarioFim}
+                              </span>
+                              <h5 className="text-xl font-black text-white italic">{slot.posto}</h5>
+                            </div>
+                            <div className="px-4 py-2 bg-primary/10 rounded-xl border border-primary/20">
+                               <p className="text-[8px] font-black uppercase text-primary mb-1">Função</p>
+                               <p className="text-xs font-black text-white uppercase">{slot.funcao || 'Monitoria Geral'}</p>
+                            </div>
+                          </div>
+                          
+                          {slot.instrucoes && (
+                            <div className="mt-4 p-4 bg-black/20 rounded-2xl border border-white/5 italic text-sm text-on-surface-variant">
+                               <p className="text-[8px] font-black uppercase opacity-40 mb-1 not-italic">Instruções:</p>
+                               "{slot.instrucoes}"
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                  {gradeMonitores.filter(g => g.monitorNome === monitorSelecionado.nome).length === 0 && (
+                    <div className="py-10 text-center opacity-30 italic text-sm">
+                       Nenhum roteiro definido para este monitor.
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>

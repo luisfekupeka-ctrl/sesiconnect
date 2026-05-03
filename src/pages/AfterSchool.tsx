@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, MapPin, Clock, Users, Calendar, ChevronDown, ChevronUp, User, DoorOpen } from 'lucide-react';
+import { Sparkles, MapPin, Clock, Users, Calendar, ChevronDown, ChevronUp, User, DoorOpen, Search } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 import { AtividadeAfter } from '../types';
@@ -12,6 +12,7 @@ export default function AfterSchool() {
   const [diaFiltro, setDiaFiltro] = useState<string | null>(null);
   const [categoriaFiltro, setCategoriaFiltro] = useState<string | null>(null);
   const [atividadeAberta, setAtividadeAberta] = useState<string | null>(null);
+  const [buscaAlunos, setBuscaAlunos] = useState('');
 
   const categorias = [...new Set(atividadesAfter.map(a => a.categoria))];
 
@@ -289,24 +290,47 @@ export default function AfterSchool() {
                       </div>
 
                       {/* Lista de alunos */}
-                      {atividade.listaAlunos.length > 0 && (
-                        <div>
-                          <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest mb-3 flex items-center gap-2">
-                            <Users size={12} />
-                            Alunos Matriculados ({atividade.listaAlunos.length})
-                          </p>
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                            {atividade.listaAlunos.map((aluno, i) => (
-                              <div key={i} className="flex items-center gap-2.5 p-3 bg-surface-container-low/50 rounded-xl hover:bg-surface-container-low transition-colors">
-                                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-[9px] font-black">
-                                  {aluno.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                                </div>
-                                <span className="text-xs font-bold text-on-surface truncate">{aluno}</span>
-                              </div>
-                            ))}
-                          </div>
+                      <div className="space-y-4">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                           <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
+                             <Users size={12} />
+                             Alunos Matriculados ({atividade.listaAlunos?.length || 0})
+                           </p>
+                           <div className="relative group max-w-xs w-full">
+                              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors" />
+                              <input 
+                                type="text"
+                                placeholder="Buscar aluno na oficina..."
+                                onChange={(e) => setBuscaAlunos(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 transition-all shadow-inner"
+                              />
+                           </div>
                         </div>
-                      )}
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                          {(atividade.listaAlunos || [])
+                            .filter(a => a.toLowerCase().includes(buscaAlunos.toLowerCase()))
+                            .map((aluno, i) => (
+                            <motion.div 
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              key={i} 
+                              className="flex items-center gap-2.5 p-3 bg-surface-container-low/50 rounded-xl hover:bg-primary/5 transition-colors group"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-surface-container-high text-on-surface-variant flex items-center justify-center text-[9px] font-black group-hover:bg-primary group-hover:text-on-surface-bright transition-colors">
+                                {aluno.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                              </div>
+                              <span className="text-xs font-bold text-on-surface truncate group-hover:text-primary transition-colors">{aluno}</span>
+                            </motion.div>
+                          ))}
+                          
+                          {(atividade.listaAlunos || []).length === 0 && (
+                             <div className="col-span-full py-10 text-center opacity-30 italic text-xs">
+                               Nenhum aluno ensalado nesta atividade.
+                             </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </motion.div>
                 )}

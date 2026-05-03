@@ -184,6 +184,24 @@ export async function salvarAlunosNaGrade(
 // ALUNOS
 // ============================================================
 
+export const atualizarListaAlunosGrade = async (id: string, listaAlunos: any[]) => {
+  const { data, error } = await supabase
+    .from('mapa_salas')
+    .update({ lista_alunos: listaAlunos })
+    .eq('id', id);
+  if (error) throw error;
+  return data;
+};
+
+export const getAlunosPorTurma = async (turma: string) => {
+  const { data, error } = await supabase
+    .from('alunos_cms')
+    .select('*')
+    .eq('turma', turma);
+  if (error) throw error;
+  return data;
+};
+
 export async function buscarAlunos(): Promise<Aluno[]> {
   const { data, error } = await supabase.from('alunos_cms').select('*');
   if (error) return [];
@@ -420,7 +438,9 @@ export async function buscarGradeMonitores(): Promise<GradeMonitor[]> {
     horarioInicio: item.horario_inicio,
     horarioFim: item.horario_fim,
     posto: item.posto,
-    corEtiqueta: item.cor_etiqueta,
+    funcao: item.funcao || 'Monitoria Geral',
+    instrucoes: item.instrucoes || '',
+    corEtiqueta: item.cor_etiqueta || '#3B82F6',
   }));
 }
 
@@ -431,7 +451,9 @@ export async function salvarGradeMonitor(grade: Partial<GradeMonitor>): Promise<
     horario_inicio: grade.horarioInicio,
     horario_fim: grade.horarioFim,
     posto: grade.posto,
-    cor_etiqueta: grade.corEtiqueta
+    funcao: grade.funcao || 'Monitoria Geral',
+    instrucoes: grade.instrucoes || '',
+    cor_etiqueta: grade.corEtiqueta || '#3B82F6'
   };
 
   if (grade.id && grade.id !== 'novo') {
@@ -518,7 +540,8 @@ export async function buscarLocaisCMS(): Promise<LocalCMS[]> {
     nome: l.nome,
     numero: l.numero,
     tipo: l.tipo,
-    capacidade: l.capacidade
+    capacidade: l.capacidade,
+    lista_alunos: l.lista_alunos || []
   }));
 }
 
@@ -532,7 +555,8 @@ export async function salvarLocalCMS(local: Partial<LocalCMS>): Promise<boolean>
     nome: local.nome.trim(),
     numero: (local.numero !== undefined && local.numero !== null && local.numero !== '') ? Number(local.numero) : null,
     tipo: local.tipo || 'sala',
-    capacidade: (local.capacidade !== undefined && local.capacidade !== null && local.capacidade !== '') ? Number(local.capacidade) : 0
+    capacidade: (local.capacidade !== undefined && local.capacidade !== null && local.capacidade !== '') ? Number(local.capacidade) : 0,
+    lista_alunos: local.lista_alunos || []
   };
 
   console.log('[DEBUG] Salvando local:', payload);
