@@ -28,13 +28,23 @@ export default function GestaoRealocacao() {
 
   // ESTADO DO WIZARD
   const [step, setStep] = useState(1);
-  const [diaSel, setDiaSel] = useState('SEGUNDA');
+  const [dataSelecionada, setDataSelecionada] = useState(new Date().toISOString().split('T')[0]);
+  const [diaSel, setDiaSel] = useState('');
   const [tipoFluxo, setTipoFluxo] = useState<'SALA' | 'PROFESSOR' | null>(null);
   const [targetId, setTargetId] = useState<string>('');
   const [segmentoSel, setSegmentoSel] = useState<string>('6º e 7º');
   const [horariosSel, setHorariosSel] = useState<string[]>([]);
   const [isModoProva, setIsModoProva] = useState(false);
   const [profFixoProva, setProfFixoProva] = useState('');
+
+  // Sincroniza o dia da semana com a data selecionada
+  useEffect(() => {
+    if (dataSelecionada) {
+      const data = new Date(dataSelecionada + 'T00:00:00');
+      const dias = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO'];
+      setDiaSel(dias[data.getDay()]);
+    }
+  }, [dataSelecionada]);
 
   const [resultados, setResultados] = useState<ResultadoRealocacao[]>([]);
   const [carregando, setCarregando] = useState(false);
@@ -124,7 +134,7 @@ export default function GestaoRealocacao() {
     try {
       const eventoId = await salvarEventoEscola({
         tipo: isModoProva ? 'PROVA' : 'FALTA',
-        dia: diaSel,
+        dia: dataSelecionada, // Agora salva a data completa
         horarios: horariosSel,
         professor: tipoFluxo === 'PROFESSOR' ? targetId : profFixoProva,
         status
@@ -183,16 +193,48 @@ export default function GestaoRealocacao() {
 
       <AnimatePresence mode="wait">
         {step === 1 && (
-          <motion.div key="s1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-surface-container-lowest p-8 rounded-[3rem] editorial-shadow">
-            <h2 className="text-2xl font-black mb-6">1. Selecione o Dia</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
-              {DIAS_SEMANA.map(d => (
-                <button key={d} onClick={() => setDiaSel(d)} className={cn("p-4 rounded-xl font-black text-sm border-2 transition-all shadow-sm", diaSel === d ? "bg-amber-700 text-white border-amber-600" : "bg-surface-container-highest border-blue-800 text-on-surface hover:border-accent-amber")}>
-                  {d}
-                </button>
-              ))}
+          <motion.div key="s1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-surface-container-lowest p-10 rounded-[3rem] editorial-shadow border border-blue-800">
+            <h2 className="text-3xl font-black mb-8 text-on-surface-bright">1. Selecione a Data</h2>
+            <div className="flex flex-col gap-6">
+              <div className="relative group">
+                <input 
+                  type="date" 
+                  value={dataSelecionada} 
+                  onChange={e => setDataSelecionada(e.target.value)}
+                  className="w-full bg-surface-container-low p-6 rounded-3xl font-black text-2xl text-on-surface border-2 border-blue-800 focus:border-accent-amber transition-all outline-none"
+                />
+                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <span className="bg-amber-700 text-white px-4 py-2 rounded-xl text-xs font-black uppercase">
+                    {diaSel}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {[-1, 0, 1, 2, 3].map(offset => {
+                  const d = new Date();
+                  d.setDate(d.getDate() + offset);
+                  const iso = d.toISOString().split('T')[0];
+                  const diasCompact = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+                  return (
+                    <button 
+                      key={iso}
+                      onClick={() => setDataSelecionada(iso)}
+                      className={cn(
+                        "flex-1 min-w-[100px] p-4 rounded-2xl border-2 font-black transition-all",
+                        dataSelecionada === iso 
+                          ? "bg-amber-700 border-amber-600 text-white shadow-lg scale-105" 
+                          : "bg-surface-container-high border-blue-800 text-on-surface opacity-60 hover:opacity-100"
+                      )}
+                    >
+                      <div className="text-[10px] uppercase opacity-70">{diasCompact[d.getDay()]}</div>
+                      <div className="text-lg">{d.getDate()}</div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <button onClick={() => setStep(2)} className="w-full mt-8 py-5 bg-amber-700 text-white rounded-2xl font-black uppercase text-xs border border-amber-600 hover:bg-amber-600 transition-all">Próximo Passo</button>
+            <button onClick={() => setStep(2)} className="w-full mt-10 py-6 bg-blue-800 text-white rounded-3xl font-black uppercase text-xs tracking-widest border border-blue-700 hover:bg-blue-700 shadow-2xl transition-all">Próximo Passo</button>
           </motion.div>
         )}
 
@@ -222,13 +264,19 @@ export default function GestaoRealocacao() {
                 {tipoFluxo === 'SALA' && (
                   <div className={cn("p-6 rounded-3xl border-2 transition-all", horariosSaoConsecutivos && horariosSel.length > 1 ? "bg-amber-500/10 border-amber-500" : "bg-surface-container-low border-transparent opacity-50")}>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <input type="checkbox" disabled={!horariosSaoConsecutivos || horariosSel.length <= 1} checked={isModoProva} onChange={e => setIsModoProva(e.target.checked)} className="w-5 h-5" />
-                      <span className="font-black text-amber-700">MODO PROVA</span>
+                      <input type="checkbox" disabled={!horariosSaoConsecutivos || horariosSel.length <= 1} checked={isModoProva} onChange={e => setIsModoProva(e.target.checked)} className="w-5 h-5 accent-amber-700" />
+                      <span className="font-black text-amber-500 uppercase tracking-wider">MODO PROVA</span>
                     </label>
                     {isModoProva && (
-                      <select value={profFixoProva} onChange={e => setProfFixoProva(e.target.value)} className="w-full mt-4 p-3 rounded-xl bg-surface-container-high border-none text-on-surface">
-                        <option value="">Fiscal da Prova...</option>
-                        {professores.map(p => <option key={p.nome} value={p.nome}>{p.nome}</option>)}
+                      <select value={profFixoProva} onChange={e => setProfFixoProva(e.target.value)} className="w-full mt-4 p-4 rounded-2xl bg-surface-container-high border-2 border-amber-700/50 text-on-surface font-black outline-none focus:border-amber-500 transition-all">
+                        <option value="">Selecione o Fiscal da Prova...</option>
+                        {Array.from(new Set(
+                          gradeCompleta
+                            .filter(g => g.numeroSala === Number(targetId) && g.diaSemana === diaSel && horariosSel.includes(g.horario))
+                            .map(g => g.nomeProfessor)
+                        )).map(nome => (
+                          <option key={nome} value={nome}>{nome}</option>
+                        ))}
                       </select>
                     )}
                     {!horariosSaoConsecutivos && <p className="text-[10px] text-red-500 mt-2 font-bold flex items-center gap-1"><Info size={12} /> Selecione horários seguidos para ativar.</p>}

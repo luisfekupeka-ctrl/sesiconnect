@@ -79,13 +79,16 @@ export function calcularModoProva(
   const resultados: ResultadoRealocacao[] = [];
 
   horarios.forEach(h => {
+    const entradaOriginal = grade.find(g => g.numeroSala === salaNumero && g.diaSemana === dia && g.horario === h);
+    const nomeTurma = entradaOriginal ? entradaOriginal.turma : `Sala ${salaNumero}`;
+
     resultados.push({
       id: `prova-${Math.random()}`,
       eventoId: 'modo-prova',
       tipo: 'PROVA',
-      professorOriginal: 'Livre',
+      professorOriginal: entradaOriginal ? entradaOriginal.nomeProfessor : '—',
       professorSubstituto: profFixo,
-      turma: `SALA ${salaNumero} (PROVA)`,
+      turma: `${nomeTurma} (PROVA)`,
       horario: h,
       segmento: segmento,
       acao: 'MODO PROVA',
