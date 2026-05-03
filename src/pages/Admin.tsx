@@ -46,9 +46,14 @@ const PALETA_CORES = [
 ];
 
 // ============================================================
-// HELPER: Ler Excel simples (coluna de nomes)
+// HELPER: Ler Excel (nomes e anos)
 // ============================================================
-function lerNomesExcel(arquivo: File): Promise<string[]> {
+interface DadosImportacao {
+  nome: string;
+  ano?: string;
+}
+
+function lerDadosExcel(arquivo: File): Promise<DadosImportacao[]> {
   return new Promise((resolve, reject) => {
     const leitor = new FileReader();
     leitor.onload = (e) => {
@@ -57,10 +62,11 @@ function lerNomesExcel(arquivo: File): Promise<string[]> {
         const wb = XLSX.read(dados, { type: 'array' });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json<any>(ws);
-        const nomes = json.map((row: any) => {
-          return String(row['nome'] || row['Nome'] || row['NOME'] || Object.values(row)[0] || '').trim();
-        }).filter(Boolean);
-        resolve(nomes);
+        const resultados = json.map((row: any) => ({
+          nome: String(row['nome'] || row['Nome'] || row['NOME'] || Object.values(row)[0] || '').trim(),
+          ano: String(row['ano'] || row['Ano'] || row['ANO'] || row['série'] || row['Serie'] || '').trim()
+        })).filter(r => r.nome);
+        resolve(resultados);
       } catch { reject(new Error('Erro ao ler Excel')); }
     };
     leitor.onerror = () => reject(new Error('Erro'));
@@ -108,6 +114,49 @@ export default function Admin() {
   const [editandoGradeMonitor, setEditandoGradeMonitor] = useState<any>(null);
   const [diaMonitor, setDiaMonitor] = useState('SEGUNDA');
   const [subAbaMonitor, setSubAbaMonitor] = useState<'EQUIPE' | 'ESCALA' | 'DASHBOARD'>('EQUIPE');
+
+  const [buscaGlobal, setBuscaGlobal] = useState('');
+  const [mostrarResultadosGlobal, setMostrarResultadosGlobal] = useState(false);
+
+  // 1.1 LOGICA DE BUSCA GLOBAL
+  const resultadosBuscaGlobal = useMemo(() => {
+    if (buscaGlobal.length < 2) return [];
+    const q = buscaGlobal.toLowerCase();
+    const res: { id: string; tipo: string; titulo: string; subtitulo: string; aba: AbaAdmin }[] = [];
+
+    // Alunos
+    alunos.filter(a => a.nome.toLowerCase().includes(q)).slice(0, 5).forEach(a => 
+      res.push({ id: a.id, tipo: 'ALUNO', titulo: a.nome, subtitulo: `${a.ano} · ${a.turma}`, aba: 'alunos' }));
+
+    // Professores
+    professoresCMS.filter(p => p.nome.toLowerCase().includes(q)).slice(0, 3).forEach(p => 
+      res.push({ id: p.id, tipo: 'PROFESSOR', titulo: p.nome, subtitulo: p.especialidade || 'Docente', aba: 'professores' }));
+
+    // Monitores
+    monitores.filter(m => m.nome.toLowerCase().includes(q)).slice(0, 3).forEach(m => 
+      res.push({ id: m.id, tipo: 'MONITOR', titulo: m.nome, subtitulo: m.tipo, aba: 'gestao-monitores' }));
+
+    // Locais/Salas
+    locaisCMS.filter(l => l.nome.toLowerCase().includes(q) || l.numero?.toString().includes(q)).slice(0, 3).forEach(l => 
+      res.push({ id: l.id, tipo: 'SALA', titulo: l.nome, subtitulo: `Sala ${l.numero}`, aba: 'locais' }));
+
+    // Language Lab
+    languageLab.filter(l => (l.nivel || '').toLowerCase().includes(q) || (l.professor || '').toLowerCase().includes(q)).slice(0, 3).forEach(l => 
+      res.push({ id: l.id, tipo: 'IDIOMA', titulo: l.nivel, subtitulo: `${l.professor} · ${l.sala}`, aba: 'language-lab' }));
+
+    // After School
+    atividadesAfter.filter(a => (a.nome || '').toLowerCase().includes(q) || (a.nomeProfessor || '').toLowerCase().includes(q)).slice(0, 3).forEach(a => 
+      res.push({ id: a.id, tipo: 'AFTER', titulo: a.nome, subtitulo: `${a.nomeProfessor} · ${a.local}`, aba: 'after-school' }));
+
+    return res;
+  }, [buscaGlobal, alunos, professoresCMS, monitores, locaisCMS, languageLab, atividadesAfter]);
+
+  const irParaResultado = (aba: AbaAdmin, termo: string) => {
+    setAbaAtiva(aba);
+    setBusca(termo);
+    setBuscaGlobal('');
+    setMostrarResultadosGlobal(false);
+  };
 
   // 2. FUNÇÕES DE SUPORTE
   const handleLogin = (e: React.FormEvent) => {
@@ -246,29 +295,31 @@ export default function Admin() {
       if (!arquivo) return;
       setCarregando(true);
       try {
-        const nomes = await lerNomesExcel(arquivo);
+        const dados = await lerDadosExcel(arquivo);
         let ok = 0;
 
-        if (tipo === 'alunos' && anoAlvo) {
-          for (const nome of nomes) {
-            const sucesso = await salvarAluno({ nome, turma: anoAlvo, ano: anoAlvo, numeroSala: 0 });
+        if (tipo === 'alunos') {
+          for (const d of dados) {
+            const anoFinal = d.ano || anoAlvo;
+            if (!anoFinal) continue;
+            const sucesso = await salvarAluno({ nome: d.nome, turma: anoFinal, ano: anoFinal, numeroSala: 0 });
             if (sucesso) ok++;
           }
-          setMsg({ tipo: 'ok', texto: `${ok} alunos importados para ${anoAlvo}!` });
+          setMsg({ tipo: 'ok', texto: `${ok} alunos processados!` });
         } else if (tipo === 'monitores') {
-          for (const nome of nomes) {
-            const sucesso = await salvarMonitor({ nome, materia: '', turno: 'manha', horarioInicio: '08:00', horarioFim: '12:00', tipo: 'fixo', status: 'ativo', localPermanencia: '', localAlmoco: '' });
+          for (const d of dados) {
+            const sucesso = await salvarMonitor({ nome: d.nome, materia: '', turno: 'manha', horarioInicio: '08:00', horarioFim: '12:00', tipo: 'fixo', status: 'ativo', localPermanencia: '', localAlmoco: '' });
             if (sucesso) ok++;
           }
           setMsg({ tipo: 'ok', texto: `${ok} monitores importados!` });
         } else if (tipo === 'professores') {
-          for (let i = 0; i < nomes.length; i++) {
-            const nome = nomes[i];
+          for (let i = 0; i < dados.length; i++) {
+            const d = dados[i];
             const cor = PALETA_CORES[i % PALETA_CORES.length];
-            const sucesso = await salvarProfessorCMS({ nome, cor });
+            const sucesso = await salvarProfessorCMS({ nome: d.nome, cor });
             if (sucesso) ok++;
           }
-          setMsg({ tipo: 'ok', texto: `${ok} professores cadastrados com cores únicas!` });
+          setMsg({ tipo: 'ok', texto: `${ok} professores cadastrados!` });
         }
         atualizar();
       } catch (err: any) {
@@ -294,12 +345,74 @@ export default function Admin() {
   return (
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8 pb-20">
-        <header>
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-500/10 text-red-600 rounded-full mb-4 font-black text-xs uppercase tracking-widest">
-            <Shield size={14} /> Master CMS
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-500/10 text-red-600 rounded-full mb-4 font-black text-xs uppercase tracking-widest">
+              <Shield size={14} /> Master CMS
+            </div>
+            <h1 className="text-4xl font-black tracking-tighter">Central de Cadastros</h1>
+            <p className="text-on-surface-variant font-medium mt-2">Cadastre listas, configure grades e crie formulários.</p>
           </div>
-          <h1 className="text-4xl font-black tracking-tighter">Central de Cadastros</h1>
-          <p className="text-on-surface-variant font-medium mt-2">Cadastre listas, configure grades e crie formulários.</p>
+
+          <div className="relative w-full md:w-96">
+            <div className="relative group">
+              <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-all" />
+              <input 
+                type="text" 
+                placeholder="Pesquisa Global (Alunos, Salas, After...)" 
+                value={buscaGlobal} 
+                onChange={e => { setBuscaGlobal(e.target.value); setMostrarResultadosGlobal(true); }}
+                onFocus={() => setMostrarResultadosGlobal(true)}
+                className="w-full bg-surface-container-high/40 p-5 pl-14 rounded-[1.5rem] text-sm font-black outline-none border-2 border-transparent focus:border-primary/30 transition-all shadow-inner placeholder:opacity-30" 
+              />
+              {buscaGlobal && (
+                <button onClick={() => setBuscaGlobal('')} className="absolute right-5 top-1/2 -translate-y-1/2 text-on-surface-variant/40 hover:text-on-surface transition-colors">
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            <AnimatePresence>
+              {mostrarResultadosGlobal && resultadosBuscaGlobal.length > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute top-full left-0 right-0 z-[110] mt-3 bg-black border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden backdrop-blur-xl"
+                >
+                  <div className="p-4 border-b border-white/5 bg-white/5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">Resultados da Busca</p>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto p-2 custom-scrollbar">
+                    {resultadosBuscaGlobal.map(res => (
+                      <button 
+                        key={`${res.tipo}-${res.id}`}
+                        onClick={() => irParaResultado(res.aba, res.titulo)}
+                        className="w-full flex items-center gap-4 p-4 hover:bg-primary/10 rounded-2xl transition-all text-left group"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-surface-container-high flex flex-col items-center justify-center shrink-0 group-hover:bg-primary/20 transition-all">
+                          {res.tipo === 'ALUNO' && <Users size={16} className="text-blue-400" />}
+                          {res.tipo === 'PROFESSOR' && <UserPlus size={16} className="text-emerald-400" />}
+                          {res.tipo === 'MONITOR' && <ClipboardList size={16} className="text-amber-400" />}
+                          {res.tipo === 'SALA' && <MapPin size={16} className="text-red-400" />}
+                          {res.tipo === 'IDIOMA' && <BookOpen size={16} className="text-purple-400" />}
+                          {res.tipo === 'AFTER' && <Clock size={16} className="text-orange-400" />}
+                          <span className="text-[6px] font-black uppercase mt-0.5 opacity-40">{res.tipo}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-black truncate text-white">{res.titulo}</p>
+                          <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest truncate">{res.subtitulo}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="p-3 bg-white/2 border-t border-white/5 text-center">
+                    <p className="text-[8px] font-black uppercase tracking-[0.3em] opacity-20 italic">Pressione ESC para fechar</p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </header>
 
         <AnimatePresence>
@@ -328,12 +441,21 @@ export default function Admin() {
           {abaAtiva === 'alunos' && (
             <motion.div key="alunos" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
               <Painel titulo="Gestão de Alunos" subtitulo="Suba uma lista Excel de nomes por ano escolar."
-                acao={<button onClick={() => setEditandoAluno({ id: 'novo', nome: '', turma: '', ano: '6º Ano', numeroSala: 0 })} className="btn-primary"><Plus size={14} /> Novo Aluno</button>}>
+                acao={
+                  <div className="flex gap-2">
+                    <button onClick={() => handleUploadNomes('alunos')} className="btn-secondary">
+                      <FileSpreadsheet size={14} /> Importação Master (Excel)
+                    </button>
+                    <button onClick={() => setEditandoAluno({ id: 'novo', nome: '', turma: '', ano: '6º Ano', numeroSala: 0 })} className="btn-primary">
+                      <Plus size={14} /> Novo Aluno
+                    </button>
+                  </div>
+                }>
 
                 <div className="flex flex-wrap gap-2 mb-6">
                   <div className="relative flex-1 min-w-[200px]">
                     <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
-                    <input type="text" placeholder="Buscar aluno..." value={busca} onChange={e => setBusca(e.target.value)} className="campo-input pl-10" />
+                    <input type="text" placeholder="Buscar por Nome, Ano ou Turma..." value={busca} onChange={e => setBusca(e.target.value)} className="campo-input pl-10" />
                   </div>
                   {['Todos', ...ANOS_ESCOLARES].map(ano => (
                     <button key={ano} onClick={() => setAnoFiltro(ano)}
@@ -347,7 +469,10 @@ export default function Admin() {
                 {anoFiltro === 'Todos' ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {ANOS_ESCOLARES.map(ano => {
-                      const lista = alunos.filter(a => a.ano === ano);
+                      const q = busca.toLowerCase();
+                      const lista = alunos.filter(a => a.ano === ano && (
+                        !q || a.nome.toLowerCase().includes(q) || a.turma.toLowerCase().includes(q)
+                      ));
                       return (
                         <div key={ano} className="bg-surface-container-low p-5 rounded-2xl border border-transparent hover:border-primary/10 transition-all">
                           <div className="flex items-center justify-between mb-3">
@@ -359,8 +484,8 @@ export default function Admin() {
                           </div>
                           <div className="space-y-1 max-h-40 overflow-y-auto mb-3 scrollbar-hide">
                             {lista.length === 0 ? (
-                              <p className="text-[10px] text-on-surface-variant italic">Nenhum aluno</p>
-                            ) : lista.filter(a => !busca || a.nome.toLowerCase().includes(busca.toLowerCase())).map(a => (
+                              <p className="text-[10px] text-on-surface-variant italic">Nenhum aluno encontrado</p>
+                            ) : lista.map(a => (
                               <div key={a.id} className="flex items-center justify-between text-xs py-1 group">
                                 <span className="font-medium truncate mr-2">{a.nome}</span>
                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100">
@@ -381,9 +506,14 @@ export default function Admin() {
                   </div>
                 ) : (
                   <div className="grid gap-1">
-                    {alunosFiltrados.map(a => (
+                    {alunos.filter(a => a.ano === anoFiltro && (
+                      !busca || a.nome.toLowerCase().includes(busca.toLowerCase()) || a.turma.toLowerCase().includes(busca.toLowerCase())
+                    )).map(a => (
                       <div key={a.id} className="flex items-center justify-between p-3 hover:bg-primary/5 rounded-xl group">
-                        <span className="text-sm font-bold">{a.nome}</span>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold">{a.nome}</span>
+                          <span className="text-[10px] text-on-surface-variant uppercase font-black">{a.turma}</span>
+                        </div>
                         <div className="flex gap-2 opacity-0 group-hover:opacity-100">
                           <button onClick={() => setEditandoAluno(a)} className="p-2 bg-surface-container-high rounded-lg shadow-sm hover:text-primary"><Eye size={12} /></button>
                           <button onClick={() => { if (confirm('Excluir?')) doDelete(excluirAluno(a.id)); }} className="p-2 bg-surface-container-high rounded-lg shadow-sm hover:text-red-500"><Trash2 size={12} /></button>
@@ -404,14 +534,19 @@ export default function Admin() {
                 acao={<button onClick={() => setEditandoProfessor({ id: 'novo', nome: '', cor: '#3B82F6' })} className="btn-primary"><Plus size={14} /> Novo Professor</button>}>
                 <div className="relative mb-6">
                   <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
-                  <input type="text" placeholder="Buscar por nome..." value={busca} onChange={e => setBusca(e.target.value)} className="campo-input pl-10" />
+                  <input type="text" placeholder="Buscar por Nome, Especialidade ou Matéria..." value={busca} onChange={e => setBusca(e.target.value)} className="campo-input pl-10" />
                 </div>
 
                 {professoresCMS.length === 0 ? (
                   <VazioMsg texto="Nenhum professor cadastrado no banco de dados." />
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {professoresCMS.filter(p => !busca || p.nome.toLowerCase().includes(busca.toLowerCase())).map(p => {
+                    {professoresCMS.filter(p => {
+                      const q = busca.toLowerCase();
+                      const aulas = gradeCompleta.filter(g => g.nomeProfessor === p.nome);
+                      const materias = Array.from(new Set(aulas.map(a => a.materia?.toLowerCase() || '')));
+                      return !q || p.nome.toLowerCase().includes(q) || (p.especialidade || '').toLowerCase().includes(q) || materias.some(m => m.includes(q));
+                    }).map(p => {
                       const aulas = gradeCompleta.filter(g => g.nomeProfessor === p.nome);
                       return (
                         <div key={p.id} className="bg-surface-container-low p-5 rounded-2xl border-l-4 group transition-all hover:bg-surface-container-high" style={{ borderLeftColor: p.cor }}>
@@ -798,9 +933,18 @@ export default function Admin() {
               <Painel titulo="Ensalamento Language Lab" subtitulo="Gerencie as aulas de inglês, níveis e salas do laboratório."
                 acao={<button onClick={() => setEditandoLanguageLab({ id: 'novo', turma: '', nivel: '', professor: '', sala: '', horarioInicio: '08:00', horarioFim: '09:30', diaSemana: 'SEGUNDA' })} className="btn-primary"><Plus size={14} /> Nova Aula Inglês</button>}>
 
+                <div className="relative mb-6">
+                  <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
+                  <input type="text" placeholder="Buscar por Nível, Professor, Sala ou Aluno..." value={busca} onChange={e => setBusca(e.target.value)} className="campo-input pl-10" />
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {languageLab.length === 0 ? <VazioMsg texto="Nenhuma aula de Language Lab cadastrada." /> :
-                    languageLab.map(lab => (
+                    languageLab.filter(lab => {
+                      const q = busca.toLowerCase();
+                      const matchAlunos = lab.listaAlunos?.some((nome: string) => nome.toLowerCase().includes(q));
+                      return !q || lab.nivel.toLowerCase().includes(q) || lab.professor.toLowerCase().includes(q) || lab.sala.toLowerCase().includes(q) || matchAlunos;
+                    }).map(lab => (
                       <div key={lab.id} className="bg-surface-container-low p-5 rounded-[2rem] border border-primary/10 group hover:bg-primary/5 transition-all">
                         <div className="flex justify-between items-start mb-4">
                           <div className="px-3 py-1 bg-primary text-on-surface-bright rounded-full text-[10px] font-black uppercase tracking-widest">
@@ -1008,9 +1152,18 @@ export default function Admin() {
               <Painel titulo="Atividades After School" subtitulo="Gerencie as atividades extras, esportes e oficinas do contraturno."
                 acao={<button onClick={() => setEditandoAfter({ id: 'novo', nome: '', categoria: 'Esporte', horarioInicio: '16:00', horarioFim: '17:30', local: '', dias: ['SEGUNDA'], nomeProfessor: '', descricao: '', quantidadeAlunos: 0, grupoAlunos: '', vagas: 20 })} className="btn-primary"><Plus size={14} /> Nova Atividade</button>}>
 
+                <div className="relative mb-6">
+                  <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
+                  <input type="text" placeholder="Buscar por Nome, Categoria, Professor ou Aluno..." value={busca} onChange={e => setBusca(e.target.value)} className="campo-input pl-10" />
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {(atividadesAfter || []).length === 0 ? <VazioMsg texto="Nenhuma atividade cadastrada." /> :
-                    atividadesAfter.map(ativ => (
+                    atividadesAfter.filter(ativ => {
+                      const q = busca.toLowerCase();
+                      const matchAlunos = ativ.listaAlunos?.some((nome: string) => nome.toLowerCase().includes(q));
+                      return !q || ativ.nome.toLowerCase().includes(q) || ativ.categoria.toLowerCase().includes(q) || (ativ.nomeProfessor || '').toLowerCase().includes(q) || matchAlunos;
+                    }).map(ativ => (
                       <div key={ativ.id} className="bg-surface-container-low p-6 rounded-[2.5rem] border border-amber-500/10 group hover:bg-amber-500/5 transition-all">
                         <div className="flex justify-between items-start mb-4">
                           <div className="px-3 py-1 bg-amber-500 text-on-surface-bright rounded-full text-[10px] font-black uppercase tracking-widest">

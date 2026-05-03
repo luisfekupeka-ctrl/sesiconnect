@@ -206,19 +206,27 @@ export default function GestaoRealocacao() {
             <div className="flex flex-col gap-8">
               <div className="space-y-4">
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-amber ml-2">Calendário Completo</label>
-                <div className="relative group">
+                <div className="relative group cursor-pointer" onClick={() => {
+                  const input = document.getElementById('calendario-principal') as HTMLInputElement;
+                  if (input) input.showPicker();
+                }}>
+                  <div className="absolute left-8 top-1/2 -translate-y-1/2 text-blue-400 group-hover:text-accent-amber transition-colors">
+                    <CalendarIcon size={32} />
+                  </div>
                   <input 
+                    id="calendario-principal"
                     type="date" 
                     value={dataSelecionada} 
                     onChange={e => setDataSelecionada(e.target.value)}
-                    className="w-full bg-surface-container-low p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] font-black text-2xl md:text-4xl text-on-surface border-2 border-blue-800 focus:border-accent-amber transition-all outline-none shadow-inner cursor-pointer"
+                    className="w-full bg-surface-container-low p-6 md:p-8 pl-20 md:pl-24 rounded-[1.5rem] md:rounded-[2rem] font-black text-2xl md:text-4xl text-on-surface border-2 border-blue-800 group-hover:border-accent-amber transition-all outline-none shadow-inner cursor-pointer"
                   />
                   <div className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:flex flex-col items-end">
-                    <span className="bg-amber-700 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase shadow-xl">
+                    <span className="bg-amber-700 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase shadow-xl group-hover:bg-amber-600 transition-colors">
                       {diaSel}
                     </span>
                   </div>
                 </div>
+                <p className="text-[10px] text-on-surface-variant italic ml-2">Clique no ícone ou na data para abrir o calendário</p>
               </div>
             </div>
 
