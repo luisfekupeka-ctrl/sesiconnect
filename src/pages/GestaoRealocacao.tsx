@@ -34,8 +34,11 @@ export default function GestaoRealocacao() {
   const [targetId, setTargetId] = useState<string>('');
   const [segmentoSel, setSegmentoSel] = useState<string>('6º e 7º');
   const [horariosSel, setHorariosSel] = useState<string[]>([]);
-  const [isModoProva, setIsModoProva] = useState(false);
   const [profFixoProva, setProfFixoProva] = useState('');
+  
+  // REGRAS DE SUBSTITUIÇÃO
+  const [regraSub, setRegraSub] = useState<'LIVRE' | 'MESMO_ANO' | 'DIRECIONADA'>('LIVRE');
+  const [profDirecionado, setProfDirecionado] = useState('');
 
   // Sincroniza o dia da semana com a data selecionada
   useEffect(() => {
@@ -98,7 +101,16 @@ export default function GestaoRealocacao() {
     setTimeout(() => {
       let res: ResultadoRealocacao[] = [];
       if (tipoFluxo === 'SALA' && isModoProva) {
-        res = calcularModoProva(profFixoProva, Number(targetId), horariosSel, diaSel, segmentoSel, gradeCompleta, professoresConfig);
+        res = calcularModoProva(
+          profFixoProva, 
+          Number(targetId), 
+          horariosSel, 
+          diaSel, 
+          segmentoSel, 
+          gradeCompleta, 
+          professoresConfig,
+          { regra: regraSub, professorAlvo: profDirecionado }
+        );
       } else if (tipoFluxo === 'SALA') {
         // Substituição normal por sala: identifica o professor original de cada horário
         horariosSel.forEach(h => {
@@ -112,7 +124,15 @@ export default function GestaoRealocacao() {
         });
       } else {
         const profAlvo = tipoFluxo === 'PROFESSOR' ? targetId : 'Desconhecido';
-        res = calcularCenarioFalta(diaSel, horariosSel, profAlvo, segmentoSel, gradeCompleta, professoresConfig);
+        res = calcularCenarioFalta(
+          diaSel, 
+          horariosSel, 
+          profAlvo, 
+          segmentoSel, 
+          gradeCompleta, 
+          professoresConfig,
+          { regra: regraSub, professorAlvo: profDirecionado }
+        );
       }
       setResultados(res);
       setStep(4);
@@ -261,38 +281,84 @@ export default function GestaoRealocacao() {
                   {tipoFluxo === 'SALA' ? salas.map(s => <option key={s.numero} value={s.numero}>Sala {s.numero}</option>) : professores.map(p => <option key={p.nome} value={p.nome}>{p.nome}</option>)}
                 </select>
 
-                {tipoFluxo === 'SALA' && (
-                  <div className={cn("p-6 rounded-3xl border-2 transition-all", horariosSaoConsecutivos && horariosSel.length > 1 ? "bg-amber-500/10 border-amber-500" : "bg-surface-container-low border-transparent opacity-50")}>
-                    <label className="flex items-center gap-3 cursor-pointer">
+                </select>
+                
+                {/* REGRAS DE SUBSTITUIÇÃO PARA AMBOS OS FLUXOS */}
+                <div className={cn("p-6 rounded-3xl border-2 transition-all space-y-4", 
+                  tipoFluxo === 'SALA' ? (horariosSaoConsecutivos && horariosSel.length > 1 ? "bg-amber-500/10 border-amber-500" : "bg-surface-container-low border-transparent opacity-50") : "bg-blue-500/10 border-blue-500")}>
+                  
+                  {tipoFluxo === 'SALA' && (
+                    <label className="flex items-center gap-3 cursor-pointer mb-4">
                       <input type="checkbox" disabled={!horariosSaoConsecutivos || horariosSel.length <= 1} checked={isModoProva} onChange={e => setIsModoProva(e.target.checked)} className="w-5 h-5 accent-amber-700" />
                       <span className="font-black text-amber-500 uppercase tracking-wider">MODO PROVA</span>
                     </label>
-                    {isModoProva && (
-                      <select value={profFixoProva} onChange={e => setProfFixoProva(e.target.value)} className="w-full mt-4 p-4 rounded-2xl bg-surface-container-high border-2 border-amber-700/50 text-on-surface font-black outline-none focus:border-amber-500 transition-all">
-                        <option value="">Selecione o Fiscal da Prova...</option>
-                        {Array.from(new Set(
-                          gradeCompleta
-                            .filter(g => g.numeroSala === Number(targetId) && g.diaSemana === diaSel && horariosSel.includes(g.horario))
-                            .map(g => g.nomeProfessor)
-                        )).map(nome => (
-                          <option key={nome} value={nome}>{nome}</option>
-                        ))}
-                      </select>
-                    )}
-                    {!horariosSaoConsecutivos && <p className="text-[10px] text-red-500 mt-2 font-bold flex items-center gap-1"><Info size={12} /> Selecione horários seguidos para ativar.</p>}
-                  </div>
-                )}
+                  )}
+
+                  {(tipoFluxo === 'PROFESSOR' || (tipoFluxo === 'SALA' && isModoProva)) && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                      {tipoFluxo === 'SALA' && isModoProva && (
+                        <div className="p-4 bg-amber-500/5 rounded-2xl border border-amber-500/20">
+                          <label className="text-[10px] font-black uppercase text-amber-600 mb-2 block tracking-widest">Escolha o Fiscal</label>
+                          <select value={profFixoProva} onChange={e => setProfFixoProva(e.target.value)} className="w-full p-3 rounded-xl bg-surface-container-high border-none text-on-surface font-black outline-none">
+                            <option value="">Selecione o Fiscal...</option>
+                            {Array.from(new Set(
+                              gradeCompleta
+                                .filter(g => g.numeroSala === Number(targetId) && g.diaSemana === diaSel && horariosSel.includes(g.horario))
+                                .map(g => g.nomeProfessor)
+                            )).map(nome => (
+                              <option key={nome} value={nome}>{nome}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      <div className="p-4 bg-blue-500/5 rounded-2xl border border-blue-500/20">
+                        <label className="text-[10px] font-black uppercase text-blue-400 mb-3 block tracking-widest">Regras de Substituição</label>
+                        <div className="grid grid-cols-1 gap-2">
+                          <button onClick={() => setRegraSub('LIVRE')} className={cn("flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left", regraSub === 'LIVRE' ? "bg-blue-800 border-blue-600 text-white" : "bg-surface-container-high border-transparent text-on-surface opacity-60")}>
+                            <RefreshCw size={14} />
+                            <span className="text-[10px] font-black uppercase">Análise Livre (Geral)</span>
+                          </button>
+                          <button onClick={() => setRegraSub('MESMO_ANO')} className={cn("flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left", regraSub === 'MESMO_ANO' ? "bg-blue-800 border-blue-600 text-white" : "bg-surface-container-high border-transparent text-on-surface opacity-60")}>
+                            <Users size={14} />
+                            <span className="text-[10px] font-black uppercase">Priorizar Mesmo Ano/Turma</span>
+                          </button>
+                          <button onClick={() => setRegraSub('DIRECIONADA')} className={cn("flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left", regraSub === 'DIRECIONADA' ? "bg-blue-800 border-blue-600 text-white" : "bg-surface-container-high border-transparent text-on-surface opacity-60")}>
+                            <UserMinus size={14} />
+                            <span className="text-[10px] font-black uppercase">Direcionar a Professor...</span>
+                          </button>
+                        </div>
+                        
+                        {regraSub === 'DIRECIONADA' && (
+                          <select value={profDirecionado} onChange={e => setProfDirecionado(e.target.value)} className="w-full mt-3 p-3 rounded-xl bg-surface-container-high border-none text-on-surface font-black text-[10px]">
+                            <option value="">Escolher Substituto Principal...</option>
+                            {professores.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
+                          </select>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {tipoFluxo === 'SALA' && !horariosSaoConsecutivos && <p className="text-[10px] text-red-500 mt-2 font-bold flex items-center gap-1"><Info size={12} /> Selecione horários seguidos para ativar.</p>}
+                </div>
               </div>
 
               <div>
                 <h3 className="text-sm font-black mb-4 uppercase tracking-widest text-on-surface-variant">Selecione as Aulas</h3>
                 <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto pr-2">
-                  {gradeCompleta.filter(g => g.diaSemana === diaSel && (tipoFluxo === 'SALA' ? g.numeroSala === Number(targetId) : g.nomeProfessor === targetId)).map(g => (
-                    <button key={g.id} onClick={() => setHorariosSel(prev => prev.includes(g.horario) ? prev.filter(h => h !== g.horario) : [...prev, g.horario])}
-                      className={cn("p-4 rounded-xl text-xs font-black text-left transition-all border-2", horariosSel.includes(g.horario) ? "bg-amber-700 text-white border-amber-600 shadow-md" : "bg-surface-container-highest border-blue-800 text-on-surface")}>
-                      {g.horario} - {g.turma}
-                    </button>
-                  ))}
+                  {gradeCompleta
+                    .filter(g => {
+                      const diaMatch = String(g.diaSemana || '').toUpperCase().trim() === String(diaSel || '').toUpperCase().trim();
+                      const targetMatch = tipoFluxo === 'SALA' 
+                        ? g.numeroSala === Number(targetId)
+                        : String(g.nomeProfessor || '').toUpperCase().trim() === String(targetId || '').toUpperCase().trim();
+                      return diaMatch && targetMatch;
+                    })
+                    .map(g => (
+                      <button key={g.id} onClick={() => setHorariosSel(prev => prev.includes(g.horario) ? prev.filter(h => h !== g.horario) : [...prev, g.horario])}
+                        className={cn("p-4 rounded-xl text-xs font-black text-left transition-all border-2", horariosSel.includes(g.horario) ? "bg-amber-700 text-white border-amber-600 shadow-md" : "bg-surface-container-highest border-blue-800 text-on-surface")}>
+                        {g.horario} - {g.turma}
+                      </button>
+                    ))}
                 </div>
               </div>
             </div>

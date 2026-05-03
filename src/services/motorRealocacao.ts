@@ -74,10 +74,13 @@ export function calcularModoProva(
   dia: string,
   segmento: string,
   grade: EntradaGradeSala[],
-  configs: ProfessorConfig[]
+  configs: ProfessorConfig[],
+  opcoes?: { regra: 'LIVRE' | 'MESMO_ANO' | 'DIRECIONADA', professorAlvo?: string }
 ): ResultadoRealocacao[] {
   const resultados: ResultadoRealocacao[] = [];
+  const regra = opcoes?.regra || 'LIVRE';
 
+  // 1. Aloca o Fiscal na Sala da Prova
   horarios.forEach(h => {
     const entradaOriginal = grade.find(g => g.numeroSala === salaNumero && g.diaSemana === dia && g.horario === h);
     const nomeTurma = entradaOriginal ? entradaOriginal.turma : `Sala ${salaNumero}`;
@@ -96,6 +99,7 @@ export function calcularModoProva(
     });
   });
 
+  // 2. Resolve as aulas originais do Fiscal que ficaram órfãs
   const aulasParaRepor = grade.filter(g =>
     g.nomeProfessor === profFixo &&
     g.diaSemana === dia &&
@@ -103,30 +107,44 @@ export function calcularModoProva(
   );
 
   aulasParaRepor.forEach(aula => {
-    const substitutosValidos = configs.filter(c => {
+    let substitutosValidos = configs.filter(c => {
       const ocupado = grade.some(g =>
         g.nomeProfessor === c.nome &&
         g.diaSemana === dia &&
         g.horario === aula.horario
       );
-      // Trava de Segmento: No futuro o config terá a lista de segmentos do prof
-      return !ocupado;
+      return !ocupado && c.nome !== profFixo;
     });
 
-    if (substitutosValidos.length > 0) {
-      resultados.push({
-        id: `rep-${Math.random()}`,
-        eventoId: 'modo-prova',
-        tipo: 'FALTA',
-        professorOriginal: profFixo,
-        professorSubstituto: substitutosValidos[0].nome,
-        turma: aula.turma,
-        horario: aula.horario,
-        segmento: segmento,
-        acao: 'Substituição',
-        status: 'EFETIVADO'
-      });
+    // Aplicar Regras Específicas
+    if (regra === 'DIRECIONADA' && opcoes?.professorAlvo) {
+      const profAlvo = configs.find(c => c.nome === opcoes.professorAlvo);
+      if (profAlvo) {
+        // Verifica se o alvo está livre
+        const ocupado = grade.some(g => g.nomeProfessor === profAlvo.nome && g.diaSemana === dia && g.horario === aula.horario);
+        if (!ocupado) substitutosValidos = [profAlvo];
+      }
+    } else if (regra === 'MESMO_ANO') {
+      // Filtra apenas professores que já dão aula para essa turma/ano em algum momento da grade
+      const professoresDoAno = new Set(grade.filter(g => g.turma === aula.turma).map(g => g.nomeProfessor));
+      const filtrados = substitutosValidos.filter(s => professoresDoAno.has(s.nome));
+      if (filtrados.length > 0) substitutosValidos = filtrados;
     }
+
+    const substituto = substitutosValidos.length > 0 ? substitutosValidos[0].nome : 'A DEFINIR';
+
+    resultados.push({
+      id: `rep-${Math.random()}`,
+      eventoId: 'modo-prova',
+      tipo: 'FALTA',
+      professorOriginal: profFixo,
+      professorSubstituto: substituto,
+      turma: aula.turma,
+      horario: aula.horario,
+      segmento: segmento,
+      acao: substituto === 'A DEFINIR' ? 'Necessita Atenção' : 'Substituição (Regra: ' + regra + ')',
+      status: 'EFETIVADO'
+    });
   });
 
   return resultados;
@@ -142,9 +160,11 @@ export function calcularCenarioFalta(
   professorAlvo: string,
   segmento: string,
   grade: EntradaGradeSala[],
-  professoresConfig: ProfessorConfig[]
+  professoresConfig: ProfessorConfig[],
+  opcoes?: { regra: 'LIVRE' | 'MESMO_ANO' | 'DIRECIONADA', professorAlvo?: string }
 ): ResultadoRealocacao[] {
   const resultados: ResultadoRealocacao[] = [];
+  const regra = opcoes?.regra || 'LIVRE';
 
   horarios.forEach(horario => {
     const aulaAfetada = grade.find(a =>
@@ -155,19 +175,40 @@ export function calcularCenarioFalta(
 
     if (!aulaAfetada) return;
 
-    let livres = encontrarProfessoresLivres(horario, dia, grade, professoresConfig);
-    const substituto = livres.length > 0 ? livres[0] : null;
+    let substitutosValidos = professoresConfig.filter(c => {
+      const ocupado = grade.some(g =>
+        g.nomeProfessor === c.nome &&
+        g.diaSemana === dia &&
+        g.horario === horario
+      );
+      return !ocupado && c.nome !== professorAlvo;
+    });
+
+    // Aplicar Regras Específicas
+    if (regra === 'DIRECIONADA' && opcoes?.professorAlvo) {
+      const profAlvo = professoresConfig.find(c => c.nome === opcoes.professorAlvo);
+      if (profAlvo) {
+        const ocupado = grade.some(g => g.nomeProfessor === profAlvo.nome && g.diaSemana === dia && g.horario === horario);
+        if (!ocupado) substitutosValidos = [profAlvo];
+      }
+    } else if (regra === 'MESMO_ANO') {
+      const professoresDoAno = new Set(grade.filter(g => g.turma === aulaAfetada.turma).map(g => g.nomeProfessor));
+      const filtrados = substitutosValidos.filter(s => professoresDoAno.has(s.nome));
+      if (filtrados.length > 0) substitutosValidos = filtrados;
+    }
+
+    const substituto = substitutosValidos.length > 0 ? substitutosValidos[0].nome : 'A DEFINIR';
 
     resultados.push({
       id: `falta-${Math.random()}`,
       eventoId: 'falta-id',
       tipo: 'FALTA',
       professorOriginal: professorAlvo,
-      professorSubstituto: substituto ? substituto.nome : 'A DEFINIR',
+      professorSubstituto: substituto,
       turma: aulaAfetada.turma,
       horario,
       segmento: segmento,
-      acao: 'Substituição',
+      acao: substituto === 'A DEFINIR' ? 'Necessita Atenção' : 'Substituição (Regra: ' + regra + ')',
       status: 'EFETIVADO'
     });
   });
