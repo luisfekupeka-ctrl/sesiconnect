@@ -137,7 +137,21 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
   else if (after) tipo = 'after_school';
   else if (lab) tipo = 'language_lab';
 
-  if (tipo === 'after_school' && (after || entradaRegular)) {
+  // Tenta encontrar por vínculo direto (ID) primeiro, ou cai no fallback por sala/dia/horário
+  const entradaComVinculo = entradaRegular?.vinculado_id ? (
+    languageLab.find((l: any) => l.id === entradaRegular.vinculado_id) || 
+    atividadesAfter.find((a: any) => a.id === entradaRegular.vinculado_id)
+  ) : null;
+
+  if (entradaComVinculo) {
+    const isLab = 'nivel' in entradaComVinculo;
+    tipo = isLab ? 'language_lab' : 'after_school';
+    entradaFinal = { 
+      materia: entradaRegular?.materia || (isLab ? `Inglês: ${entradaComVinculo.nivel}` : entradaComVinculo.nome), 
+      prof: entradaRegular?.nomeProfessor || entradaComVinculo.professor || entradaComVinculo.nomeProfessor 
+    };
+    alunosNoBloco = entradaComVinculo.listaAlunos || [];
+  } else if (tipo === 'after_school' && (after || entradaRegular)) {
      entradaFinal = { materia: entradaRegular?.materia || after?.nome, prof: entradaRegular?.nomeProfessor || after?.nomeProfessor };
      alunosNoBloco = after?.listaAlunos || entradaRegular?.listaAlunos || [];
   } else if (tipo === 'language_lab' && (lab || entradaRegular)) {

@@ -939,7 +939,41 @@ export default function Admin() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <CampoSelect label="Dia" value={editandoGrade.diaSemana} options={DIAS_SEMANA} onChange={v => setEditandoGrade({ ...editandoGrade, diaSemana: v })} />
-                <CampoSelect label="Tipo de Atividade" value={editandoGrade.tipo || 'regular'} options={['regular', 'after_school', 'language_lab']} onChange={v => setEditandoGrade({ ...editandoGrade, tipo: v })} />
+                <CampoSelect 
+                  label="Tipo de Atividade" 
+                  value={editandoGrade.tipo || 'regular'} 
+                  options={['regular', 'after_school', 'language_lab']} 
+                  onChange={v => {
+                    let vinculadoId = null;
+                    let listaAlunos = editandoGrade.lista_alunos;
+                    
+                    if (v === 'after_school') {
+                      const match = atividadesAfter.find(a => 
+                        a.local.includes(editandoGrade.numeroSala?.toString()) && 
+                        a.horarioInicio <= (editandoGrade.horario?.split('-')[0]?.trim() || '') &&
+                        a.dias.includes(editandoGrade.diaSemana)
+                      );
+                      if (match) {
+                        vinculadoId = match.id;
+                        listaAlunos = match.listaAlunos;
+                        setMsg({ tipo: 'ok', texto: `Vinculado automaticamente ao After: ${match.nome}` });
+                      }
+                    } else if (v === 'language_lab') {
+                      const match = languageLab.find(l => 
+                        l.sala.includes(editandoGrade.numeroSala?.toString()) &&
+                        l.horarioInicio <= (editandoGrade.horario?.split('-')[0]?.trim() || '') &&
+                        l.diaSemana === editandoGrade.diaSemana
+                      );
+                      if (match) {
+                        vinculadoId = match.id;
+                        listaAlunos = match.listaAlunos;
+                        setMsg({ tipo: 'ok', texto: `Vinculado automaticamente ao Lab: ${match.nivel}` });
+                      }
+                    }
+                    
+                    setEditandoGrade({ ...editandoGrade, tipo: v, vinculado_id: vinculadoId, lista_alunos: listaAlunos });
+                  }} 
+                />
               </div>
                 <CampoTexto label="Horário (Ex: 07:30)" value={editandoGrade.horario} onChange={v => setEditandoGrade({ ...editandoGrade, horario: v })} />
               <div className="grid grid-cols-2 gap-4">

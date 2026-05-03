@@ -11,7 +11,7 @@ import { useEscola } from '../context/ContextoEscola';
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
 export default function TeachersPage() {
-  const { professores, gradeCompleta } = useEscola();
+  const { professores, gradeCompleta, languageLab, atividadesAfter } = useEscola();
   const [busca, setBusca] = useState('');
   const [profSelecionadoId, setProfSelecionadoId] = useState<string | null>(null);
   const [diaFiltro, setDiaFiltro] = useState('SEGUNDA');
@@ -34,6 +34,38 @@ export default function TeachersPage() {
     ).sort((a, b) => a.horario.localeCompare(b.horario));
   }, [professorAtivo, diaFiltro, gradeCompleta]);
 
+  // Busca automática da lista de alunos (Ensalamento)
+  const listaAlunosFinal = useMemo(() => {
+    if (!aulaParaChamada) return [];
+    
+    // Tenta por vínculo direto
+    if (aulaParaChamada.vinculado_id) {
+      const fonte = languageLab.find(l => l.id === aulaParaChamada.vinculado_id) || 
+                    atividadesAfter.find(a => a.id === aulaParaChamada.vinculado_id);
+      if (fonte) return fonte.listaAlunos || [];
+    }
+
+    // Fallback por tipo/sala/horário
+    const horarioInicio = aulaParaChamada.horario?.split('-')[0]?.trim() || '';
+    if (aulaParaChamada.tipo === 'after_school') {
+      const match = atividadesAfter.find(a => 
+        a.local.includes(aulaParaChamada.numeroSala?.toString()) && 
+        a.horarioInicio <= horarioInicio &&
+        a.dias.includes(diaFiltro)
+      );
+      if (match) return match.listaAlunos || [];
+    } else if (aulaParaChamada.tipo === 'language_lab') {
+      const match = languageLab.find(l => 
+        l.sala.includes(aulaParaChamada.numeroSala?.toString()) &&
+        l.horarioInicio <= horarioInicio &&
+        l.diaSemana === diaFiltro
+      );
+      if (match) return match.listaAlunos || [];
+    }
+
+    return aulaParaChamada.listaAlunos || [];
+  }, [aulaParaChamada, languageLab, atividadesAfter, diaFiltro]);
+
   const alternarPresenca = (aluno: string) => {
     setChamada(prev => ({
       ...prev,
@@ -43,7 +75,7 @@ export default function TeachersPage() {
 
   // Sub-página: Chamada Digital (Lista Vertical)
   if (aulaParaChamada) {
-    const alunos = aulaParaChamada.listaAlunos || [];
+    const alunos = listaAlunosFinal;
     const filtrados = alunos.filter((a: string) => a.toLowerCase().includes(buscaAlunos.toLowerCase()));
 
     return (
