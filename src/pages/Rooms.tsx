@@ -138,13 +138,12 @@ export default function RoomsPage() {
                     </div>
                  </div>
 
-                 <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pr-4 custom-scrollbar">
+                 <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pr-4 custom-scrollbar">
                     {obterBlocosDeHorario(periodos).map(bloco => {
                        const range = `${bloco.inicio} - ${bloco.fim}`;
                        const entradasDia = gradeCompleta.filter(e => e.numeroSala === salaGradeModal.numero && e.diaSemana === diaGrade);
                        const entradaRegular = entradasDia.find(e => e.horario === range);
                        
-                       // Lógica de herança de matrizes
                        const lab = languageLab.find(l => l.sala.includes(salaGradeModal.numero.toString()) && l.diaSemana === diaGrade && l.horarioInicio <= bloco.inicio && l.horarioFim >= bloco.fim);
                        const after = atividadesAfter.find(a => a.local.includes(salaGradeModal.numero.toString()) && a.dias.includes(diaGrade) && a.horarioInicio <= bloco.inicio && a.horarioFim >= bloco.fim);
 
@@ -169,9 +168,9 @@ export default function RoomsPage() {
                        }
 
                        if (!entradaFinal) return (
-                          <div key={bloco.indice} className="p-10 rounded-[3rem] bg-white/2 border border-white/5 opacity-30 flex flex-col items-center justify-center gap-2 border-dashed">
-                             <span className="text-[10px] font-black uppercase opacity-50">{bloco.inicio} — {bloco.fim}</span>
-                             <p className="text-sm font-black uppercase tracking-[0.2em]">Sala Livre</p>
+                          <div key={bloco.indice} className="p-12 rounded-[4rem] bg-white/[0.02] border-2 border-dashed border-white/5 opacity-20 flex flex-col items-center justify-center gap-4 group hover:opacity-40 transition-all">
+                             <span className="text-[11px] font-black uppercase tracking-[0.4em] mb-2">{bloco.inicio} — {bloco.fim}</span>
+                             <p className="text-sm font-black uppercase tracking-[0.3em] italic">Ambiente Disponível</p>
                           </div>
                        );
 
@@ -180,50 +179,64 @@ export default function RoomsPage() {
                        return (
                           <motion.div 
                             key={bloco.indice} 
-                            whileHover={{ scale: 1.02 }}
+                            whileHover={{ y: -5 }}
                             className={cn(
-                             "p-8 rounded-[3.5rem] border-2 transition-all flex flex-col gap-6 shadow-xl",
-                             tipo === 'after_school' ? "bg-amber-500/5 border-amber-500/20" : 
-                             tipo === 'language_lab' ? "bg-indigo-500/5 border-indigo-500/20" : "bg-surface-container-low border-[#30363d]"
+                             "p-10 rounded-[4rem] border-2 transition-all flex flex-col gap-8 shadow-2xl relative overflow-hidden group",
+                             tipo === 'after_school' ? "bg-amber-500/[0.03] border-amber-500/20 shadow-amber-500/5" : 
+                             tipo === 'language_lab' ? "bg-indigo-500/[0.03] border-indigo-500/20 shadow-indigo-500/5" : 
+                             "bg-surface-container-low/40 border-[#30363d] shadow-black/40"
                            )}
                           >
-                             <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-2">
-                                   <Clock size={12} className="opacity-40" />
-                                   <span className="text-[11px] font-black uppercase opacity-40">{bloco.inicio} — {bloco.fim}</span>
+                             {/* Badge de Horário Flutuante */}
+                             <div className="flex justify-between items-center relative z-10">
+                                <div className="flex items-center gap-3">
+                                   <div className="w-2 h-2 rounded-full bg-[#42a0f5] animate-pulse shadow-[0_0_10px_rgba(66,160,245,0.5)]" />
+                                   <span className="text-[12px] font-black uppercase tracking-[0.3em] opacity-50">{bloco.inicio} — {bloco.fim}</span>
                                 </div>
                                 <span className={cn(
-                                  "text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest",
-                                  tipo === 'after_school' ? "bg-amber-500/20 text-amber-500" :
-                                  tipo === 'language_lab' ? "bg-indigo-500/20 text-indigo-500" : "bg-[#42a0f5]/20 text-[#42a0f5]"
-                                )}>{tipo === 'regular' ? 'Aula' : tipo.replace('_', ' ')}</span>
+                                  "text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em] border shadow-sm",
+                                  tipo === 'after_school' ? "bg-amber-500/20 text-amber-500 border-amber-500/20" :
+                                  tipo === 'language_lab' ? "bg-indigo-500/20 text-indigo-500 border-indigo-500/20" : 
+                                  "bg-[#42a0f5]/20 text-[#42a0f5] border-[#42a0f5]/20"
+                                )}>{tipo === 'regular' ? 'Aula Regular' : tipo.replace('_', ' ').toUpperCase()}</span>
                              </div>
                              
-                             <div>
-                                <h4 className="text-2xl font-black text-white italic tracking-tighter leading-none mb-2">{entradaFinal.materia}</h4>
-                                <div className="flex items-center gap-2 text-on-surface-variant">
-                                   <UserCheck size={14} className="text-[#42a0f5]" />
-                                   <p className="text-sm font-bold truncate">{entradaFinal.prof}</p>
+                             <div className="relative z-10">
+                                <h4 className="text-3xl font-black text-white italic tracking-tighter leading-none mb-3 group-hover:text-[#42a0f5] transition-colors">{entradaFinal.materia}</h4>
+                                <div className="flex items-center gap-3 text-on-surface-variant">
+                                   <div className="p-2 bg-white/5 rounded-xl"><UserCheck size={16} className="text-[#42a0f5]" /></div>
+                                   <p className="text-sm font-black italic tracking-tight">{entradaFinal.prof}</p>
                                 </div>
                              </div>
                              
-                             <div className="pt-6 border-t border-white/5 space-y-4">
+                             <div className="pt-8 border-t border-white/5 space-y-6 relative z-10">
                                 <div className="flex justify-between items-center">
-                                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#42a0f5]">{alunosNoBloco.length} Alunos Ensalados</p>
+                                   <p className="text-[11px] font-black uppercase tracking-[0.3em] text-[#42a0f5] flex items-center gap-2">
+                                     <Users size={14} /> {alunosNoBloco.length} Alunos Ensalados
+                                   </p>
                                 </div>
                                 
-                                <div className="max-h-[120px] overflow-y-auto pr-2 custom-scrollbar space-y-2">
-                                   {alunosFiltrados.map((aluno, i) => (
-                                     <div key={i} className="text-[11px] font-black py-3 px-5 bg-white/5 rounded-2xl flex items-center justify-between group hover:bg-[#42a0f5]/10 transition-all border border-transparent hover:border-[#42a0f5]/20">
-                                        <span className="italic text-on-surface-variant group-hover:text-white">{aluno}</span>
-                                        <span className="text-[8px] opacity-20 font-black">#{i+1}</span>
-                                     </div>
-                                   ))}
-                                   {alunosNoBloco.length > 0 && buscaAlunosModal && alunosFiltrados.length === 0 && (
-                                      <p className="text-[10px] italic opacity-30 text-center py-4">Nenhum aluno encontrado nesta busca.</p>
+                                <div className="max-h-[160px] overflow-y-auto pr-3 custom-scrollbar grid gap-3">
+                                   {alunosFiltrados.length === 0 && buscaAlunosModal ? (
+                                      <p className="text-[10px] italic opacity-30 text-center py-6">Nenhum aluno encontrado.</p>
+                                   ) : (
+                                     alunosFiltrados.map((aluno, i) => (
+                                       <motion.div 
+                                         initial={{ opacity: 0, x: -10 }}
+                                         animate={{ opacity: 1, x: 0 }}
+                                         key={i} 
+                                         className="text-[12px] font-black py-4 px-6 bg-white/[0.03] rounded-[1.5rem] flex items-center justify-between group/item hover:bg-[#42a0f5] hover:text-black transition-all border border-white/5"
+                                       >
+                                          <span className="italic tracking-tight">{aluno}</span>
+                                          <span className="text-[9px] opacity-30 font-black group-hover/item:opacity-60">#{i+1}</span>
+                                       </motion.div>
+                                     ))
                                    )}
                                 </div>
                              </div>
+
+                             {/* Efeito Visual de Fundo */}
+                             <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-[#42a0f5]/5 rounded-full blur-[80px] group-hover:bg-[#42a0f5]/10 transition-all" />
                           </motion.div>
                        );
                     })}

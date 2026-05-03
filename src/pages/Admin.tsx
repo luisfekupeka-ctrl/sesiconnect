@@ -1105,11 +1105,11 @@ function ModalForm({ aberto, onClose, titulo, onSalvar, carregando, children, la
         className={cn("bg-surface-container-lowest p-8 rounded-[2.5rem] editorial-shadow w-full space-y-5", largo ? "max-w-4xl" : "max-w-lg")} onClick={e => e.stopPropagation()}>
         <h3 className="text-2xl font-black tracking-tighter">{titulo}</h3>
         <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">{children}</div>
-        <div className="flex gap-4 pt-4 border-t">
-          <button onClick={onClose} className="flex-1 py-4 text-on-surface-variant font-bold text-sm">Cancelar</button>
+        <div className="flex gap-4 pt-8 border-t border-white/5">
+          <button onClick={onClose} className="flex-1 py-5 text-on-surface-variant font-black text-[10px] uppercase tracking-widest hover:text-white transition-all">Cancelar</button>
           <button onClick={onSalvar} disabled={carregando}
-            className="flex-1 py-4 bg-primary text-on-surface-bright rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl disabled:opacity-50">
-            {carregando ? 'Salvando...' : 'Salvar'}
+            className="flex-[2] py-5 bg-[#42a0f5] text-black rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl shadow-[#42a0f5]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
+            {carregando ? 'Salvando...' : 'Confirmar e Salvar'}
           </button>
         </div>
       </motion.div>
@@ -1142,11 +1142,13 @@ function SeletorAlunos({ alunos, selecionados, onChange, turmaAlvo }: { alunos: 
   const [busca, setBusca] = useState('');
   const [mostrarTodos, setMostrarTodos] = useState(!turmaAlvo);
 
-  const alunosFiltrados = alunos.filter(a => {
-    const matchesBusca = !busca || a.nome.toLowerCase().includes(busca.toLowerCase());
-    const matchesTurma = mostrarTodos || (turmaAlvo && a.turma === turmaAlvo);
-    return matchesBusca && matchesTurma;
-  });
+  const alunosFiltrados = useMemo(() => {
+    return alunos.filter(a => {
+      const matchesBusca = !busca || a.nome.toLowerCase().includes(busca.toLowerCase());
+      const matchesTurma = mostrarTodos || (turmaAlvo && a.turma === turmaAlvo);
+      return matchesBusca && matchesTurma;
+    }).sort((a,b) => a.nome.localeCompare(b.nome));
+  }, [alunos, busca, mostrarTodos, turmaAlvo]);
 
   const toggleAluno = (nome: string) => {
     if (selecionados.includes(nome)) {
@@ -1157,48 +1159,86 @@ function SeletorAlunos({ alunos, selecionados, onChange, turmaAlvo }: { alunos: 
   };
 
   return (
-    <div className="border-2 border-blue-800/30 rounded-[2rem] overflow-hidden bg-surface-container-low shadow-inner">
-      <div className="p-5 border-b border-white/5 bg-blue-800/5">
-        <div className="flex justify-between items-center mb-4">
-          <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
-            <Users size={14} className="text-blue-400" /> 
-            <span>Selecionar Alunos ({selecionados.length})</span>
-          </label>
+    <div className="border-2 border-[#42a0f5]/20 rounded-[2.5rem] overflow-hidden bg-[#0d1117] shadow-2xl">
+      <div className="p-8 border-b border-white/5 bg-[#42a0f5]/5">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div>
+            <label className="text-[10px] font-black text-[#42a0f5] uppercase tracking-[0.4em] flex items-center gap-2 mb-1">
+              <Users size={16} /> Ensalamento Nominal
+            </label>
+            <p className="text-xs font-bold text-on-surface-variant italic opacity-60">
+              {selecionados.length} aluno(s) selecionado(s)
+            </p>
+          </div>
           {turmaAlvo && (
-            <button onClick={() => setMostrarTodos(!mostrarTodos)} className="text-[8px] font-black uppercase tracking-widest px-3 py-1 bg-surface-container-high rounded-full hover:bg-blue-800 transition-all">
-              {mostrarTodos ? 'Ver apenas ' + turmaAlvo : 'Ver todos os anos'}
+            <button 
+              type="button"
+              onClick={() => setMostrarTodos(!mostrarTodos)} 
+              className={cn(
+                "px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border",
+                mostrarTodos ? "bg-white/5 border-white/10 text-on-surface-variant" : "bg-[#42a0f5]/10 border-[#42a0f5]/20 text-[#42a0f5]"
+              )}>
+              {mostrarTodos ? 'Filtrar por ' + turmaAlvo : 'Ver todos os alunos'}
             </button>
           )}
         </div>
-        <div className="relative">
-          <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
-          <input type="text" placeholder="Buscar aluno por nome..." value={busca} onChange={e => setBusca(e.target.value)}
-            className="w-full bg-surface-container-high p-4 pl-12 rounded-2xl text-xs font-black outline-none border border-transparent focus:border-blue-500 transition-all" />
+        <div className="relative group">
+          <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-[#42a0f5] transition-all" />
+          <input 
+            type="text" 
+            placeholder="Pesquisar por nome..." 
+            value={busca} 
+            onChange={e => setBusca(e.target.value)}
+            className="w-full bg-surface-container-high/40 p-5 pl-14 rounded-[1.5rem] text-sm font-black outline-none border border-transparent focus:border-[#42a0f5]/30 focus:ring-4 focus:ring-[#42a0f5]/5 transition-all shadow-inner" 
+          />
         </div>
       </div>
-      <div className="max-h-64 overflow-y-auto p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 custom-scrollbar">
+      
+      <div className="max-h-[300px] overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 custom-scrollbar">
         {alunosFiltrados.length === 0 ? (
-          <div className="col-span-full py-10 text-center opacity-30 italic text-[10px] uppercase font-black tracking-widest">Nenhum aluno encontrado</div>
+          <div className="col-span-full py-20 text-center opacity-20 italic text-xs uppercase font-black tracking-widest">
+            Nenhum aluno encontrado
+          </div>
         ) : (
-          alunosFiltrados.sort((a,b) => a.nome.localeCompare(b.nome)).map(a => {
+          alunosFiltrados.map(a => {
             const isSelected = selecionados.includes(a.nome);
             return (
-              <button key={a.id} onClick={() => toggleAluno(a.nome)}
+              <motion.button 
+                key={a.id} 
+                type="button"
+                whileTap={{ scale: 0.98 }}
+                onClick={() => toggleAluno(a.nome)}
                 className={cn(
-                  "flex items-center gap-3 p-3 rounded-xl transition-all text-left border-2",
-                  isSelected ? "bg-blue-800 border-blue-600 text-white shadow-md" : "bg-surface-container-high border-transparent text-on-surface opacity-60 hover:opacity-100"
+                  "flex items-center gap-4 p-5 rounded-2xl transition-all text-left border-2 group",
+                  isSelected 
+                    ? "bg-[#42a0f5] border-[#42a0f5] text-black shadow-lg shadow-[#42a0f5]/10" 
+                    : "bg-surface-container-low/40 border-transparent text-on-surface-variant hover:bg-white/5 hover:border-white/10"
                 )}>
-                <div className={cn("w-4 h-4 rounded border-2 flex items-center justify-center transition-all", isSelected ? "bg-white border-white text-blue-800" : "border-white/20")}>
-                  {isSelected && <Check size={10} strokeWidth={4} />}
+                <div className={cn(
+                  "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all", 
+                  isSelected ? "bg-black border-black text-[#42a0f5]" : "border-white/10 group-hover:border-white/30"
+                )}>
+                  {isSelected && <Check size={14} strokeWidth={4} />}
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] font-black truncate uppercase tracking-tight">{a.nome}</span>
-                  <span className="text-[7px] font-black opacity-50 uppercase">{a.turma}</span>
+                  <span className={cn("text-xs font-black truncate italic", isSelected ? "text-black" : "text-white")}>{a.nome}</span>
+                  <span className={cn("text-[9px] font-black uppercase tracking-widest opacity-60", isSelected ? "text-black/60" : "text-on-surface-variant")}>{a.turma}</span>
                 </div>
-              </button>
+              </motion.button>
             );
           })
         )}
+      </div>
+      
+      <div className="p-4 bg-white/2 border-t border-white/5 flex justify-between">
+         <button 
+            type="button"
+            onClick={() => onChange([])}
+            className="text-[9px] font-black uppercase text-red-500/60 hover:text-red-500 transition-colors tracking-[0.2em]"
+         >
+            Limpar Seleção
+         </button>
+         <span className="text-[9px] font-black uppercase opacity-20 tracking-widest italic">SESI Connect Ensalamento</span>
       </div>
     </div>
   );
