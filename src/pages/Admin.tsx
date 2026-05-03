@@ -1133,16 +1133,26 @@ function ModalForm({ aberto, onClose, titulo, onSalvar, carregando, children, la
 }) {
   if (!aberto) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-on-surface/40 backdrop-blur-sm" onClick={onClose}>
-      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-        className={cn("bg-surface-container-lowest p-8 rounded-[2.5rem] editorial-shadow w-full space-y-5", largo ? "max-w-4xl" : "max-w-lg")} onClick={e => e.stopPropagation()}>
-        <h3 className="text-2xl font-black tracking-tighter">{titulo}</h3>
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">{children}</div>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-black/60 backdrop-blur-md" onClick={onClose}>
+      <motion.div 
+        initial={{ scale: 0.95, opacity: 0, y: 20 }} 
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        className={cn(
+          "bg-[#0a0a0a] border border-white/10 p-6 md:p-10 rounded-[2.5rem] shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] w-full space-y-6 relative overflow-hidden", 
+          largo ? "max-w-5xl" : "max-w-xl"
+        )} 
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#42a0f5] to-transparent opacity-20" />
+        <h3 className="text-2xl md:text-3xl font-black tracking-tighter text-white italic">{titulo}</h3>
+        <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-4 custom-scrollbar">
+          {children}
+        </div>
         <div className="flex gap-4 pt-8 border-t border-white/5">
-          <button onClick={onClose} className="flex-1 py-5 text-on-surface-variant font-black text-[10px] uppercase tracking-widest hover:text-white transition-all">Cancelar</button>
-          <button onClick={onSalvar} disabled={carregando}
-            className="flex-[2] py-5 bg-[#42a0f5] text-black rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl shadow-[#42a0f5]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
-            {carregando ? 'Salvando...' : 'Confirmar e Salvar'}
+          <button type="button" onClick={onClose} className="flex-1 py-4 text-white/40 font-black text-[10px] uppercase tracking-widest hover:text-white transition-all">Cancelar</button>
+          <button type="button" onClick={onSalvar} disabled={carregando}
+            className="flex-[2] py-4 bg-[#42a0f5] text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-xl shadow-[#42a0f5]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
+            {carregando ? 'Processando...' : 'Salvar Alterações'}
           </button>
         </div>
       </motion.div>
@@ -1192,7 +1202,7 @@ function SeletorAlunos({ alunos, selecionados, onChange, turmaAlvo }: { alunos: 
   };
 
   return (
-    <div className="border-2 border-[#42a0f5]/20 rounded-[2.5rem] overflow-hidden bg-[#0d1117] shadow-2xl">
+    <div className="border-2 border-white/5 rounded-[2.5rem] overflow-hidden bg-black shadow-2xl">
       <div className="p-8 border-b border-white/5 bg-[#42a0f5]/5">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
