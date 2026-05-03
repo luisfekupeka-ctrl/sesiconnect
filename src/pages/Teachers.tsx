@@ -26,7 +26,6 @@ export default function TeachersPage() {
 
   const professorAtivo = professores.find(p => p.id === profSelecionadoId);
 
-  // Filtra as aulas do professor com base no dia selecionado
   const aulasDoDia = useMemo(() => {
     if (!professorAtivo) return [];
     return gradeCompleta.filter(aula => 
@@ -121,7 +120,7 @@ export default function TeachersPage() {
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-white/5 pb-6">
                  <div className="flex flex-col gap-1">
                     <h3 className="text-xl md:text-3xl font-black italic tracking-tighter text-white">Cronograma Docente</h3>
-                    <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Selecione o dia para ver as aulas</p>
+                    <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Selecione o dia para abrir a chamada</p>
                  </div>
                  
                  <div className="flex gap-1 p-1 bg-black rounded-xl border border-white/5 overflow-x-auto no-scrollbar">
