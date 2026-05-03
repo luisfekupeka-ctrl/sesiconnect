@@ -37,8 +37,6 @@ export default function MonitorScheduleEditor() {
   const [modalCopiaAberto, setModalCopiaAberto] = useState(false);
   const [buscaMonitor, setBuscaMonitor] = useState('');
 
-  const [segmentoSelecionado, setSegmentoSelecionado] = useState<string>('6e7');
-
   const periodosFallback = useMemo(() => [
     { id: 'f1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: '6e7' },
     { id: 'f2', nome: '2ª Aula', horarioInicio: '08:20', horarioFim: '09:10', tipo: 'aula', segmento: '6e7' },
@@ -50,12 +48,13 @@ export default function MonitorScheduleEditor() {
     { id: 'f8', nome: '6ª Aula', horarioInicio: '13:00', horarioFim: '13:50', tipo: 'aula', segmento: '6e7' },
   ], []);
 
-  // Sincronizar linhas quando monitor, dia ou segmento muda
+  // Sincronizar linhas quando monitor ou dia muda
   useEffect(() => {
     if (monitorSelecionado) {
       const periodosAlvo = (periodos && periodos.length > 0) ? periodos : periodosFallback;
-      const periodosFiltrados = periodosAlvo.filter(p => p.segmento === segmentoSelecionado);
-      const finalPeriodos = periodosFiltrados.length > 0 ? periodosFiltrados : periodosAlvo.slice(0, 8);
+      // Pegar apenas um conjunto de horários únicos para não duplicar aulas de segmentos diferentes
+      const horáriosUnicos = Array.from(new Set(periodosAlvo.map(p => p.horarioInicio))).map(h => periodosAlvo.find(p => p.horarioInicio === h)!);
+      const finalPeriodos = horáriosUnicos.sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio)).slice(0, 10);
 
       const baseLinhas: LinhaGradeMonitor[] = finalPeriodos.map((p, i) => ({
         id: `l-${i}`,
@@ -82,7 +81,7 @@ export default function MonitorScheduleEditor() {
 
       setLinhas(baseLinhas);
     }
-  }, [monitorSelecionado, diaSelecionado, gradeMonitores, periodos, segmentoSelecionado, periodosFallback]);
+  }, [monitorSelecionado, diaSelecionado, gradeMonitores, periodos, periodosFallback]);
 
   const atualizarLinha = (id: string, campo: keyof LinhaGradeMonitor, valor: any) => {
     setLinhas(prev => prev.map(l => l.id === id ? { ...l, [campo]: valor } : l));
@@ -210,18 +209,7 @@ export default function MonitorScheduleEditor() {
               </div>
 
               <div className="pt-6 border-t border-white/5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant flex items-center gap-2"><Calendar size={14} /> Dia da Semana</label>
-                  <div className="flex gap-1">
-                    {['6e7', '8e9', 'medio'].map(s => (
-                      <button key={s} onClick={() => setSegmentoSelecionado(s)}
-                        className={cn("px-2 py-1 rounded-md text-[8px] font-black uppercase transition-all",
-                          segmentoSelecionado === s ? "bg-primary text-black" : "bg-white/5 text-on-surface-variant")}>
-                        {s.toUpperCase()}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <label className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant flex items-center gap-2"><Calendar size={14} /> Dia da Semana</label>
                 <div className="grid grid-cols-5 gap-1">
                   {DIAS_SEMANA.map(dia => (
                     <button key={dia} onClick={() => setDiaSelecionado(dia)}
