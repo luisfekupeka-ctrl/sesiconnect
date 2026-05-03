@@ -230,6 +230,7 @@ export default function Monitores() {
                 </div>
               );
             })}
+            </div>
           </div>
 
           {/* Painel de detalhes do monitor selecionado */}

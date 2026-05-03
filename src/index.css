@@ -17,20 +17,21 @@
   --color-secondary: #0aeb7a;
   --color-secondary-container: #054d2e;
   
-  --color-tertiary: #f1d86f;
+  --color-tertiary: #f59e0b;
   --color-tertiary-container: #3d3218;
   --color-on-tertiary-container: #000000;
 
   /* Fundos bem escuros */
-  --color-background: #000000;
-  --color-surface: #0a0a0a;
+  --color-background: #020617;
+  --color-surface: #0f172a;
+  --color-surface-bright: #1e293b;
   --color-surface-container-lowest: #000000;
   --color-surface-container-low: #0d1117;
   --color-surface-container-high: #161b22;
   --color-surface-container-highest: #1f2937;
   
   /* Texto Principal PRETO (#000000) em fundo claro, ou branco em fundo escuro */
-  --color-on-surface: #e2e8f0;
+  --color-on-surface: #f8fafc;
   --color-on-surface-variant: #94a3b8;
   --color-on-surface-bright: #ffffff;
   --color-outline: #30363d;

@@ -102,36 +102,38 @@ export default function Dashboard() {
           )}
         </div>
 
-        {salasExibidas.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {salasExibidas.map((sala) => (
-              <div key={sala.numeroSala} className="bg-surface p-6 md:p-7 rounded-2xl border border-[#30363d] group hover:border-[#42a0f5] transition-all">
-                <div className="flex items-center justify-between mb-6">
-                   <div className="w-12 h-12 bg-[#42a0f5]/10 rounded-2xl flex items-center justify-center text-[#42a0f5] group-hover:bg-[#42a0f5]/20 transition-all">
-                     <DoorOpen size={24} />
-                   </div>
-                   <div className="text-right">
-                     <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">Sala</p>
-                     <p className="text-xl font-black text-[#42a0f5]">{sala.numeroSala.toString().padStart(2, '0')}</p>
-                   </div>
+        {/* GRID DE SALAS - OTIMIZADO PARA MOBILE */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6">
+          {salasExibidas.map((sala) => (
+            <motion.div
+              key={sala.numeroSala}
+              whileHover={{ y: -5, scale: 1.02 }}
+              className="relative group p-6 rounded-[2rem] border-2 border-[#30363d] bg-surface hover:border-[#42a0f5] transition-all shadow-xl overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
+
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="text-3xl font-black text-white italic tracking-tighter">#{sala.numeroSala.toString().padStart(2, '0')}</h3>
+                  <p className="text-[10px] font-black uppercase text-blue-400 tracking-[0.2em]">Ocupada</p>
+                </div>
+                <div className="px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border bg-blue-500/10 text-blue-400 border-blue-500/30">
+                  Em Aula
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[8px] font-black uppercase text-on-surface-variant tracking-widest block mb-1">Disciplina</label>
+                  <p className="text-xl font-black text-white truncate italic">{sala.materiaAtual}</p>
                 </div>
                 
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider mb-0.5">Disciplina</p>
-                    <h3 className="text-base font-bold leading-tight text-white">{sala.materiaAtual}</h3>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg bg-surface-container-high flex items-center justify-center text-on-surface-variant">
-                      <Users size={14} />
+                <div className="pt-4 border-t border-white/5">
+                  <label className="text-[8px] font-black uppercase text-on-surface-variant tracking-widest block mb-2">Professor</label>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-blue-800/30 border border-blue-800/50 flex items-center justify-center text-blue-400 font-black text-xs">
+                      {sala.professorAtual[0]}
                     </div>
-                    <span className="text-sm font-semibold text-on-surface-variant">{sala.professorAtual}</span>
-                  </div>
-                  <div className="pt-3 border-t border-[#30363d] flex justify-between items-center">
-                    <span className="text-xs font-bold bg-surface-container-high px-3 py-1.5 rounded-lg uppercase tracking-wider">{sala.turmaAtual}</span>
-                    <span className="text-xs font-bold text-[#42a0f5]">{sala.horarioFim}</span>
-                  </div>
-                </div>
               </div>
             ))}
           </div>
