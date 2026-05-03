@@ -10,6 +10,7 @@ import Monitores from './pages/Monitores';
 import FormsPage from './pages/Forms';
 import Admin from './pages/Admin';
 import ScheduleEditor from './pages/ScheduleEditor';
+import MonitorScheduleEditor from './pages/MonitorScheduleEditor';
 import MonitorPortal from './pages/MonitorPortal';
 import LoginPage from './pages/Login';
 import ChamadaProfessor from './pages/ChamadaProfessor';
@@ -45,6 +46,7 @@ export default function App() {
             {/* Áreas Administrativas (Abertas) */}
             <Route path="/admin" element={<Admin />} />
             <Route path="/schedule-editor" element={<ScheduleEditor />} />
+            <Route path="/monitor-schedule" element={<MonitorScheduleEditor />} />
           </Route>
         </Routes>
       </BrowserRouter>

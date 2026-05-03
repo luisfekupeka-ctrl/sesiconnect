@@ -597,15 +597,21 @@ export default function Admin() {
               )}
 
               {subAbaMonitor === 'ESCALA' && (
-                <div>
-                  <Painel titulo="Grade de Postos (Grade)" subtitulo="Alocação detalhada por horário, local e função."
-                    acao={<button onClick={() => setEditandoGradeMonitor({ id: 'novo', monitorNome: '', diaSemana: 'SEGUNDA', horarioInicio: '08:00', horarioFim: '09:30', posto: '', funcao: 'Monitoria Geral', corEtiqueta: '#3B82F6' })} className="btn-primary"><Plus size={14} /> Alocar em um Posto</button>}>
-
-                  <div className="relative mb-6">
-                    <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
-                    <input type="text" placeholder="Buscar por monitor ou posto..." value={busca} onChange={e => setBusca(e.target.value)} className="campo-input pl-10" />
+                <div className="space-y-8">
+                  {/* Bloco: Acesso ao Editor */}
+                  <div className="bg-primary/10 border-2 border-primary/20 p-8 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div>
+                      <h2 className="text-2xl font-black text-primary italic">Diner de Monitores</h2>
+                      <p className="text-sm font-medium text-on-surface-variant mt-1 max-w-xl">
+                        Gerencie a escala diária (Grade) de cada monitor de forma visual. Defina postos, funções e horários de almoço.
+                      </p>
+                    </div>
+                    <button onClick={() => navigate('/monitor-schedule')} className="bg-primary text-black px-8 py-4 rounded-2xl font-black text-sm whitespace-nowrap hover:bg-primary-hover transition-all flex items-center gap-2 shadow-xl shadow-primary/20">
+                      <Clock size={18} /> Montar Grade dos Monitores
+                    </button>
                   </div>
 
+                  <Painel titulo="Grade de Postos (Visualização)" subtitulo="Alocação detalhada por horário, local e função.">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {gradeMonitores.length === 0 ? <VazioMsg texto="Nenhuma escala detalhada cadastrada. Adicione postos no botão acima." /> :
                         gradeMonitores.filter(gm => !busca || gm.monitorNome.toLowerCase().includes(busca.toLowerCase()) || gm.posto.toLowerCase().includes(busca.toLowerCase())).map(gm => {

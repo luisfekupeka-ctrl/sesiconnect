@@ -468,6 +468,41 @@ export async function salvarGradeMonitor(grade: Partial<GradeMonitor>): Promise<
   return !error;
 }
 
+export async function salvarGradeMonitores(lista: Partial<GradeMonitor>[]): Promise<boolean> {
+  if (!lista || lista.length === 0) return false;
+
+  const payloads = lista.map(grade => ({
+    monitor_nome: grade.monitorNome,
+    dia_semana: grade.diaSemana,
+    horario_inicio: grade.horarioInicio,
+    horario_fim: grade.horarioFim,
+    posto: grade.posto,
+    funcao: grade.funcao || 'Monitoria Geral',
+    instrucoes: grade.instrucoes || '',
+    cor_etiqueta: grade.corEtiqueta || '#3B82F6'
+  }));
+
+  try {
+    for (const p of payloads) {
+      // Tenta inserir
+      const { error: insertError } = await supabase.from('grade_monitores').insert([p]);
+      
+      if (insertError && insertError.code === '23505') {
+        // Se duplicar (mesmo monitor, dia e horário), atualiza
+        await supabase.from('grade_monitores')
+          .update(p)
+          .eq('monitor_nome', p.monitor_nome)
+          .eq('dia_semana', p.dia_semana)
+          .eq('horario_inicio', p.horario_inicio);
+      }
+    }
+    return true;
+  } catch (error) {
+    console.error('Erro ao salvar grade de monitores:', error);
+    return false;
+  }
+}
+
 export async function excluirGradeMonitor(id: string): Promise<boolean> {
   const { error } = await supabase.from('grade_monitores').delete().eq('id', id);
   return !error;

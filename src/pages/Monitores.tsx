@@ -246,8 +246,18 @@ export default function Monitores() {
 
       {/* ====== SEÇÃO 2: ESCALA GERAL DO DIA ====== */}
       <section className="space-y-4">
-        <h2 className="text-xl font-black italic tracking-tighter text-white flex items-center gap-2">
-          <Shield size={18} className="text-[#fbbf24]" /> Escala do Dia — {diaFiltro}
+        <h2 className="text-xl font-black italic tracking-tighter text-white flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Shield size={18} className="text-[#fbbf24]" /> Escala do Dia — {diaFiltro}
+          </div>
+          <select 
+            value={busca || 'Todos'} 
+            onChange={(e) => setBusca(e.target.value === 'Todos' ? '' : e.target.value)}
+            className="bg-[#0a0a0a] border-none rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest outline-none ring-2 ring-[#42a0f5]/10 focus:ring-[#42a0f5]/30 text-[#42a0f5] cursor-pointer"
+          >
+            <option value="Todos">Todos os Monitores</option>
+            {monitores.map(m => <option key={m.id} value={m.nome}>{m.nome}</option>)}
+          </select>
         </h2>
 
         {escalaDoDia.length === 0 ? (
