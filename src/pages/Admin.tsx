@@ -86,10 +86,83 @@ export default function Admin() {
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [autenticado, setAutenticado] = useState(true);
+  const [autenticado, setAutenticado] = useState(false);
   const [usuario, setUsuario] = useState('');
   const [senha, setSenha] = useState('');
   const [erroLogin, setErroLogin] = useState(false);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Credenciais simples para o painel administrativo
+    if (usuario === 'admin' && senha === 'admin2024') {
+      setAutenticado(true);
+      setErroLogin(false);
+    } else {
+      setErroLogin(true);
+    }
+  };
+
+  // Se não estiver autenticado, mostra tela de login
+  if (!autenticado) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-6 font-sans">
+        <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#42a0f5] blur-[120px] rounded-full" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#fbbf24] blur-[120px] rounded-full opacity-50" />
+        </div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md bg-[#0a0a0a] border border-white/10 p-10 rounded-[2.5rem] shadow-2xl relative z-10"
+        >
+          <div className="flex flex-col items-center mb-10">
+            <div className="w-16 h-16 bg-[#fbbf24] text-black rounded-2xl flex items-center justify-center mb-6 shadow-glow-yellow">
+              <Shield size={32} />
+            </div>
+            <h1 className="text-3xl font-black text-white italic tracking-tighter">SESI <span className="text-[#fbbf24]">Connect</span></h1>
+            <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em] mt-2">Painel Administrativo</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Usuário</label>
+              <input 
+                type="text" value={usuario} onChange={e => setUsuario(e.target.value)}
+                className="w-full bg-black border border-white/10 p-5 rounded-2xl text-sm font-black text-white focus:border-[#fbbf24]/50 outline-none transition-all shadow-inner"
+                placeholder="Ex: admin"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Senha</label>
+              <input 
+                type="password" value={senha} onChange={e => setSenha(e.target.value)}
+                className="w-full bg-black border border-white/10 p-5 rounded-2xl text-sm font-black text-white focus:border-[#fbbf24]/50 outline-none transition-all shadow-inner"
+                placeholder="••••••••"
+              />
+            </div>
+
+            {erroLogin && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-[10px] font-black uppercase text-center tracking-widest">
+                Credenciais Inválidas
+              </motion.p>
+            )}
+
+            <button 
+              type="submit"
+              className="w-full py-5 bg-[#fbbf24] text-black rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-xl shadow-[#fbbf24]/10 hover:scale-[1.02] active:scale-95 transition-all"
+            >
+              Acessar Dashboard
+            </button>
+          </form>
+
+          <div className="mt-12 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
+             <button onClick={() => navigate('/')} className="text-[10px] font-black text-white/20 uppercase tracking-widest hover:text-[#42a0f5] transition-colors">Voltar ao Site</button>
+             <span className="text-[8px] font-black text-white/10 uppercase tracking-[0.5em] italic">Segurança Sesi Connect</span>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   const handleOpenAlunos = async (item: any) => {
     setEditingAlunos(item);
