@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Search, ChevronLeft, ChevronRight, UserCheck, ChevronDown, Users, Clock, DoorOpen, LayoutGrid } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
-import { obterBlocosDeHorario, obterDiaSemana } from '../services/motorEscolar';
+import { obterBlocosDeHorario, obterDiaSemana, estaNoHorario } from '../services/motorEscolar';
 import { Sala } from '../types';
 
 const LISTA_DIAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];

@@ -113,3 +113,18 @@
     @apply pt-2 pb-16 px-2;
   }
 }
+
+/* === CLASSES REUTILIZÁVEIS (Admin) === */
+.campo-input {
+  @apply w-full bg-surface-container-low border border-outline/30 rounded-xl p-4 text-sm font-semibold text-on-surface outline-none transition-all;
+  @apply focus:border-primary focus:ring-2 focus:ring-primary/10;
+}
+
+.btn-primary {
+  @apply inline-flex items-center gap-2 px-5 py-3 bg-primary text-on-primary rounded-xl text-xs font-black uppercase tracking-widest transition-all;
+  @apply hover:scale-[1.02] active:scale-95 shadow-lg shadow-primary/20;
+}
+
+.editorial-shadow {
+  box-shadow: 0 4px 24px -6px rgba(0, 0, 0, 0.6);
+}

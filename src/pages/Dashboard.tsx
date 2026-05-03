@@ -22,11 +22,14 @@ export default function Dashboard() {
 
   const gradeAgora = useMemo(() => {
     return gradeCompleta.filter(slot => {
+       if (!slot.diaSemana || !slot.horario || !slot.horario.includes('-')) return false;
        if (slot.diaSemana.toUpperCase() !== diaHoje && !diaHoje.includes(slot.diaSemana.toUpperCase())) return false;
-       const [inicio, fim] = slot.horario.split('-').map(h => {
-          const [hh, mm] = h.trim().split(':').map(Number);
-          return hh * 60 + mm;
-       });
+       const parts = slot.horario.split('-');
+       if (parts.length < 2) return false;
+       const [hh1, mm1] = (parts[0]?.trim() || '0:0').split(':').map(Number);
+       const [hh2, mm2] = (parts[1]?.trim() || '0:0').split(':').map(Number);
+       const inicio = (hh1 || 0) * 60 + (mm1 || 0);
+       const fim = (hh2 || 0) * 60 + (mm2 || 0);
        return horaMinAgora >= inicio && horaMinAgora < fim;
     });
   }, [gradeCompleta, diaHoje, horaMinAgora]);
