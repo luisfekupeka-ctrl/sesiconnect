@@ -684,17 +684,18 @@ export async function buscarOcorrencias(): Promise<RegistroOcorrencia[]> {
 }
 
 export async function salvarOcorrencia(ocorrencia: Partial<RegistroOcorrencia>): Promise<boolean> {
-  const payload = {
-    id: ocorrencia.id || undefined,
+  const payload: any = {
     modelo_id: ocorrencia.modeloFormularioId,
     nome_modelo: ocorrencia.nomeModelo,
-    dados: ocorrencia.dados,
+    dados: ocorrencia.dados || {},
     nome_aluno: ocorrencia.nomeAluno,
     turma_aluno: ocorrencia.turmaAluno,
     ano_aluno: ocorrencia.anoAluno,
     sala_aluno: ocorrencia.salaAluno,
     professor_atual: ocorrencia.professorAtual,
   };
+
+  if (ocorrencia.id) payload.id = ocorrencia.id;
 
   const { error } = await supabase
     .from('ocorrencias')
