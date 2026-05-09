@@ -43,39 +43,28 @@ function AutocompleteAluno({
   return (
     <div ref={ref} className="relative">
       <div className="relative group">
-        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors" size={16} />
+        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-on-surface-variant/30 group-focus-within:text-primary transition-all duration-300" size={18} />
         <input
           type="text"
           value={busca}
           onChange={(e) => { setBusca(e.target.value); setAberto(true); }}
           onFocus={() => setAberto(true)}
-          placeholder="Digite o nome do aluno..."
-          className="w-full pl-12 pr-5 py-4 bg-surface-container-low border-none rounded-2xl text-on-surface focus:ring-4 focus:ring-primary/10 transition-all font-bold text-sm placeholder:text-outline"
+          placeholder="Comece a digitar o nome do aluno..."
+          className="w-full bg-surface-container-high/50 border-2 border-white/5 rounded-[1.5rem] py-5 pl-14 pr-6 text-sm font-bold text-on-surface outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10 focus:bg-surface-container-high placeholder:text-on-surface-variant/20"
         />
+        <div className="absolute right-5 top-1/2 -translate-y-1/2">
+           <div className={cn("w-2 h-2 rounded-full transition-all duration-500", busca.length >= 2 ? "bg-primary shadow-[0_0_10px_rgba(251,191,36,0.5)]" : "bg-white/10")} />
+        </div>
       </div>
 
       <AnimatePresence>
         {aberto && sugestoes.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.98 }}
+            initial={{ opacity: 0, y: 10, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.98 }}
-            className="absolute z-50 w-full mt-2 bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/10 overflow-hidden max-h-72 overflow-y-auto"
+            exit={{ opacity: 0, y: 10, scale: 0.98 }}
+            className="absolute z-[60] w-full mt-3 bg-[#121212] border border-white/10 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden backdrop-blur-xl"
           >
-            {sugestoes.map((aluno) => (
-              <button
-                key={aluno.id}
-                onClick={() => {
-                  aoSelecionar(aluno);
-                  setBusca(aluno.nome);
-                  setAberto(false);
-                }}
-                className="w-full px-5 py-3.5 text-left hover:bg-primary/5 transition-colors flex items-center justify-between group"
-              >
-                <div>
-                  <p className="text-sm font-black text-on-surface group-hover:text-primary transition-colors">{aluno.nome}</p>
-                  <p className="text-[10px] text-on-surface-variant font-bold">
-                    {aluno.turma !== aluno.ano && `${aluno.turma} • `}
                     {aluno.numeroSala > 0 ? `Sala ${aluno.numeroSala.toString().padStart(2, '0')}` : 'Sem Sala'}
                   </p>
                 </div>
@@ -237,8 +226,11 @@ export default function FormsPage() {
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-8">
                   {modeloSelecionado.campos.map(campo => (
-                    <div key={campo.id} className="space-y-3 bg-white/5 p-6 rounded-3xl border border-white/5">
-                      <label className="text-[11px] font-black text-primary uppercase tracking-widest px-1 flex items-center gap-1 mb-2">
+                    <div key={campo.id} className="space-y-4 bg-white/[0.02] p-8 rounded-[2.5rem] border border-white/[0.05] relative overflow-hidden group/field">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-focus-within/field:bg-primary transition-all" />
+                      
+                      <label className="text-[11px] font-black text-primary uppercase tracking-[0.2em] px-1 flex items-center gap-2 mb-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                         {campo.rotulo} {campo.obrigatorio && <span className="text-red-500">*</span>}
                       </label>
                       {campo.tipo === 'autocomplete_aluno' && (
@@ -319,8 +311,8 @@ export default function FormsPage() {
                           value={dadosFormulario[campo.rotulo] || ''} 
                           onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} 
                           rows={12} 
-                          className="w-full bg-surface-container-high border-2 border-white/5 rounded-2xl p-6 text-sm font-medium focus:ring-4 focus:ring-primary/20 focus:border-primary/30 transition-all resize-none shadow-inner editorial-leading text-on-surface placeholder:text-on-surface-variant/30" 
-                          placeholder="Descreva detalhadamente o ocorrido, observações pedagógicas e providências tomadas..." 
+                          className="w-full bg-surface-container-high/50 border-2 border-white/5 rounded-[1.5rem] p-6 text-lg font-medium focus:ring-8 focus:ring-primary/5 focus:border-primary/40 focus:bg-surface-container-high transition-all resize-none shadow-inner editorial-leading text-on-surface placeholder:text-on-surface-variant/10" 
+                          placeholder="Descreva detalhadamente o ocorrido..." 
                         />
                       )}
                     </div>
