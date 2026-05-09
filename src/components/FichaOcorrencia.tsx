@@ -111,26 +111,26 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
           </div>
 
           {/* Área de Impressão (Direita) */}
-          <div id="printable-occurrence" className="flex-1 overflow-y-auto p-12 bg-white print:overflow-visible print:p-0 custom-scrollbar relative">
+          <div id="printable-occurrence" className="flex-1 overflow-y-auto p-12 bg-white print:overflow-visible print:p-0 custom-scrollbar relative border-t-[12px] border-amber-400">
             
             {/* Elementos Institucionais (Shapes e Logos) */}
             <div className="absolute top-0 left-0 w-32 h-32 bg-gray-100 -translate-x-1/2 -translate-y-1/2 rotate-45 print:block hidden" />
-            <div className="absolute top-0 left-10 w-4 h-20 bg-amber-400/20 -skew-x-12 print:block hidden" />
+            <div className="absolute top-0 right-0 w-full h-1.5 bg-blue-600 print:block hidden" />
             
             <div className="flex justify-between items-start mb-12">
               <div className="pt-4">
-                <div className="text-3xl font-black tracking-tighter text-gray-900">SESI CONNECT</div>
+                <div className="text-3xl font-black tracking-tighter text-blue-900">SESI <span className="text-amber-500">CONNECT</span></div>
                 <div className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Serviço Social da Indústria</div>
               </div>
               <div className="flex flex-col items-end">
-                <div className="bg-gray-900 text-white px-4 py-1 text-[10px] font-black uppercase tracking-widest rounded-sm mb-2">Colégio</div>
+                <div className="bg-blue-900 text-white px-4 py-1 text-[10px] font-black uppercase tracking-widest rounded-sm mb-2">Colégio</div>
                 <div className="text-4xl font-black text-gray-900 tracking-tighter leading-none">Sesi</div>
                 <div className="bg-amber-400 px-3 py-0.5 text-[9px] font-black uppercase tracking-widest mt-1">Internacional</div>
               </div>
             </div>
 
-            <div className="mb-10 text-center border-y-2 border-gray-900 py-4">
-              <h1 className="text-xl font-black uppercase tracking-[0.2em] text-gray-900">Registro de Ocorrência Disciplinar</h1>
+            <div className="mb-10 text-center border-y-4 border-amber-400/30 py-4 bg-amber-50/50">
+              <h1 className="text-xl font-black uppercase tracking-[0.2em] text-blue-900">Registro de Ocorrência Disciplinar</h1>
             </div>
 
             <div className="space-y-12">
