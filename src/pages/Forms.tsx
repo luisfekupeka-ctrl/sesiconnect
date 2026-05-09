@@ -234,23 +234,23 @@ export default function FormsPage() {
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-8">
                   {modeloSelecionado.campos.map(campo => (
-                    <div key={campo.id} className="space-y-3">
-                      <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest px-1 flex items-center gap-1">
+                    <div key={campo.id} className="space-y-3 bg-white/5 p-6 rounded-3xl border border-white/5">
+                      <label className="text-[11px] font-black text-primary uppercase tracking-widest px-1 flex items-center gap-1 mb-2">
                         {campo.rotulo} {campo.obrigatorio && <span className="text-red-500">*</span>}
                       </label>
                       {campo.tipo === 'autocomplete_aluno' && (
                         <div className="space-y-3">
                           <AutocompleteAluno alunos={alunos} valor={alunoSelecionado?.nome || ''} aoSelecionar={setAlunoSelecionado} />
                           {alunoSelecionado && (
-                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="grid grid-cols-3 gap-3">
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="grid grid-cols-3 gap-3 pt-2">
                               {[
                                 { rotulo: 'Turma', valor: alunoSelecionado.turma },
                                 { rotulo: 'Ano', valor: alunoSelecionado.ano },
                                 { rotulo: 'Sala', valor: `Sala ${alunoSelecionado.numeroSala.toString().padStart(2, '0')}` },
                               ].map(info => (
-                                <div key={info.rotulo} className="bg-primary/5 p-3 rounded-xl border border-primary/10">
-                                  <p className="text-[8px] font-black text-primary uppercase tracking-widest mb-0.5">{info.rotulo}</p>
-                                  <p className="text-xs font-black text-on-surface">{info.valor}</p>
+                                <div key={info.rotulo} className="bg-primary/10 p-4 rounded-2xl border border-primary/20">
+                                  <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-1">{info.rotulo}</p>
+                                  <p className="text-sm font-black text-on-surface">{info.valor}</p>
                                 </div>
                               ))}
                             </motion.div>
@@ -265,20 +265,20 @@ export default function FormsPage() {
                           {campo.opcoes.map(opcao => <option key={opcao} value={opcao}>{opcao}</option>)}
                         </select>
                       )}
-
+ 
                       {campo.tipo === 'radio' && campo.opcoes && (
                         <div className="flex flex-wrap gap-3">
                           {campo.opcoes.map(opcao => (
                             <label key={opcao} className="cursor-pointer">
                               <input type="radio" name={campo.id} required={campo.obrigatorio} className="sr-only peer" onChange={() => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: opcao }))} checked={dadosFormulario[campo.rotulo] === opcao} />
-                              <div className="px-5 py-3 rounded-2xl bg-surface-container-low text-on-surface-variant peer-checked:bg-primary/10 peer-checked:text-primary peer-checked:ring-2 peer-checked:ring-primary font-bold text-sm">
+                              <div className="px-6 py-4 rounded-2xl bg-surface-container-high text-on-surface-variant peer-checked:bg-primary/20 peer-checked:text-primary peer-checked:ring-2 peer-checked:ring-primary font-black text-sm transition-all hover:bg-surface-container-highest">
                                 {opcao}
                               </div>
                             </label>
                           ))}
                         </div>
                       )}
-
+ 
                       {campo.tipo === 'checkbox' && campo.opcoes && (
                         <div className="flex flex-wrap gap-3">
                           {campo.opcoes.map(opcao => {
@@ -293,7 +293,7 @@ export default function FormsPage() {
                                       : valores.filter((v: string) => v !== opcao);
                                     setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: novosValores }));
                                   }} checked={estaSelecionado} />
-                                <div className="px-5 py-3 rounded-2xl bg-surface-container-low text-on-surface-variant peer-checked:bg-primary/10 peer-checked:text-primary peer-checked:ring-2 peer-checked:ring-primary font-bold text-sm">
+                                <div className="px-6 py-4 rounded-2xl bg-surface-container-high text-on-surface-variant peer-checked:bg-primary/20 peer-checked:text-primary peer-checked:ring-2 peer-checked:ring-primary font-black text-sm transition-all hover:bg-surface-container-highest">
                                   {opcao}
                                 </div>
                               </label>

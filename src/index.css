@@ -115,9 +115,14 @@
 }
 
 /* === CLASSES REUTILIZÁVEIS (Admin) === */
-.campo-input {
+.campo-input, .campo-input-base {
   @apply w-full bg-surface-container-high border border-white/10 rounded-xl p-4 text-sm font-semibold text-on-surface outline-none transition-all;
   @apply focus:border-primary/50 focus:ring-4 focus:ring-primary/10;
+}
+
+/* Garante que as opções do select fiquem visíveis */
+select option {
+  @apply bg-surface-container-high text-on-surface;
 }
 
 .btn-primary {
