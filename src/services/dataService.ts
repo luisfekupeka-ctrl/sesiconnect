@@ -257,6 +257,17 @@ export async function excluirAluno(id: string): Promise<boolean> {
   return !error;
 }
 
+export async function excluirTodosAlunos(ano?: string): Promise<boolean> {
+  let query = supabase.from('alunos_cms').delete();
+  if (ano && ano !== 'Todos') {
+    query = query.eq('ano', ano);
+  } else {
+    query = query.neq('id', '00000000-0000-0000-0000-000000000000'); // Hack to bypass "delete all" protection if any
+  }
+  const { error } = await query;
+  return !error;
+}
+
 // ============================================================
 // PROFESSORES
 // ============================================================
@@ -304,6 +315,11 @@ export async function salvarProfessorCMS(prof: Partial<ProfessorCMS>): Promise<b
 
 export async function excluirProfessorCMS(id: string): Promise<boolean> {
   const { error } = await supabase.from('professores_cms').delete().eq('id', id);
+  return !error;
+}
+
+export async function excluirTodosProfessores(): Promise<boolean> {
+  const { error } = await supabase.from('professores_cms').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   return !error;
 }
 
@@ -418,6 +434,11 @@ export async function salvarMonitor(monitor: Partial<Monitor>): Promise<boolean>
 
 export async function excluirMonitor(id: string): Promise<boolean> {
   const { error } = await supabase.from('monitores').delete().eq('id', id);
+  return !error;
+}
+
+export async function excluirTodosMonitores(): Promise<boolean> {
+  const { error } = await supabase.from('monitores').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   return !error;
 }
 

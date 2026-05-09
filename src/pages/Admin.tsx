@@ -12,9 +12,9 @@ import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 import {
   salvarPeriodo, excluirPeriodo,
-  salvarAluno, excluirAluno,
-  salvarMonitor, excluirMonitor,
-  salvarProfessorCMS, excluirProfessorCMS,
+  salvarAluno, excluirAluno, excluirTodosAlunos,
+  salvarMonitor, excluirMonitor, excluirTodosMonitores,
+  salvarProfessorCMS, excluirProfessorCMS, excluirTodosProfessores,
   salvarLocalCMS, excluirLocalCMS,
   salvarModeloFormulario, excluirModeloFormulario,
   salvarLanguageLab, excluirLanguageLab,
@@ -120,6 +120,8 @@ export default function Admin() {
   const [editandoGradeMonitor, setEditandoGradeMonitor] = useState<any>(null);
   const [diaMonitor, setDiaMonitor] = useState('SEGUNDA');
   const [subAbaMonitor, setSubAbaMonitor] = useState<'EQUIPE' | 'ESCALA' | 'DASHBOARD'>('EQUIPE');
+  const [pasteContent, setPasteContent] = useState('');
+  const [mostrandoPasteModal, setMostrandoPasteModal] = useState<{ aberto: boolean; tipo: 'alunos' | 'professores' | 'monitores'; ano?: string } | null>(null);
 
   const [buscaGlobal, setBuscaGlobal] = useState('');
   const [mostrarResultadosGlobal, setMostrarResultadosGlobal] = useState(false);
@@ -337,6 +339,68 @@ export default function Admin() {
     input.click();
   };
 
+  const handlePasteImport = async () => {
+    if (!mostrandoPasteModal || !pasteContent.trim()) return;
+    setCarregando(true);
+    const nomes = pasteContent.split('\n').map(n => n.trim()).filter(n => n);
+    let ok = 0;
+
+    try {
+      if (mostrandoPasteModal.tipo === 'alunos') {
+        const anoAlvo = mostrandoPasteModal.ano;
+        if (!anoAlvo) throw new Error('Ano não selecionado');
+        for (const nome of nomes) {
+          const sucesso = await salvarAluno({ nome, turma: anoAlvo, ano: anoAlvo, numeroSala: 0 });
+          if (sucesso) ok++;
+        }
+        setMsg({ tipo: 'ok', texto: `${ok} alunos cadastrados da lista!` });
+      } else if (mostrandoPasteModal.tipo === 'professores') {
+        for (let i = 0; i < nomes.length; i++) {
+          const cor = PALETA_CORES[i % PALETA_CORES.length];
+          const sucesso = await salvarProfessorCMS({ nome: nomes[i], cor });
+          if (sucesso) ok++;
+        }
+        setMsg({ tipo: 'ok', texto: `${ok} professores cadastrados da lista!` });
+      } else if (mostrandoPasteModal.tipo === 'monitores') {
+        for (const nome of nomes) {
+          const sucesso = await salvarMonitor({ nome, materia: '', turno: 'manha', horarioInicio: '08:00', horarioFim: '12:00', tipo: 'fixo', status: 'ativo', localPermanencia: '', localAlmoco: '' });
+          if (sucesso) ok++;
+        }
+        setMsg({ tipo: 'ok', texto: `${ok} monitores cadastrados da lista!` });
+      }
+      atualizar();
+      setMostrandoPasteModal(null);
+      setPasteContent('');
+    } catch (err: any) {
+      setMsg({ tipo: 'erro', texto: err.message });
+    }
+    setCarregando(false);
+    setTimeout(() => setMsg(null), 4000);
+  };
+
+  const handleClearAll = async (tipo: 'alunos' | 'professores' | 'monitores', ano?: string) => {
+    const confirmMsg = ano 
+      ? `Tem certeza que deseja apagar TODOS os alunos do ${ano}? Esta ação é irreversível.` 
+      : `Tem certeza que deseja apagar TODOS os ${tipo}? Esta ação é irreversível.`;
+    
+    if (confirm(confirmMsg)) {
+      setCarregando(true);
+      let ok = false;
+      if (tipo === 'alunos') ok = await excluirTodosAlunos(ano);
+      else if (tipo === 'professores') ok = await excluirTodosProfessores();
+      else if (tipo === 'monitores') ok = await excluirTodosMonitores();
+
+      if (ok) {
+        setMsg({ tipo: 'ok', texto: `Todos os ${tipo} foram removidos.` });
+        atualizar();
+      } else {
+        setMsg({ tipo: 'erro', texto: `Erro ao limpar lista de ${tipo}.` });
+      }
+      setCarregando(false);
+      setTimeout(() => setMsg(null), 4000);
+    }
+  };
+
   const abas: { id: AbaAdmin; rotulo: string; icone: any; badge?: number }[] = [
     { id: 'alunos', rotulo: 'Alunos', icone: Users, badge: (alunos || []).length },
     { id: 'professores', rotulo: 'Professores', icone: UserPlus, badge: (professoresCMS || []).length },
@@ -456,6 +520,9 @@ export default function Admin() {
                     <button onClick={() => setEditandoAluno({ id: 'novo', nome: '', turma: '', ano: '6º Ano', numeroSala: 0 })} className="btn-primary">
                       <Plus size={14} /> Novo Aluno
                     </button>
+                    <button onClick={() => handleClearAll('alunos')} className="px-4 py-2 bg-red-500/10 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all">
+                      <Trash2 size={14} /> Apagar Todos
+                    </button>
                   </div>
                 }>
 
@@ -503,10 +570,20 @@ export default function Admin() {
                               </div>
                             ))}
                           </div>
-                          <button onClick={() => handleUploadNomes('alunos', ano)}
-                            className="w-full py-2 bg-primary/5 text-primary rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-primary/10 transition-all flex items-center justify-center gap-1.5">
-                            <Upload size={12} /> Subir Lista Excel
-                          </button>
+                          <div className="flex gap-2">
+                            <button onClick={() => handleUploadNomes('alunos', ano)}
+                              className="flex-1 py-2 bg-primary/5 text-primary rounded-xl text-[8px] font-black uppercase tracking-widest hover:bg-primary/10 transition-all flex items-center justify-center gap-1.5">
+                              <Upload size={10} /> Excel
+                            </button>
+                            <button onClick={() => setMostrandoPasteModal({ aberto: true, tipo: 'alunos', ano })}
+                              className="flex-1 py-2 bg-[#fbbf24]/10 text-[#fbbf24] rounded-xl text-[8px] font-black uppercase tracking-widest hover:bg-[#fbbf24]/20 transition-all flex items-center justify-center gap-1.5">
+                              <List size={10} /> Colar Lista
+                            </button>
+                            <button onClick={() => handleClearAll('alunos', ano)}
+                              className="p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500/20 transition-all">
+                              <Trash2 size={10} />
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -538,7 +615,19 @@ export default function Admin() {
           {abaAtiva === 'professores' && (
             <motion.div key="prof" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
               <Painel titulo="Base de Professores" subtitulo="Gerencie os professores e suas assinaturas visuais (cores)."
-                acao={<button onClick={() => setEditandoProfessor({ id: 'novo', nome: '', cor: '#3B82F6' })} className="btn-primary"><Plus size={14} /> Novo Professor</button>}>
+                acao={
+                  <div className="flex gap-2">
+                    <button onClick={() => setMostrandoPasteModal({ aberto: true, tipo: 'professores' })} className="btn-secondary">
+                      <List size={14} /> Colar Lista
+                    </button>
+                    <button onClick={() => setEditandoProfessor({ id: 'novo', nome: '', cor: '#3B82F6' })} className="btn-primary">
+                      <Plus size={14} /> Novo Professor
+                    </button>
+                    <button onClick={() => handleClearAll('professores')} className="px-4 py-2 bg-red-500/10 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all">
+                      <Trash2 size={14} /> Apagar Todos
+                    </button>
+                  </div>
+                }>
                 <div className="relative mb-6">
                   <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
                   <input type="text" placeholder="Buscar por Nome, Especialidade ou Matéria..." value={busca} onChange={e => setBusca(e.target.value)} className="campo-input pl-10" />
@@ -785,7 +874,19 @@ export default function Admin() {
               {subAbaMonitor === 'EQUIPE' && (
                 <div>
                   <Painel titulo="Equipe de Monitores" subtitulo="Cadastro básico de monitores e horários padrão."
-                    acao={<button onClick={() => setEditandoMonitor({ id: 'novo', nome: '', materia: '', diaSemana: 'SEGUNDA', turno: 'manha', horarioInicio: '08:00', horarioFim: '12:00', tipo: 'fixo', status: 'ativo', localPermanencia: '', localAlmoco: '', cor: '#3B82F6' })} className="btn-primary"><Plus size={14} /> Cadastrar Monitor</button>}>
+                    acao={
+                      <div className="flex gap-2">
+                        <button onClick={() => setMostrandoPasteModal({ aberto: true, tipo: 'monitores' })} className="btn-secondary">
+                          <List size={14} /> Colar Lista
+                        </button>
+                        <button onClick={() => setEditandoMonitor({ id: 'novo', nome: '', materia: '', diaSemana: 'SEGUNDA', turno: 'manha', horarioInicio: '08:00', horarioFim: '12:00', tipo: 'fixo', status: 'ativo', localPermanencia: '', localAlmoco: '', cor: '#3B82F6' })} className="btn-primary">
+                          <Plus size={14} /> Cadastrar Monitor
+                        </button>
+                        <button onClick={() => handleClearAll('monitores')} className="px-4 py-2 bg-red-500/10 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all">
+                          <Trash2 size={14} /> Apagar Todos
+                        </button>
+                      </div>
+                    }>
 
                   <div className="relative mb-6">
                     <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
@@ -1560,6 +1661,28 @@ export default function Admin() {
               </div>
             </div>
           )}
+        </ModalForm>
+
+        <ModalForm 
+          aberto={!!mostrandoPasteModal} 
+          onClose={() => setMostrandoPasteModal(null)}
+          titulo={`Colar Lista de ${mostrandoPasteModal?.tipo === 'alunos' ? 'Alunos (' + mostrandoPasteModal.ano + ')' : mostrandoPasteModal?.tipo}`}
+          onSalvar={handlePasteImport} 
+          carregando={carregando}
+        >
+          <div className="space-y-4">
+            <p className="text-xs text-on-surface-variant font-medium">Cole a lista de nomes abaixo, um por linha. O sistema cadastrará cada um automaticamente.</p>
+            <textarea 
+              value={pasteContent}
+              onChange={e => setPasteContent(e.target.value)}
+              placeholder="Cole os nomes aqui...&#10;Ex:&#10;João Silva&#10;Maria Santos&#10;Pedro Oliveira"
+              className="w-full h-64 bg-black border border-white/10 p-5 rounded-2xl text-sm font-medium text-white focus:border-primary/50 outline-none transition-all shadow-inner custom-scrollbar resize-none"
+            />
+            <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
+               <p className="text-[10px] font-black text-primary uppercase tracking-widest">Dica</p>
+               <p className="text-[10px] text-on-surface-variant font-medium mt-1">Certifique-se de que cada nome esteja em uma linha diferente para uma importação correta.</p>
+            </div>
+          </div>
         </ModalForm>
       </motion.div>
     </>
