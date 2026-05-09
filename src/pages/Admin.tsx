@@ -497,8 +497,10 @@ export default function Admin() {
         <div className="flex gap-1.5 p-2 bg-surface-container-low rounded-2xl overflow-x-auto scrollbar-hide">
           {abas.map(a => (
             <button key={a.id} onClick={() => { setAbaAtiva(a.id); setBusca(''); setAnoFiltro('Todos'); }}
-              className={cn("flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0",
-                abaAtiva === a.id ? "bg-primary text-on-primary shadow-lg shadow-primary/20" : "text-on-surface-variant hover:bg-hover")}>
+              className={cn("flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0",
+                abaAtiva === a.id 
+                  ? "bg-primary text-on-primary shadow-xl shadow-primary/30 border-2 border-secondary/50 scale-105" 
+                  : "text-on-surface-variant hover:bg-hover hover:text-on-surface")}>
               <a.icone size={13} />
               {a.rotulo}
               {a.badge !== undefined && <span className={cn("ml-0.5 px-1.5 py-0.5 rounded-full text-[7px]", abaAtiva === a.id ? "bg-primary/10 text-primary" : "bg-surface-container-high")}>{a.badge}</span>}
@@ -939,19 +941,19 @@ export default function Admin() {
                                              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black" style={{ backgroundColor: `${cor}20`, color: cor }}>{nome.charAt(0)}</div>
                                              <span className="text-[10px] font-black truncate">{nome.split(' ')[0]}</span>
                                           </div>
-                                          <div className="flex-1 relative h-10">
-                                             {postos.map(p => {
-                                                const parseH = (h: string) => { const [hh, mm] = h.split(':').map(Number); return hh * 60 + mm; };
-                                                const l = ((parseH(p.horarioInicio) - inicio) / total) * 100;
-                                                const w = ((parseH(p.horarioFim) - parseH(p.horarioInicio)) / total) * 100;
-                                                return (
-                                                   <div key={p.id} className="absolute h-8 top-1 rounded-lg flex items-center px-2 shadow-sm overflow-hidden border border-white/10"
-                                                     style={{ left: `${Math.max(0, l)}%`, width: `${Math.min(100 - l, w)}%`, backgroundColor: cor }}>
-                                                      <span className="text-[7px] font-black text-white uppercase truncate">{p.posto}</span>
-                                                   </div>
-                                                );
-                                             })}
-                                          </div>
+                                           <div className="flex-1 relative h-14">
+                                              {postos.map(p => {
+                                                 const parseH = (h: string) => { const [hh, mm] = h.split(':').map(Number); return hh * 60 + mm; };
+                                                 const l = ((parseH(p.horarioInicio) - inicio) / total) * 100;
+                                                 const w = ((parseH(p.horarioFim) - parseH(p.horarioInicio)) / total) * 100;
+                                                 return (
+                                                    <div key={p.id} className="absolute h-12 top-1 rounded-xl flex items-center px-3 shadow-md overflow-hidden border border-white/20"
+                                                      style={{ left: `${Math.max(0, l)}%`, width: `${Math.min(100 - l, w)}%`, backgroundColor: cor }}>
+                                                       <span className="text-[10px] font-black text-white uppercase truncate drop-shadow-md">{p.posto}</span>
+                                                    </div>
+                                                 );
+                                              })}
+                                           </div>
                                        </div>
                                     );
                                  })}

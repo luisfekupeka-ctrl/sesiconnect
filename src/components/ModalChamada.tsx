@@ -14,6 +14,7 @@ interface ModalChamadaProps {
 export default function ModalChamada({ aula, onClose }: ModalChamadaProps) {
   const { alunos } = useEscola();
   const [presencas, setPresencas] = useState<Record<string, StatusPresenca>>({});
+  const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
@@ -126,6 +127,28 @@ export default function ModalChamada({ aula, onClose }: ModalChamadaProps) {
           </button>
         </div>
 
+        {/* Search & Stats */}
+        <div className="px-6 py-4 bg-surface-container-lowest border-b border-outline-variant/10 flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40" size={14} />
+            <input 
+              type="text" 
+              placeholder="Pesquisar aluno..." 
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-surface-container-low border border-outline-variant/10 rounded-xl text-xs font-bold outline-none focus:ring-2 ring-primary/20"
+            />
+          </div>
+          <div className="flex gap-4">
+            <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">
+              {Object.values(presencas).filter(v => v === 'presente').length} Presentes
+            </div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-rose-500">
+              {Object.values(presencas).filter(v => v === 'falta').length} Faltas
+            </div>
+          </div>
+        </div>
+
         {/* Lista de Alunos */}
         <div className="flex-1 overflow-y-auto p-6 space-y-3 custom-scrollbar">
           {loading ? (
@@ -137,7 +160,7 @@ export default function ModalChamada({ aula, onClose }: ModalChamadaProps) {
               <p className="font-bold">Nenhum aluno cadastrado nesta turma/sala.</p>
             </div>
           ) : (
-            alunosDaTurma.map((aluno, index) => (
+            alunosDaTurma.filter(a => a.nome.toLowerCase().includes(busca.toLowerCase())).map((aluno, index) => (
               <div key={aluno.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-surface-container-low rounded-2xl gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center font-black text-xs">

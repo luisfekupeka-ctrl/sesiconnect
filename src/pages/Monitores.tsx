@@ -306,7 +306,7 @@ export default function Monitores() {
                     </div>
 
                     {/* Barras de postos */}
-                    <div className="flex-1 relative py-2">
+                    <div className="flex-1 relative py-4 h-24">
                       {postos.map(slot => {
                         const minInicio = horaParaMinutos(slot.horarioInicio);
                         const minFim = horaParaMinutos(slot.horarioFim);
@@ -317,21 +317,27 @@ export default function Monitores() {
                         return (
                           <div
                             key={slot.id}
-                            className={cn("absolute h-8 rounded-lg flex items-center px-2 gap-1 overflow-hidden transition-all",
-                              estaAtivo ? "shadow-lg" : "opacity-80")}
+                            className={cn("absolute h-16 rounded-xl flex flex-col justify-center px-4 gap-1 overflow-hidden transition-all",
+                              estaAtivo ? "shadow-lg scale-105 z-10" : "opacity-90")}
                             style={{
                               left: `${leftPct}%`,
                               width: `${widthPct}%`,
-                              backgroundColor: estaAtivo ? cor : `${cor}30`,
-                              color: estaAtivo ? '#000' : cor,
+                              backgroundColor: estaAtivo ? cor : `${cor}25`,
+                              color: estaAtivo ? '#000' : '#fff',
                               top: '50%',
                               transform: 'translateY(-50%)',
-                              boxShadow: estaAtivo ? `0 0 12px ${cor}40` : 'none',
+                              boxShadow: estaAtivo ? `0 0 20px ${cor}60` : 'none',
+                              border: `1px solid ${cor}40`
                             }}
                             title={`${slot.horarioInicio}–${slot.horarioFim} | ${slot.posto} | ${slot.funcao || 'Monitoria'}`}
                           >
-                            <MapPin size={8} strokeWidth={3} />
-                            <span className="text-[7px] font-black uppercase tracking-tight truncate">{slot.posto}</span>
+                            <div className="flex items-center gap-2">
+                              <MapPin size={10} strokeWidth={3} className={estaAtivo ? 'text-black' : 'text-primary'} />
+                              <span className="text-[10px] font-black uppercase tracking-tight truncate">{slot.posto}</span>
+                            </div>
+                            <span className={cn("text-[8px] font-black opacity-60", estaAtivo ? 'text-black' : 'text-white/60')}>
+                              {slot.horarioInicio} - {slot.horarioFim}
+                            </span>
                           </div>
                         );
                       })}

@@ -309,7 +309,17 @@ export default function FormsPage() {
                         </select>
                       )}
 
-                      {campo.tipo === 'area_texto' && <textarea required={campo.obrigatorio} value={dadosFormulario[campo.rotulo] || ''} onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} rows={3} className="campo-input-base resize-none" placeholder="Detalhes..." />}
+                      {/* Campo de Texto Longo (Ocorrência) - Aumentado a pedido do usuário */}
+                      {campo.tipo === 'area_texto' && (
+                        <textarea 
+                          required={campo.obrigatorio} 
+                          value={dadosFormulario[campo.rotulo] || ''} 
+                          onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} 
+                          rows={12} 
+                          className="w-full bg-surface-container-low border-none rounded-2xl p-6 text-sm font-medium focus:ring-4 focus:ring-primary/10 transition-all resize-none shadow-inner editorial-leading text-on-surface" 
+                          placeholder="Descreva detalhadamente o ocorrido, observações pedagógicas e providências tomadas..." 
+                        />
+                      )}
                     </div>
                   ))}
                   <div className="flex justify-end gap-4 pt-4">

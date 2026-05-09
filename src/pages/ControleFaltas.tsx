@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Search, Filter, FileText, CheckCircle2, XCircle, Clock, Calendar, Download } from 'lucide-react';
+import { Search, Filter, FileText, CheckCircle2, XCircle, Clock, Calendar, Download, BarChart3 } from 'lucide-react';
 import { RegistroChamada } from '../types';
 import { buscarChamadas } from '../services/dataService';
 import { cn } from '../lib/utils';
@@ -86,6 +86,50 @@ export default function ControleFaltas() {
         <div className="bg-primary text-on-primary p-6 rounded-[2rem] editorial-shadow">
           <p className="text-xs font-black uppercase tracking-widest opacity-80 mb-2">Frequência %</p>
           <p className="text-3xl font-black">{frequencia}%</p>
+        </div>
+      </div>
+
+      {/* Ranking de Absenteísmo - Novo a pedido do usuário */}
+      <div className="bg-surface-container-lowest p-8 rounded-[3rem] border border-outline-variant/10 editorial-shadow">
+        <h3 className="text-xl font-black tracking-tighter mb-6 flex items-center gap-2">
+          <BarChart3 size={20} className="text-rose-500" />
+          Ranking de Absenteísmo por Ano
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {['6º Ano', '7º Ano', '8º Ano', '9º Ano'].map(ano => {
+            const faltasPorAluno: Record<string, number> = {};
+            chamadas.filter(c => c.turmaAluno?.includes(ano) && c.status === 'falta').forEach(c => {
+              faltasPorAluno[c.nomeAluno] = (faltasPorAluno[c.nomeAluno] || 0) + 1;
+            });
+            
+            const ranking = Object.entries(faltasPorAluno)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 5);
+
+            return (
+              <div key={ano} className="space-y-4">
+                <div className="flex items-center justify-between border-b border-outline-variant/10 pb-2">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">{ano}</h4>
+                  <span className="text-[8px] font-black bg-rose-500/10 text-rose-500 px-2 py-0.5 rounded-full">Críticos</span>
+                </div>
+                
+                <div className="space-y-2">
+                  {ranking.length === 0 ? (
+                    <p className="text-[10px] text-on-surface-variant/40 italic">Sem registros de faltas.</p>
+                  ) : ranking.map(([nome, total], i) => (
+                    <div key={nome} className="flex items-center justify-between p-3 bg-surface-container-low rounded-xl">
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="text-[9px] font-black opacity-20">#{i+1}</span>
+                        <span className="text-[11px] font-black truncate">{nome}</span>
+                      </div>
+                      <span className="text-[11px] font-black text-rose-500">{total} faltas</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

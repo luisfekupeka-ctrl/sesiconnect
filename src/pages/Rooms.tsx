@@ -120,7 +120,7 @@ export default function RoomsPage() {  const { salas, estadoEscola, gradeComplet
 }
 
 function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, languageLab, atividadesAfter, buscaFiltro, alunos }: any) {
-  const [expandido, setExpandido] = useState(false);
+  const minutosAgora = horaAtual.getHours() * 60 + horaAtual.getMinutes();
 
   const entradasDia = useMemo(() => {
     if (!salaSelecionada || !gradeCompleta) return [];
@@ -129,6 +129,17 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
       String(e.diaSemana).toUpperCase() === String(diaGrade).toUpperCase()
     );
   }, [gradeCompleta, salaSelecionada, diaGrade]);
+
+  const estaNoBlocoAtual = useMemo(() => {
+    if (diaGrade !== obterDiaSemana(horaAtual)) return false;
+    const [h, m] = bloco.inicio.split(':').map(Number);
+    const [hf, mf] = bloco.fim.split(':').map(Number);
+    const minInicio = h * 60 + m;
+    const minFim = hf * 60 + mf;
+    return minutosAgora >= minInicio && minutosAgora < minFim;
+  }, [bloco, diaGrade, minutosAgora, horaAtual]);
+
+  const [expandido, setExpandido] = useState(estaNoBlocoAtual);
 
   // Lista de alunos baseada no ANO da sala (fallback principal)
   const alunosDaSala = useMemo(() => {
@@ -198,15 +209,23 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
   const alunosFiltrados = alunosNoBloco.filter(a => a.toLowerCase().includes(buscaFiltro.toLowerCase()));
   const isActive = entradaFinal.materia && entradaFinal.materia !== 'A DEFINIR';
 
-  return (
-     <motion.div layout className={cn("p-5 rounded-2xl border-2 transition-all flex flex-col gap-4 relative overflow-hidden shadow-premium",
-        !isActive ? "bg-black border-dashed border-white/5 opacity-20" :
-        tipo === 'after_school' ? "bg-[#fbbf24]/5 border-[#fbbf24]/20" : 
-        tipo === 'language_lab' ? "bg-indigo-500/5 border-indigo-500/20" : "bg-[#0a0a0a] border-white/5",
-        expandido && "border-[#fbbf24] bg-[#fbbf24]/10")}>
+   return (
+      <motion.div layout className={cn("p-5 rounded-2xl border-2 transition-all flex flex-col gap-4 relative overflow-hidden shadow-premium",
+         !isActive ? "bg-black border-dashed border-white/5 opacity-20" :
+         tipo === 'after_school' ? "bg-[#fbbf24]/5 border-[#fbbf24]/20" : 
+         tipo === 'language_lab' ? "bg-indigo-500/5 border-indigo-500/20" : "bg-[#0a0a0a] border-white/5",
+         estaNoBlocoAtual && "border-[#fbbf24] bg-[#fbbf24]/10 shadow-[0_0_30px_rgba(251,191,36,0.15)]",
+         expandido && !estaNoBlocoAtual && "border-white/20 bg-white/5")}
+      >
+        {estaNoBlocoAtual && (
+          <div className="absolute top-0 left-0 w-1 h-full bg-[#fbbf24] animate-pulse" />
+        )}
         <div className="flex justify-between items-center relative z-10">
            <div className="flex items-center gap-4">
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40 italic">{bloco.inicio} — {bloco.fim}</span>
+              <span className={cn("text-[9px] font-black uppercase tracking-[0.2em] italic", estaNoBlocoAtual ? "text-[#fbbf24]" : "opacity-40")}>
+                {bloco.inicio} — {bloco.fim}
+                {estaNoBlocoAtual && " • AGORA"}
+              </span>
               {isActive && <span className="text-[8px] font-black px-2 py-0.5 rounded-md bg-[#fbbf24]/10 text-[#fbbf24]">{tipo.toUpperCase()}</span>}
            </div>
            {isActive && (
