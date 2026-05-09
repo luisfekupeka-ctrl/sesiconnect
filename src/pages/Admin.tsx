@@ -1393,132 +1393,176 @@ export default function Admin() {
 
         <ModalForm aberto={!!editandoLanguageLab} onClose={() => setEditandoLanguageLab(null)}
           titulo={editandoLanguageLab?.id === 'novo' ? 'Nova Aula Inglês' : 'Editar Aula Inglês'}
+          largo={true}
           onSalvar={() => doSave(salvarLanguageLab(editandoLanguageLab), setEditandoLanguageLab)} carregando={carregando}>
           {editandoLanguageLab && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <CampoTexto label="Turma (Ex: 9º Ano A)" value={editandoLanguageLab.turma} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, turma: v })} />
-                <CampoTexto label="Nível (Ex: B1 Intermediate)" value={editandoLanguageLab.nivel} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, nivel: v })} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <CampoTexto label="Professor" value={editandoLanguageLab.professor} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, professor: v })} />
-                <CampoTexto label="Sala / Local" value={editandoLanguageLab.sala} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, sala: v })} />
-              </div>
-              <CampoSelect label="Dia da Semana" value={editandoLanguageLab.diaSemana} options={DIAS_SEMANA} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, diaSemana: v })} />
-              <div className="grid grid-cols-2 gap-4">
-                <CampoTexto label="Início" value={editandoLanguageLab.horarioInicio} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, horarioInicio: v })} tipo="time" />
-                <CampoTexto label="Fim" value={editandoLanguageLab.horarioFim} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, horarioFim: v })} tipo="time" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1.5 h-6 bg-primary rounded-full" />
+                  <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.3em]">Informações Básicas</h4>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <CampoTexto label="Turma (Ex: 9º Ano A)" value={editandoLanguageLab.turma} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, turma: v })} />
+                  <CampoTexto label="Nível (Ex: B1 Intermediate)" value={editandoLanguageLab.nivel} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, nivel: v })} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <CampoTexto label="Professor" value={editandoLanguageLab.professor} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, professor: v })} />
+                  <CampoTexto label="Sala / Local" value={editandoLanguageLab.sala} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, sala: v })} />
+                </div>
+                <CampoSelect label="Dia da Semana" value={editandoLanguageLab.diaSemana} options={DIAS_SEMANA} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, diaSemana: v })} />
+                <div className="grid grid-cols-2 gap-4">
+                  <CampoTexto label="Início" value={editandoLanguageLab.horarioInicio} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, horarioInicio: v })} tipo="time" />
+                  <CampoTexto label="Fim" value={editandoLanguageLab.horarioFim} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, horarioFim: v })} tipo="time" />
+                </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-outline-variant/20">
-                <SeletorAlunos
-                  alunos={alunosBase}
-                  selecionados={editandoLanguageLab.listaAlunos || []}
-                  onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, listaAlunos: v })}
-                />
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1.5 h-6 bg-[#42a0f5] rounded-full" />
+                  <h4 className="text-[10px] font-black uppercase text-[#42a0f5] tracking-[0.3em]">Alunos Matriculados</h4>
+                </div>
+                <div className="bg-black/20 rounded-[2rem] border border-white/5 overflow-hidden">
+                  <SeletorAlunos
+                    alunos={alunosBase}
+                    selecionados={editandoLanguageLab.listaAlunos || []}
+                    onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, listaAlunos: v })}
+                  />
+                </div>
               </div>
             </div>
           )}
         </ModalForm>
+
         <ModalForm aberto={!!editandoGrade} onClose={() => setEditandoGrade(null)}
           titulo="Editar Horário de Aula"
+          largo={true}
           onSalvar={() => doSave(salvarGradeSala([editandoGrade]), setEditandoGrade)} carregando={carregando}>
           {editandoGrade && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <CampoTexto label="Professor" value={editandoGrade.nomeProfessor} onChange={v => setEditandoGrade({ ...editandoGrade, nomeProfessor: v })} />
-                <CampoTexto label="Matéria" value={editandoGrade.materia} onChange={v => setEditandoGrade({ ...editandoGrade, materia: v })} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <CampoSelect label="Dia" value={editandoGrade.diaSemana} options={DIAS_SEMANA} onChange={v => setEditandoGrade({ ...editandoGrade, diaSemana: v })} />
-                <CampoSelect 
-                  label="Tipo de Atividade" 
-                  value={editandoGrade.tipo || 'regular'} 
-                  options={['regular', 'after_school', 'language_lab']} 
-                  onChange={v => {
-                    let vinculadoId = null;
-                    let listaAlunos = editandoGrade.lista_alunos;
-                    
-                    if (v === 'after_school') {
-                      const match = atividadesAfter.find(a => 
-                        a.local.includes(editandoGrade.numeroSala?.toString()) && 
-                        a.horarioInicio <= (editandoGrade.horario?.split('-')[0]?.trim() || '') &&
-                        a.dias.includes(editandoGrade.diaSemana)
-                      );
-                      if (match) {
-                        vinculadoId = match.id;
-                        listaAlunos = match.listaAlunos;
-                        setMsg({ tipo: 'ok', texto: `Vinculado automaticamente ao After: ${match.nome}` });
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+              {/* Coluna Esquerda: Informações da Aula */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1.5 h-6 bg-primary rounded-full" />
+                  <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.3em]">Informações da Aula</h4>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <CampoSelect label="Dia" value={editandoGrade.diaSemana} options={DIAS_SEMANA} onChange={v => setEditandoGrade({ ...editandoGrade, diaSemana: v })} />
+                  <CampoSelect 
+                    label="Tipo de Atividade" 
+                    value={editandoGrade.tipo || 'regular'} 
+                    options={['regular', 'after_school', 'language_lab']} 
+                    onChange={v => {
+                      let vinculadoId = null;
+                      let listaAlunos = editandoGrade.lista_alunos;
+                      
+                      if (v === 'after_school') {
+                        const match = atividadesAfter.find(a => 
+                          a.local.includes(editandoGrade.numeroSala?.toString()) && 
+                          a.horarioInicio <= (editandoGrade.horario?.split('-')[0]?.trim() || '') &&
+                          a.dias.includes(editandoGrade.diaSemana)
+                        );
+                        if (match) {
+                          vinculadoId = match.id;
+                          listaAlunos = match.listaAlunos;
+                          setMsg({ tipo: 'ok', texto: `Vinculado automaticamente ao After: ${match.nome}` });
+                        }
+                      } else if (v === 'language_lab') {
+                        const match = languageLab.find(l => 
+                          l.sala.includes(editandoGrade.numeroSala?.toString()) &&
+                          l.horarioInicio <= (editandoGrade.horario?.split('-')[0]?.trim() || '') &&
+                          l.diaSemana === editandoGrade.diaSemana
+                        );
+                        if (match) {
+                          vinculadoId = match.id;
+                          listaAlunos = match.listaAlunos;
+                          setMsg({ tipo: 'ok', texto: `Vinculado automaticamente ao Lab: ${match.nivel}` });
+                        }
                       }
-                    } else if (v === 'language_lab') {
-                      const match = languageLab.find(l => 
-                        l.sala.includes(editandoGrade.numeroSala?.toString()) &&
-                        l.horarioInicio <= (editandoGrade.horario?.split('-')[0]?.trim() || '') &&
-                        l.diaSemana === editandoGrade.diaSemana
-                      );
-                      if (match) {
-                        vinculadoId = match.id;
-                        listaAlunos = match.listaAlunos;
-                        setMsg({ tipo: 'ok', texto: `Vinculado automaticamente ao Lab: ${match.nivel}` });
-                      }
-                    }
-                    
-                    setEditandoGrade({ ...editandoGrade, tipo: v, vinculado_id: vinculadoId, lista_alunos: listaAlunos });
-                  }} 
-                />
+                      
+                      setEditandoGrade({ ...editandoGrade, tipo: v, vinculado_id: vinculadoId, lista_alunos: listaAlunos });
+                    }} 
+                  />
+                </div>
+
+                <CampoTexto label="Horário (Ex: 07:30 - 08:20)" value={editandoGrade.horario} onChange={v => setEditandoGrade({ ...editandoGrade, horario: v })} />
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <CampoTexto label="Turma" value={editandoGrade.turma} onChange={v => setEditandoGrade({ ...editandoGrade, turma: v })} />
+                  <CampoTexto label="Número da Sala" value={editandoGrade.numeroSala?.toString()} tipo="number" onChange={v => setEditandoGrade({ ...editandoGrade, numeroSala: parseInt(v) })} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <CampoTexto label="Matéria" value={editandoGrade.materia || ''} onChange={v => setEditandoGrade({ ...editandoGrade, materia: v })} />
+                  <CampoSelect label="Professor" value={editandoGrade.nomeProfessor} options={['—', 'A DEFINIR', ...listaProfessores]} onChange={v => setEditandoGrade({ ...editandoGrade, nomeProfessor: v })} />
+                </div>
               </div>
-                <CampoTexto label="Horário (Ex: 07:30)" value={editandoGrade.horario} onChange={v => setEditandoGrade({ ...editandoGrade, horario: v })} />
-              <div className="grid grid-cols-2 gap-4">
-                <CampoTexto label="Turma" value={editandoGrade.turma} onChange={v => setEditandoGrade({ ...editandoGrade, turma: v })} />
-                <CampoTexto label="Número da Sala" value={editandoGrade.numeroSala?.toString()} tipo="number" onChange={v => setEditandoGrade({ ...editandoGrade, numeroSala: parseInt(v) })} />
-              </div>
-              <div className="mt-6 pt-4 border-t border-outline-variant/20">
-                <div className="p-5 bg-blue-800/5 rounded-2xl border border-blue-800/20 space-y-4">
+
+              {/* Coluna Direita: Ensalamento */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1.5 h-6 bg-[#fbbf24] rounded-full" />
+                  <h4 className="text-[10px] font-black uppercase text-[#fbbf24] tracking-[0.3em]">Gestão de Alunos</h4>
+                </div>
+
+                <div className="p-6 bg-white/[0.02] rounded-[2rem] border border-white/5 space-y-5">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-black uppercase text-blue-400 tracking-widest flex items-center gap-2">
-                      <RefreshCw size={12} /> Origem do Ensalamento
+                    <label className="text-[9px] font-black uppercase text-white/40 tracking-widest flex items-center gap-2">
+                      <RefreshCw size={14} className="text-[#42a0f5]" /> Sincronização de Lista
                     </label>
                     <button 
                       onClick={() => setEditandoGrade({ ...editandoGrade, lista_alunos: null, vinculado_id: null })}
-                      className="text-[8px] font-black uppercase bg-surface-container-high px-2 py-1 rounded-md hover:bg-red-500 transition-all"
+                      className="text-[8px] font-black uppercase bg-white/5 px-3 py-1.5 rounded-xl hover:bg-red-500/20 hover:text-red-500 transition-all border border-white/5"
                     >
                       Resetar para Turma Completa
                     </button>
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <select 
-                      className="bg-surface-container-high p-3 rounded-xl text-[10px] font-black uppercase outline-none"
-                      onChange={(e) => {
-                        const id = e.target.value;
-                        const lab = languageLab.find(l => l.id === id);
-                        if (lab) setEditandoGrade({ ...editandoGrade, vinculado_id: id, lista_alunos: lab.listaAlunos });
-                      }}
-                    >
-                      <option value="">Vincular Language Lab...</option>
-                      {languageLab.map(l => <option key={l.id} value={l.id}>{l.nivel} - {l.professor}</option>)}
-                    </select>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black uppercase text-white/20 ml-2">Language Lab</label>
+                      <select 
+                        className="w-full bg-black border border-white/10 p-4 rounded-xl text-[10px] font-black uppercase outline-none focus:border-[#42a0f5]/40 transition-all"
+                        value={editandoGrade.vinculado_id || ''}
+                        onChange={(e) => {
+                          const id = e.target.value;
+                          const lab = languageLab.find(l => l.id === id);
+                          if (lab) setEditandoGrade({ ...editandoGrade, vinculado_id: id, lista_alunos: lab.listaAlunos, tipo: 'language_lab' });
+                        }}
+                      >
+                        <option value="">Não vinculado</option>
+                        {languageLab.map(l => <option key={l.id} value={l.id}>{l.nivel} - {l.professor}</option>)}
+                      </select>
+                    </div>
 
-                    <select 
-                      className="bg-surface-container-high p-3 rounded-xl text-[10px] font-black uppercase outline-none"
-                      onChange={(e) => {
-                        const id = e.target.value;
-                        const after = atividadesAfter.find(a => a.id === id);
-                        if (after) setEditandoGrade({ ...editandoGrade, vinculado_id: id, lista_alunos: after.listaAlunos });
-                      }}
-                    >
-                      <option value="">Vincular After School...</option>
-                      {atividadesAfter.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
-                    </select>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black uppercase text-white/20 ml-2">After School</label>
+                      <select 
+                        className="w-full bg-black border border-white/10 p-4 rounded-xl text-[10px] font-black uppercase outline-none focus:border-[#fbbf24]/40 transition-all"
+                        value={editandoGrade.vinculado_id || ''}
+                        onChange={(e) => {
+                          const id = e.target.value;
+                          const after = atividadesAfter.find(a => a.id === id);
+                          if (after) setEditandoGrade({ ...editandoGrade, vinculado_id: id, lista_alunos: after.listaAlunos, tipo: 'after_school' });
+                        }}
+                      >
+                        <option value="">Não vinculado</option>
+                        {atividadesAfter.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
+                      </select>
+                    </div>
                   </div>
                 </div>
 
-                <SeletorAlunos
-                  alunos={alunosBase}
-                  selecionados={editandoGrade.lista_alunos || []}
-                  turmaAlvo={editandoGrade.turma}
-                  onChange={v => setEditandoGrade({ ...editandoGrade, lista_alunos: v })}
-                />
+                <div className="bg-black/20 rounded-[2rem] border border-white/5 overflow-hidden">
+                  <SeletorAlunos
+                    alunos={alunosBase}
+                    selecionados={editandoGrade.lista_alunos || []}
+                    turmaAlvo={editandoGrade.turma}
+                    onChange={v => setEditandoGrade({ ...editandoGrade, lista_alunos: v })}
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -1526,47 +1570,66 @@ export default function Admin() {
 
         <ModalForm aberto={!!editandoAfter} onClose={() => setEditandoAfter(null)}
           titulo={editandoAfter?.id === 'novo' ? 'Nova Atividade After School' : 'Editar Atividade After School'}
+          largo={true}
           onSalvar={() => doSave(salvarAtividadeAfter(editandoAfter), setEditandoAfter)} carregando={carregando}>
           {editandoAfter && (
-            <div className="space-y-4">
-              <CampoTexto label="Nome da Atividade" value={editandoAfter.nome} onChange={v => setEditandoAfter({ ...editandoAfter, nome: v })} />
-              <CampoSelect label="Categoria" value={editandoAfter.categoria} options={['Esporte', 'Oficina', 'Reforço', 'Outro']} onChange={v => setEditandoAfter({ ...editandoAfter, categoria: v })} />
-              <div className="grid grid-cols-2 gap-4">
-                <CampoTexto label="Professor" value={editandoAfter.nomeProfessor} onChange={v => setEditandoAfter({ ...editandoAfter, nomeProfessor: v })} />
-                <CampoTexto label="Local" value={editandoAfter.local} onChange={v => setEditandoAfter({ ...editandoAfter, local: v })} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <CampoTexto label="Horário de Início" value={editandoAfter.horarioInicio} tipo="time" onChange={v => setEditandoAfter({ ...editandoAfter, horarioInicio: v })} />
-                <CampoTexto label="Horário de Término" value={editandoAfter.horarioFim} tipo="time" onChange={v => setEditandoAfter({ ...editandoAfter, horarioFim: v })} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <CampoTexto label="Alunos Matriculados" value={editandoAfter.quantidadeAlunos?.toString() || '0'} tipo="number" onChange={v => setEditandoAfter({ ...editandoAfter, quantidadeAlunos: parseInt(v) })} />
-                <CampoTexto label="Vagas Totais" value={editandoAfter.vagas?.toString() || '20'} tipo="number" onChange={v => setEditandoAfter({ ...editandoAfter, vagas: parseInt(v) })} />
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1 block">Dias da Semana</label>
-                <div className="flex flex-wrap gap-2">
-                  {DIAS_SEMANA.map(dia => (
-                    <label key={dia} className="flex items-center gap-2 bg-surface-container p-2 rounded-lg text-xs font-bold cursor-pointer">
-                      <input type="checkbox" checked={editandoAfter.dias?.includes(dia)} onChange={e => {
-                        const dias = e.target.checked
-                          ? [...(editandoAfter.dias || []), dia]
-                          : (editandoAfter.dias || []).filter((d: string) => d !== dia);
-                        setEditandoAfter({ ...editandoAfter, dias });
-                      }} className="rounded text-primary" />
-                      {dia}
-                    </label>
-                  ))}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1.5 h-6 bg-primary rounded-full" />
+                  <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.3em]">Configurações da Atividade</h4>
                 </div>
-              </div>
-              <CampoTexto label="Descrição / Detalhes" value={editandoAfter.descricao || ''} onChange={v => setEditandoAfter({ ...editandoAfter, descricao: v })} />
 
-              <div className="mt-6 pt-4 border-t border-outline-variant/20">
-                <SeletorAlunos
-                  alunos={alunosBase}
-                  selecionados={editandoAfter.listaAlunos || []}
-                  onChange={v => setEditandoAfter({ ...editandoAfter, listaAlunos: v })}
-                />
+                <CampoTexto label="Nome da Atividade" value={editandoAfter.nome} onChange={v => setEditandoAfter({ ...editandoAfter, nome: v })} />
+                <CampoSelect label="Categoria" value={editandoAfter.categoria} options={['Esporte', 'Oficina', 'Reforço', 'Outro']} onChange={v => setEditandoAfter({ ...editandoAfter, categoria: v })} />
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <CampoTexto label="Professor" value={editandoAfter.nomeProfessor} onChange={v => setEditandoAfter({ ...editandoAfter, nomeProfessor: v })} />
+                  <CampoTexto label="Local" value={editandoAfter.local} onChange={v => setEditandoAfter({ ...editandoAfter, local: v })} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <CampoTexto label="Horário de Início" value={editandoAfter.horarioInicio} tipo="time" onChange={v => setEditandoAfter({ ...editandoAfter, horarioInicio: v })} />
+                  <CampoTexto label="Horário de Término" value={editandoAfter.horarioFim} tipo="time" onChange={v => setEditandoAfter({ ...editandoAfter, horarioFim: v })} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <CampoTexto label="Alunos Matriculados" value={editandoAfter.quantidadeAlunos?.toString() || '0'} tipo="number" onChange={v => setEditandoAfter({ ...editandoAfter, quantidadeAlunos: parseInt(v) })} />
+                  <CampoTexto label="Vagas Totais" value={editandoAfter.vagas?.toString() || '20'} tipo="number" onChange={v => setEditandoAfter({ ...editandoAfter, vagas: parseInt(v) })} />
+                </div>
+
+                <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                  <label className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3 block">Dias da Semana</label>
+                  <div className="flex flex-wrap gap-2">
+                    {DIAS_SEMANA.map(dia => (
+                      <label key={dia} className="flex items-center gap-2 bg-black/40 p-2.5 rounded-xl text-[10px] font-black uppercase cursor-pointer hover:bg-primary/20 transition-all border border-white/5">
+                        <input type="checkbox" checked={editandoAfter.dias?.includes(dia)} onChange={e => {
+                          const dias = e.target.checked
+                            ? [...(editandoAfter.dias || []), dia]
+                            : (editandoAfter.dias || []).filter((d: string) => d !== dia);
+                          setEditandoAfter({ ...editandoAfter, dias });
+                        }} className="rounded text-primary bg-black border-white/20" />
+                        {dia}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                
+                <CampoTexto label="Descrição / Detalhes" value={editandoAfter.descricao || ''} onChange={v => setEditandoAfter({ ...editandoAfter, descricao: v })} />
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1.5 h-6 bg-[#fbbf24] rounded-full" />
+                  <h4 className="text-[10px] font-black uppercase text-[#fbbf24] tracking-[0.3em]">Lista de Participantes</h4>
+                </div>
+                <div className="bg-black/20 rounded-[2rem] border border-white/5 overflow-hidden">
+                  <SeletorAlunos
+                    alunos={alunosBase}
+                    selecionados={editandoAfter.listaAlunos || []}
+                    onChange={v => setEditandoAfter({ ...editandoAfter, listaAlunos: v })}
+                  />
+                </div>
               </div>
             </div>
           )}
