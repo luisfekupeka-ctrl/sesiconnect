@@ -252,7 +252,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           @page { size: A4; margin: 0; }
-          body { background: white !important; }
+          body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           body * { visibility: hidden; }
           #printable-occurrence, #printable-occurrence * { visibility: visible; }
           #printable-occurrence {
@@ -263,6 +263,8 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
             height: 297mm;
             padding: 20mm !important;
             background: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
           .print\\:hidden { display: none !important; }
           .print\\:block { display: block !important; }
