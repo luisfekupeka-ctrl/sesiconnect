@@ -5,9 +5,10 @@ import { Printer, X, User, ClipboardList, MapPin, CheckSquare, Square } from 'lu
 interface Props {
   ocorrencia: RegistroOcorrencia;
   onClose: () => void;
+  isPrintOnly?: boolean;
 }
 
-export default function FichaOcorrencia({ ocorrencia, onClose }: Props) {
+export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Props) {
   // Configurações dinâmicas de assinatura
   const [configAssinaturas, setConfigAssinaturas] = useState({
     mostrarAluno: true,
@@ -22,9 +23,11 @@ export default function FichaOcorrencia({ ocorrencia, onClose }: Props) {
     window.print();
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:p-0 print:bg-white">
-      <div className="bg-white w-full max-w-5xl max-h-[95vh] overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row print:shadow-none print:max-h-none print:rounded-none">
+  const content = (
+    <div className={cn(
+        "bg-white w-full max-w-5xl flex flex-col md:flex-row print:shadow-none print:max-h-none print:rounded-none",
+        !isPrintOnly ? "max-h-[95vh] overflow-hidden rounded-[2.5rem] shadow-2xl" : "rounded-none"
+    )}>
         
         {/* Configurações (Esquerda) - Oculta na impressão */}
         <div className="w-full md:w-80 bg-gray-50 border-r border-gray-100 p-8 flex flex-col gap-6 print:hidden overflow-y-auto">
@@ -215,7 +218,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose }: Props) {
           </div>
         </div>
       </div>
-
+      
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           body * { visibility: hidden; }
@@ -229,6 +232,14 @@ export default function FichaOcorrencia({ ocorrencia, onClose }: Props) {
           .print\\:hidden { display: none !important; }
         }
       `}} />
+    </div>
+  );
+
+  if (isPrintOnly) return content;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:p-0 print:bg-white overflow-y-auto">
+      {content}
     </div>
   );
 }

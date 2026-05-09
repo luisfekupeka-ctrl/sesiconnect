@@ -720,6 +720,21 @@ export async function registrarAtrasoProfessor(payload: {
   return !error;
 }
 
+export async function arquivarELimparMes(mes: number, ano: number): Promise<boolean> {
+  // O Supabase não tem uma função nativa de "exportar e apagar" atômica para o cliente,
+  // então apenas removemos os registros após o usuário confirmar o download no front.
+  const inicio = new Date(ano, mes, 1).toISOString();
+  const fim = new Date(ano, mes + 1, 0, 23, 59, 59).toISOString();
+
+  const { error } = await supabase
+    .from('ocorrencias')
+    .delete()
+    .gte('criado_em', inicio)
+    .lte('criado_em', fim);
+
+  return !error;
+}
+
 // ============================================================
 // MODELOS DE FORMULÁRIO
 // ============================================================

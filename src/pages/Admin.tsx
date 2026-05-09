@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 import FichaOcorrencia from '../components/FichaOcorrencia';
+import ExploradorProntuario from '../components/ExploradorProntuario';
 import { RegistroOcorrencia } from '../types';
 import { Printer } from 'lucide-react';
 import {
@@ -33,7 +34,7 @@ import {
 type AbaAdmin =
   | 'alunos' | 'professores' | 'gestao-monitores' | 'substituicoes'
   | 'locais' | 'grade-professores'
-  | 'formularios' | 'language-lab' | 'after-school';
+  | 'formularios' | 'language-lab' | 'after-school' | 'prontuario';
 
 
 
@@ -409,6 +410,7 @@ export default function Admin() {
     { id: 'language-lab', rotulo: 'Idioma', icone: BookOpen, badge: (languageLab || []).length },
     { id: 'after-school', rotulo: 'After School', icone: Clock, badge: (atividadesAfter || []).length },
     { id: 'formularios', rotulo: 'Ocorrências', icone: FileSpreadsheet, badge: (modelosFormulario || []).length },
+    { id: 'prontuario', rotulo: 'Prontuário Explorer', icone: DoorOpen },
   ];
 
   return (
@@ -1208,115 +1210,130 @@ export default function Admin() {
                 titulo={editandoModelo?.id === 'novo' ? 'Novo Modelo de Formulário' : 'Editar Modelo de Formulário'}
                 onSalvar={() => doSave(salvarModeloFormulario(editandoModelo), setEditandoModelo)} carregando={carregando}>
                 {editandoModelo && (
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Lado Esquerdo: Configurações Gerais */}
-                    <div className="md:col-span-4 space-y-6">
-                      <div className="p-6 bg-surface-container-low rounded-3xl space-y-4">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Informações Gerais</h4>
-                        <CampoTexto label="Nome do Formulário" value={editandoModelo.nome} onChange={v => setEditandoModelo({ ...editandoModelo, nome: v })} />
-                        <CampoTexto label="Descrição / Instruções" value={editandoModelo.descricao} onChange={v => setEditandoModelo({ ...editandoModelo, descricao: v })} />
-                      </div>
-
-                      <div className="p-6 bg-surface-container-low rounded-3xl space-y-4">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Quick Add: Clique para Adicionar</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {[
-                            { tipo: 'texto', rotulo: 'Texto', icone: AlignLeft },
-                            { tipo: 'area_texto', rotulo: 'Longo', icone: List },
-                            { tipo: 'selecao', rotulo: 'Lista', icone: ChevronDownSquare },
-                            { tipo: 'radio', rotulo: 'Escolha', icone: CircleDot },
-                            { tipo: 'checkbox', rotulo: 'Caixas', icone: CheckSquare },
-                            { tipo: 'serie_escolar', rotulo: 'Série', icone: GraduationCap },
-                            { tipo: 'autocomplete_aluno', rotulo: 'Aluno', icone: Users },
-                          ].map(t => (
-                            <button key={t.tipo} onClick={() => setEditandoModelo({ ...editandoModelo, campos: [...(editandoModelo.campos || []), { id: `f-${Date.now()}`, tipo: t.tipo as any, rotulo: t.rotulo, obrigatorio: false }] })}
-                              className="flex flex-col items-center justify-center p-3 bg-surface-container-highest rounded-2xl hover:bg-primary/10 hover:text-primary transition-all gap-1 text-center">
-                              <t.icone size={18} />
-                              <span className="text-[9px] font-black uppercase">{t.rotulo}</span>
-                            </button>
-                          ))}
+                    <div className="lg:col-span-1 space-y-6">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="w-1.5 h-6 bg-primary rounded-full" />
+                            <h4 className="text-xs font-black uppercase text-primary tracking-[0.3em]">Informações Gerais</h4>
                         </div>
-                      </div>
+                        <CampoTexto label="Nome do Formulário" value={editandoModelo.nome} onChange={v => setEditandoModelo({ ...editandoModelo, nome: v })} />
+                        <div className="mt-4">
+                            <CampoTexto label="Descrição / Instruções" value={editandoModelo.descricao} onChange={v => setEditandoModelo({ ...editandoModelo, descricao: v })} />
+                        </div>
+
+                        <div className="mt-10">
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
+                                <h4 className="text-xs font-black uppercase text-blue-500 tracking-[0.3em]">Quick Add: Clique para Adicionar</h4>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                {[
+                                    { tipo: 'texto', rotulo: 'Texto Curto', icon: AlignLeft },
+                                    { tipo: 'longo', rotulo: 'Texto Longo', icon: List },
+                                    { tipo: 'selecao', rotulo: 'Seleção (Dropdown)', icon: ChevronDownSquare },
+                                    { tipo: 'radio', rotulo: 'Escolha Única', icon: CircleDot },
+                                    { tipo: 'checkbox', rotulo: 'Caixas de Seleção', icon: CheckSquare },
+                                    { tipo: 'sessao', rotulo: 'Título de Sessão', icon: AlignLeft },
+                                    { tipo: 'aluno', rotulo: 'Aluno (Base de Dados)', icon: GraduationCap }
+                                ].map(t => (
+                                    <button key={t.tipo} onClick={() => setEditandoModelo({ ...editandoModelo, campos: [...(editandoModelo.campos || []), { id: `f-${Date.now()}`, tipo: t.tipo as any, rotulo: t.rotulo, obrigatorio: false }] })}
+                                        className="flex flex-col items-center justify-center p-5 bg-white/5 border border-white/10 rounded-2xl hover:bg-primary/20 hover:border-primary/50 transition-all group">
+                                        <t.icon size={20} className="mb-2 text-primary group-hover:scale-110 transition-transform" />
+                                        <span className="text-[10px] font-black uppercase tracking-tighter text-white/60 group-hover:text-white">{t.rotulo}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Lado Direito: Lista de Campos */}
-                    <div className="md:col-span-8 space-y-4">
-                      <div className="flex items-center justify-between px-2">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Estrutura do Formulário ({editandoModelo.campos?.length || 0} campos)</h4>
-                      </div>
+                    {/* Lado Direito: Estrutura do Formulário */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="w-1.5 h-6 bg-amber-500 rounded-full" />
+                                <h4 className="text-xs font-black uppercase tracking-widest text-on-surface-variant">Estrutura do Formulário ({editandoModelo.campos?.length || 0} campos)</h4>
+                            </div>
+                        </div>
 
-                      <div className="space-y-3">
+                        <div className="space-y-4">
                         {editandoModelo.campos?.length === 0 ? (
-                          <div className="p-12 text-center border-2 border-dashed border-outline-variant/20 rounded-3xl opacity-40">
-                            <Plus size={24} className="mx-auto mb-2" />
-                            <p className="text-[10px] font-black uppercase">Adicione campos usando o painel ao lado</p>
-                          </div>
+                            <div className="p-20 border-2 border-dashed border-white/5 rounded-[3rem] flex flex-col items-center justify-center text-center opacity-20">
+                                <ClipboardList size={64} className="mb-4" />
+                                <p className="text-sm font-black uppercase tracking-widest">Nenhum campo adicionado ainda</p>
+                            </div>
                         ) : (
                           editandoModelo.campos?.map((campo: any, idx: number) => (
-                            <div key={campo.id} className="p-5 bg-surface-container-low rounded-3xl border border-outline-variant/10 space-y-4 relative group hover:border-primary/20 transition-all">
+                            <motion.div layout key={campo.id} className="p-8 bg-surface-container-high rounded-[2.5rem] border border-white/5 relative group shadow-xl">
                               <button onClick={() => setEditandoModelo({ ...editandoModelo, campos: editandoModelo.campos.filter((c: any) => c.id !== campo.id) })}
-                                className="absolute top-4 right-4 p-1.5 text-on-surface-variant/30 hover:text-red-500 bg-surface-container-highest rounded-lg transition-colors"><Trash2 size={14} /></button>
+                                className="absolute top-6 right-6 p-2 bg-red-500/10 text-red-500 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white">
+                                <Trash2 size={16} />
+                              </button>
 
-                              <div className="flex gap-4 items-start">
-                                <div className="flex-1 grid grid-cols-2 gap-4">
-                                  <div>
-                                    <label className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest mb-1 block">Rótulo / Pergunta</label>
-                                    <input type="text" value={campo.rotulo} onChange={e => {
-                                      const novos = [...editandoModelo.campos];
-                                      novos[idx].rotulo = e.target.value;
-                                      setEditandoModelo({ ...editandoModelo, campos: novos });
-                                    }} className="bg-surface-container-highest px-4 py-3 rounded-xl text-xs font-black w-full outline-none focus:ring-2 ring-primary/20" placeholder="Ex: Motivo da falta" />
-                                  </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase text-white/40 tracking-widest ml-2">Rótulo / Pergunta</label>
+                                    <input type="text" value={campo.rotulo}
+                                      onChange={e => {
+                                        const novos = [...editandoModelo.campos];
+                                        novos[idx].rotulo = e.target.value;
+                                        setEditandoModelo({ ...editandoModelo, campos: novos });
+                                      }}
+                                      className="w-full bg-black/40 border border-white/10 p-5 rounded-2xl text-sm font-bold focus:border-primary outline-none transition-all" />
+                                </div>
 
-                                  <div>
-                                    <label className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest mb-1 block">Tipo de Resposta</label>
-                                    <select value={campo.tipo} onChange={e => {
-                                      const novos = [...editandoModelo.campos];
-                                      novos[idx].tipo = e.target.value as any;
-                                      setEditandoModelo({ ...editandoModelo, campos: novos });
-                                    }} className="bg-surface-container-highest px-4 py-3 rounded-xl text-xs font-black w-full outline-none">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase text-white/40 tracking-widest ml-2">Tipo de Resposta</label>
+                                    <select value={campo.tipo}
+                                      onChange={e => {
+                                        const novos = [...editandoModelo.campos];
+                                        novos[idx].tipo = e.target.value as any;
+                                        setEditandoModelo({ ...editandoModelo, campos: novos });
+                                      }}
+                                      className="w-full bg-black/40 border border-white/10 p-5 rounded-2xl text-sm font-black uppercase outline-none focus:border-primary transition-all">
                                       <option value="texto">Texto Curto</option>
-                                      <option value="area_texto">Texto Longo</option>
+                                      <option value="longo">Texto Longo</option>
                                       <option value="selecao">Seleção (Dropdown)</option>
-                                      <option value="radio">Múltipla Escolha (Radio)</option>
+                                      <option value="radio">Escolha Única</option>
                                       <option value="checkbox">Caixas de Seleção</option>
-                                      <option value="serie_escolar">Série Escolar (Padrão)</option>
-                                      <option value="autocomplete_aluno">Aluno (Base de Dados)</option>
+                                      <option value="sessao">Título de Sessão</option>
+                                      <option value="aluno">Aluno (Base de Dados)</option>
                                     </select>
+                                </div>
+
+                                {(campo.tipo === 'selecao' || campo.tipo === 'radio' || campo.tipo === 'checkbox') && (
+                                  <div className="md:col-span-2 space-y-2">
+                                      <label className="text-xs font-black uppercase text-primary/60 tracking-widest ml-2">Opções (separe por vírgula)</label>
+                                      <textarea value={campo.opcoes?.join(', ') || ''}
+                                        onChange={e => {
+                                          const novos = [...editandoModelo.campos];
+                                          novos[idx].opcoes = e.target.value.split(',').map(s => s.trim());
+                                          setEditandoModelo({ ...editandoModelo, campos: novos });
+                                        }}
+                                        className="w-full bg-black/40 border border-primary/20 p-5 rounded-2xl text-xs font-bold focus:border-primary outline-none transition-all" rows={2} />
                                   </div>
+                                )}
+
+                                <div className="md:col-span-2 flex items-center gap-3">
+                                    <button
+                                      onClick={() => {
+                                        const novos = [...editandoModelo.campos];
+                                        novos[idx].obrigatorio = !novos[idx].obrigatorio;
+                                        setEditandoModelo({ ...editandoModelo, campos: novos });
+                                      }}
+                                      className="flex items-center gap-3 group"
+                                    >
+                                      <div className={cn("w-12 h-6 rounded-full p-1 transition-all", campo.obrigatorio ? "bg-primary" : "bg-white/10")}>
+                                          <div className={cn("w-4 h-4 bg-white rounded-full transition-all", campo.obrigatorio ? "translate-x-6" : "translate-x-0")} />
+                                      </div>
+                                      <span className="text-xs font-black uppercase tracking-widest text-white/60">Obrigatório</span>
+                                    </button>
                                 </div>
                               </div>
-
-                              {['selecao', 'radio', 'checkbox'].includes(campo.tipo) && (
-                                <div className="pt-2">
-                                  <label className="text-[8px] font-black text-primary uppercase tracking-widest mb-1 block">Opções (separe por vírgula)</label>
-                                  <input type="text" placeholder="Opção 1, Opção 2, Opção 3..." value={campo.opcoes?.join(', ') || ''}
-                                    onChange={e => {
-                                      const novos = [...editandoModelo.campos];
-                                      novos[idx].opcoes = e.target.value.split(',').map(s => s.trim());
-                                      setEditandoModelo({ ...editandoModelo, campos: novos });
-                                    }} className="bg-surface-container-highest px-4 py-3 rounded-xl text-[10px] font-bold w-full outline-none border border-primary/5 focus:border-primary/20" />
-                                </div>
-                              )}
-
-                              <div className="flex items-center gap-6 pt-2">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                  <div className="relative">
-                                    <input type="checkbox" checked={campo.obrigatorio} onChange={e => {
-                                      const novos = [...editandoModelo.campos];
-                                      novos[idx].obrigatorio = e.target.checked;
-                                      setEditandoModelo({ ...editandoModelo, campos: novos });
-                                    }} className="sr-only peer" />
-                                    <div className="w-8 h-4 bg-surface-container-highest rounded-full peer peer-checked:bg-primary transition-all"></div>
-                                    <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-surface-container-low rounded-full peer-checked:left-4.5 transition-all"></div>
-                                  </div>
-                                  <span className="text-[9px] font-black uppercase text-on-surface-variant">Obrigatório</span>
-                                </label>
-                              </div>
-                            </div>
+                            </motion.div>
                           ))
                         )}
-                      </div>
+                        </div>
                     </div>
                   </div>
                 )}
@@ -1344,31 +1361,41 @@ export default function Admin() {
                       const matchAlunos = ativ.listaAlunos?.some((nome: string) => nome.toLowerCase().includes(q));
                       return !q || ativ.nome.toLowerCase().includes(q) || ativ.categoria.toLowerCase().includes(q) || (ativ.nomeProfessor || '').toLowerCase().includes(q) || matchAlunos;
                     }).map(ativ => (
-                      <div key={ativ.id} className="bg-surface-container-low p-6 rounded-[2.5rem] border border-amber-500/10 group hover:bg-amber-500/5 transition-all">
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="px-3 py-1 bg-amber-500 text-on-surface-bright rounded-full text-[10px] font-black uppercase tracking-widest">
+                      <div key={ativ.id} className="bg-surface-container-low p-8 rounded-[3rem] border border-amber-500/20 group hover:bg-amber-500/5 transition-all shadow-xl">
+                        <div className="flex justify-between items-start mb-6">
+                          <div className="px-4 py-1.5 bg-amber-500 text-on-surface-bright rounded-full text-xs font-black uppercase tracking-widest">
                             {ativ.categoria}
                           </div>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                            <button onClick={() => setEditandoAfter(ativ)} className="p-1.5 bg-surface-container-high rounded-lg hover:text-primary"><Eye size={12} /></button>
-                            <button onClick={() => { if (confirm('Excluir atividade?')) doDelete(excluirAtividadeAfter(ativ.id)); }} className="p-1.5 bg-surface-container-high rounded-lg hover:text-red-500"><Trash2 size={12} /></button>
+                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                            <button onClick={() => setEditandoAfter(ativ)} className="p-2.5 bg-surface-container-high rounded-xl hover:text-primary transition-all"><Eye size={16} /></button>
+                            <button onClick={() => { if (confirm('Excluir atividade?')) doDelete(excluirAtividadeAfter(ativ.id)); }} className="p-2.5 bg-surface-container-high rounded-xl hover:text-red-500 transition-all"><Trash2 size={16} /></button>
                           </div>
                         </div>
-                        <h3 className="text-sm font-black">{ativ.nome}</h3>
-                        <p className="text-[11px] font-bold text-on-surface-variant mt-1">{ativ.nomeProfessor} · {ativ.local}</p>
-                        <div className="mt-4 flex flex-wrap gap-1">
+                        <h3 className="text-lg font-black text-white">{ativ.nome}</h3>
+                        <p className="text-xs font-bold text-on-surface-variant mt-2 uppercase tracking-wide">{ativ.nomeProfessor} · {ativ.local}</p>
+                        <div className="mt-6 flex flex-wrap gap-2">
                           {ativ.dias.map(d => (
-                            <span key={d} className="px-1.5 py-0.5 bg-surface-container-high rounded text-[7px] font-black uppercase">{d.slice(0, 3)}</span>
+                            <span key={d} className="px-3 py-1 bg-surface-container-high border border-white/5 rounded-lg text-[10px] font-black uppercase tracking-widest text-on-surface-variant">{d.slice(0, 3)}</span>
                           ))}
                         </div>
-                        <div className="mt-4 pt-3 border-t border-outline-variant/10 flex justify-between items-center text-[10px] font-black uppercase">
-                          <span className="text-amber-600">{ativ.horarioInicio} - {ativ.horarioFim}</span>
-                          <span className="text-on-surface-variant">{ativ.quantidadeAlunos} / {ativ.vagas || '∞'} Alunos</span>
+                        <div className="mt-8 pt-4 border-t border-white/5 flex justify-between items-center text-xs font-black uppercase tracking-widest">
+                          <span className="text-amber-500">{ativ.horarioInicio} — {ativ.horarioFim}</span>
+                          <span className="text-on-surface-variant/60">{ativ.quantidadeAlunos} / {ativ.vagas || '∞'} Alunos</span>
                         </div>
                       </div>
                     ))}
                 </div>
               </Painel>
+            </motion.div>
+          )}
+
+          {abaAtiva === 'prontuario' && (
+            <motion.div key="prontuario" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <ExploradorProntuario 
+                alunos={alunos} 
+                ocorrencias={ocorrencias} 
+                atualizar={carregarDados} 
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -1769,9 +1796,9 @@ function ModalForm({ aberto, onClose, titulo, onSalvar, carregando, children, la
           {children}
         </div>
         <div className="flex gap-4 pt-8 border-t border-white/5">
-          <button type="button" onClick={onClose} className="flex-1 py-4 text-white/40 font-black text-[10px] uppercase tracking-widest hover:text-white transition-all">Cancelar</button>
+          <button type="button" onClick={onClose} className="flex-1 py-4 text-white/40 font-black text-xs uppercase tracking-widest hover:text-white transition-all">Cancelar</button>
           <button type="button" onClick={onSalvar} disabled={carregando}
-            className="flex-[2] py-4 bg-[#42a0f5] text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-xl shadow-[#42a0f5]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
+            className="flex-[2] py-4 bg-[#42a0f5] text-black rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-xl shadow-[#42a0f5]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
             {carregando ? 'Processando...' : 'Salvar Alterações'}
           </button>
         </div>
@@ -1782,8 +1809,8 @@ function ModalForm({ aberto, onClose, titulo, onSalvar, carregando, children, la
 
 function CampoTexto({ label, value, onChange, tipo = 'text' }: { label: string; value: string; onChange: (v: string) => void; tipo?: string }) {
   return (
-    <div>
-      <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1 block">{label}</label>
+    <div className="space-y-1.5">
+      <label className="text-xs font-black text-white/40 uppercase tracking-widest block ml-2">{label}</label>
       <input type={tipo} value={value || ''} onChange={e => onChange(e.target.value)} placeholder={label}
         className="campo-input" />
     </div>
@@ -1792,8 +1819,8 @@ function CampoTexto({ label, value, onChange, tipo = 'text' }: { label: string; 
 
 function CampoSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void }) {
   return (
-    <div>
-      <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1 block">{label}</label>
+    <div className="space-y-1.5">
+      <label className="text-xs font-black text-white/40 uppercase tracking-widest block ml-2">{label}</label>
       <select value={value || ''} onChange={e => onChange(e.target.value)} className="campo-input">
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
