@@ -111,26 +111,45 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
           </div>
 
           {/* Área de Impressão (Direita) */}
-          <div id="printable-occurrence" className="flex-1 overflow-y-auto p-12 bg-white print:overflow-visible print:p-0 custom-scrollbar relative border-t-[12px] border-amber-400">
+          <div id="printable-occurrence" className="flex-1 overflow-y-auto p-12 bg-white print:overflow-visible print:p-0 custom-scrollbar relative">
             
-            {/* Elementos Institucionais (Shapes e Logos) */}
-            <div className="absolute top-0 left-0 w-32 h-32 bg-gray-100 -translate-x-1/2 -translate-y-1/2 rotate-45 print:block hidden" />
-            <div className="absolute top-0 right-0 w-full h-1.5 bg-blue-600 print:block hidden" />
+            {/* Shapes Institucionais (Topo Esquerda) */}
+            <div className="absolute top-0 left-0 w-full h-40 print:block hidden overflow-hidden pointer-events-none">
+              {/* Forma Cinza */}
+              <div 
+                className="absolute top-0 left-0 w-[240px] h-full bg-[#e5e5e5]" 
+                style={{ clipPath: 'polygon(0 0, 100% 0, 65% 100%, 0 100%)' }}
+              />
+              {/* Forma Amarela */}
+              <div 
+                className="absolute top-0 left-0 w-[50px] h-[180px] bg-[#fab700]" 
+                style={{ clipPath: 'polygon(0 0, 30% 0, 100% 100%, 0 100%)' }}
+              />
+            </div>
             
-            <div className="flex justify-between items-start mb-12">
-              <div className="pt-4">
-                <div className="text-3xl font-black tracking-tighter text-blue-900">SESI <span className="text-amber-500">CONNECT</span></div>
-                <div className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Serviço Social da Indústria</div>
+            <div className="flex justify-between items-start mb-12 relative z-10">
+              <div className="pt-6 pl-2">
+                <div className="text-[8px] font-black tracking-[0.5em] text-blue-900/40 uppercase">SESI CONNECT SYSTEM</div>
               </div>
-              <div className="flex flex-col items-end">
-                <div className="bg-blue-900 text-white px-4 py-1 text-[10px] font-black uppercase tracking-widest rounded-sm mb-2">Colégio</div>
-                <div className="text-4xl font-black text-gray-900 tracking-tighter leading-none">Sesi</div>
-                <div className="bg-amber-400 px-3 py-0.5 text-[9px] font-black uppercase tracking-widest mt-1">Internacional</div>
+              
+              {/* Logo Colégio Sesi Internacional (Direita) */}
+              <div className="flex flex-col items-end pr-4">
+                <div className="flex items-center gap-1.5 mb-[-8px]">
+                   <span className="text-xs font-bold text-[#002b45] lowercase">colégio</span>
+                   <div className="w-2 h-2 rounded-full bg-[#002b45] mt-1" />
+                </div>
+                <div className="text-[64px] font-black text-[#002b45] tracking-tighter leading-none mb-1">Sesi</div>
+                <div 
+                  className="bg-[#fab700] px-4 py-1 mt-[-4px]"
+                  style={{ clipPath: 'polygon(5% 0, 100% 0, 95% 100%, 0 100%)' }}
+                >
+                  <span className="text-sm font-black text-[#002b45] lowercase tracking-tighter">internacional</span>
+                </div>
               </div>
             </div>
 
-            <div className="mb-10 text-center border-y-4 border-amber-400/30 py-4 bg-amber-50/50">
-              <h1 className="text-xl font-black uppercase tracking-[0.2em] text-blue-900">Registro de Ocorrência Disciplinar</h1>
+            <div className="mb-10 text-center border-y-2 border-gray-900 py-6">
+              <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-[#002b45]">Registro de Ocorrência Disciplinar</h1>
             </div>
 
             <div className="space-y-12">
