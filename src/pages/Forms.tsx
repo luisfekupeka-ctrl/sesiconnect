@@ -316,7 +316,7 @@ export default function FormsPage() {
                           value={dadosFormulario[campo.rotulo] || ''} 
                           onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} 
                           rows={12} 
-                          className="w-full bg-surface-container-low border-none rounded-2xl p-6 text-sm font-medium focus:ring-4 focus:ring-primary/10 transition-all resize-none shadow-inner editorial-leading text-on-surface" 
+                          className="w-full bg-surface-container-high border-2 border-white/5 rounded-2xl p-6 text-sm font-medium focus:ring-4 focus:ring-primary/20 focus:border-primary/30 transition-all resize-none shadow-inner editorial-leading text-on-surface placeholder:text-on-surface-variant/30" 
                           placeholder="Descreva detalhadamente o ocorrido, observações pedagógicas e providências tomadas..." 
                         />
                       )}

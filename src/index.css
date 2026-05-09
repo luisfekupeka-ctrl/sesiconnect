@@ -19,9 +19,9 @@
   --color-surface: #001229;
   --color-surface-bright: #001d3d;
   --color-surface-container-lowest: #00050d;
-  --color-surface-container-low: #000a1a;
-  --color-surface-container-high: #001e40;
-  --color-surface-container-highest: #003566;
+  --color-surface-container-low: #051930;
+  --color-surface-container-high: #0a2a4d;
+  --color-surface-container-highest: #0f3b6b;
   
   --color-on-surface: #f8fafc;
   --color-on-surface-variant: #94a3b8;
@@ -116,8 +116,8 @@
 
 /* === CLASSES REUTILIZÁVEIS (Admin) === */
 .campo-input {
-  @apply w-full bg-surface-container-low border border-outline/30 rounded-xl p-4 text-sm font-semibold text-on-surface outline-none transition-all;
-  @apply focus:border-primary focus:ring-2 focus:ring-primary/10;
+  @apply w-full bg-surface-container-high border border-white/10 rounded-xl p-4 text-sm font-semibold text-on-surface outline-none transition-all;
+  @apply focus:border-primary/50 focus:ring-4 focus:ring-primary/10;
 }
 
 .btn-primary {
