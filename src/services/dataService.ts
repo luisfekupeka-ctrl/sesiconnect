@@ -13,7 +13,6 @@ import type {
   GradeMonitor,
   ModeloFormulario,
   RegistroOcorrencia,
-  PeriodoConfig,
   PeriodoEscolar,
   RegistroChamada,
   StatusPresenca,
@@ -655,52 +654,6 @@ export async function salvarLocalCMS(local: Partial<LocalCMS>): Promise<boolean>
 
 export async function excluirLocalCMS(id: string): Promise<boolean> {
   const { error } = await supabase.from('locais_cms').delete().eq('id', id);
-  return !error;
-}
-
-// ============================================================
-// PERÍODOS ESCOLARES
-// ============================================================
-
-export async function buscarPeriodosEscolares(): Promise<PeriodoConfig[]> {
-  const { data } = await supabase
-    .from('periodos_escolares')
-    .select('*')
-    .order('horario_inicio', { ascending: true });
-
-  if (!data) return [];
-
-  return data.map(p => ({
-    id: p.id.toString(),
-    nome: p.nome,
-    horarioInicio: p.horario_inicio,
-    horarioFim: p.horario_fim,
-    tipo: p.tipo as PeriodoEscolar,
-    segmento: p.segmento,
-  }));
-}
-
-export async function salvarPeriodo(periodo: Partial<PeriodoConfig>): Promise<boolean> {
-  const payload: any = {
-    nome: periodo.nome,
-    horario_inicio: periodo.horarioInicio,
-    horario_fim: periodo.horarioFim,
-    tipo: periodo.tipo,
-    segmento: periodo.segmento
-  };
-
-  if (periodo.id && periodo.id !== 'novo') {
-    payload.id = parseInt(periodo.id);
-    const { error } = await supabase.from('periodos_escolares').update(payload).eq('id', payload.id);
-    return !error;
-  }
-
-  const { error } = await supabase.from('periodos_escolares').insert([payload]);
-  return !error;
-}
-
-export async function excluirPeriodo(id: string): Promise<boolean> {
-  const { error } = await supabase.from('periodos_escolares').delete().eq('id', id);
   return !error;
 }
 

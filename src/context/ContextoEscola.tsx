@@ -15,7 +15,6 @@ import {
   ModeloFormulario,
   RegistroOcorrencia,
   Professor,
-  PeriodoConfig,
   ProfessorCMS,
   LocalCMS,
 } from '../types';
@@ -25,8 +24,6 @@ import {
   extrairProfessores,
   obterAgendaProfessor,
   obterLocalizacaoProfessor,
-  obterPeriodoEscolar,
-  estaNoHorario,
 } from '../services/motorEscolar';
 import {
   buscarSalas,
@@ -37,7 +34,6 @@ import {
   buscarMonitores,
   buscarModelosFormulario,
   buscarOcorrencias,
-  buscarPeriodosEscolares,
   buscarProfessoresCMS,
   buscarLocaisCMS,
   buscarGradeMonitores,
@@ -57,7 +53,6 @@ interface ContextoEscolaType {
   locaisCMS: LocalCMS[];
   modelosFormulario: ModeloFormulario[];
   ocorrencias: RegistroOcorrencia[];
-  periodos: PeriodoConfig[];
   gradeMonitores: GradeMonitor[];
   adicionarOcorrencia: (ocorrencia: RegistroOcorrencia) => void;
   carregando: boolean;
@@ -79,34 +74,12 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
   const [modelosFormulario, setModelosFormulario] = useState<ModeloFormulario[]>([]);
   const [ocorrencias, setOcorrencias] = useState<RegistroOcorrencia[]>([]);
   const [gradeMonitores, setGradeMonitores] = useState<GradeMonitor[]>([]);
-  const [periodos, setPeriodos] = useState<PeriodoConfig[]>([
-    // 6º e 7º Anos
-    { id: '67-1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: '6e7' },
-    { id: '67-2', nome: '2ª Aula', horarioInicio: '08:20', horarioFim: '09:10', tipo: 'aula', segmento: '6e7' },
-    { id: '67-int', nome: 'Intervalo', horarioInicio: '09:10', horarioFim: '09:30', tipo: 'intervalo', segmento: '6e7' },
-    { id: '67-3', nome: '3ª Aula', horarioInicio: '09:30', horarioFim: '10:20', tipo: 'aula', segmento: '6e7' },
-    { id: '67-4', nome: '4ª Aula', horarioInicio: '10:20', horarioFim: '11:10', tipo: 'aula', segmento: '6e7' },
-    { id: '67-5', nome: '5ª Aula', horarioInicio: '11:10', horarioFim: '12:00', tipo: 'aula', segmento: '6e7' },
-
-    // 8º, 9º e Médio
-    { id: '89m-1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: '8e9' },
-    { id: '89m-2', nome: '2ª Aula', horarioInicio: '08:20', horarioFim: '09:10', tipo: 'aula', segmento: '8e9' },
-    { id: '89m-3', nome: '3ª Aula', horarioInicio: '09:10', horarioFim: '10:00', tipo: 'aula', segmento: '8e9' },
-    { id: '89m-int', nome: 'Intervalo', horarioInicio: '10:00', horarioFim: '10:20', tipo: 'intervalo', segmento: '8e9' },
-    { id: '89m-4', nome: '4ª Aula', horarioInicio: '10:20', horarioFim: '11:10', tipo: 'aula', segmento: '8e9' },
-    { id: '89m-5', nome: '5ª Aula', horarioInicio: '11:10', horarioFim: '12:00', tipo: 'aula', segmento: '8e9' },
-
-    // Médio (com extras se necessário)
-    { id: 'med-1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: 'medio' },
-    { id: 'med-int', nome: 'Intervalo', horarioInicio: '10:00', horarioFim: '10:20', tipo: 'intervalo', segmento: 'medio' },
-    { id: 'med-6', nome: '6ª Aula', horarioInicio: '12:00', horarioFim: '12:50', tipo: 'aula', segmento: 'medio' },
-  ]);
   const [carregando, setCarregando] = useState(true);
 
   const carregarDados = useCallback(async () => {
     setCarregando(true);
     try {
-      const [s, g, a, li, aa, m, mf, oc, p, pCms, lCms, gm] = await Promise.all([
+      const [s, g, a, li, aa, m, mf, oc, pCms, lCms, gm] = await Promise.all([
         buscarSalas(),
         buscarMapaSalas(),
         buscarAlunos(),
@@ -115,7 +88,6 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
         buscarMonitores(),
         buscarModelosFormulario(),
         buscarOcorrencias(),
-        buscarPeriodosEscolares(),
         buscarProfessoresCMS(),
         buscarLocaisCMS(),
         buscarGradeMonitores(),
@@ -203,7 +175,6 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
       setAtividadesAfter(aa);
       setLocaisCMS(lCms);
       setOcorrencias(oc);
-      if (p && p.length > 0) setPeriodos(p);
 
       // === LANGUAGE LAB DEMO ===
       if (li && li.length > 0) {
@@ -343,7 +314,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
 
   let estadoEscola: EstadoEscola;
   try {
-    estadoEscola = obterEstadoAtualDaEscola(horaAtual, salas || [], gradeProcessada || [], periodos || []);
+    estadoEscola = obterEstadoAtualDaEscola(horaAtual, salas || [], gradeProcessada || [], []);
   } catch (err) {
     console.error('Erro crítico no motor escolar:', err);
     estadoEscola = {
@@ -364,10 +335,8 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
       const localizacao = obterLocalizacaoProfessor(nome, horaAtual, gradeProcessada);
       const agenda = obterAgendaProfessor(nome, diaSemana, gradeProcessada);
       const horaStr = `${horaAtual.getHours().toString().padStart(2, '0')}:${horaAtual.getMinutes().toString().padStart(2, '0')}`;
-      const periodoLabel = obterPeriodoEscolar(horaStr, periodos);
-
       let status: Professor['status'] = 'presente';
-      if (localizacao && periodoLabel === 'aula') {
+      if (localizacao) {
         status = 'em_aula';
       }
 
@@ -396,7 +365,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
         agendaDoDia: agenda,
       };
     });
-  }, [gradeCompleta, horaAtual, periodos]);
+  }, [gradeCompleta, horaAtual]);
 
   const adicionarOcorrencia = useCallback((ocorrencia: RegistroOcorrencia) => {
     setOcorrencias(prev => [ocorrencia, ...prev]);
@@ -419,7 +388,6 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
       locaisCMS,
       modelosFormulario,
       ocorrencias,
-      periodos,
       gradeMonitores,
       adicionarOcorrencia,
       carregando,

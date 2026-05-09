@@ -11,7 +11,6 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 import {
-  salvarPeriodo, excluirPeriodo,
   salvarAluno, excluirAluno, excluirTodosAlunos,
   salvarMonitor, excluirMonitor, excluirTodosMonitores,
   salvarProfessorCMS, excluirProfessorCMS, excluirTodosProfessores,
@@ -30,14 +29,10 @@ import {
 // ============================================================
 type AbaAdmin =
   | 'alunos' | 'professores' | 'gestao-monitores' | 'substituicoes'
-  | 'locais' | 'grade-professores' | 'horarios'
+  | 'locais' | 'grade-professores'
   | 'formularios' | 'language-lab' | 'after-school';
 
-const SEGMENTOS_HORARIO = [
-  { id: '6e7', label: '6º e 7º Ano' },
-  { id: '8e9', label: '8º e 9º Ano' },
-  { id: 'medio', label: 'Ensino Médio' },
-];
+
 
 const ANOS_ESCOLARES = ['6º Ano', '7º Ano', '8º Ano', '9º Ano', '1º Ano EM', '2º Ano EM', '3º Ano EM'];
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
@@ -107,7 +102,6 @@ export default function Admin() {
 
   const [editandoAluno, setEditandoAluno] = useState<any>(null);
   const [editandoMonitor, setEditandoMonitor] = useState<any>(null);
-  const [editandoPeriodo, setEditandoPeriodo] = useState<any>(null);
   const [editandoLocal, setEditandoLocal] = useState<any>(null);
   const [editandoProfessor, setEditandoProfessor] = useState<any>(null);
   const [editingAlunos, setEditingAlunos] = useState<any>(null);
@@ -406,7 +400,6 @@ export default function Admin() {
     { id: 'professores', rotulo: 'Professores', icone: UserPlus, badge: (professoresCMS || []).length },
     { id: 'grade-professores', rotulo: 'Grade de Aulas', icone: Calendar },
     { id: 'gestao-monitores', rotulo: 'Monitores', icone: ClipboardList, badge: (monitores || []).length },
-    { id: 'horarios', rotulo: 'Horários', icone: Clock, badge: (periodos || []).length },
     { id: 'locais', rotulo: 'Salas', icone: MapPin, badge: (locaisCMS || []).length },
     { id: 'language-lab', rotulo: 'Idioma', icone: BookOpen, badge: (languageLab || []).length },
     { id: 'after-school', rotulo: 'After School', icone: Clock, badge: (atividadesAfter || []).length },
@@ -708,91 +701,7 @@ export default function Admin() {
             </motion.div>
           )}
 
-          {/* ===================== HORÁRIOS POR SEGMENTO ===================== */}
-          {abaAtiva === 'horarios' && (
-            <motion.div key="horarios" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-              <Painel titulo="Horários por Segmento" subtitulo="Defina os períodos de aula, intervalo e almoço para cada segmento escolar. Esses horários serão usados como base para salas e escalas."
-                acao={<button onClick={() => setEditandoPeriodo({ id: 'novo', nome: '', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: '6e7' })} className="btn-primary"><Plus size={14} /> Novo Período</button>}>
 
-                <div className="space-y-8">
-                  {SEGMENTOS_HORARIO.map(seg => {
-                    const periodosSegmento = periodos.filter(p => p.segmento === seg.id).sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
-                    return (
-                      <div key={seg.id} className="bg-surface-container-low rounded-2xl md:rounded-[2rem] p-4 md:p-6 border border-white/5">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-primary/10 flex items-center justify-center">
-                              <Clock size={20} className="text-primary" />
-                            </div>
-                            <div>
-                              <h3 className="text-base md:text-lg font-black tracking-tighter">{seg.label}</h3>
-                              <p className="text-[10px] text-on-surface-variant font-black uppercase tracking-widest">{periodosSegmento.length} Períodos</p>
-                            </div>
-                          </div>
-                          <button onClick={() => setEditandoPeriodo({ id: 'novo', nome: '', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: seg.id })} className="btn-mini">
-                            <Plus size={12} /> Adicionar
-                          </button>
-                        </div>
-
-                        {periodosSegmento.length === 0 ? (
-                          <div className="p-6 text-center bg-surface-container rounded-xl border border-dashed border-outline-variant/20">
-                            <p className="text-on-surface-variant text-xs font-medium">Nenhum período cadastrado para este segmento.</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-1.5">
-                            {periodosSegmento.map((p, idx) => {
-                              const ehPausa = p.tipo === 'intervalo' || p.tipo === 'almoco';
-                              return (
-                                <div key={p.id} className={cn(
-                                  "flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl md:rounded-2xl group transition-all",
-                                  ehPausa ? "bg-amber-500/5 border border-amber-500/10" : "bg-white/[0.02] hover:bg-primary/5 border border-transparent"
-                                )}>
-                                  <div className={cn(
-                                    "w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center text-[10px] md:text-xs font-black shrink-0",
-                                    ehPausa ? "bg-amber-500/20 text-amber-500" : "bg-primary/10 text-primary"
-                                  )}>
-                                    {ehPausa ? <Coffee size={16} /> : (idx + 1)}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs md:text-sm font-black truncate">{p.nome}</p>
-                                    <p className="text-[9px] md:text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-                                      {p.horarioInicio} — {p.horarioFim} · {p.tipo}
-                                    </p>
-                                  </div>
-                                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0">
-                                    <button onClick={() => setEditandoPeriodo(p)} className="p-1.5 md:p-2 bg-surface-container-high rounded-lg hover:text-primary"><Eye size={12} /></button>
-                                    <button onClick={() => { if (confirm('Excluir período?')) doDelete(excluirPeriodo(p.id)); }} className="p-1.5 md:p-2 bg-surface-container-high rounded-lg hover:text-red-500"><Trash2 size={12} /></button>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </Painel>
-
-              <ModalForm aberto={!!editandoPeriodo} onClose={() => setEditandoPeriodo(null)}
-                titulo={editandoPeriodo?.id === 'novo' ? 'Novo Período' : 'Editar Período'}
-                onSalvar={() => doSave(salvarPeriodo(editandoPeriodo), setEditandoPeriodo)} carregando={carregando}>
-                {editandoPeriodo && (
-                  <div className="space-y-4">
-                    <CampoTexto label="Nome do Período" value={editandoPeriodo.nome} onChange={v => setEditandoPeriodo({ ...editandoPeriodo, nome: v })} placeholder="Ex: 1ª Aula, Intervalo, Almoço..." />
-                    <div className="grid grid-cols-2 gap-4">
-                      <CampoTexto label="Início" value={editandoPeriodo.horarioInicio} onChange={v => setEditandoPeriodo({ ...editandoPeriodo, horarioInicio: v })} tipo="time" />
-                      <CampoTexto label="Fim" value={editandoPeriodo.horarioFim} onChange={v => setEditandoPeriodo({ ...editandoPeriodo, horarioFim: v })} tipo="time" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <CampoSelect label="Tipo" value={editandoPeriodo.tipo} options={['aula', 'intervalo', 'almoco']} onChange={v => setEditandoPeriodo({ ...editandoPeriodo, tipo: v })} />
-                      <CampoSelect label="Segmento" value={editandoPeriodo.segmento} options={['6e7', '8e9', 'medio']} onChange={v => setEditandoPeriodo({ ...editandoPeriodo, segmento: v })} />
-                    </div>
-                  </div>
-                )}
-              </ModalForm>
-            </motion.div>
-          )}
 
           {/* ===================== GRADE E ESCALA (SALAS + PROFS) ===================== */}
           {abaAtiva === 'grade-professores' && (
@@ -1787,26 +1696,73 @@ function CampoSelect({ label, value, options, onChange }: { label: string; value
 }
 
 function SeletorAlunos({ alunos, selecionados, onChange, turmaAlvo }: { alunos: any[]; selecionados: string[]; onChange: (selecionados: string[]) => void; turmaAlvo?: string }) {
+  const { atualizar } = useEscola();
   const [busca, setBusca] = useState('');
   const [mostrarTodos, setMostrarTodos] = useState(!turmaAlvo);
   const [modoPaste, setModoPaste] = useState(false);
   const [conteudoPaste, setConteudoPaste] = useState('');
-  const [resultadoValidacao, setResultadoValidacao] = useState<{ nome: string; encontrado: boolean; aluno?: any }[]>([]);
+  const [resultadoValidacao, setResultadoValidacao] = useState<{ id_temp: string; nome: string; encontrado: boolean; aluno?: any; buscaManual?: boolean }[]>([]);
+  const [carregandoInterno, setCarregandoInterno] = useState(false);
 
-  const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, "").trim();
 
   const handleValidarPaste = () => {
     const linhas = conteudoPaste.split('\n').map(l => l.trim()).filter(l => l);
-    const validacao = linhas.map(nomeOriginal => {
+    const validacao = linhas.map((nomeOriginal, idx) => {
       const nomeNorm = normalize(nomeOriginal);
-      const aluno = alunos.find(a => normalize(a.nome) === nomeNorm);
+      
+      // 1. Busca Exata
+      let aluno = alunos.find(a => normalize(a.nome) === nomeNorm);
+      
+      // 2. Busca por Palavras-Chave (Fallback)
+      if (!aluno) {
+        const palavrasBusca = nomeNorm.split(' ').filter(p => p.length > 2);
+        if (palavrasBusca.length > 0) {
+          aluno = alunos.find(a => {
+            const nomeAlunoNorm = normalize(a.nome);
+            return palavrasBusca.every(palavra => nomeAlunoNorm.includes(palavra));
+          });
+        }
+      }
+
       return {
+        id_temp: `${idx}-${Date.now()}`,
         nome: nomeOriginal,
         encontrado: !!aluno,
-        aluno: aluno
+        aluno: aluno,
+        buscaManual: false
       };
     });
     setResultadoValidacao(validacao);
+  };
+
+  const handleVincularManual = (id_temp: string, alunoSelecionado: any) => {
+    setResultadoValidacao(prev => prev.map(item => 
+      item.id_temp === id_temp 
+        ? { ...item, encontrado: true, aluno: alunoSelecionado, buscaManual: false } 
+        : item
+    ));
+  };
+
+  const handleCadastrarRapido = async (id_temp: string, nome: string) => {
+    setCarregandoInterno(true);
+    const novoAluno = { 
+      nome, 
+      turma: turmaAlvo || '6º Ano', 
+      ano: turmaAlvo || '6º Ano', 
+      numeroSala: 0 
+    };
+    
+    const sucesso = await salvarAluno(novoAluno);
+    if (sucesso) {
+      await atualizar();
+      setResultadoValidacao(prev => prev.map(item => 
+        item.id_temp === id_temp 
+          ? { ...item, encontrado: true, aluno: { ...novoAluno, id: 'temp-' + Date.now() } } 
+          : item
+      ));
+    }
+    setCarregandoInterno(false);
   };
 
   const handleConfirmarPaste = () => {
@@ -1814,7 +1770,6 @@ function SeletorAlunos({ alunos, selecionados, onChange, turmaAlvo }: { alunos: 
       .filter(r => r.encontrado && r.aluno)
       .map(r => r.aluno.nome);
     
-    // Unir com os já selecionados sem duplicar
     const novosSelecionados = Array.from(new Set([...selecionados, ...nomesEncontrados]));
     onChange(novosSelecionados);
     setModoPaste(false);
@@ -1853,14 +1808,17 @@ function SeletorAlunos({ alunos, selecionados, onChange, turmaAlvo }: { alunos: 
           <div className="flex gap-2 w-full sm:w-auto">
             <button 
               type="button"
-              onClick={() => setModoPaste(!modoPaste)} 
+              onClick={() => {
+                setModoPaste(!modoPaste);
+                setResultadoValidacao([]);
+              }} 
               className={cn(
                 "flex-1 sm:flex-none px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border",
                 modoPaste ? "bg-[#fbbf24] border-[#fbbf24] text-black" : "bg-white/5 border-white/10 text-on-surface-variant"
               )}>
               {modoPaste ? 'Voltar para Lista' : 'Colar Ensalamento'}
             </button>
-            {turmaAlvo && !modoPaste && (
+            {!modoPaste && turmaAlvo && (
               <button 
                 type="button"
                 onClick={() => setMostrarTodos(!mostrarTodos)} 
@@ -1888,16 +1846,21 @@ function SeletorAlunos({ alunos, selecionados, onChange, turmaAlvo }: { alunos: 
         )}
       </div>
       
-      <div className="max-h-[400px] overflow-y-auto p-4 custom-scrollbar bg-black/20">
+      <div className="max-h-[450px] overflow-y-auto p-4 custom-scrollbar bg-black/20">
         {modoPaste ? (
           <div className="space-y-4 p-2">
             {resultadoValidacao.length === 0 ? (
               <div className="space-y-4">
-                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Cole a lista de alunos (um por linha):</p>
+                <div className="bg-primary/10 p-4 rounded-2xl border border-primary/20 mb-4">
+                  <p className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
+                    <ClipboardList size={14} /> Modo Ensalamento em Massa
+                  </p>
+                  <p className="text-[10px] text-on-surface-variant font-medium mt-1">Cole nomes de PDF, Excel ou Word. O sistema buscará correspondências exatas e por palavras-chave.</p>
+                </div>
                 <textarea 
                   value={conteudoPaste}
                   onChange={e => setConteudoPaste(e.target.value)}
-                  placeholder="Nome do Aluno 1&#10;Nome do Aluno 2..."
+                  placeholder="Cole os nomes aqui (um por linha)..."
                   className="w-full h-48 bg-black border border-white/10 p-5 rounded-2xl text-sm font-medium text-white focus:border-[#fbbf24]/50 outline-none transition-all shadow-inner resize-none"
                 />
                 <button 
@@ -1906,40 +1869,92 @@ function SeletorAlunos({ alunos, selecionados, onChange, turmaAlvo }: { alunos: 
                   disabled={!conteudoPaste.trim()}
                   className="w-full py-4 bg-[#fbbf24] text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-xl shadow-[#fbbf24]/10 hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-30"
                 >
-                  Validar Nomes no Banco
+                  Validar Nomes e Buscar no Banco
                 </button>
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-2">
-                   <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Resultado da Validação:</p>
-                   <button onClick={() => setResultadoValidacao([])} className="text-[10px] font-black text-[#fbbf24] uppercase tracking-widest">Limpar e Tentar Novamente</button>
+                   <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Revisão de Correspondência:</p>
+                   <button onClick={() => setResultadoValidacao([])} className="text-[10px] font-black text-[#fbbf24] uppercase tracking-widest hover:underline">Limpar Lista</button>
                 </div>
-                <div className="space-y-2">
-                  {resultadoValidacao.map((r, i) => (
-                    <div key={i} className={cn(
-                      "flex items-center justify-between p-3 rounded-xl border",
-                      r.encontrado ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-red-500/10 border-red-500/20 text-red-500"
+                <div className="space-y-3">
+                  {resultadoValidacao.map((r) => (
+                    <div key={r.id_temp} className={cn(
+                      "flex flex-col p-4 rounded-2xl border transition-all",
+                      r.encontrado ? "bg-emerald-500/5 border-emerald-500/20" : "bg-red-500/5 border-red-500/20"
                     )}>
-                      <div className="flex items-center gap-3">
-                        {r.encontrado ? <Check size={14} /> : <X size={14} />}
-                        <span className="text-xs font-black truncate max-w-[200px]">{r.nome}</span>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                            r.encontrado ? "bg-emerald-500/20 text-emerald-500" : "bg-red-500/20 text-red-500"
+                          )}>
+                            {r.encontrado ? <Check size={16} /> : <X size={16} />}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Colado:</span>
+                            <span className="text-xs font-black truncate text-white">{r.nome}</span>
+                          </div>
+                        </div>
+
+                        {r.encontrado ? (
+                          <div className="text-right shrink-0">
+                            <span className="text-[10px] font-black text-emerald-500 uppercase block tracking-tighter">Match: {r.aluno.nome}</span>
+                            <span className="text-[8px] font-black uppercase text-on-surface-variant opacity-60 italic">{r.aluno.turma}</span>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2 shrink-0">
+                            <button 
+                              onClick={() => setResultadoValidacao(prev => prev.map(it => it.id_temp === r.id_temp ? {...it, buscaManual: !it.buscaManual} : it))}
+                              className="px-3 py-2 bg-white/5 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-white/10"
+                            >
+                              {r.buscaManual ? 'Fechar' : 'Buscar'}
+                            </button>
+                            <button 
+                              disabled={carregandoInterno}
+                              onClick={() => handleCadastrarRapido(r.id_temp, r.nome)}
+                              className="px-3 py-2 bg-red-500/10 text-red-500 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-500/20"
+                            >
+                              {carregandoInterno ? '...' : '+ Novo'}
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      {r.encontrado ? (
-                        <span className="text-[8px] font-black uppercase bg-emerald-500/20 px-2 py-1 rounded-full">Encontrado: {r.aluno.turma}</span>
-                      ) : (
-                        <span className="text-[8px] font-black uppercase bg-red-500/20 px-2 py-1 rounded-full">Não encontrado</span>
+
+                      {r.buscaManual && (
+                        <div className="mt-4 pt-4 border-t border-white/5 space-y-2 animate-in slide-in-from-top-2 duration-200">
+                          <input 
+                            autoFocus
+                            type="text" 
+                            placeholder="Pesquise o nome correto no banco..."
+                            className="w-full bg-black/40 p-3 rounded-xl text-xs font-medium border border-white/10 outline-none focus:border-primary/40"
+                            onChange={(e) => setBusca(e.target.value)}
+                          />
+                          <div className="max-h-32 overflow-y-auto space-y-1 custom-scrollbar">
+                            {alunos.filter(a => normalize(a.nome).includes(normalize(busca))).slice(0, 5).map(a => (
+                              <button key={a.id} onClick={() => handleVincularManual(r.id_temp, a)}
+                                className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-white/5 text-left transition-colors">
+                                <span className="text-xs font-bold text-white/80">{a.nome}</span>
+                                <span className="text-[8px] font-black uppercase text-on-surface-variant">{a.turma}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
                   ))}
                 </div>
-                <button 
-                  type="button"
-                  onClick={handleConfirmarPaste}
-                  className="w-full py-4 bg-primary text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all"
-                >
-                  Confirmar Ensalamento ({resultadoValidacao.filter(r => r.encontrado).length} alunos)
-                </button>
+                
+                <div className="pt-4 sticky bottom-0 bg-black/60 backdrop-blur-md pb-2">
+                  <button 
+                    type="button"
+                    onClick={handleConfirmarPaste}
+                    className="w-full py-4 bg-primary text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all"
+                  >
+                    Confirmar Ensalamento ({resultadoValidacao.filter(r => r.encontrado).length} alunos)
+                  </button>
+                </div>
               </div>
             )}
           </div>
