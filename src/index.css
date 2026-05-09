@@ -9,38 +9,38 @@
   --font-headline: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  /* === TEMA SESI CONNECT (AZUL & AMARELO) === */
-  --color-primary: #3b82f6; 
-  --color-secondary: #fbbf24;
-  --color-on-primary: #ffffff;
-  --color-on-secondary: #000000;
+  /* === TEMA SESI CONNECT (YELLOW & BLACK - PREMIUM NIGHT) === */
+  --color-primary: #fbbf24; 
+  --color-secondary: #3b82f6;
+  --color-on-primary: #000000;
+  --color-on-secondary: #ffffff;
   
-  --color-background: #000814;
-  --color-surface: #001229;
-  --color-surface-bright: #001d3d;
-  --color-surface-container-lowest: #00050d;
-  --color-surface-container-low: #051930;
-  --color-surface-container-high: #0a2a4d;
-  --color-surface-container-highest: #0f3b6b;
+  --color-background: #000000;
+  --color-surface: #0a0a0a;
+  --color-surface-bright: #121212;
+  --color-surface-container-lowest: #000000;
+  --color-surface-container-low: #0f0f0f;
+  --color-surface-container-high: #1a1a1a;
+  --color-surface-container-highest: #262626;
   
-  --color-on-surface: #f8fafc;
-  --color-on-surface-variant: #94a3b8;
+  --color-on-surface: #ffffff;
+  --color-on-surface-variant: #a3a3a3;
   --color-on-surface-bright: #ffffff;
-  --color-outline: #1e293b;
-  --color-outline-variant: rgba(59, 130, 246, 0.2);
+  --color-outline: #262626;
+  --color-outline-variant: rgba(251, 191, 36, 0.15);
 
   --color-accent-amber: #fbbf24;
   --color-accent-blue: #3b82f6;
 
-  --radius-xl: 1.5rem;
-  --radius-lg: 1rem;
-  --radius-md: 0.75rem;
+  --radius-xl: 2rem;
+  --radius-lg: 1.5rem;
+  --radius-md: 1rem;
 }
 
 @layer base {
   body {
     @apply bg-background text-on-surface font-sans;
-    background: radial-gradient(circle at 50% 0%, #003566 0%, #000814 100%);
+    background: radial-gradient(circle at 50% 0%, #1a1a00 0%, #000000 100%);
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
@@ -54,31 +54,31 @@
 
 /* Utilitários Compactos */
 .glass {
-  background: rgba(0, 18, 41, 0.8);
-  backdrop-filter: blur(15px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(10, 10, 10, 0.8);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(251, 191, 36, 0.05);
 }
 
 .glass-yellow {
-  background: rgba(251, 191, 36, 0.05);
-  border: 1px solid rgba(251, 191, 36, 0.2);
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.3);
 }
 
 .glass-blue {
-  background: rgba(59, 130, 246, 0.05);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
 .shadow-premium {
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 1);
 }
 
 .shadow-glow-yellow {
-  box-shadow: 0 0 20px rgba(251, 191, 36, 0.1);
+  box-shadow: 0 0 30px rgba(251, 191, 36, 0.15);
 }
 
 .shadow-glow-blue {
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.15);
 }
 
 .custom-scrollbar::-webkit-scrollbar {
