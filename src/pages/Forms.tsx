@@ -74,7 +74,10 @@ function AutocompleteAluno({
               >
                 <div>
                   <p className="text-sm font-black text-on-surface group-hover:text-primary transition-colors">{aluno.nome}</p>
-                  <p className="text-[10px] text-on-surface-variant font-bold">{aluno.turma} • Sala {aluno.numeroSala.toString().padStart(2, '0')}</p>
+                  <p className="text-[10px] text-on-surface-variant font-bold">
+                    {aluno.turma !== aluno.ano && `${aluno.turma} • `}
+                    {aluno.numeroSala > 0 ? `Sala ${aluno.numeroSala.toString().padStart(2, '0')}` : 'Sem Sala'}
+                  </p>
                 </div>
                 <span className="text-[9px] font-black text-on-surface-variant bg-surface-container-low px-2.5 py-1 rounded-lg">{aluno.ano}</span>
               </button>
@@ -242,13 +245,13 @@ export default function FormsPage() {
                         <div className="space-y-3">
                           <AutocompleteAluno alunos={alunos} valor={alunoSelecionado?.nome || ''} aoSelecionar={setAlunoSelecionado} />
                           {alunoSelecionado && (
-                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="grid grid-cols-3 gap-3 pt-2">
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex flex-wrap gap-3 pt-2">
                               {[
-                                { rotulo: 'Turma', valor: alunoSelecionado.turma },
                                 { rotulo: 'Ano', valor: alunoSelecionado.ano },
-                                { rotulo: 'Sala', valor: `Sala ${alunoSelecionado.numeroSala.toString().padStart(2, '0')}` },
-                              ].map(info => (
-                                <div key={info.rotulo} className="bg-primary/10 p-4 rounded-2xl border border-primary/20">
+                                { rotulo: 'Turma', valor: alunoSelecionado.turma !== alunoSelecionado.ano ? alunoSelecionado.turma : null },
+                                { rotulo: 'Sala', valor: alunoSelecionado.numeroSala > 0 ? `Sala ${alunoSelecionado.numeroSala.toString().padStart(2, '0')}` : null },
+                              ].filter(i => i.valor).map(info => (
+                                <div key={info.rotulo} className="bg-primary/10 p-4 px-6 rounded-2xl border border-primary/20 min-w-[120px]">
                                   <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-1">{info.rotulo}</p>
                                   <p className="text-sm font-black text-on-surface">{info.valor}</p>
                                 </div>
