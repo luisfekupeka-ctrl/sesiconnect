@@ -610,9 +610,9 @@ export async function salvarLocalCMS(local: Partial<LocalCMS>): Promise<boolean>
 
   const payload: any = {
     nome: local.nome.trim(),
-    numero: (local.numero !== undefined && local.numero !== null && local.numero !== '') ? Number(local.numero) : null,
+    numero: (local.numero !== undefined && local.numero !== null) ? Number(local.numero) : null,
     tipo: local.tipo || 'sala',
-    capacidade: (local.capacidade !== undefined && local.capacidade !== null && local.capacidade !== '') ? Number(local.capacidade) : 0,
+    capacidade: (local.capacidade !== undefined && local.capacidade !== null) ? Number(local.capacidade) : 0,
     lista_alunos: local.lista_alunos || []
   };
 
@@ -872,7 +872,7 @@ export async function buscarEventosEscola(): Promise<any[]> {
 }
 
 export async function salvarEvento(evento: any): Promise<boolean> {
-  const payload = {
+  const payload: any = {
     titulo: evento.titulo,
     data: evento.data,
     tipo: evento.tipo || 'evento',
@@ -889,7 +889,7 @@ export async function buscarRealocacoes(): Promise<any[]> {
 }
 
 export async function salvarRealocacao(realocacao: any): Promise<boolean> {
-  const payload = {
+  const payload: any = {
     professor_original: realocacao.professorOriginal,
     professor_substituto: realocacao.professorSubstituto || '',
     sala: realocacao.sala,

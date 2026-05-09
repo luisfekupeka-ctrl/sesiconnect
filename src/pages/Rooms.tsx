@@ -120,6 +120,7 @@ export default function RoomsPage() {  const { salas, estadoEscola, gradeComplet
 }
 
 function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, languageLab, atividadesAfter, buscaFiltro, alunos }: any) {
+  const { horaAtual } = useEscola();
   const minutosAgora = horaAtual.getHours() * 60 + horaAtual.getMinutes();
 
   const entradasDia = useMemo(() => {

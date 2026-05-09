@@ -173,6 +173,7 @@ export interface LocalCMS {
   numero?: number;
   tipo: 'sala' | 'arena' | 'quadra' | 'patio' | 'especializado';
   capacidade?: number;
+  lista_alunos?: string[];
 }
 
 // --- Formulários ---
@@ -255,7 +256,7 @@ export interface EventoEscola {
   horarios: string[]; // ["13:00 - 13:45", "13:45 - 14:30"]
 }
 
-export type AcaoRealocacao = 'Troca Completa' | 'Substituição' | 'MODO PROVA' | 'Parcial';
+export type AcaoRealocacao = string; // 'Troca Completa' | 'Substituição' | 'MODO PROVA' | 'Parcial'
 
 export interface ResultadoRealocacao {
   id: string;

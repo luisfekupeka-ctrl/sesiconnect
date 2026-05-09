@@ -168,6 +168,7 @@ export async function importarMonitores(arquivo: File): Promise<ResultadoImporta
         localPermanencia: '',
         localAlmoco: '',
         tipo: 'fixo',
+        cor: '#fbbf24',
       });
     });
 

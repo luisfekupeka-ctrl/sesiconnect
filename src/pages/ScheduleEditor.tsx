@@ -168,6 +168,63 @@ export default function ScheduleEditor() {
     if (ok) atualizar();
     setSalvando(false);
   };
+  
+  const handleCopiarParaDias = async (dias: string[]) => {
+    if (!salaSelecionada) return;
+    setSalvando(true);
+    const promessas = dias.map(dia => {
+      const entradas: Omit<EntradaGradeSala, 'id'>[] = linhas.map(l => ({
+        anoTurma: turmaEditavel,
+        numeroSala: salaSelecionada.numero,
+        nomeSala: salaSelecionada.nome,
+        diaSemana: dia,
+        horario: `${l.horarioInicio} - ${l.horarioFim}`,
+        nomeProfessor: l.professor || '—',
+        turma: turmaEditavel,
+        materia: l.materia || 'A DEFINIR',
+        tipo: l.tipo === 'laboratorio_idiomas' ? 'laboratorio_idiomas' : l.tipo === 'after' ? 'after' : 'regular',
+        listaAlunos: l.listaAlunos
+      }));
+      return salvarGradeSala(entradas);
+    });
+    const resultados = await Promise.all(promessas);
+    const ok = resultados.every(r => r);
+    setMensagem(ok ? { tipo: 'sucesso', texto: 'Grade copiada para os dias!' } : { tipo: 'erro', texto: 'Erro ao copiar.' });
+    if (ok) {
+      atualizar();
+      setModalCopiaAberto(false);
+    }
+    setSalvando(false);
+  };
+
+  const handleCopiarParaSalas = async (numerosSalas: number[]) => {
+    if (!salaSelecionada) return;
+    setSalvando(true);
+    const promessas = numerosSalas.map(num => {
+      const salaAlvo = salas.find(s => s.numero === num);
+      const entradas: Omit<EntradaGradeSala, 'id'>[] = linhas.map(l => ({
+        anoTurma: turmaEditavel,
+        numeroSala: num,
+        nomeSala: salaAlvo?.nome || `Sala ${num}`,
+        diaSemana: diaSelecionado,
+        horario: `${l.horarioInicio} - ${l.horarioFim}`,
+        nomeProfessor: l.professor || '—',
+        turma: turmaEditavel,
+        materia: l.materia || 'A DEFINIR',
+        tipo: l.tipo === 'laboratorio_idiomas' ? 'laboratorio_idiomas' : l.tipo === 'after' ? 'after' : 'regular',
+        listaAlunos: l.listaAlunos
+      }));
+      return salvarGradeSala(entradas);
+    });
+    const resultados = await Promise.all(promessas);
+    const ok = resultados.every(r => r);
+    setMensagem(ok ? { tipo: 'sucesso', texto: 'Grade copiada para as salas!' } : { tipo: 'erro', texto: 'Erro ao copiar.' });
+    if (ok) {
+      atualizar();
+      setModalCopiaSalasAberto(false);
+    }
+    setSalvando(false);
+  };
 
   const linhaAtiva = useMemo(() => linhas.find(l => l.id === linhaFocada), [linhaFocada, linhas]);
 

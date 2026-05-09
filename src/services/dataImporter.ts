@@ -65,6 +65,7 @@ export const ImportadorDados = {
       localPermanencia: '',
       localAlmoco: '',
       tipo: 'fixo',
+      cor: '#fbbf24',
     }));
   },
 

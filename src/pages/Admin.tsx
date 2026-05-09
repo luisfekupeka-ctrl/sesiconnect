@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import * as XLSX from 'xlsx';
 import {
   Shield, Upload, Check, X, Plus, Search, Eye, Trash2,
-  DoorOpen, Users, BookOpen, Clock, Calendar, UserPlus, Coffee,
-  MapPin, FileSpreadsheet, ClipboardList, BarChart3, RefreshCw, FileText,
-  AlignLeft, List, ChevronDownSquare, CircleDot, CheckSquare, GraduationCap
+  DoorOpen, Users, BookOpen, Clock, Calendar, UserPlus,
+  MapPin, FileSpreadsheet, ClipboardList, XCircle, FileText, Save,
+  List, Printer, AlignLeft, ChevronDownSquare, CircleDot, CheckSquare, GraduationCap, RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
@@ -13,7 +13,6 @@ import { useEscola } from '../context/ContextoEscola';
 import FichaOcorrencia from '../components/FichaOcorrencia';
 import ExploradorProntuario from '../components/ExploradorProntuario';
 import { RegistroOcorrencia } from '../types';
-import { Printer } from 'lucide-react';
 import {
   salvarAluno, excluirAluno, excluirTodosAlunos,
   salvarMonitor, excluirMonitor, excluirTodosMonitores,
@@ -23,7 +22,7 @@ import {
   salvarLanguageLab, excluirLanguageLab,
   salvarAtividadeAfter, excluirAtividadeAfter,
   salvarGradeMonitor, excluirGradeMonitor,
-  salvarGradeSala, getSalas,
+  salvarGradeSala, buscarSalas,
   atualizarListaAlunosGrade,
   getAlunosPorTurma
 } from '../services/dataService';
@@ -285,7 +284,7 @@ export default function Admin() {
   }
   const listaProfessores = Array.from(new Set(
     gradeCompleta.map(e => e.nomeProfessor).filter(n => n && n !== '—' && n !== 'A DEFINIR')
-  )).sort();
+  )).sort() as string[];
 
   const alunosBase = Array.isArray(alunos) ? alunos : [];
   const alunosFiltrados = alunosBase.filter(a => {
@@ -513,25 +512,29 @@ export default function Admin() {
         <AnimatePresence mode="wait">
           {abaAtiva === 'alunos' && (
             <motion.div key="alunos" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-              <Painel titulo="Gestão de Alunos" subtitulo="Suba uma lista Excel de nomes por ano escolar."
-                acao={
-                  <div className="flex gap-2">
-                    <button onClick={() => handleUploadNomes('alunos')} className="btn-secondary">
-                      <FileSpreadsheet size={14} /> Importação Master (Excel)
+              <Painel titulo="Gestão de Alunos" subtitulo="Suba uma lista Excel de nomes por ano escolar.">
+              <div className="flex flex-wrap gap-4 items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-black">Gestão de Alunos</h2>
+                  <p className="text-on-surface-variant font-medium text-sm">Suba uma lista Excel de nomes por ano escolar.</p>
+                </div>
+                <div className="flex gap-2">
+                    <button onClick={() => handleUploadNomes('alunos')} className="flex items-center gap-2 px-4 py-2 bg-surface-container-high rounded-xl text-[10px] font-black uppercase hover:bg-surface-container-highest transition-all">
+                      <FileSpreadsheet size={14} /> Importar Excel
                     </button>
-                    <button onClick={() => setEditandoAluno({ id: 'novo', nome: '', turma: '', ano: '6º Ano', numeroSala: 0 })} className="btn-primary">
+                    <button onClick={() => setEditandoAluno({ id: 'novo', nome: '', turma: '', ano: '6º Ano', numeroSala: 0 })} className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-xl text-[10px] font-black uppercase">
                       <Plus size={14} /> Novo Aluno
                     </button>
-                    <button onClick={() => handleClearAll('alunos')} className="px-4 py-2 bg-red-500/10 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all">
-                      <Trash2 size={14} /> Apagar Todos
+                    <button onClick={() => handleClearAll('alunos')} className="px-4 py-2 bg-red-500/10 text-red-500 rounded-xl text-[10px] font-black uppercase hover:bg-red-500/20 transition-all">
+                      <Trash2 size={14} /> Apagar Tudo
                     </button>
-                  </div>
-                }>
+                </div>
+              </div>
 
                 <div className="flex flex-wrap gap-2 mb-6">
                   <div className="relative flex-1 min-w-[200px]">
                     <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
-                    <input type="text" placeholder="Buscar por Nome, Ano ou Turma..." value={busca} onChange={e => setBusca(e.target.value)} className="campo-input pl-10" />
+                    <input type="text" placeholder="Buscar por Nome, Ano ou Turma..." value={busca} onChange={e => setBusca(e.target.value)} className="w-full bg-surface-container-high p-3 pl-10 rounded-xl text-xs font-black outline-none border-2 border-transparent focus:border-primary/30" />
                   </div>
                   {['Todos', ...ANOS_ESCOLARES].map(ano => (
                     <button key={ano} onClick={() => setAnoFiltro(ano)}
@@ -579,7 +582,7 @@ export default function Admin() {
                             </button>
                             <button onClick={() => setMostrandoPasteModal({ aberto: true, tipo: 'alunos', ano })}
                               className="flex-1 py-2 bg-[#fbbf24]/10 text-[#fbbf24] rounded-xl text-[8px] font-black uppercase tracking-widest hover:bg-[#fbbf24]/20 transition-all flex items-center justify-center gap-1.5">
-                              <List size={10} /> Colar Lista
+                              <ClipboardList size={10} /> Colar Lista
                             </button>
                             <button onClick={() => handleClearAll('alunos', ano)}
                               className="p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500/20 transition-all">
@@ -609,40 +612,43 @@ export default function Admin() {
                   </div>
                 )}
               </Painel>
-
             </motion.div>
           )}
 
           {/* ===================== PROFESSORES ===================== */}
           {abaAtiva === 'professores' && (
             <motion.div key="prof" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-              <Painel titulo="Base de Professores" subtitulo="Gerencie os professores e suas assinaturas visuais (cores)."
-                acao={
-                  <div className="flex gap-2">
-                    <button onClick={() => setMostrandoPasteModal({ aberto: true, tipo: 'professores' })} className="btn-secondary">
-                      <List size={14} /> Colar Lista
-                    </button>
-                    <button onClick={() => setEditandoProfessor({ id: 'novo', nome: '', cor: '#3B82F6' })} className="btn-primary">
-                      <Plus size={14} /> Novo Professor
-                    </button>
-                    <button onClick={() => handleClearAll('professores')} className="px-4 py-2 bg-red-500/10 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all">
-                      <Trash2 size={14} /> Apagar Todos
-                    </button>
-                  </div>
-                }>
+              <Painel titulo="Base de Professores" subtitulo="Gerencie os professores e suas assinaturas visuais (cores).">
+              <div className="flex flex-wrap gap-4 items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-black">Base de Professores</h2>
+                  <p className="text-on-surface-variant font-medium text-sm">Gerencie professores e assinaturas visuais.</p>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setMostrandoPasteModal({ aberto: true, tipo: 'professores' })} className="flex items-center gap-2 px-4 py-2 bg-surface-container-high rounded-xl text-[10px] font-black uppercase">
+                    <ClipboardList size={14} /> Colar Lista
+                  </button>
+                  <button onClick={() => setEditandoProfessor({ id: 'novo', nome: '', cor: '#3B82F6' })} className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-xl text-[10px] font-black uppercase">
+                    <Plus size={14} /> Novo Professor
+                  </button>
+                  <button onClick={() => handleClearAll('professores')} className="px-4 py-2 bg-red-500/10 text-red-500 rounded-xl text-[10px] font-black uppercase hover:bg-red-500/20 transition-all">
+                    <Trash2 size={14} /> Apagar Tudo
+                  </button>
+                </div>
+              </div>
                 <div className="relative mb-6">
                   <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
-                  <input type="text" placeholder="Buscar por Nome, Especialidade ou Matéria..." value={busca} onChange={e => setBusca(e.target.value)} className="campo-input pl-10" />
+                  <input type="text" placeholder="Buscar por Nome, Especialidade ou Matéria..." value={busca} onChange={e => setBusca(e.target.value)} className="w-full bg-surface-container-high p-3 pl-10 rounded-xl text-xs font-black outline-none border-2 border-transparent focus:border-primary/30" />
                 </div>
 
                 {professoresCMS.length === 0 ? (
-                  <VazioMsg texto="Nenhum professor cadastrado no banco de dados." />
+                  <p className="p-10 text-center text-on-surface-variant/50 font-black uppercase tracking-widest text-[10px]">Nenhum professor cadastrado.</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {professoresCMS.filter(p => {
                       const q = busca.toLowerCase();
                       const aulas = gradeCompleta.filter(g => g.nomeProfessor === p.nome);
-                      const materias = Array.from(new Set(aulas.map(a => a.materia?.toLowerCase() || '')));
+                      const materias = Array.from(new Set(aulas.map(a => a.materia?.toLowerCase() || ''))) as string[];
                       return !q || p.nome.toLowerCase().includes(q) || (p.especialidade || '').toLowerCase().includes(q) || materias.some(m => m.includes(q));
                     }).map(p => {
                       const aulas = gradeCompleta.filter(g => g.nomeProfessor === p.nome);
@@ -671,7 +677,6 @@ export default function Admin() {
                   </div>
                 )}
               </Painel>
-
             </motion.div>
           )}
 
@@ -916,7 +921,7 @@ export default function Admin() {
                       {(() => {
                          const diaSel = diaMonitor;
                          const gradeDia = gradeMonitores.filter(g => g.diaSemana === diaSel && (anoFiltro === 'Todos' || g.monitorNome === anoFiltro));
-                         const monsNoDia = Array.from(new Set(gradeDia.map(g => g.monitorNome)));
+                         const monsNoDia = Array.from(new Set(gradeDia.map(g => g.monitorNome))) as string[];
                          const horas = ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00'];
                          const inicio = 7 * 60;
                          const total = 7 * 60;
@@ -940,8 +945,8 @@ export default function Admin() {
                                     return (
                                        <div key={nome} className="flex items-center group py-2 hover:bg-primary/5 transition-all rounded-xl">
                                           <div className="w-32 shrink-0 flex items-center gap-3">
-                                             <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black" style={{ backgroundColor: `${cor}20`, color: cor }}>{nome.charAt(0)}</div>
-                                             <span className="text-[10px] font-black truncate">{nome.split(' ')[0]}</span>
+                                             <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black" style={{ backgroundColor: `${cor}20`, color: cor }}>{(nome as string).charAt(0)}</div>
+                                             <span className="text-[10px] font-black truncate">{(nome as string).split(' ')[0]}</span>
                                           </div>
                                            <div className="flex-1 relative h-14">
                                               {postos.map(p => {
@@ -962,27 +967,33 @@ export default function Admin() {
                                </div>
                                {/* MOBILE: Cards */}
                                <div className="md:hidden space-y-4">
-                                 {monsNoDia.map(nome => {
-                                    const mObj = monitores.find(m => m.nome === nome);
-                                    const cor = mObj?.cor || '#3B82F6';
-                                    const postos = gradeDia.filter(g => g.monitorNome === nome);
-                                    return (
-                                       <div key={nome} className="bg-surface-container-highest rounded-2xl p-4 border-l-4" style={{ borderLeftColor: cor }}>
-                                          <div className="flex items-center gap-3 mb-3">
-                                             <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black text-white" style={{ backgroundColor: cor }}>{nome.charAt(0)}</div>
-                                             <span className="text-sm font-black">{nome}</span>
-                                          </div>
-                                          <div className="space-y-1.5">
-                                             {postos.map(p => (
-                                                <div key={p.id} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ backgroundColor: `${cor}15` }}>
-                                                   <span className="text-[10px] font-black text-on-surface-variant w-20 shrink-0">{p.horarioInicio}-{p.horarioFim}</span>
-                                                   <span className="text-[10px] font-black uppercase truncate" style={{ color: cor }}>{p.posto || '—'}</span>
-                                                </div>
-                                             ))}
-                                          </div>
+                                 {(() => {
+                                   const monsNoDiaMob = Array.from(new Set(gradeDia.map(g => g.monitorNome))) as string[];
+                                   return monsNoDiaMob.map(nome => {
+                                     const mObj = monitores.find(m => m.nome === nome);
+                                     const cor = mObj?.cor || '#3B82F6';
+                                     const postos = gradeDia.filter(g => g.monitorNome === nome);
+                                     return (
+                                       <div key={nome} className="bg-surface-container-low p-5 rounded-2xl border border-white/5 space-y-4">
+                                         <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                               <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black shadow-lg" style={{ backgroundColor: cor, color: '#000' }}>{nome.charAt(0)}</div>
+                                               <span className="text-sm font-black italic">{nome.split(' ')[0]}</span>
+                                            </div>
+                                            <div className="text-[10px] font-black text-on-surface-variant/40 italic">{postos.length} postos</div>
+                                         </div>
+                                         <div className="space-y-1.5">
+                                            {postos.map(p => (
+                                               <div key={p.id} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ backgroundColor: `${cor}15` }}>
+                                                  <span className="text-[10px] font-black text-on-surface-variant w-20 shrink-0">{p.horarioInicio}-{p.horarioFim}</span>
+                                                  <span className="text-[10px] font-black uppercase truncate" style={{ color: cor }}>{p.posto || '—'}</span>
+                                               </div>
+                                            ))}
+                                         </div>
                                        </div>
-                                    );
-                                 })}
+                                     );
+                                   });
+                                 })()}
                                </div>
 
                                {/* Legenda */}
@@ -1394,7 +1405,7 @@ export default function Admin() {
               <ExploradorProntuario 
                 alunos={alunos} 
                 ocorrencias={ocorrencias} 
-                atualizar={carregarDados} 
+                atualizar={atualizar} 
               />
             </motion.div>
           )}

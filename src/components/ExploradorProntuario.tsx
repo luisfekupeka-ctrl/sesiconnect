@@ -86,10 +86,12 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
         if (ok) {
             alert('Mês arquivado e limpo com sucesso!');
             atualizar();
-        } else {
-            alert('Erro ao limpar banco de dados.');
         }
-        setCarregando(fal  return (
+        setCarregando(false);
+    }
+  };
+
+  return (
     <div className="bg-[#f3f3f3] text-[#333] rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[800px] border border-white/20 font-sans">
       
       {/* Barra de Título Windows */}

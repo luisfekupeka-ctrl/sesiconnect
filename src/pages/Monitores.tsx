@@ -287,7 +287,7 @@ export default function Monitores() {
 
             {/* Agrupar por monitor */}
             {(() => {
-              const monitoresNaEscala = Array.from(new Set(escalaDoDia.map(g => g.monitorNome))).sort();
+              const monitoresNaEscala = Array.from(new Set(escalaDoDia.map(g => g.monitorNome))).sort() as string[];
               return monitoresNaEscala.map(nome => {
                 const cor = mapaCorMonitor[nome] || '#3B82F6';
                 const postos = escalaDoDia.filter(g => g.monitorNome === nome);

@@ -1,7 +1,7 @@
 // Teste de conexão com Supabase
 // Cole no console do navegador (F12 > Console)
 
-import { supabase } from './src/lib/supabase';
+import { supabase } from './lib/supabase';
 
 // Testar conexão
 async function testConnection() {

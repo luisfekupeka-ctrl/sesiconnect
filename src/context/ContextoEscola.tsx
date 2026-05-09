@@ -314,7 +314,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
 
   let estadoEscola: EstadoEscola;
   try {
-    estadoEscola = obterEstadoAtualDaEscola(horaAtual, salas || [], gradeProcessada || [], []);
+    estadoEscola = obterEstadoAtualDaEscola(horaAtual, salas || [], gradeProcessada || []);
   } catch (err) {
     console.error('Erro crítico no motor escolar:', err);
     estadoEscola = {

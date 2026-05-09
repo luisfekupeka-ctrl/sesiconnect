@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { X, Check, XCircle, Clock, FileText, Save } from 'lucide-react';
+import { X, Check, XCircle, Clock, FileText, Save, Search } from 'lucide-react';
 import { EntradaGradeSala, Aluno, StatusPresenca } from '../types';
 import { useEscola } from '../context/ContextoEscola';
 import { cn } from '../lib/utils';
