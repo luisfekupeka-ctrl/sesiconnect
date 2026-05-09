@@ -111,56 +111,66 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
           </div>
 
           {/* Área de Impressão (Direita) */}
-          <div id="printable-occurrence" className="flex-1 overflow-y-auto p-12 bg-white print:overflow-visible print:p-8 custom-scrollbar">
-            {/* Cabeçalho SESI */}
-            <div className="flex flex-col items-center text-center mb-10 border-b-2 border-gray-900 pb-8">
-              <div className="text-2xl font-black tracking-tighter text-gray-900 mb-1">SESI CONNECT</div>
-              <div className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 mb-6">Serviço Social da Indústria</div>
-              <div className="px-8 py-2 bg-gray-900 text-white text-xs font-black uppercase tracking-widest rounded-full">
-                Registro de Ocorrência Disciplinar
+          <div id="printable-occurrence" className="flex-1 overflow-y-auto p-12 bg-white print:overflow-visible print:p-0 custom-scrollbar relative">
+            
+            {/* Elementos Institucionais (Shapes e Logos) */}
+            <div className="absolute top-0 left-0 w-32 h-32 bg-gray-100 -translate-x-1/2 -translate-y-1/2 rotate-45 print:block hidden" />
+            <div className="absolute top-0 left-10 w-4 h-20 bg-amber-400/20 -skew-x-12 print:block hidden" />
+            
+            <div className="flex justify-between items-start mb-12">
+              <div className="pt-4">
+                <div className="text-3xl font-black tracking-tighter text-gray-900">SESI CONNECT</div>
+                <div className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Serviço Social da Indústria</div>
+              </div>
+              <div className="flex flex-col items-end">
+                <div className="bg-gray-900 text-white px-4 py-1 text-[10px] font-black uppercase tracking-widest rounded-sm mb-2">Colégio</div>
+                <div className="text-4xl font-black text-gray-900 tracking-tighter leading-none">Sesi</div>
+                <div className="bg-amber-400 px-3 py-0.5 text-[9px] font-black uppercase tracking-widest mt-1">Internacional</div>
               </div>
             </div>
 
-            <div className="space-y-10">
+            <div className="mb-10 text-center border-y-2 border-gray-900 py-4">
+              <h1 className="text-xl font-black uppercase tracking-[0.2em] text-gray-900">Registro de Ocorrência Disciplinar</h1>
+            </div>
+
+            <div className="space-y-12">
               {/* Seção 1: Dados do Aluno */}
-              <section className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <User size={14} className="text-gray-900" />
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-900">Identificação do Aluno</h4>
+              <section className="space-y-6">
+                <div className="grid grid-cols-2 gap-12">
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Nome do Aluno</p>
+                    <p className="text-lg font-black text-gray-900 border-b-2 border-gray-100 pb-1">{ocorrencia.nomeAluno}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Ano Escolar</p>
+                    <p className="text-lg font-black text-gray-900 border-b-2 border-gray-100 pb-1">{ocorrencia.anoAluno || ocorrencia.turmaAluno}</p>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+                <div className="grid grid-cols-2 gap-12">
                   <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Nome Completo</p>
-                    <p className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-1">{ocorrencia.nomeAluno}</p>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Data do Registro</p>
+                    <p className="text-sm font-bold text-gray-900">{new Date(ocorrencia.criadoEm || '').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
                   </div>
                   <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Turma / Grupo</p>
-                    <p className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-1">{ocorrencia.turmaAluno} • {ocorrencia.anoAluno}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Data do Registro</p>
-                    <p className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-1">{new Date(ocorrencia.criadoEm || '').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Sala / Local</p>
-                    <p className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-1">Sala {ocorrencia.salaAluno || '—'}</p>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Local / Sala</p>
+                    <p className="text-sm font-bold text-gray-900">{ocorrencia.salaAluno ? `Sala ${ocorrencia.salaAluno}` : '—'}</p>
                   </div>
                 </div>
               </section>
 
-              {/* Seção 2: Detalhes da Ocorrência */}
-              <section className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <ClipboardList size={14} className="text-gray-900" />
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-900">Descrição da Ocorrência</h4>
+              {/* Seção 2: Detalhes da Ocorrência - DESTAQUE PARA TEXTO */}
+              <section className="space-y-4 pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1.5 h-4 bg-amber-400" />
+                  <h4 className="text-[11px] font-black uppercase tracking-widest text-gray-900">Relato da Ocorrência</h4>
                 </div>
-                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">{ocorrencia.nomeModelo}</p>
-                  <div className="space-y-4">
+                <div className="bg-gray-50/50 p-8 rounded-[2rem] border-2 border-gray-100 min-h-[300px]">
+                  <p className="text-[10px] font-black text-amber-600 uppercase tracking-[0.2em] mb-6">{ocorrencia.nomeModelo}</p>
+                  <div className="space-y-8">
                     {Object.entries(ocorrencia.dados || {}).map(([key, value]) => (
-                      <div key={key}>
-                        <p className="text-[9px] font-black text-gray-900/40 uppercase tracking-tighter mb-1">{key}</p>
-                        <p className="text-xs font-medium text-gray-800 leading-relaxed whitespace-pre-wrap">
+                      <div key={key} className="space-y-2">
+                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">{key}</p>
+                        <p className="text-lg font-medium text-gray-900 leading-relaxed whitespace-pre-wrap text-justify">
                           {Array.isArray(value) ? value.join(', ') : value}
                         </p>
                       </div>
@@ -169,69 +179,75 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                 </div>
               </section>
 
-              {/* Seção 3: Informações Complementares */}
-              <section className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <MapPin size={14} className="text-gray-900" />
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-900">Informações Complementares</h4>
+              {/* Seção 3: Informações do Emissor */}
+              <section className="grid grid-cols-2 gap-12 border-t border-gray-100 pt-6">
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Emitido por</p>
+                  <p className="text-sm font-black text-gray-900 uppercase">{ocorrencia.professorAtual || 'Administração'}</p>
                 </div>
-                <div className="grid grid-cols-2 gap-12">
-                  <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Registrado por</p>
-                    <p className="text-xs font-bold text-gray-900">{ocorrencia.professorAtual || 'Administração'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Horário do Registro</p>
-                    <p className="text-xs font-bold text-gray-900">{new Date(ocorrencia.criadoEm || '').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
-                  </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Horário</p>
+                  <p className="text-sm font-black text-gray-900">{new Date(ocorrencia.criadoEm || '').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
               </section>
 
-              {/* Seção 4: Assinaturas Dinâmicas */}
-              <section className="mt-16 pt-16 border-t border-gray-100">
+              {/* Seção 4: Assinaturas */}
+              <section className="mt-20 pt-10">
                 <div className="grid grid-cols-2 gap-x-12 gap-y-20">
                   {configAssinaturas.mostrarAluno && (
                     <div className="text-center">
-                      <div className="w-full border-b border-gray-900 mb-2"></div>
-                      <p className="text-[9px] font-black uppercase tracking-widest text-gray-900">Assinatura do Aluno</p>
-                      <p className="text-[8px] font-bold text-gray-400 uppercase mt-1">{configAssinaturas.nomeAluno}</p>
+                      <div className="w-full border-b-2 border-gray-900 mb-2"></div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-900">Assinatura do Aluno</p>
+                      <p className="text-[9px] font-bold text-gray-400 uppercase mt-1">{configAssinaturas.nomeAluno}</p>
                     </div>
                   )}
                   {configAssinaturas.mostrarResponsavel && (
                     <div className="text-center">
-                      <div className="w-full border-b border-gray-900 mb-2"></div>
-                      <p className="text-[9px] font-black uppercase tracking-widest text-gray-900">Assinatura do Responsável</p>
-                      {configAssinaturas.nomeResponsavel && <p className="text-[8px] font-bold text-gray-400 uppercase mt-1">{configAssinaturas.nomeResponsavel}</p>}
+                      <div className="w-full border-b-2 border-gray-900 mb-2"></div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-900">Assinatura do Responsável</p>
+                      {configAssinaturas.nomeResponsavel && <p className="text-[9px] font-bold text-gray-400 uppercase mt-1">{configAssinaturas.nomeResponsavel}</p>}
                     </div>
                   )}
                   {configAssinaturas.mostrarEmissor && (
                     <div className="text-center col-span-2 max-w-xs mx-auto">
-                      <div className="w-full border-b border-gray-900 mb-2"></div>
-                      <p className="text-[9px] font-black uppercase tracking-widest text-gray-900">Coordenação / Emissor</p>
-                      <p className="text-[8px] font-bold text-gray-400 uppercase mt-1">{configAssinaturas.nomeEmissor}</p>
+                      <div className="w-full border-b-2 border-gray-900 mb-2"></div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-900">Coordenação / Direção</p>
+                      <p className="text-[9px] font-bold text-gray-400 uppercase mt-1">{configAssinaturas.nomeEmissor}</p>
                     </div>
                   )}
                 </div>
               </section>
             </div>
 
-            <div className="mt-20 text-center opacity-30 text-[8px] font-black uppercase tracking-[0.5em] print:block hidden">
-              Documento gerado digitalmente via SESI Connect - {new Date().toLocaleDateString()}
+            {/* Footer com logo e triângulo amarelo */}
+            <div className="absolute bottom-0 right-0 w-32 h-32 bg-amber-400 translate-x-1/2 translate-y-1/2 rotate-45 print:block hidden" />
+            <div className="absolute bottom-6 right-6 flex flex-col items-end print:flex hidden">
+              <div className="flex items-center gap-1">
+                <span className="text-[8px] font-black text-gray-400 uppercase">Sistema Fiep</span>
+                <span className="text-lg font-black text-gray-900 italic">SESI</span>
+              </div>
             </div>
           </div>
       </div>
       
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
+          @page { size: A4; margin: 0; }
+          body { background: white !important; }
           body * { visibility: hidden; }
           #printable-occurrence, #printable-occurrence * { visibility: visible; }
           #printable-occurrence {
             position: absolute;
             left: 0;
             top: 0;
-            width: 100%;
+            width: 210mm;
+            height: 297mm;
+            padding: 20mm !important;
+            background: white !important;
           }
           .print\\:hidden { display: none !important; }
+          .print\\:block { display: block !important; }
+          .print\\:flex { display: flex !important; }
         }
       `}} />
     </>
