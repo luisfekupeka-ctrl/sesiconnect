@@ -97,6 +97,28 @@ export function obterEstadoAtualDaEscola(
   };
 }
 
+export function obterBlocosDeHorario(gradeCompleta: EntradaGradeSala[]): { indice: number; inicio: string; fim: string }[] {
+  if (!Array.isArray(gradeCompleta)) return [];
+  
+  const ranges = new Set<string>();
+  gradeCompleta.forEach(e => {
+    if (e.horario && e.horario.includes('-')) {
+      ranges.add(e.horario);
+    }
+  });
+
+  return Array.from(ranges)
+    .sort((a, b) => horaParaMinutos(a.split('-')[0]) - horaParaMinutos(b.split('-')[0]))
+    .map((range, idx) => {
+      const parts = range.split('-');
+      return {
+        indice: idx,
+        inicio: parts[0]?.trim(),
+        fim: parts[1]?.trim()
+      };
+    });
+}
+
 export function extrairProfessores(gradeCompleta: EntradaGradeSala[]): string[] {
   const nomes = new Set<string>();
   gradeCompleta.forEach(e => {

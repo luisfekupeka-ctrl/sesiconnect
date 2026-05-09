@@ -8,8 +8,7 @@ import { Sala } from '../types';
 
 const LISTA_DIAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
-export default function RoomsPage() {
-  const { salas, estadoEscola, gradeCompleta, languageLab, atividadesAfter, horaAtual, periodos, alunos } = useEscola();
+export default function RoomsPage() {  const { salas, estadoEscola, gradeCompleta, languageLab, atividadesAfter, horaAtual, alunos } = useEscola();
   const [busca, setBusca] = useState('');
   const [diaGrade, setDiaGrade] = useState(obterDiaSemana(horaAtual));
   const [salaSelecionada, setSalaSelecionada] = useState<Sala | null>(null);
@@ -57,10 +56,11 @@ export default function RoomsPage() {
              
              {/* Blocos Verticais */}
              <div className="flex flex-col gap-3">
-                {obterBlocosDeHorario(periodos).map(bloco => (
-                  <BlocoHorarioSala key={bloco.indice} bloco={bloco} salaSelecionada={salaSelecionada} diaGrade={diaGrade} gradeCompleta={gradeCompleta} languageLab={languageLab} atividadesAfter={atividadesAfter} buscaFiltro={buscaAlunos} alunos={alunos} />
+                {obterBlocosDeHorario(gradeCompleta).map(bloco => (
+                   <BlocoHorarioSala key={bloco.indice} bloco={bloco} salaSelecionada={salaSelecionada} diaGrade={diaGrade} gradeCompleta={gradeCompleta} languageLab={languageLab} atividadesAfter={atividadesAfter} buscaFiltro={buscaAlunos} alunos={alunos} />
                 ))}
              </div>
+
           </div>
         </div>
       </motion.div>

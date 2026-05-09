@@ -13,7 +13,7 @@ import { obterBlocosDeHorario, obterDiaSemana } from '../services/motorEscolar';
 import { RegistroChamada, ResultadoRealocacao } from '../types';
 
 export default function RelatorioDiario() {
-    const { gradeCompleta, salas, professoresCMS, periodos, horaAtual } = useEscola();
+    const { gradeCompleta, salas, professoresCMS, horaAtual } = useEscola();
     const [dataSel, setDataSel] = useState(new Date().toISOString().split('T')[0]);
     const [agrupamento, setAgrupamento] = useState<'sala' | 'professor'>('sala');
     const [busca, setBusca] = useState('');
@@ -22,7 +22,7 @@ export default function RelatorioDiario() {
     const [carregando, setCarregando] = useState(true);
 
     const diaSemana = obterDiaSemana(new Date(dataSel + 'T12:00:00'));
-    const blocos = obterBlocosDeHorario(periodos);
+    const blocos = obterBlocosDeHorario(gradeCompleta);
 
     useEffect(() => {
         async function carregarDados() {

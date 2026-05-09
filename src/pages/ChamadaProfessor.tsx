@@ -10,7 +10,7 @@ import ModalChamada from '../components/ModalChamada';
 import { EntradaGradeSala, ResultadoRealocacao } from '../types';
 
 export default function ChamadaProfessor() {
-  const { professores, horaAtual, periodos } = useEscola();
+  const { professores, horaAtual, gradeCompleta } = useEscola();
   const [professorSelecionado, setProfessorSelecionado] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
   const [diaFiltro, setDiaFiltro] = useState(obterDiaSemana(horaAtual));
@@ -51,7 +51,7 @@ export default function ChamadaProfessor() {
   ).sort((a, b) => a.horario.localeCompare(b.horario)) || [];
 
   // Calcular total de aulas (Regular + Subs confirmadas) para a barra de progresso
-  const totalAulasHoje = obterBlocosDeHorario(periodos).filter(bloco => {
+  const totalAulasHoje = obterBlocosDeHorario(gradeCompleta).filter(bloco => {
     const range = `${bloco.inicio} - ${bloco.fim}`;
     const temRegular = minhaAgenda.some(a => a.horario === range);
     const temSub = substituicoes.some(s => 
@@ -162,7 +162,7 @@ export default function ChamadaProfessor() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {obterBlocosDeHorario(periodos).map(bloco => {
+          {obterBlocosDeHorario(gradeCompleta).map(bloco => {
             const range = `${bloco.inicio} - ${bloco.fim}`;
 
             // Tenta achar aula na grade regular
