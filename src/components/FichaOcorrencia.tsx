@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { RegistroOcorrencia } from '../types';
-import { Printer, Download, X, User, Calendar, MapPin, ClipboardList, PenTool } from 'lucide-react';
+import { Printer, X, User, ClipboardList, MapPin, CheckSquare, Square } from 'lucide-react';
 
 interface Props {
   ocorrencia: RegistroOcorrencia;
@@ -8,37 +8,105 @@ interface Props {
 }
 
 export default function FichaOcorrencia({ ocorrencia, onClose }: Props) {
+  // Configurações dinâmicas de assinatura
+  const [configAssinaturas, setConfigAssinaturas] = useState({
+    mostrarAluno: true,
+    nomeAluno: ocorrencia.nomeAluno,
+    mostrarResponsavel: true,
+    nomeResponsavel: '',
+    mostrarEmissor: true,
+    nomeEmissor: ocorrencia.professorAtual || 'Administração'
+  });
+
   const handlePrint = () => {
     window.print();
   };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:p-0 print:bg-white">
-      <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col print:shadow-none print:max-h-none print:rounded-none">
+      <div className="bg-white w-full max-w-5xl max-h-[95vh] overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row print:shadow-none print:max-h-none print:rounded-none">
         
-        {/* Toolbar - Oculta na impressão */}
-        <div className="p-6 border-b border-gray-100 flex items-center justify-between print:hidden">
-          <div className="flex items-center gap-3 text-gray-900">
-            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-              <ClipboardList size={20} />
+        {/* Configurações (Esquerda) - Oculta na impressão */}
+        <div className="w-full md:w-80 bg-gray-50 border-r border-gray-100 p-8 flex flex-col gap-6 print:hidden overflow-y-auto">
+          <div>
+            <h3 className="font-black text-lg mb-1">Configurar Documento</h3>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Personalize as assinaturas</p>
+          </div>
+
+          <div className="space-y-6">
+            {/* Assinatura Aluno */}
+            <div className="space-y-3">
+              <button 
+                onClick={() => setConfigAssinaturas(prev => ({ ...prev, mostrarAluno: !prev.mostrarAluno }))}
+                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-900"
+              >
+                {configAssinaturas.mostrarAluno ? <CheckSquare size={16} className="text-primary" /> : <Square size={16} />}
+                Assinatura do Aluno
+              </button>
+              {configAssinaturas.mostrarAluno && (
+                <input 
+                  type="text" 
+                  value={configAssinaturas.nomeAluno} 
+                  onChange={e => setConfigAssinaturas(prev => ({ ...prev, nomeAluno: e.target.value }))}
+                  placeholder="Nome do Aluno"
+                  className="w-full bg-white border border-gray-200 p-3 rounded-xl text-xs font-bold focus:border-primary outline-none transition-all"
+                />
+              )}
             </div>
-            <div>
-              <h3 className="font-black text-lg">Visualizar Ocorrência</h3>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Documento Oficial</p>
+
+            {/* Assinatura Responsável */}
+            <div className="space-y-3">
+              <button 
+                onClick={() => setConfigAssinaturas(prev => ({ ...prev, mostrarResponsavel: !prev.mostrarResponsavel }))}
+                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-900"
+              >
+                {configAssinaturas.mostrarResponsavel ? <CheckSquare size={16} className="text-primary" /> : <Square size={16} />}
+                Assinatura do Responsável
+              </button>
+              {configAssinaturas.mostrarResponsavel && (
+                <input 
+                  type="text" 
+                  value={configAssinaturas.nomeResponsavel} 
+                  onChange={e => setConfigAssinaturas(prev => ({ ...prev, nomeResponsavel: e.target.value }))}
+                  placeholder="Nome do Responsável (Opcional)"
+                  className="w-full bg-white border border-gray-200 p-3 rounded-xl text-xs font-bold focus:border-primary outline-none transition-all"
+                />
+              )}
+            </div>
+
+            {/* Assinatura Emissor */}
+            <div className="space-y-3">
+              <button 
+                onClick={() => setConfigAssinaturas(prev => ({ ...prev, mostrarEmissor: !prev.mostrarEmissor }))}
+                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-900"
+              >
+                {configAssinaturas.mostrarEmissor ? <CheckSquare size={16} className="text-primary" /> : <Square size={16} />}
+                Assinatura Emissor/Coord.
+              </button>
+              {configAssinaturas.mostrarEmissor && (
+                <input 
+                  type="text" 
+                  value={configAssinaturas.nomeEmissor} 
+                  onChange={e => setConfigAssinaturas(prev => ({ ...prev, nomeEmissor: e.target.value }))}
+                  placeholder="Nome do Coordenador"
+                  className="w-full bg-white border border-gray-200 p-3 rounded-xl text-xs font-bold focus:border-primary outline-none transition-all"
+                />
+              )}
             </div>
           </div>
-          <div className="flex gap-2">
-            <button onClick={handlePrint} className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl text-xs font-black uppercase hover:bg-gray-800 transition-all">
-              <Printer size={14} /> Imprimir / PDF
+
+          <div className="mt-auto pt-6 border-t border-gray-200 space-y-3">
+            <button onClick={handlePrint} className="w-full flex items-center justify-center gap-2 px-5 py-4 bg-gray-900 text-white rounded-2xl text-xs font-black uppercase hover:bg-gray-800 transition-all shadow-lg">
+              <Printer size={16} /> Imprimir / PDF
             </button>
-            <button onClick={onClose} className="p-2.5 bg-gray-100 text-gray-500 rounded-xl hover:bg-red-50 hover:text-red-500 transition-all">
-              <X size={20} />
+            <button onClick={onClose} className="w-full py-4 bg-gray-200 text-gray-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-500 transition-all">
+              Fechar Visualização
             </button>
           </div>
         </div>
 
-        {/* Área de Impressão */}
-        <div id="printable-occurrence" className="flex-1 overflow-y-auto p-12 bg-white print:overflow-visible print:p-8">
+        {/* Área de Impressão (Direita) */}
+        <div id="printable-occurrence" className="flex-1 overflow-y-auto p-12 bg-white print:overflow-visible print:p-8 custom-scrollbar">
           {/* Cabeçalho SESI */}
           <div className="flex flex-col items-center text-center mb-10 border-b-2 border-gray-900 pb-8">
             <div className="text-2xl font-black tracking-tighter text-gray-900 mb-1">SESI CONNECT</div>
@@ -96,7 +164,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose }: Props) {
               </div>
             </section>
 
-            {/* Seção 3: Observações Adicionais */}
+            {/* Seção 3: Informações Complementares */}
             <section className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
                 <MapPin size={14} className="text-gray-900" />
@@ -114,21 +182,30 @@ export default function FichaOcorrencia({ ocorrencia, onClose }: Props) {
               </div>
             </section>
 
-            {/* Seção 4: Assinaturas */}
+            {/* Seção 4: Assinaturas Dinâmicas */}
             <section className="mt-16 pt-16 border-t border-gray-100">
               <div className="grid grid-cols-2 gap-x-12 gap-y-20">
-                <div className="text-center">
-                  <div className="w-full border-b border-gray-900 mb-2"></div>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-900">Assinatura do Aluno</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-full border-b border-gray-900 mb-2"></div>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-900">Assinatura do Responsável</p>
-                </div>
-                <div className="text-center col-span-2 max-w-xs mx-auto">
-                  <div className="w-full border-b border-gray-900 mb-2"></div>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-900">Coordenação Pedagógica / Direção</p>
-                </div>
+                {configAssinaturas.mostrarAluno && (
+                  <div className="text-center">
+                    <div className="w-full border-b border-gray-900 mb-2"></div>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-900">Assinatura do Aluno</p>
+                    <p className="text-[8px] font-bold text-gray-400 uppercase mt-1">{configAssinaturas.nomeAluno}</p>
+                  </div>
+                )}
+                {configAssinaturas.mostrarResponsavel && (
+                  <div className="text-center">
+                    <div className="w-full border-b border-gray-900 mb-2"></div>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-900">Assinatura do Responsável</p>
+                    {configAssinaturas.nomeResponsavel && <p className="text-[8px] font-bold text-gray-400 uppercase mt-1">{configAssinaturas.nomeResponsavel}</p>}
+                  </div>
+                )}
+                {configAssinaturas.mostrarEmissor && (
+                  <div className="text-center col-span-2 max-w-xs mx-auto">
+                    <div className="w-full border-b border-gray-900 mb-2"></div>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-900">Coordenação / Emissor</p>
+                    <p className="text-[8px] font-bold text-gray-400 uppercase mt-1">{configAssinaturas.nomeEmissor}</p>
+                  </div>
+                )}
               </div>
             </section>
           </div>
