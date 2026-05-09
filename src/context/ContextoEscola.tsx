@@ -223,7 +223,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
       } else {
         setModelosFormulario([
           {
-            id: 'mock-form-1',
+            id: '11111111-1111-1111-1111-111111111111',
             nome: 'Ocorrência Disciplinar',
             descricao: 'Registre ocorrências disciplinares de alunos com categoria e descrição detalhada.',
             campos: [

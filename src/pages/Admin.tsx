@@ -10,6 +10,9 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
+import FichaOcorrencia from '../components/FichaOcorrencia';
+import { RegistroOcorrencia } from '../types';
+import { Printer } from 'lucide-react';
 import {
   salvarAluno, excluirAluno, excluirTodosAlunos,
   salvarMonitor, excluirMonitor, excluirTodosMonitores,
@@ -98,6 +101,8 @@ export default function Admin() {
   const [busca, setBusca] = useState('');
   const [anoFiltro, setAnoFiltro] = useState('Todos');
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
+  const [buscaOcorrencia, setBuscaOcorrencia] = useState('');
+  const [visualizandoOcorrencia, setVisualizandoOcorrencia] = useState<RegistroOcorrencia | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [editandoAluno, setEditandoAluno] = useState<any>(null);
@@ -1141,24 +1146,54 @@ export default function Admin() {
                 </div>
 
                 <div className="bg-surface-container-low rounded-[2.5rem] border border-outline-variant/10 overflow-hidden">
-                  <div className="p-6 border-b flex items-center justify-between">
-                    <h3 className="font-black text-sm">Relatório de Envios (Ocorrências)</h3>
-                    <div className="flex gap-2">
-                      <a href="/formularios" className="btn-mini">Ver Dashboard Geral →</a>
+                  <div className="p-6 border-b flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                      <h3 className="font-black text-sm">Histórico de Ocorrências</h3>
+                      <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">Consulte por aluno ou turma</p>
+                    </div>
+                    <div className="flex gap-3 flex-1 min-w-[280px] md:max-w-md">
+                      <div className="relative flex-1">
+                        <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+                        <input 
+                          type="text" 
+                          placeholder="Buscar aluno, série ou modelo..."
+                          value={buscaOcorrencia}
+                          onChange={(e) => setBuscaOcorrencia(e.target.value)}
+                          className="w-full bg-surface-container-highest border-none rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                        />
+                      </div>
+                      <a href="/formularios" className="btn-mini whitespace-nowrap">Dashboard Geral →</a>
                     </div>
                   </div>
-                  <div className="divide-y divide-surface-container-low max-h-[400px] overflow-y-auto">
-                    {ocorrencias.length === 0 ? <VazioMsg texto="Nenhuma ocorrência registrada ainda." /> :
-                      ocorrencias.map(oc => (
-                        <div key={oc.id} className="p-4 hover:bg-primary/5 transition-colors flex items-center gap-4">
+                  <div className="divide-y divide-surface-container-low max-h-[500px] overflow-y-auto">
+                    {ocorrencias.filter(o => 
+                      o.nomeAluno?.toLowerCase().includes(buscaOcorrencia.toLowerCase()) ||
+                      o.turmaAluno?.toLowerCase().includes(buscaOcorrencia.toLowerCase()) ||
+                      o.nomeModelo?.toLowerCase().includes(buscaOcorrencia.toLowerCase())
+                    ).length === 0 ? <VazioMsg texto="Nenhuma ocorrência encontrada." /> :
+                      ocorrencias.filter(o => 
+                        o.nomeAluno?.toLowerCase().includes(buscaOcorrencia.toLowerCase()) ||
+                        o.turmaAluno?.toLowerCase().includes(buscaOcorrencia.toLowerCase()) ||
+                        o.nomeModelo?.toLowerCase().includes(buscaOcorrencia.toLowerCase())
+                      ).map(oc => (
+                        <div key={oc.id} className="p-4 hover:bg-primary/5 transition-colors flex items-center gap-4 group">
                           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0"><FileText size={16} /></div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-black truncate">{oc.nomeAluno}</p>
                             <p className="text-[9px] text-on-surface-variant font-bold uppercase">{oc.nomeModelo} · {oc.turmaAluno}</p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-[10px] font-black">{new Date(oc.criadoEm).toLocaleDateString()}</p>
-                            <p className="text-[9px] text-on-surface-variant font-medium italic truncate max-w-[100px]">{oc.professorAtual || '—'}</p>
+                          <div className="text-right flex items-center gap-4">
+                            <div className="hidden sm:block">
+                              <p className="text-[10px] font-black">{new Date(oc.criadoEm || '').toLocaleDateString()}</p>
+                              <p className="text-[9px] text-on-surface-variant font-medium italic truncate max-w-[100px]">{oc.professorAtual || '—'}</p>
+                            </div>
+                            <button 
+                              onClick={() => setVisualizandoOcorrencia(oc)}
+                              className="p-2 bg-primary text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-105"
+                              title="Ver Detalhes / Imprimir"
+                            >
+                              <Printer size={14} />
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -1656,6 +1691,12 @@ export default function Admin() {
             </div>
           </div>
         </ModalForm>
+        {visualizandoOcorrencia && (
+          <FichaOcorrencia 
+            ocorrencia={visualizandoOcorrencia} 
+            onClose={() => setVisualizandoOcorrencia(null)} 
+          />
+        )}
       </motion.div>
     </>
   );

@@ -684,7 +684,8 @@ export async function buscarOcorrencias(): Promise<RegistroOcorrencia[]> {
 }
 
 export async function salvarOcorrencia(ocorrencia: Partial<RegistroOcorrencia>): Promise<boolean> {
-  const { error } = await supabase.from('ocorrencias').insert([{
+  const payload = {
+    id: ocorrencia.id || undefined,
     modelo_id: ocorrencia.modeloFormularioId,
     nome_modelo: ocorrencia.nomeModelo,
     dados: ocorrencia.dados,
@@ -693,7 +694,11 @@ export async function salvarOcorrencia(ocorrencia: Partial<RegistroOcorrencia>):
     ano_aluno: ocorrencia.anoAluno,
     sala_aluno: ocorrencia.salaAluno,
     professor_atual: ocorrencia.professorAtual,
-  }]);
+  };
+
+  const { error } = await supabase
+    .from('ocorrencias')
+    .upsert([payload]);
 
   return !error;
 }
