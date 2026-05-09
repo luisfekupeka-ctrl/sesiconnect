@@ -1789,10 +1789,42 @@ function CampoSelect({ label, value, options, onChange }: { label: string; value
 function SeletorAlunos({ alunos, selecionados, onChange, turmaAlvo }: { alunos: any[]; selecionados: string[]; onChange: (selecionados: string[]) => void; turmaAlvo?: string }) {
   const [busca, setBusca] = useState('');
   const [mostrarTodos, setMostrarTodos] = useState(!turmaAlvo);
+  const [modoPaste, setModoPaste] = useState(false);
+  const [conteudoPaste, setConteudoPaste] = useState('');
+  const [resultadoValidacao, setResultadoValidacao] = useState<{ nome: string; encontrado: boolean; aluno?: any }[]>([]);
+
+  const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+  const handleValidarPaste = () => {
+    const linhas = conteudoPaste.split('\n').map(l => l.trim()).filter(l => l);
+    const validacao = linhas.map(nomeOriginal => {
+      const nomeNorm = normalize(nomeOriginal);
+      const aluno = alunos.find(a => normalize(a.nome) === nomeNorm);
+      return {
+        nome: nomeOriginal,
+        encontrado: !!aluno,
+        aluno: aluno
+      };
+    });
+    setResultadoValidacao(validacao);
+  };
+
+  const handleConfirmarPaste = () => {
+    const nomesEncontrados = resultadoValidacao
+      .filter(r => r.encontrado && r.aluno)
+      .map(r => r.aluno.nome);
+    
+    // Unir com os já selecionados sem duplicar
+    const novosSelecionados = Array.from(new Set([...selecionados, ...nomesEncontrados]));
+    onChange(novosSelecionados);
+    setModoPaste(false);
+    setConteudoPaste('');
+    setResultadoValidacao([]);
+  };
 
   const alunosFiltrados = useMemo(() => {
     return alunos.filter(a => {
-      const matchesBusca = !busca || a.nome.toLowerCase().includes(busca.toLowerCase());
+      const matchesBusca = !busca || normalize(a.nome).includes(normalize(busca));
       const matchesTurma = mostrarTodos || (turmaAlvo && (a.turma === turmaAlvo || a.ano === turmaAlvo));
       return matchesBusca && matchesTurma;
     }).sort((a,b) => a.nome.localeCompare(b.nome));
@@ -1807,7 +1839,7 @@ function SeletorAlunos({ alunos, selecionados, onChange, turmaAlvo }: { alunos: 
   };
 
   return (
-    <div className="border-2 border-white/5 rounded-[2.5rem] overflow-hidden bg-black shadow-2xl">
+    <div className="border-2 border-white/5 rounded-[2.5rem] overflow-hidden bg-[#050505] shadow-2xl">
       <div className="p-8 border-b border-white/5 bg-[#42a0f5]/5">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
@@ -1818,67 +1850,141 @@ function SeletorAlunos({ alunos, selecionados, onChange, turmaAlvo }: { alunos: 
               {selecionados.length} aluno(s) selecionado(s)
             </p>
           </div>
-          {turmaAlvo && (
+          <div className="flex gap-2 w-full sm:w-auto">
             <button 
               type="button"
-              onClick={() => setMostrarTodos(!mostrarTodos)} 
+              onClick={() => setModoPaste(!modoPaste)} 
               className={cn(
-                "px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border",
-                mostrarTodos ? "bg-white/5 border-white/10 text-on-surface-variant" : "bg-[#42a0f5]/10 border-[#42a0f5]/20 text-[#42a0f5]"
+                "flex-1 sm:flex-none px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border",
+                modoPaste ? "bg-[#fbbf24] border-[#fbbf24] text-black" : "bg-white/5 border-white/10 text-on-surface-variant"
               )}>
-              {mostrarTodos ? 'Filtrar por ' + turmaAlvo : 'Ver todos os alunos'}
+              {modoPaste ? 'Voltar para Lista' : 'Colar Ensalamento'}
             </button>
-          )}
-        </div>
-        <div className="relative group">
-          <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-[#42a0f5] transition-all" />
-          <input 
-            type="text" 
-            placeholder="Pesquisar por nome..." 
-            value={busca} 
-            onChange={e => setBusca(e.target.value)}
-            className="w-full bg-surface-container-high/40 p-5 pl-14 rounded-[1.5rem] text-sm font-black outline-none border border-transparent focus:border-[#42a0f5]/30 focus:ring-4 focus:ring-[#42a0f5]/5 transition-all shadow-inner" 
-          />
-        </div>
-      </div>
-      
-      <div className="max-h-[300px] overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 custom-scrollbar">
-        {alunosFiltrados.length === 0 ? (
-          <div className="col-span-full py-20 text-center opacity-20 italic text-xs uppercase font-black tracking-widest">
-            Nenhum aluno encontrado
-          </div>
-        ) : (
-          alunosFiltrados.map(a => {
-            const isSelected = selecionados.includes(a.nome);
-            return (
-              <motion.button 
-                key={a.id} 
+            {turmaAlvo && !modoPaste && (
+              <button 
                 type="button"
-                whileTap={{ scale: 0.98 }}
-                onClick={() => toggleAluno(a.nome)}
+                onClick={() => setMostrarTodos(!mostrarTodos)} 
                 className={cn(
-                  "flex items-center gap-4 p-5 rounded-2xl transition-all text-left border-2 group",
-                  isSelected 
-                    ? "bg-[#42a0f5] border-[#42a0f5] text-black shadow-lg shadow-[#42a0f5]/10" 
-                    : "bg-surface-container-low/40 border-transparent text-on-surface-variant hover:bg-white/5 hover:border-white/10"
+                  "flex-1 sm:flex-none px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border",
+                  mostrarTodos ? "bg-white/5 border-white/10 text-on-surface-variant" : "bg-[#42a0f5]/10 border-[#42a0f5]/20 text-[#42a0f5]"
                 )}>
-                <div className={cn(
-                  "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all", 
-                  isSelected ? "bg-black border-black text-[#42a0f5]" : "border-white/10 group-hover:border-white/30"
-                )}>
-                  {isSelected && <Check size={14} strokeWidth={4} />}
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className={cn("text-xs font-black truncate italic", isSelected ? "text-black" : "text-white")}>{a.nome}</span>
-                  <span className={cn("text-[9px] font-black uppercase tracking-widest opacity-60", isSelected ? "text-black/60" : "text-on-surface-variant")}>{a.turma}</span>
-                </div>
-              </motion.button>
-            );
-          })
+                {mostrarTodos ? 'Filtrar ' + turmaAlvo : 'Ver Todos'}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {!modoPaste && (
+          <div className="relative group">
+            <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-[#42a0f5] transition-all" />
+            <input 
+              type="text" 
+              placeholder="Pesquisar por nome..." 
+              value={busca} 
+              onChange={e => setBusca(e.target.value)}
+              className="w-full bg-surface-container-high/40 p-5 pl-14 rounded-[1.5rem] text-sm font-black outline-none border border-transparent focus:border-[#42a0f5]/30 transition-all shadow-inner" 
+            />
+          </div>
         )}
       </div>
       
-      <div className="p-4 bg-white/2 border-t border-white/5 flex justify-between">
+      <div className="max-h-[400px] overflow-y-auto p-4 custom-scrollbar bg-black/20">
+        {modoPaste ? (
+          <div className="space-y-4 p-2">
+            {resultadoValidacao.length === 0 ? (
+              <div className="space-y-4">
+                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Cole a lista de alunos (um por linha):</p>
+                <textarea 
+                  value={conteudoPaste}
+                  onChange={e => setConteudoPaste(e.target.value)}
+                  placeholder="Nome do Aluno 1&#10;Nome do Aluno 2..."
+                  className="w-full h-48 bg-black border border-white/10 p-5 rounded-2xl text-sm font-medium text-white focus:border-[#fbbf24]/50 outline-none transition-all shadow-inner resize-none"
+                />
+                <button 
+                  type="button"
+                  onClick={handleValidarPaste}
+                  disabled={!conteudoPaste.trim()}
+                  className="w-full py-4 bg-[#fbbf24] text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-xl shadow-[#fbbf24]/10 hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-30"
+                >
+                  Validar Nomes no Banco
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                   <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Resultado da Validação:</p>
+                   <button onClick={() => setResultadoValidacao([])} className="text-[10px] font-black text-[#fbbf24] uppercase tracking-widest">Limpar e Tentar Novamente</button>
+                </div>
+                <div className="space-y-2">
+                  {resultadoValidacao.map((r, i) => (
+                    <div key={i} className={cn(
+                      "flex items-center justify-between p-3 rounded-xl border",
+                      r.encontrado ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-red-500/10 border-red-500/20 text-red-500"
+                    )}>
+                      <div className="flex items-center gap-3">
+                        {r.encontrado ? <Check size={14} /> : <X size={14} />}
+                        <span className="text-xs font-black truncate max-w-[200px]">{r.nome}</span>
+                      </div>
+                      {r.encontrado ? (
+                        <span className="text-[8px] font-black uppercase bg-emerald-500/20 px-2 py-1 rounded-full">Encontrado: {r.aluno.turma}</span>
+                      ) : (
+                        <span className="text-[8px] font-black uppercase bg-red-500/20 px-2 py-1 rounded-full">Não encontrado</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button 
+                  type="button"
+                  onClick={handleConfirmarPaste}
+                  className="w-full py-4 bg-primary text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all"
+                >
+                  Confirmar Ensalamento ({resultadoValidacao.filter(r => r.encontrado).length} alunos)
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {alunosFiltrados.length === 0 ? (
+              <div className="py-20 text-center opacity-20 italic text-xs uppercase font-black tracking-widest">
+                Nenhum aluno encontrado
+              </div>
+            ) : (
+              alunosFiltrados.map(a => {
+                const isSelected = selecionados.includes(a.nome);
+                return (
+                  <button 
+                    key={a.id} 
+                    type="button"
+                    onClick={() => toggleAluno(a.nome)}
+                    className={cn(
+                      "w-full flex items-center justify-between p-4 rounded-2xl transition-all text-left group",
+                      isSelected 
+                        ? "bg-primary/10 border border-primary/30" 
+                        : "hover:bg-white/5"
+                    )}>
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all", 
+                        isSelected ? "bg-primary border-primary text-black" : "border-white/10 group-hover:border-white/30"
+                      )}>
+                        {isSelected && <Check size={12} strokeWidth={4} />}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className={cn("text-xs font-black truncate", isSelected ? "text-primary" : "text-white")}>{a.nome}</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest opacity-40">{a.turma}</span>
+                      </div>
+                    </div>
+                    {isSelected && <span className="text-[8px] font-black text-primary uppercase tracking-widest">Selecionado</span>}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+      
+      <div className="p-4 bg-black/40 border-t border-white/5 flex justify-between items-center">
          <button 
             type="button"
             onClick={() => onChange([])}
@@ -1886,7 +1992,10 @@ function SeletorAlunos({ alunos, selecionados, onChange, turmaAlvo }: { alunos: 
          >
             Limpar Seleção
          </button>
-         <span className="text-[9px] font-black uppercase opacity-20 tracking-widest italic">SESI Connect Ensalamento</span>
+         <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="text-[9px] font-black uppercase opacity-20 tracking-widest italic">SESI Connect Ensalamento</span>
+         </div>
       </div>
     </div>
   );
