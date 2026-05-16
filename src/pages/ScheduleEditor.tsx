@@ -190,15 +190,17 @@ export default function ScheduleEditor() {
     setSalvando(true);
     try {
       const paraSalvar = periodosEditaveis.map(p => ({ ...p, segmento: segmentoSelecionado }));
+      console.log('[DEBUG] handleSalvarPeriodos enviando:', paraSalvar);
       const ok = await salvarPeriodos(paraSalvar);
       if (ok) {
         setMensagem({ tipo: 'sucesso', texto: 'Modelo do Segmento salvo!' });
         await atualizar(); 
         setModalPeriodosAberto(false);
       } else {
-        setMensagem({ tipo: 'erro', texto: 'Erro ao salvar modelo.' });
+        setMensagem({ tipo: 'erro', texto: 'Erro ao salvar modelo. Veja console.' });
       }
     } catch (err) {
+      console.error('[DEBUG] handleSalvarPeriodos erro:', err);
       setMensagem({ tipo: 'erro', texto: 'Falha ao processar salvamento.' });
     } finally {
       setSalvando(false);
@@ -212,7 +214,7 @@ export default function ScheduleEditor() {
         <div>
           <h1 className="text-4xl font-black italic tracking-tighter uppercase">Gestão <span className="text-primary">de Grades</span></h1>
           <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
-             <Zap size={12} className="text-primary" /> Sistema Ativo <span className="text-primary/20 ml-2">v2.6 — DB_PERMISSION_FIX</span>
+             <Zap size={12} className="text-primary" /> Sistema Ativo <span className="text-primary/20 ml-2">v3.0</span>
           </p>
         </div>
         <div className="flex gap-4">

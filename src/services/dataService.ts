@@ -807,16 +807,42 @@ export async function salvarRealocacao(realocacao: any): Promise<boolean> {
 export async function salvarPeriodos(lista: any[]): Promise<boolean> {
   if (!lista || lista.length === 0) return false;
   const segmento = lista[0].segmento;
-  if (segmento) {
-    await supabase.from('periodos_escolares').delete().eq('segmento', segmento);
+  if (!segmento) {
+    console.error('[DEBUG] salvarPeriodos: segmento ausente');
+    return false;
   }
+
+  // 1. Deletar períodos antigos deste segmento
+  const { error: delErr } = await supabase
+    .from('periodos_escolares')
+    .delete()
+    .eq('segmento', segmento);
+
+  if (delErr) {
+    console.error('[DEBUG] Erro ao deletar períodos antigos:', delErr);
+    return false;
+  }
+
+  // 2. Montar payloads SEM o id do banco (para evitar conflito de UUID)
   const payloads = lista.map(p => ({
-    nome: p.nome || p.materia || 'Período',
-    horario_inicio: p.horarioInicio || p.horario?.split(' - ')[0],
-    horario_fim: p.horarioFim || p.horario?.split(' - ')[1],
-    segmento: p.segmento,
+    nome: p.nome || 'Aula',
+    horario_inicio: (p.horarioInicio || '08:00').slice(0, 5),
+    horario_fim: (p.horarioFim || '08:45').slice(0, 5),
+    segmento: segmento,
     tipo: p.tipo || 'aula',
   }));
-  const { error } = await supabase.from('periodos_escolares').insert(payloads);
-  return !error;
+
+  console.log('[DEBUG] salvarPeriodos payload:', payloads);
+
+  // 3. Inserir novos períodos
+  const { error: insErr } = await supabase
+    .from('periodos_escolares')
+    .insert(payloads);
+
+  if (insErr) {
+    console.error('[DEBUG] Erro ao inserir períodos:', insErr);
+    return false;
+  }
+
+  return true;
 }
