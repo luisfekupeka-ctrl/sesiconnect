@@ -549,60 +549,121 @@ export default function ScheduleEditor() {
                 <button onClick={() => setModalPreviewAberto(false)} className="p-4 bg-white/5 rounded-2xl text-red-500"><X size={24} /></button>
               </div>
               <div className="flex-1 overflow-y-auto p-10 space-y-12 custom-scrollbar">
-                <section>
-                  <h4 className="text-sm font-black uppercase tracking-widest text-white/80 mb-6 flex items-center gap-2">
-                    <DoorOpen size={16} className="text-primary" /> Turmas x Salas (Clique em "Revisar" para ver horários)
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {Object.keys(dadosPreview).map(turma => (
-                      <div key={turma} className="bg-surface-container-low p-6 rounded-[2.5rem] border border-white/5 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="px-4 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black">{turma}</span>
-                          <button onClick={() => setTurmaExpandida(turmaExpandida === turma ? null : turma)} className="text-[9px] font-black uppercase text-primary hover:underline">
-                            {turmaExpandida === turma ? 'Fechar' : 'Revisar Horários'}
-                          </button>
-                        </div>
-                        
-                        <select value={mapeamentoSalas[turma]} onChange={e => setMapeamentoSalas({...mapeamentoSalas, [turma]: e.target.value})} className="w-full bg-black/40 border border-white/10 p-4 rounded-2xl text-xs font-black outline-none">
-                          <option value="">Vincular Sala...</option>
-                          {Array.from({length: 31}, (_, i) => i + 1).map(n => <option key={n} value={n}>Sala {n}</option>)}
-                        </select>
+                <section className="space-y-8">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xl font-black uppercase tracking-tighter italic text-white flex items-center gap-3">
+                      <LayoutGrid size={24} className="text-primary" /> 
+                      Conferência de Grade por Turma
+                    </h4>
+                    <p className="text-[10px] font-black uppercase text-on-surface-variant bg-white/5 px-4 py-2 rounded-full">
+                      Vincule cada turma a uma sala física e revise os horários detectados
+                    </p>
+                  </div>
 
-                        {/* Detalhes da Grade para Revisão */}
-                        <AnimatePresence>
-                          {turmaExpandida === turma && (
-                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-black/20 rounded-2xl p-4 mt-2">
-                              <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
-                                {dadosPreview[turma].map((a, i) => (
-                                  <div key={i} className="flex flex-col border-b border-white/5 pb-2 last:border-0">
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-[9px] font-black text-primary/60">{a.dia}</span>
-                                      <span className="text-[9px] font-black text-white/40">{a.horario}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-[10px] font-black text-white truncate max-w-[100px]">{a.materia}</span>
-                                      <span className="text-[9px] font-medium text-white/60 truncate max-w-[80px]">{a.professor}</span>
-                                    </div>
-                                  </div>
-                                ))}
+                  <div className="grid grid-cols-1 gap-8">
+                    {Object.keys(dadosPreview).map(turma => {
+                      const aulasTurma = dadosPreview[turma];
+                      const estaExpandido = turmaExpandida === turma;
+
+                      return (
+                        <div key={turma} className={cn(
+                          "bg-surface-container-low rounded-[3rem] border-2 transition-all overflow-hidden",
+                          estaExpandido ? "border-primary bg-primary/5 shadow-2xl" : "border-white/5"
+                        )}>
+                          {/* Cabeçalho do Bloco */}
+                          <div className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div className="flex items-center gap-6">
+                              <div className="w-16 h-16 bg-white/5 rounded-[1.5rem] flex items-center justify-center text-2xl font-black italic text-primary">
+                                {turma.slice(0, 2)}
                               </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    ))}
+                              <div>
+                                <h5 className="text-2xl font-black italic text-white leading-none">{turma}</h5>
+                                <button onClick={() => setTurmaExpandida(estaExpandido ? null : turma)} 
+                                  className="mt-2 text-[9px] font-black uppercase tracking-widest text-primary flex items-center gap-2 hover:opacity-70">
+                                  {estaExpandido ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                                  {estaExpandido ? 'Fechar Grade' : `Revisar ${aulasTurma.length} aulas detectadas`}
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-4 w-full md:w-auto">
+                              <div className="flex-1 md:w-64">
+                                <label className="text-[8px] font-black uppercase text-on-surface-variant block mb-2 ml-2 tracking-widest">Vincular Sala Física</label>
+                                <select 
+                                  value={mapeamentoSalas[turma]} 
+                                  onChange={e => setMapeamentoSalas({...mapeamentoSalas, [turma]: e.target.value})}
+                                  className="w-full bg-black border border-white/10 p-4 rounded-2xl text-xs font-black outline-none focus:border-primary/50 transition-all cursor-pointer appearance-none"
+                                >
+                                  <option value="">Selecione uma Sala...</option>
+                                  {Array.from({length: 31}, (_, i) => i + 1).map(n => (
+                                    <option key={n} value={n}>SALA {n}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Grade Visual (Expandida) */}
+                          <AnimatePresence>
+                            {estaExpandido && (
+                              <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="border-t border-white/5 bg-black/40">
+                                <div className="p-8">
+                                  <div className="grid grid-cols-5 gap-4">
+                                    {DIAS_SEMANA.map(dia => (
+                                      <div key={dia} className="space-y-3">
+                                        <div className="text-[10px] font-black uppercase text-primary/40 text-center tracking-widest pb-3 border-b border-white/5">{dia}</div>
+                                        <div className="space-y-2">
+                                          {aulasTurma.filter(a => a.dia === dia).map((a, idx) => (
+                                            <div key={idx} className="bg-white/5 p-4 rounded-2xl border border-white/5 space-y-2 group hover:border-primary/30 transition-all">
+                                              <div className="text-[9px] font-black text-on-surface-variant opacity-40 group-hover:opacity-100">{a.horario}</div>
+                                              <div className="text-[11px] font-black text-white italic truncate">{a.materia}</div>
+                                              <div className="text-[9px] font-bold text-primary truncate italic">{a.professor}</div>
+                                            </div>
+                                          ))}
+                                          {aulasTurma.filter(a => a.dia === dia).length === 0 && (
+                                            <div className="py-12 border border-dashed border-white/5 rounded-2xl flex items-center justify-center opacity-10 text-[8px] font-black uppercase italic">Sem aulas</div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      );
+                    })}
                   </div>
                 </section>
-                <section>
-                  <h4 className="text-sm font-black uppercase tracking-widest text-white/80 mb-6">Professores</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                <section className="bg-surface-container-low rounded-[3.5rem] border border-white/5 p-10 space-y-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary"><Users size={24} /></div>
+                    <div>
+                      <h4 className="text-xl font-black uppercase italic text-white tracking-tighter">Reconciliação de Professores</h4>
+                      <p className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest">Confirme o vínculo entre o nome do arquivo e o banco de dados</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {professoresUnicosPreview.map(prof => (
-                      <div key={prof} className="bg-surface-container-low p-6 rounded-[2.5rem] border border-white/5 space-y-4">
-                        <span className="text-xs font-black text-white italic">{prof}</span>
-                        <select value={mapeamentoProfessores[prof]} onChange={e => setMapeamentoProfessores({...mapeamentoProfessores, [prof]: e.target.value})} className="w-full bg-black/40 border border-white/10 p-4 rounded-2xl text-xs font-black outline-none">
-                          <option value="">Ignorar ou Criar...</option>
-                          {listaProfessoresNomes.map(p => <option key={p} value={p}>{p}</option>)}
-                        </select>
+                      <div key={prof} className="bg-black/40 p-6 rounded-3xl border border-white/5 space-y-4 hover:border-primary/20 transition-all">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[8px] font-black uppercase text-on-surface-variant tracking-widest">No Arquivo</span>
+                          <span className="text-xs font-black text-white italic truncate">{prof}</span>
+                        </div>
+                        <div className="space-y-2">
+                           <span className="text-[8px] font-black uppercase text-primary tracking-widest">Vincular ao Sistema</span>
+                           <select 
+                            value={mapeamentoProfessores[prof]} 
+                            onChange={e => setMapeamentoProfessores({...mapeamentoProfessores, [prof]: e.target.value})}
+                            className="w-full bg-surface-container-high border-none p-4 rounded-xl text-[10px] font-black outline-none focus:ring-2 focus:ring-primary/30 appearance-none"
+                           >
+                            <option value="">Ignorar ou Criar...</option>
+                            {listaProfessoresNomes.map(p => <option key={p} value={p}>{p}</option>)}
+                           </select>
+                        </div>
                       </div>
                     ))}
                   </div>
