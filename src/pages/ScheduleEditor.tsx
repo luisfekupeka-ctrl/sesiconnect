@@ -77,6 +77,12 @@ export default function ScheduleEditor() {
   const [conteudoPlano, setConteudoPlano] = useState('');
   const [modalFotoAberto, setModalFotoAberto] = useState(false); // Reutilizando para Importação Geral
   const [importandoGeral, setImportandoGeral] = useState(false);
+  const [modalPreviewAberto, setModalPreviewAberto] = useState(false);
+  const [dadosPreview, setDadosPreview] = useState<{[key: string]: any[]}>({});
+  const [mapeamentoSalas, setMapeamentoSalas] = useState<{[key: string]: string}>({});
+  const [mapeamentoProfessores, setMapeamentoProfessores] = useState<{[key: string]: string}>({});
+  const [professoresUnicosPreview, setProfessoresUnicosPreview] = useState<string[]>([]);
+  const [processandoFinal, setProcessandoFinal] = useState(false);
 
   useEffect(() => { localStorage.setItem('sesi_materias', JSON.stringify(materias)); }, [materias]);
   const listaProfessoresNomes = professoresCMS.map(p => p.nome).sort();
@@ -178,34 +184,81 @@ export default function ScheduleEditor() {
       try {
         const data = new Uint8Array(ev.target?.result as ArrayBuffer);
         const wb = XLSX.read(data, { type: 'array' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json<any>(ws);
+        const previewMap: {[key: string]: any[]} = {};
 
-        // Processamento para o formato da tabela de grade
-        // Espera-se colunas como: Sala, Turma, Dia, Horario, Professor, Materia
-        const entradas: Omit<EntradaGradeSala, 'id'>[] = json.map(row => ({
-          numeroSala: Number(row.sala || row.Sala || row.SALA || 0),
-          nomeSala: String(row.nome_sala || row.Sala || `Sala ${row.sala}`),
-          anoTurma: String(row.turma || row.Turma || row.TURMA || 'A DEFINIR'),
-          diaSemana: String(row.dia || row.Dia || row.DIA || '').toUpperCase().trim(),
-          horario: String(row.horario || row.Horario || row.HORARIO || ''),
-          nomeProfessor: String(row.professor || row.Professor || row.PROFESSOR || '—'),
-          materia: String(row.materia || row.Materia || row.MATERIA || 'A DEFINIR'),
-          turma: String(row.turma || row.Turma || 'A DEFINIR'),
-          tipo: 'regular',
-          listaAlunos: []
-        })).filter(e => e.numeroSala > 0 && e.diaSemana && e.horario);
+        for (const nomeAba of wb.SheetNames) {
+          const ws = wb.Sheets[nomeAba];
+          const turmaNome = nomeAba.replace(' SESI', '').trim();
+          const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:Z100');
+          const rows: any[][] = [];
+          
+          for (let R = range.s.r; R <= range.e.r; ++R) {
+            const row = [];
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+              const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+              row.push(cell ? cell.v : null);
+            }
+            rows.push(row);
+          }
 
-        if (entradas.length === 0) throw new Error("Nenhum dado válido encontrado na planilha.");
+          const diasIndices: { [key: string]: number } = {};
+          rows.forEach((row) => {
+            row.forEach((cell, cIdx) => {
+              const val = String(cell || '').toUpperCase().trim();
+              if (DIAS_SEMANA.includes(val)) diasIndices[val] = cIdx;
+            });
+          });
 
-        const ok = await salvarGradeSala(entradas);
-        if (ok) {
-          setMensagem({ tipo: 'sucesso', texto: `${entradas.length} horários importados com sucesso!` });
-          atualizar();
-          setModalFotoAberto(false);
-        } else {
-          throw new Error("Erro ao salvar no banco de dados.");
+          const itensTurma: any[] = [];
+          rows.forEach((row) => {
+            const horarioRaw = String(row[1] || '');
+            if (horarioRaw.includes('-') && horarioRaw.includes(':')) {
+              Object.entries(diasIndices).forEach(([dia, colIdx]) => {
+                const conteudo = String(row[colIdx] || '').trim();
+                if (conteudo && conteudo.length > 5) {
+                  const partes = conteudo.split('\n').map(p => p.trim());
+                  itensTurma.push({
+                    dia, 
+                    horario: horarioRaw.trim(),
+                    materia: partes[0],
+                    professor: partes[1]?.split('-')[0]?.trim() || '—'
+                  });
+                }
+              });
+            }
+          });
+          
+          if (itensTurma.length > 0) {
+            previewMap[turmaNome] = itensTurma;
+          }
         }
+
+        const todosProfs = new Set<string>();
+        Object.values(previewMap).forEach(aulas => {
+          aulas.forEach(a => { if (a.professor && a.professor !== '—') todosProfs.add(a.professor); });
+        });
+
+        setProfessoresUnicosPreview(Array.from(todosProfs).sort());
+        
+        // Auto-mapeamento inicial por nome idêntico
+        const autoMapProf: {[key: string]: string} = {};
+        todosProfs.forEach(pExcel => {
+          const match = professoresCMS.find(pDb => pDb.nome.toLowerCase() === pExcel.toLowerCase());
+          autoMapProf[pExcel] = match ? match.nome : '';
+        });
+
+        setDadosPreview(previewMap);
+        setMapeamentoSalas(Object.keys(previewMap).reduce((acc, curr) => ({ ...acc, [curr]: '' }), {}));
+        setMapeamentoProfessores(autoMapProf);
+        setModalPreviewAberto(true);
+        setModalFotoAberto(false);
+      } catch (err: any) {
+        setMensagem({ tipo: 'erro', texto: "Erro ao ler Excel." });
+      } finally {
+        setImportandoGeral(false);
+      }
+    };
+    };
       } catch (err: any) {
         setMensagem({ tipo: 'erro', texto: err.message || "Erro ao processar arquivo." });
       } finally {
@@ -765,6 +818,101 @@ export default function ScheduleEditor() {
                   <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Processando Planilha...</p>
                 </div>
               )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {modalPreviewAberto && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/95 backdrop-blur-xl">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#0d1117] rounded-[4rem] border border-primary/30 max-w-5xl w-full h-[85vh] flex flex-col shadow-3xl overflow-hidden" onClick={e => e.stopPropagation()}>
+              
+              <div className="p-10 border-b border-white/5 flex items-center justify-between bg-primary/5">
+                <div>
+                  <h3 className="text-3xl font-black tracking-tighter italic">Validar <span className="text-primary">Ensalamento</span></h3>
+                  <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mt-2">Vincule cada aba do Excel a uma sala física (1-31)</p>
+                </div>
+                <button onClick={() => setModalPreviewAberto(false)} className="p-4 bg-white/5 rounded-2xl hover:bg-red-500/20 text-red-500 transition-all"><X size={24} /></button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-10 custom-scrollbar space-y-12">
+                {/* SEÇÃO 1: SALAS */}
+                <section>
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-1.5 h-6 bg-primary rounded-full" />
+                    <h4 className="text-sm font-black uppercase tracking-widest text-white/80">Vincular Turmas às Salas</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {Object.keys(dadosPreview).map(turma => (
+                      <div key={turma} className="bg-surface-container-low p-6 rounded-[2.5rem] border border-white/5 space-y-4 hover:border-primary/30 transition-all group">
+                        <div className="flex items-center justify-between">
+                          <span className="px-4 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest">{turma}</span>
+                          <span className="text-[10px] font-bold text-on-surface-variant opacity-40">{dadosPreview[turma].length} Aulas</span>
+                        </div>
+                        <select 
+                          value={mapeamentoSalas[turma]}
+                          onChange={e => setMapeamentoSalas({...mapeamentoSalas, [turma]: e.target.value})}
+                          className="w-full bg-black/40 border border-white/10 p-4 rounded-2xl text-xs font-black outline-none focus:border-primary transition-all appearance-none"
+                        >
+                          <option value="">Vincular Sala...</option>
+                          {Array.from({length: 31}, (_, i) => i + 1).map(n => (
+                            <option key={n} value={n}>Sala {n < 10 ? `0${n}` : n}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                {/* SEÇÃO 2: PROFESSORES */}
+                <section>
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-1.5 h-6 bg-amber-500 rounded-full" />
+                    <h4 className="text-sm font-black uppercase tracking-widest text-white/80">Validar Professores do Banco</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {professoresUnicosPreview.map(profExcel => (
+                      <div key={profExcel} className="bg-surface-container-low p-6 rounded-[2.5rem] border border-white/5 space-y-4 hover:border-amber-500/30 transition-all group">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">No Excel:</span>
+                          <span className="text-xs font-black text-white italic">{profExcel}</span>
+                        </div>
+                        <select 
+                          value={mapeamentoProfessores[profExcel]}
+                          onChange={e => setMapeamentoProfessores({...mapeamentoProfessores, [profExcel]: e.target.value})}
+                          className="w-full bg-black/40 border border-white/10 p-4 rounded-2xl text-xs font-black outline-none focus:border-amber-500 transition-all appearance-none"
+                        >
+                          <option value="">Ignorar ou Criar Novo...</option>
+                          {listaProfessoresNomes.map(p => (
+                            <option key={p} value={p}>{p}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </div>
+
+              <div className="p-10 border-t border-white/5 bg-black/40 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-500">
+                    <AlertCircle size={24} />
+                  </div>
+                  <p className="text-[10px] font-black text-on-surface-variant uppercase max-w-xs leading-relaxed">
+                    Certifique-se de vincular todas as turmas. Salas duplicadas serão sobrescritas.
+                  </p>
+                </div>
+                <button 
+                  onClick={confirmarImportacaoFinal}
+                  disabled={processandoFinal}
+                  className="px-10 py-5 bg-primary text-black rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-2xl shadow-primary/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50"
+                >
+                  {processandoFinal ? <RefreshCw size={20} className="animate-spin" /> : <Check size={20} />}
+                  {processandoFinal ? 'Finalizando...' : 'Confirmar e Salvar Tudo'}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
