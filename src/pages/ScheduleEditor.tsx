@@ -186,10 +186,33 @@ export default function ScheduleEditor() {
                 <div key={linha.id} className="group flex items-center gap-4">
                   <div className="flex-1 bg-black/40 border border-white/5 p-2 rounded-3xl flex items-center gap-4 transition-all hover:border-primary/30" style={{ borderLeft: `6px solid ${corProf}` }}>
                     
-                    {/* Input de Horário */}
-                    <div className="flex items-center gap-2 bg-white/5 px-4 py-3 rounded-2xl">
-                      <Clock size={14} className="text-white/20" />
-                      <input type="text" value={linha.horario} onChange={e => updateLinha(linha.id, 'horario', e.target.value)} className="bg-transparent border-none text-[10px] font-black text-white w-28 outline-none uppercase" />
+                    {/* Inputs de Horário Separados */}
+                    <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-2xl">
+                      <div className="flex flex-col items-center">
+                        <span className="text-[7px] font-black uppercase text-white/20 mb-1">Início</span>
+                        <input 
+                          type="time" 
+                          value={linha.horario.split('-')[0]?.trim() || '07:30'} 
+                          onChange={e => {
+                            const fim = linha.horario.split('-')[1]?.trim() || '08:15';
+                            updateLinha(linha.id, 'horario', `${e.target.value} - ${fim}`);
+                          }} 
+                          className="bg-transparent border-none text-[10px] font-black text-white w-16 outline-none uppercase appearance-none" 
+                        />
+                      </div>
+                      <div className="w-px h-6 bg-white/10 mx-1" />
+                      <div className="flex flex-col items-center">
+                        <span className="text-[7px] font-black uppercase text-white/20 mb-1">Fim</span>
+                        <input 
+                          type="time" 
+                          value={linha.horario.split('-')[1]?.trim() || '08:15'} 
+                          onChange={e => {
+                            const inicio = linha.horario.split('-')[0]?.trim() || '07:30';
+                            updateLinha(linha.id, 'horario', `${inicio} - ${e.target.value}`);
+                          }} 
+                          className="bg-transparent border-none text-[10px] font-black text-white w-16 outline-none uppercase appearance-none" 
+                        />
+                      </div>
                     </div>
 
                     {/* Input de Matéria */}
