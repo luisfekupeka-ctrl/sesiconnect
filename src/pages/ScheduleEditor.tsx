@@ -126,16 +126,21 @@ export default function ScheduleEditor() {
     // Ordenar por horário antes de salvar
     const linhasOrdenadas = [...linhas].sort((a,b) => a.horario.localeCompare(b.horario));
 
-    const entradas: any[] = linhasOrdenadas.map(l => ({
-      numero_sala: Number(salaSelecionada.numero),
-      dia_semana: diaSelecionado,
-      horario: l.horario,
-      nome_professor: l.professor || '—',
-      materia: l.materia || 'A DEFINIR',
-      turma: salaSelecionada.ano || 'A DEFINIR',
-      tipo: l.tipo === 'laboratorio_idiomas' ? 'laboratorio_idiomas' : l.tipo === 'after' ? 'after' : 'regular',
-      lista_alunos: [] 
-    }));
+    const entradas: any[] = linhasOrdenadas.map(l => {
+      const payload: any = {
+        numero_sala: Number(salaSelecionada.numero),
+        dia_semana: String(diaSelecionado).toUpperCase().trim(),
+        horario: l.horario,
+        nome_professor: l.professor || '—',
+        materia: l.materia || 'A DEFINIR',
+        turma: salaSelecionada.ano || 'A DEFINIR',
+        tipo: l.tipo === 'laboratorio_idiomas' ? 'laboratorio_idiomas' : l.tipo === 'after' ? 'after' : 'regular'
+      };
+
+      // Só enviamos lista_alunos se necessário para evitar erros de tipo no upsert/insert
+      // se o banco permitir null ou tiver default [], remover o envio resolve o 400
+      return payload;
+    });
 
     try {
       const ok = await salvarGradeSala(entradas);
