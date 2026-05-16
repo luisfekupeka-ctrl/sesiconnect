@@ -336,15 +336,23 @@ export default function ScheduleEditor() {
                       </div>
                     </div>
 
-                    {/* Matéria Intelignete */}
+                    {/* Matéria / Atividade Dinâmica */}
                     <div className="flex-1">
-                      <div className="text-[8px] font-black uppercase text-white/20 mb-1 ml-1">Matéria / Atividade</div>
+                      <div className="text-[8px] font-black uppercase text-white/20 mb-1 ml-1">
+                        {linha.tipo === 'laboratorio_idiomas' ? 'Nível / Módulo' : linha.tipo === 'after' ? 'Atividade After' : linha.tipo === 'intervalo' || linha.tipo === 'almoco' ? 'Intervalo' : 'Matéria'}
+                      </div>
                       <input 
                         type="text" 
                         value={linha.materia} 
-                        placeholder="EX: MATEMÁTICA..." 
+                        placeholder={linha.tipo === 'laboratorio_idiomas' ? 'EX: LEVEL 3...' : linha.tipo === 'after' ? 'EX: ROBÓTICA...' : 'EX: MATEMÁTICA...'}
                         onChange={e => updateLinha(linha.id, 'materia', e.target.value)} 
-                        className="w-full bg-transparent border-none text-sm font-black text-primary outline-none placeholder:text-white/5 uppercase" 
+                        disabled={linha.tipo === 'intervalo' || linha.tipo === 'almoco'}
+                        className={cn("w-full bg-transparent border-none text-sm font-black outline-none uppercase", 
+                          linha.tipo === 'intervalo' || linha.tipo === 'almoco' ? 'text-amber-500/60' : 
+                          linha.tipo === 'laboratorio_idiomas' ? 'text-blue-400' :
+                          linha.tipo === 'after' ? 'text-purple-400' : 'text-primary',
+                          'placeholder:text-white/5'
+                        )}
                       />
                     </div>
 
