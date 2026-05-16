@@ -95,129 +95,30 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
         buscarGradeMonitores(),
       ]);
 
-      // === DADOS DEMO: PROFESSORES ===
-      if (pCms && pCms.length > 0) {
-        setProfessoresCMS(pCms);
-      } else {
-        setProfessoresCMS([
-          { id: 'p1', nome: 'Luis Kim', cor: '#3B82F6', especialidade: 'Matemática' },
-          { id: 'p2', nome: 'Patricia Santos', cor: '#EF4444', especialidade: 'Português' },
-          { id: 'p3', nome: 'Carlos Edu', cor: '#10B981', especialidade: 'Ciências' },
-          { id: 'p4', nome: 'Ana Beatriz', cor: '#F59E0B', especialidade: 'História' },
-        ]);
-      }
+      // === DADOS REAIS: PROFESSORES ===
+      setProfessoresCMS(pCms || []);
 
-      // === DADOS DEMO: ALUNOS ===
-      if (a && a.length > 0) {
-        setAlunos(a);
-      } else {
-        setAlunos([
-          { id: 'a1', nome: 'Arthur Silva', turma: '6º Ano A', ano: '6º Ano', numeroSala: 1 },
-          { id: 'a2', nome: 'Beatriz Oliveira', turma: '6º Ano A', ano: '6º Ano', numeroSala: 1 },
-          { id: 'a3', nome: 'Caio Castro', turma: '7º Ano B', ano: '7º Ano', numeroSala: 2 },
-          { id: 'a4', nome: 'Daniela Lima', turma: '7º Ano B', ano: '7º Ano', numeroSala: 2 },
-          { id: 'a5', nome: 'Eduardo Costa', turma: '8º Ano C', ano: '8º Ano', numeroSala: 3 },
-        ]);
-      }
+      // === DADOS REAIS: ALUNOS ===
+      setAlunos(a || []);
 
-      // === DADOS DEMO: GRADE COMPLETA ===
-      if (g && g.length > 0) {
-        setGradeCompleta(g);
-      } else {
-        const demoGrade: EntradaGradeSala[] = [];
-        const dias = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
-        const profs = ['Luis Kim', 'Patricia Santos', 'Carlos Edu', 'Ana Beatriz'];
-        const materias = ['Matemática', 'Português', 'Ciências', 'História'];
+      // === DADOS REAIS: GRADE COMPLETA ===
+      setGradeCompleta(g || []);
 
-        dias.forEach(dia => {
-          // Criar 3 aulas para cada dia para teste
-          demoGrade.push({
-            id: `g-${dia}-1`,
-            numeroSala: 1,
-            nomeSala: 'Sala 01',
-            anoTurma: '6º Ano A',
-            diaSemana: dia,
-            horario: '07:30 - 08:20',
-            nomeProfessor: profs[0],
-            turma: '6º Ano A',
-            materia: materias[0],
-            tipo: 'regular',
-            listaAlunos: ['a1', 'a2']
-          });
-          demoGrade.push({
-            id: `g-${dia}-2`,
-            numeroSala: 2,
-            nomeSala: 'Sala 02',
-            anoTurma: '7º Ano B',
-            diaSemana: dia,
-            horario: '08:20 - 09:10',
-            nomeProfessor: profs[1],
-            turma: '7º Ano B',
-            materia: materias[1],
-            tipo: 'regular',
-            listaAlunos: ['a3', 'a4']
-          });
-        });
-        setGradeCompleta(demoGrade);
-      }
-
-      // === DADOS DEMO: SALAS ===
-      if (s && s.length > 0) {
-        setSalas(s);
-      } else {
-        setSalas([
-          { id: 's1', numero: 1, nome: 'Sala 01', segmento: '6º e 7º', ano: '6º Ano A', grade: [] },
-          { id: 's2', numero: 2, nome: 'Sala 02', segmento: '6º e 7º', ano: '7º Ano B', grade: [] },
-          { id: 's3', numero: 3, nome: 'Sala 03', segmento: '8º e 9º', ano: '8º Ano C', grade: [] },
-          { id: 's4', numero: 4, nome: 'Sala 04', segmento: '8º e 9º', ano: '9º Ano A', grade: [] },
-          { id: 's5', numero: 5, nome: 'Sala 05', segmento: 'Ensino Médio', ano: '1º EM', grade: [] },
-        ]);
-      }
+      // === DADOS REAIS: SALAS ===
+      setSalas(s || []);
 
       setAtividadesAfter(aa);
       setLocaisCMS(lCms);
       setOcorrencias(oc);
 
-      // === LANGUAGE LAB DEMO ===
-      if (li && li.length > 0) {
-        setLanguageLab(li);
-      } else {
-        setLanguageLab([
-          { id: 'lab-1', turma: '9º Ano A', nivel: 'B1 Intermediate', professor: 'Teacher Sarah', sala: 'Lab Inglês 01', horarioInicio: '08:20', horarioFim: '10:00', diaSemana: 'SEGUNDA' },
-          { id: 'lab-2', turma: '9º Ano B', nivel: 'A2 Elementary', professor: 'Teacher John', sala: 'Lab Inglês 02', horarioInicio: '08:20', horarioFim: '10:00', diaSemana: 'SEGUNDA' },
-          { id: 'lab-3', turma: '2º EM A', nivel: 'C1 Advanced', professor: 'Teacher Mike', sala: 'Lab Inglês 01', horarioInicio: '10:20', horarioFim: '12:00', diaSemana: 'TERÇA' },
-          { id: 'lab-4', turma: '7º Ano A', nivel: 'A1 Beginner', professor: 'Teacher Anna', sala: 'Lab Inglês 03', horarioInicio: '07:30', horarioFim: '09:10', diaSemana: 'QUARTA' },
-          { id: 'lab-5', turma: '8º Ano C', nivel: 'B2 Upper Inter', professor: 'Teacher Paul', sala: 'Lab Inglês 02', horarioInicio: '10:00', horarioFim: '11:40', diaSemana: 'QUINTA' },
-        ]);
-      }
+      // === LANGUAGE LAB REAIS ===
+      setLanguageLab(li || []);
 
-      // === GRADE MONITORES DEMO ===
-      if (gm && gm.length > 0) {
-        setGradeMonitores(gm);
-      } else {
-        setGradeMonitores([
-          { id: 'gm-1', monitorNome: 'Maria Silva', diaSemana: 'SEGUNDA', horarioInicio: '07:30', horarioFim: '09:10', posto: 'Pátio Central', corEtiqueta: '#3B82F6' },
-          { id: 'gm-2', monitorNome: 'Maria Silva', diaSemana: 'SEGUNDA', horarioInicio: '09:30', horarioFim: '11:10', posto: 'Corredor 1º Andar', corEtiqueta: '#10B981' },
-          { id: 'gm-3', monitorNome: 'João Pedro', diaSemana: 'SEGUNDA', horarioInicio: '07:30', horarioFim: '12:00', posto: 'Entrada Principal', corEtiqueta: '#EF4444' },
-          { id: 'gm-4', monitorNome: 'Ana Santos', diaSemana: 'TERÇA', horarioInicio: '13:00', horarioFim: '15:20', posto: 'Refeitório', corEtiqueta: '#F59E0B' },
-          { id: 'gm-5', monitorNome: 'Ana Santos', diaSemana: 'TERÇA', horarioInicio: '16:00', horarioFim: '18:00', posto: 'Pátio Esportivo', corEtiqueta: '#8B5CF6' },
-          { id: 'gm-6', monitorNome: 'Lucas Oliveira', diaSemana: 'QUARTA', horarioInicio: '13:00', horarioFim: '17:00', posto: 'Biblioteca', corEtiqueta: '#EC4899' },
-        ]);
-      }
+      // === GRADE MONITORES REAIS ===
+      setGradeMonitores(gm || []);
 
-      // === MONITORES DE TESTE (se vazio) ===
-      if (m && m.length > 0) {
-        setMonitores(m);
-      } else {
-        setMonitores([
-          { id: 'mock-1', nome: 'Maria Silva', materia: 'Matemática', diaSemana: 'SEGUNDA', turno: 'manha', horarioInicio: '08:00', horarioFim: '12:00', localPermanencia: 'Sala 15', localAlmoco: 'Refeitório A', tipo: 'fixo', status: 'ativo' },
-          { id: 'mock-2', nome: 'João Pedro', materia: 'Português', diaSemana: 'SEGUNDA', turno: 'manha', horarioInicio: '08:00', horarioFim: '12:00', localPermanencia: '', localAlmoco: 'Refeitório B', tipo: 'volante', status: 'ativo' },
-          { id: 'mock-3', nome: 'Ana Santos', materia: 'Ciências', diaSemana: 'TERÇA', turno: 'tarde', horarioInicio: '13:00', horarioFim: '17:00', localPermanencia: 'Sala 08', localAlmoco: 'Refeitório A', tipo: 'fixo', status: 'ativo' },
-          { id: 'mock-4', nome: 'Lucas Oliveira', materia: 'História', diaSemana: 'QUARTA', turno: 'tarde', horarioInicio: '13:00', horarioFim: '17:00', localPermanencia: '', localAlmoco: 'Refeitório B', tipo: 'volante', status: 'ativo' },
-          { id: 'mock-5', nome: 'Camila Costa', materia: 'Inglês', diaSemana: 'QUINTA', turno: 'manha', horarioInicio: '09:00', horarioFim: '12:00', localPermanencia: 'Lab Idiomas', localAlmoco: 'Refeitório A', tipo: 'fixo', status: 'ativo' },
-          { id: 'mock-6', nome: 'Pedro Almeida', materia: 'Ed. Física', diaSemana: 'SEXTA', turno: 'tarde', horarioInicio: '14:00', horarioFim: '18:00', localPermanencia: '', localAlmoco: 'Refeitório B', tipo: 'volante', status: 'inativo' },
-        ]);
-      }
+      // === MONITORES REAIS ===
+      setMonitores(m || []);
 
       // === FORMULÁRIO DE TESTE (se vazio) ===
       if (mf && mf.length > 0) {

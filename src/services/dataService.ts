@@ -65,19 +65,6 @@ export async function buscarSalas(): Promise<Sala[]> {
     grade: []
   }));
 
-  if (salas.length === 0) {
-    for (let i = 1; i <= 31; i++) {
-      salas.push({
-        id: i.toString().padStart(2, '0'),
-        numero: i,
-        nome: `Sala ${i.toString().padStart(2, '0')}`,
-        segmento: i <= 10 ? '6º e 7º' : i <= 20 ? '8º e 9º' : 'Ensino Médio',
-        ano: 'A DEFINIR',
-        grade: [],
-      });
-    }
-  }
-
   grade.forEach(item => {
     const sala = salas.find(s => s.numero === item.numeroSala);
     if (sala) {
@@ -97,9 +84,7 @@ export async function salvarGradeSala(entrada: Partial<EntradaGradeSala> | Parti
     const diaFormatado = String(grade.diaSemana || '').toUpperCase().trim();
     const horarioStr = String(grade.horario || '').trim();
 
-    if (!nSala || nSala <= 0 || !diaFormatado || !horarioStr) {
-      return null;
-    }
+    if (!nSala || nSala <= 0 || !diaFormatado || !horarioStr) return null;
 
     return {
       numero_sala: nSala,
@@ -113,54 +98,17 @@ export async function salvarGradeSala(entrada: Partial<EntradaGradeSala> | Parti
     };
   }).filter(p => p !== null);
 
-  console.log('[DEBUG] Payload para salvar:', payloads);
+  if (!payloads.length) return false;
 
-  if (!payloads || payloads.length === 0) {
-    console.error('[DEBUG] Nenhum registro válido para salvar na grade.');
+  const { error } = await supabase
+    .from('mapa_salas')
+    .upsert(payloads, { onConflict: 'numero_sala,dia_semana,horario' });
+
+  if (error) {
+    console.error('[DEBUG] Erro ao salvar grade:', error);
     return false;
   }
-
-  try {
-    let todosSalvos = true;
-    
-    for (const payload of payloads) {
-      console.log('[DEBUG] Salvando grade:', payload);
-      
-      const { error: insertError } = await supabase
-        .from('mapa_salas')
-        .insert(payload);
-
-      if (insertError) {
-        console.log('[DEBUG] Erro no insert:', insertError.code, insertError.message);
-        
-        if (insertError.code === '23505') {
-          const { error: updateError } = await supabase
-            .from('mapa_salas')
-            .update(payload)
-            .eq('numero_sala', payload.numero_sala)
-            .eq('dia_semana', payload.dia_semana)
-            .eq('horario', payload.horario);
-          
-          if (updateError) {
-            console.error('[DEBUG] Erro no update:', updateError);
-            todosSalvos = false;
-          } else {
-            console.log('[DEBUG] Atualizado com sucesso');
-          }
-        } else {
-          console.error('[DEBUG] Erro ao salvar grade:', insertError);
-          todosSalvos = false;
-        }
-      } else {
-        console.log('[DEBUG] Inserido com sucesso');
-      }
-    }
-    console.log('[DEBUG] Resultado final:', todosSalvos);
-    return todosSalvos;
-  } catch (e) {
-    console.error('[DEBUG] Exceção ao salvar grade:', e);
-    return false;
-  }
+  return true;
 }
 
 export async function salvarAlunosNaGrade(
@@ -222,33 +170,14 @@ export async function salvarAluno(aluno: Partial<Aluno>): Promise<boolean> {
     ano: String(aluno.ano || '').trim(),
   };
 
+  if (aluno.id && aluno.id !== 'novo') payload.id = aluno.id;
   if (aluno.numeroSala !== undefined && aluno.numeroSala !== null) {
     payload.numero_sala = Number(aluno.numeroSala);
   }
 
-  try {
-    // Primeiro tenta INSERT
-    const { error: insertError } = await supabase
-      .from('alunos_cms')
-      .insert([payload]);
-
-    if (insertError) {
-      // Se for duplicado, faz UPDATE
-      if (insertError.code === '23505') {
-        await supabase
-          .from('alunos_cms')
-          .update(payload)
-          .eq('nome', payload.nome);
-      } else {
-        console.error('[DEBUG] Erro ao salvar aluno:', insertError);
-        return false;
-      }
-    }
-    return true;
-  } catch (e) {
-    console.error('[DEBUG] Erro ao salvar aluno:', e);
-    return false;
-  }
+  const { error } = await supabase.from('alunos_cms').upsert([payload], { onConflict: 'nome' });
+  if (error) console.error('[DEBUG] Erro ao salvar aluno:', error);
+  return !error;
 }
 
 export async function excluirAluno(id: string): Promise<boolean> {
@@ -289,27 +218,17 @@ export async function buscarProfessoresCMS(): Promise<ProfessorCMS[]> {
 export async function salvarProfessorCMS(prof: Partial<ProfessorCMS>): Promise<boolean> {
   if (!prof.nome?.trim()) return false;
 
-  const payload = {
+  const payload: any = {
     nome: prof.nome.trim(),
     cor: prof.cor || '#3B82F6',
     especialidade: prof.especialidade || '',
   };
 
-  try {
-    const { error: insertError } = await supabase
-      .from('professores_cms')
-      .insert([payload]);
+  if (prof.id && prof.id !== 'novo') payload.id = prof.id;
 
-    if (insertError && insertError.code === '23505') {
-      await supabase
-        .from('professores_cms')
-        .update(payload)
-        .eq('nome', payload.nome);
-    }
-    return true;
-  } catch (e) {
-    return false;
-  }
+  const { error } = await supabase.from('professores_cms').upsert([payload], { onConflict: 'nome' });
+  if (error) console.error('[DEBUG] Erro ao salvar professor:', error);
+  return !error;
 }
 
 export async function excluirProfessorCMS(id: string): Promise<boolean> {
@@ -603,10 +522,7 @@ export async function buscarLocaisCMS(): Promise<LocalCMS[]> {
 }
 
 export async function salvarLocalCMS(local: Partial<LocalCMS>): Promise<boolean> {
-  if (!local.nome?.trim()) {
-    console.error('[DEBUG] Nome do local é obrigatório');
-    return false;
-  }
+  if (!local.nome?.trim()) return false;
 
   const payload: any = {
     nome: local.nome.trim(),
@@ -616,40 +532,11 @@ export async function salvarLocalCMS(local: Partial<LocalCMS>): Promise<boolean>
     lista_alunos: local.lista_alunos || []
   };
 
-  console.log('[DEBUG] Salvando local:', payload);
+  if (local.id && local.id !== 'novo') payload.id = local.id;
 
-  try {
-    const { error } = await supabase
-      .from('locais_cms')
-      .insert([payload]);
-    
-    if (error) {
-      console.log('[DEBUG] Erro no insert:', error.code, error.message);
-      
-      if (error.code === '23505') {
-        const { error: updateError } = await supabase
-          .from('locais_cms')
-          .update(payload)
-          .eq('nome', local.nome.trim());
-        
-        if (updateError) {
-          console.error('[DEBUG] Erro no update local:', updateError);
-          return false;
-        }
-        console.log('[DEBUG] Local atualizado com sucesso');
-        return true;
-      }
-      
-      console.error('[DEBUG] Erro ao inserir local:', error);
-      return false;
-    }
-    
-    console.log('[DEBUG] Local inserido com sucesso');
-    return true;
-  } catch (e) {
-    console.error('[DEBUG] Exceção ao salvar local:', e);
-    return false;
-  }
+  const { error } = await supabase.from('locais_cms').upsert([payload], { onConflict: 'nome' });
+  if (error) console.error('[DEBUG] Erro ao salvar local:', error);
+  return !error;
 }
 
 export async function excluirLocalCMS(id: string): Promise<boolean> {
