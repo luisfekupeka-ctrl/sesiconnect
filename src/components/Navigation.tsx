@@ -90,16 +90,22 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean; setIsOpen?: (
         <div className="bg-surface-container-low p-4 rounded-2xl border border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center text-[10px] font-black text-primary">
-              {profile?.full_name?.charAt(0) || 'U'}
+              {profile?.full_name?.charAt(0) || 'V'}
             </div>
             <div className="max-w-[120px]">
-              <p className="text-[11px] font-black text-white truncate">{profile?.full_name}</p>
-              <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-tighter">{profile?.role}</p>
+              <p className="text-[11px] font-black text-white truncate">{profile?.full_name || 'Visitante'}</p>
+              <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-tighter">{profile?.role || 'Consulta'}</p>
             </div>
           </div>
-          <button onClick={handleSignOut} className="p-2 text-on-surface-variant hover:text-red-500 transition-colors">
-            <LogOut size={18} />
-          </button>
+          {profile ? (
+            <button onClick={handleSignOut} className="p-2 text-on-surface-variant hover:text-red-500 transition-colors">
+              <LogOut size={18} />
+            </button>
+          ) : (
+            <button onClick={() => navigate('/login')} className="p-2 text-on-surface-variant hover:text-primary transition-colors">
+              <Shield size={18} />
+            </button>
+          )}
         </div>
       </div>
     </aside>

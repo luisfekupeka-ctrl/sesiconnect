@@ -61,8 +61,9 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/meu-horario" element={<MonitorPortal />} />
             
-            {/* Rotas com Layout Protegido */}
-            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            {/* Rotas com Layout (Públicas e Privadas) */}
+            <Route element={<Layout />}>
+              {/* Públicas (Consulta) */}
               <Route path="/" element={<Dashboard />} />
               <Route path="/teachers" element={<TeachersPage />} />
               <Route path="/rooms" element={<RoomsPage />} />
@@ -71,7 +72,7 @@ export default function App() {
               <Route path="/monitores" element={<Monitores />} />
               <Route path="/relatorio-diario" element={<RelatorioDiario />} />
               
-              {/* Áreas que exigem Role ADMIN */}
+              {/* Áreas que exigem Login/Role ADMIN */}
               <Route path="/forms" element={<ProtectedRoute requiredRole="admin"><FormsPage /></ProtectedRoute>} />
               <Route path="/controle-faltas" element={<ProtectedRoute requiredRole="admin"><ControleFaltas /></ProtectedRoute>} />
               <Route path="/realocacao" element={<ProtectedRoute requiredRole="admin"><GestaoRealocacao /></ProtectedRoute>} />
