@@ -38,6 +38,7 @@ import {
   buscarProfessoresCMS,
   buscarLocaisCMS,
   buscarGradeMonitores,
+  buscarPeriodos,
 } from '../services/dataService';
 
 interface ContextoEscolaType {
@@ -82,7 +83,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
   const carregarDados = useCallback(async () => {
     setCarregando(true);
     try {
-      const [s, g, a, li, aa, m, mf, oc, pCms, lCms, gm] = await Promise.all([
+      const [s, g, a, li, aa, m, mf, oc, pCms, lCms, gm, periodosDB] = await Promise.all([
         buscarSalas(),
         buscarMapaSalas(),
         buscarAlunos(),
@@ -94,6 +95,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
         buscarProfessoresCMS(),
         buscarLocaisCMS(),
         buscarGradeMonitores(),
+        buscarPeriodos(),
       ]);
 
       // === DADOS REAIS: PROFESSORES ===
@@ -141,36 +143,13 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
         ]);
       }
 
-      // === PERIODOS PADRÃO (Templates de Horário) ===
-      const defaultPeriodos: PeriodoConfig[] = [
-        // 6º e 7º Anos
-        { id: '67-1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:15', tipo: 'aula', segmento: '6e7' as any },
-        { id: '67-2', nome: '2ª Aula', horarioInicio: '08:15', horarioFim: '09:00', tipo: 'aula', segmento: '6e7' as any },
-        { id: '67-i', nome: 'Intervalo', horarioInicio: '09:00', horarioFim: '09:20', tipo: 'intervalo', segmento: '6e7' as any },
-        { id: '67-3', nome: '3ª Aula', horarioInicio: '09:20', horarioFim: '10:05', tipo: 'aula', segmento: '6e7' as any },
-        { id: '67-4', nome: '4ª Aula', horarioInicio: '10:05', horarioFim: '10:50', tipo: 'aula', segmento: '6e7' as any },
-        { id: '67-5', nome: '5ª Aula', horarioInicio: '10:50', horarioFim: '11:35', tipo: 'aula', segmento: '6e7' as any },
-        { id: '67-6', nome: '6ª Aula', horarioInicio: '11:35', horarioFim: '12:20', tipo: 'aula', segmento: '6e7' as any },
-
-        // 8º e 9º Anos
-        { id: '89-1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:15', tipo: 'aula', segmento: '8e9' as any },
-        { id: '89-2', nome: '2ª Aula', horarioInicio: '08:15', horarioFim: '09:00', tipo: 'aula', segmento: '8e9' as any },
-        { id: '89-3', nome: '3ª Aula', horarioInicio: '09:00', horarioFim: '09:45', tipo: 'aula', segmento: '8e9' as any },
-        { id: '89-i', nome: 'Intervalo', horarioInicio: '09:45', horarioFim: '10:05', tipo: 'intervalo', segmento: '8e9' as any },
-        { id: '89-4', nome: '4ª Aula', horarioInicio: '10:05', horarioFim: '10:50', tipo: 'aula', segmento: '8e9' as any },
-        { id: '89-5', nome: '5ª Aula', horarioInicio: '10:50', horarioFim: '11:35', tipo: 'aula', segmento: '8e9' as any },
-        { id: '89-6', nome: '6ª Aula', horarioInicio: '11:35', horarioFim: '12:20', tipo: 'aula', segmento: '8e9' as any },
-
-        // Ensino Médio
-        { id: 'em-1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: 'medio' as any },
-        { id: 'em-2', nome: '2ª Aula', horarioInicio: '08:20', horarioFim: '09:10', tipo: 'aula', segmento: 'medio' as any },
-        { id: 'em-3', nome: '3ª Aula', horarioInicio: '09:10', horarioFim: '10:00', tipo: 'aula', segmento: 'medio' as any },
-        { id: 'em-i', nome: 'Intervalo', horarioInicio: '10:00', horarioFim: '10:20', tipo: 'intervalo', segmento: 'medio' as any },
-        { id: 'em-4', nome: '4ª Aula', horarioInicio: '10:20', horarioFim: '11:10', tipo: 'aula', segmento: 'medio' as any },
-        { id: 'em-5', nome: '5ª Aula', horarioInicio: '11:10', horarioFim: '12:00', tipo: 'aula', segmento: 'medio' as any },
-        { id: 'em-6', nome: '6ª Aula', horarioInicio: '12:00', horarioFim: '12:50', tipo: 'aula', segmento: 'medio' as any },
-      ];
-      setPeriodos(defaultPeriodos);
+      // === PERIODOS: BUSCA DO BANCO DE DADOS ===
+      if (periodosDB && periodosDB.length > 0) {
+        setPeriodos(periodosDB as PeriodoConfig[]);
+      } else {
+        console.warn('[AVISO] Nenhum período encontrado no banco. Verifique a tabela periodos_escolares.');
+        setPeriodos([]);
+      }
     } catch (error) {
       console.error('Erro ao carregar dados do Supabase:', error);
     } finally {

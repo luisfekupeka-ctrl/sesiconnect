@@ -21,6 +21,32 @@ import type {
 } from '../types';
 
 // ============================================================
+// PERÍODOS ESCOLARES (Templates de Horário por Segmento)
+// ============================================================
+
+export async function buscarPeriodos(): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('periodos_escolares')
+    .select('*')
+    .order('horario_inicio', { ascending: true });
+
+  if (error) {
+    console.error('[DEBUG] Erro ao buscar períodos:', error);
+    return [];
+  }
+
+  // Converte snake_case do banco para camelCase do frontend
+  return (data || []).map(p => ({
+    id: p.id,
+    nome: p.nome,
+    horarioInicio: p.horario_inicio,
+    horarioFim: p.horario_fim,
+    tipo: p.tipo || 'aula',
+    segmento: p.segmento,
+  }));
+}
+
+// ============================================================
 // GRADE DE SALAS
 // ============================================================
 
