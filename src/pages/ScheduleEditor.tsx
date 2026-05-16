@@ -9,6 +9,11 @@ import {
 import { useEscola } from '../context/ContextoEscola';
 import { salvarGradeSala, salvarProfessorCMS } from '../services/dataService';
 import * as XLSX from 'xlsx';
+import * as pdfjsLib from 'pdfjs-dist';
+import Tesseract from 'tesseract.js';
+
+// Configuração do worker do PDF.js
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 import { cn } from '../lib/utils';
 import { Sala, EntradaGradeSala } from '../types';
 
@@ -145,32 +150,107 @@ export default function ScheduleEditor() {
     }
   }, [salaSelecionada, diaSelecionado, gradeCompleta, periodos, segmentoSelecionado]);
 
-  // Handlers de Importação Texto
-  const handleImportarPlano = () => {
-    const lines = conteudoPlano.split('\n').filter(l => l.trim());
-    const novasLinhas = [...linhas];
-    lines.forEach((line, idx) => {
-      if (idx < novasLinhas.length) {
-        if (novasLinhas[idx].tipo === 'intervalo' || novasLinhas[idx].tipo === 'almoco') return;
-        const parts = line.split('|').map(p => p.trim());
-        if (parts.length >= 2) {
-          novasLinhas[idx].materia = parts[0];
-          novasLinhas[idx].professor = parts[1];
-          novasLinhas[idx].tipo = 'aula';
-        } else if (parts.length === 1 && parts[0]) {
-           novasLinhas[idx].materia = parts[0];
-           novasLinhas[idx].tipo = 'aula';
+  // Handler para PDF
+  const handleUploadPDF = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportandoGeral(true);
+    setMensagem(null);
+
+    const leitor = new FileReader();
+    leitor.onload = async (ev) => {
+      try {
+        const typedarray = new Uint8Array(ev.target?.result as ArrayBuffer);
+        const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
+        const previewMap: {[key: string]: any[]} = {};
+        
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const items = textContent.items.map((item: any) => item.str);
+          const fullText = items.join(' ');
+
+          // Tenta detectar a Sala no cabeçalho (ex: "Sala 1")
+          const salaMatch = fullText.match(/Sala\s+(\d+)/i);
+          const salaDetectada = salaMatch ? salaMatch[1] : `Pág ${i}`;
+          
+          // Lógica simplificada de extração por padrões (Horário + Professor)
+          // Procura por horários 00:00 - 00:00 e textos próximos
+          const aulas: any[] = [];
+          const lines = fullText.split(/\d{2}:\d{2}\s*•/).filter(l => l.trim());
+          
+          // Nota: PDF.js retorna texto muitas vezes fora de ordem. 
+          // Para o seu modelo (Sala 1 - 8 Ano C), vamos tentar agrupar.
+          // Como o PDF é complexo, jogamos o texto bruto para o usuário conferir.
+          
+          // Simulação de extração baseada no seu print:
+          // Procuramos padrões de "NOME - MATERIA"
+          const profMateriaMatches = fullText.matchAll(/([A-Za-zÀ-ÿ\s]+)\s*-\s*([A-Za-zÀ-ÿ\s]+)/g);
+          for (const match of profMateriaMatches) {
+            aulas.push({
+              dia: 'REVISAR', 
+              horario: 'REVISAR',
+              materia: match[2].trim(),
+              professor: match[1].trim()
+            });
+          }
+
+          if (aulas.length > 0) previewMap[salaDetectada] = aulas;
         }
+
+        setDadosPreview(previewMap);
+        setModalPreviewAberto(true);
+        setModalFotoAberto(false);
+      } catch (err: any) {
+        setMensagem({ tipo: 'erro', texto: "Erro PDF: " + err.message });
+      } finally {
+        setImportandoGeral(false);
       }
-    });
-    setLinhas(novasLinhas);
-    setModalPlanoAberto(false);
-    setConteudoPlano('');
-    setMensagem({ tipo: 'sucesso', texto: 'Lista aplicada!' });
-    setTimeout(() => setMensagem(null), 3000);
+    };
+    leitor.readAsArrayBuffer(file);
   };
 
-  // Handlers de Importação Excel (Robustos)
+  // Handler para Imagem (OCR)
+  const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportandoGeral(true);
+    
+    try {
+      const { data: { text } } = await Tesseract.recognize(file, 'por', {
+        logger: m => console.log(m)
+      });
+      
+      // Processa o texto do OCR
+      const previewMap: {[key: string]: any[]} = {};
+      const aulas: any[] = [];
+      
+      // Tenta detectar a sala
+      const salaMatch = text.match(/Sala\s+(\d+)/i);
+      const salaDetectada = salaMatch ? `Sala ${salaMatch[1]}` : "Foto";
+
+      // Procura padrões de NOME - MATERIA
+      const matches = text.matchAll(/([A-Za-zÀ-ÿ\s]+)\s*-\s*([A-Za-zÀ-ÿ\s\n]+)/g);
+      for (const match of matches) {
+        const prof = match[1].trim().split('\n').pop() || '';
+        const mat = match[2].trim().split('\n')[0] || '';
+        if (prof.length > 3 && mat.length > 3) {
+          aulas.push({ dia: 'REVISAR', horario: 'REVISAR', materia: mat, professor: prof });
+        }
+      }
+
+      if (aulas.length > 0) previewMap[salaDetectada] = aulas;
+      setDadosPreview(previewMap);
+      setModalPreviewAberto(true);
+      setModalFotoAberto(false);
+    } catch (err: any) {
+      setMensagem({ tipo: 'erro', texto: "Erro OCR: " + err.message });
+    } finally {
+      setImportandoGeral(false);
+    }
+  };
+
+  // Handler para Excel (já existente)
   const handleUploadGradeGeral = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -430,12 +510,30 @@ export default function ScheduleEditor() {
               <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary">
                 {importandoGeral ? <RefreshCw size={40} className="animate-spin" /> : <FileSpreadsheet size={40} />}
               </div>
-              <h3 className="text-3xl font-black italic">Importar <span className="text-primary">Excel</span></h3>
-              <label className="block w-full py-8 border-2 border-dashed border-white/10 rounded-3xl cursor-pointer hover:border-primary/50 transition-all">
-                <input type="file" accept=".xlsx" className="hidden" onChange={handleUploadGradeGeral} />
-                <span className="text-[10px] font-black uppercase tracking-widest">{importandoGeral ? 'Processando...' : 'Selecionar Arquivo'}</span>
-              </label>
-              <button onClick={() => setModalFotoAberto(false)} className="text-[10px] font-black text-white/40 uppercase">Cancelar</button>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Opção Excel */}
+                <label className="flex flex-col items-center gap-4 p-8 border-2 border-dashed border-white/10 rounded-3xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all">
+                  <input type="file" accept=".xlsx" className="hidden" onChange={handleUploadGradeGeral} />
+                  <FileSpreadsheet size={32} className="text-green-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white">Excel (.xlsx)</span>
+                </label>
+
+                {/* Opção PDF */}
+                <label className="flex flex-col items-center gap-4 p-8 border-2 border-dashed border-white/10 rounded-3xl cursor-pointer hover:border-red-500/50 hover:bg-red-500/5 transition-all">
+                  <input type="file" accept=".pdf" className="hidden" onChange={handleUploadPDF} />
+                  <LayoutGrid size={32} className="text-red-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white">PDF Grade</span>
+                </label>
+
+                {/* Opção Foto */}
+                <label className="flex flex-col items-center gap-4 p-8 border-2 border-dashed border-white/10 rounded-3xl cursor-pointer hover:border-blue-500/50 hover:bg-blue-500/5 transition-all">
+                  <input type="file" accept="image/*" className="hidden" onChange={handleUploadImage} />
+                  <Zap size={32} className="text-blue-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white">Foto / Imagem</span>
+                </label>
+              </div>
+
+              <button onClick={() => setModalFotoAberto(false)} className="text-[10px] font-black text-white/40 uppercase hover:text-white transition-all">Cancelar</button>
             </motion.div>
           </div>
         )}
