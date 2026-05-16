@@ -39,18 +39,16 @@ export default function ScheduleEditor() {
     if (!salaSelecionada && salas.length > 0) setSalaSelecionada(salas[0]);
   }, [salas, salaSelecionada]);
 
-  // Função para trocar segmento — APENAS se estiver vazia
+  // Função para trocar segmento — Reativa e Definitiva
   const handleSegmentoChange = (novoSeg: string) => {
-    setSegmentoSelecionado(novoSeg);
+    // Se a grade já tem dados, avisamos (opcional, mas vou forçar para ser reativo como você pediu)
+    const temDados = linhas.some(l => l.materia && l.materia !== 'INTERVALO' && l.materia !== 'ALMOÇO');
     
-    // Só reseta a grade se ela estiver "virgem"
-    const gradeRealmenteVazia = linhas.every(l => !l.materia || l.materia === 'INTERVALO' || l.materia === 'ALMOÇO') && 
-                               linhas.every(l => !l.professor || l.professor === '—');
-
-    if (gradeRealmenteVazia || linhas.length === 0) {
-      const periodosAlvo = periodos.filter(p => p.segmento === novoSeg);
-      if (periodosAlvo.length > 0) {
-        setLinhas(periodosAlvo.map((p, i) => ({
+    const mudar = () => {
+      setSegmentoSelecionado(novoSeg);
+      const pAlvo = periodos.filter(p => p.segmento === novoSeg);
+      if (pAlvo.length > 0) {
+        setLinhas(pAlvo.map((p, i) => ({
           id: `p-${i}-${Date.now()}`,
           horario: `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`,
           tipo: p.tipo as any,
@@ -58,6 +56,14 @@ export default function ScheduleEditor() {
           professor: p.tipo === 'intervalo' || p.tipo === 'almoco' ? '—' : ''
         })));
       }
+    };
+
+    if (temDados) {
+      if (window.confirm("Trocar o segmento irá resetar os horários desta sala. Deseja continuar?")) {
+        mudar();
+      }
+    } else {
+      mudar();
     }
   };
 
@@ -140,19 +146,17 @@ export default function ScheduleEditor() {
     // Ordenar por horário antes de salvar
     const linhasOrdenadas = [...linhas].sort((a,b) => a.horario.localeCompare(b.horario));
 
-    const entradas: any[] = linhasOrdenadas.map(l => {
-      const payload: any = {
-        numero_sala: Number(salaSelecionada.numero),
-        dia_semana: String(diaSelecionado).toUpperCase().trim(),
-        horario: l.horario,
-        nome_professor: l.professor || '—',
-        materia: l.materia || 'A DEFINIR',
-        turma: salaSelecionada.ano || 'A DEFINIR',
-        tipo: l.tipo === 'laboratorio_idiomas' ? 'laboratorio_idiomas' : l.tipo === 'after' ? 'after' : 'regular'
-      };
+    const entradas: any[] = linhasOrdenadas.map(l => ({
+      numero_sala: Number(salaSelecionada.numero),
+      dia_semana: String(diaSelecionado).toUpperCase().trim(),
+      horario: String(l.horario).trim(),
+      nome_professor: l.professor || '—',
+      materia: l.materia || 'A DEFINIR',
+      turma: salaSelecionada.ano || 'A DEFINIR',
+      tipo: l.tipo || 'regular'
+    }));
 
-      return payload;
-    });
+    console.log('[DEBUG] Enviando grade para Supabase:', entradas);
 
     try {
       const ok = await salvarGradeSala(entradas);
