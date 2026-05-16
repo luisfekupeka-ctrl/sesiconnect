@@ -785,9 +785,9 @@ export async function salvarPeriodos(lista: any[]): Promise<boolean> {
     await supabase.from('periodos_escolares').delete().eq('segmento', segmento);
   }
   const payloads = lista.map(p => ({
-    nome: p.nome,
-    horario_inicio: p.horarioInicio,
-    horario_fim: p.horarioFim,
+    nome: p.nome || p.materia || 'Período',
+    horario_inicio: p.horarioInicio || p.horario?.split(' - ')[0],
+    horario_fim: p.horarioFim || p.horario?.split(' - ')[1],
     segmento: p.segmento,
     tipo: p.tipo || 'aula',
   }));
