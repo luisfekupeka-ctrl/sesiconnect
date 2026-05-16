@@ -516,250 +516,30 @@ export default function ScheduleEditor() {
                          <UserPlus size={14} className="text-primary" />
                       </button>
                     ))}
-                  </div>
-                )}
-             </div>
-             <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar">
-                {linhaAtiva.listaAlunos.map((aluno, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 bg-[#0d1117] rounded-2xl group">
-                    <span className="text-xs font-black text-white truncate">{aluno}</span>
-                    <button onClick={() => atualizarLinha(linhaAtiva.id, 'listaAlunos', linhaAtiva.listaAlunos.filter(a => a !== aluno))} className="text-red-500 p-1 opacity-0 group-hover:opacity-100"><X size={14} /></button>
-                  </div>
-                ))}
-             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Modal Excel */}
-      <AnimatePresence>
-        {modalFotoAberto && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-[#0d1117] p-10 rounded-[3.5rem] border border-primary/20 max-w-md w-full text-center space-y-8">
-              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary">
-                {importandoGeral ? <RefreshCw size={40} className="animate-spin" /> : <FileSpreadsheet size={40} />}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Opção Excel */}
-                <label className="flex flex-col items-center gap-4 p-8 border-2 border-dashed border-white/10 rounded-3xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all">
-                  <input type="file" accept=".xlsx" className="hidden" onChange={handleUploadGradeGeral} />
-                  <FileSpreadsheet size={32} className="text-green-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white">Excel (.xlsx)</span>
-                </label>
-
-                {/* Opção PDF */}
-                <label className="flex flex-col items-center gap-4 p-8 border-2 border-dashed border-white/10 rounded-3xl cursor-pointer hover:border-red-500/50 hover:bg-red-500/5 transition-all">
-                  <input type="file" accept=".pdf" className="hidden" onChange={handleUploadPDF} />
-                  <LayoutGrid size={32} className="text-red-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white">PDF Grade</span>
-                </label>
-
-                {/* Opção Foto */}
-                <label className="flex flex-col items-center gap-4 p-8 border-2 border-dashed border-white/10 rounded-3xl cursor-pointer hover:border-blue-500/50 hover:bg-blue-500/5 transition-all">
-                  <input type="file" accept="image/*" className="hidden" onChange={handleUploadImage} />
-                  <Zap size={32} className="text-blue-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white">Foto / Imagem</span>
-                </label>
-              </div>
-
-              <button onClick={() => setModalFotoAberto(false)} className="text-[10px] font-black text-white/40 uppercase hover:text-white transition-all">Cancelar</button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Modal Preview */}
-      <AnimatePresence>
-        {modalPreviewAberto && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/95 backdrop-blur-xl">
-            <div className="bg-[#0d1117] rounded-[4rem] border border-primary/30 max-w-5xl w-full h-[85vh] flex flex-col shadow-3xl overflow-hidden">
-              <div className="p-10 border-b border-white/5 flex items-center justify-between bg-primary/5">
-                <h3 className="text-3xl font-black italic">Validar <span className="text-primary">Ensalamento</span></h3>
-                <button onClick={() => setModalPreviewAberto(false)} className="p-4 bg-white/5 rounded-2xl text-red-500"><X size={24} /></button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-10 space-y-12 custom-scrollbar">
-                <section className="space-y-8">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xl font-black uppercase tracking-tighter italic text-white flex items-center gap-3">
-                      <LayoutGrid size={24} className="text-primary" /> 
-                      Conferência de Grade por Turma
-                    </h4>
-                    <p className="text-[10px] font-black uppercase text-on-surface-variant bg-white/5 px-4 py-2 rounded-full">
-                      Vincule cada turma a uma sala física e revise os horários detectados
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-8">
-                    {Object.keys(dadosPreview).map(turma => {
-                      const aulasTurma = dadosPreview[turma];
-                      const estaExpandido = turmaExpandida === turma;
-
-                      return (
-                        <div key={turma} className={cn(
-                          "bg-surface-container-low rounded-[3rem] border-2 transition-all overflow-hidden",
-                          estaExpandido ? "border-primary bg-primary/5 shadow-2xl" : "border-white/5"
-                        )}>
-                          {/* Cabeçalho do Bloco */}
-                          <div className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-                            <div className="flex items-center gap-6">
-                              <div className="w-16 h-16 bg-white/5 rounded-[1.5rem] flex items-center justify-center text-2xl font-black italic text-primary">
-                                {turma.slice(0, 2)}
-                              </div>
-                              <div>
-                                <h5 className="text-2xl font-black italic text-white leading-none">{turma}</h5>
-                                <button onClick={() => setTurmaExpandida(estaExpandido ? null : turma)} 
-                                  className="mt-2 text-[9px] font-black uppercase tracking-widest text-primary flex items-center gap-2 hover:opacity-70">
-                                  {estaExpandido ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-                                  {estaExpandido ? 'Fechar Grade' : `Revisar ${aulasTurma.length} aulas detectadas`}
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-4 w-full md:w-auto">
-                              <div className="flex-1 md:w-64">
-                                <label className="text-[8px] font-black uppercase text-on-surface-variant block mb-2 ml-2 tracking-widest">Vincular Sala Física</label>
-                                <select 
-                                  value={mapeamentoSalas[turma]} 
-                                  onChange={e => setMapeamentoSalas({...mapeamentoSalas, [turma]: e.target.value})}
-                                  className="w-full bg-black border border-white/10 p-4 rounded-2xl text-xs font-black outline-none focus:border-primary/50 transition-all cursor-pointer appearance-none"
-                                >
-                                  <option value="">Selecione uma Sala...</option>
-                                  {Array.from({length: 31}, (_, i) => i + 1).map(n => (
-                                    <option key={n} value={n}>SALA {n}</option>
-                                  ))}
-                                </select>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Grade Visual (Expandida) - Otimizada para Edição */}
-                          <AnimatePresence>
-                            {estaExpandido && (
-                              <div className="border-t border-white/5 bg-black/40 p-4 md:p-8">
-                                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                                  {DIAS_SEMANA.map(dia => (
-                                    <div key={dia} className="space-y-3">
-                                      <div className="text-[10px] font-black uppercase text-primary/40 text-center tracking-widest pb-3 border-b border-white/5">{dia}</div>
-                                      <div className="space-y-2">
-                                        {aulasTurma.filter(a => a.dia === dia).map((a, idx) => {
-                                          const realIdx = aulasTurma.indexOf(a);
-                                          return (
-                                            <div key={idx} className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2 hover:border-primary/30 transition-all">
-                                              <div className="flex justify-between items-center">
-                                                <input 
-                                                  value={a.horario} 
-                                                  onChange={e => {
-                                                    const novas = [...aulasTurma];
-                                                    novas[realIdx].horario = e.target.value;
-                                                    setDadosPreview({...dadosPreview, [turma]: novas});
-                                                  }}
-                                                  className="bg-transparent border-none text-[8px] font-black text-on-surface-variant/40 outline-none w-16"
-                                                />
-                                                <select 
-                                                  value={a.dia}
-                                                  onChange={e => {
-                                                    const novas = [...aulasTurma];
-                                                    novas[realIdx].dia = e.target.value;
-                                                    setDadosPreview({...dadosPreview, [turma]: novas});
-                                                  }}
-                                                  className="bg-transparent border-none text-[8px] font-black text-primary outline-none cursor-pointer"
-                                                >
-                                                  {DIAS_SEMANA.map(d => <option key={d} value={d}>{d.slice(0,3)}</option>)}
-                                                </select>
-                                                <button onClick={() => {
-                                                  const novas = aulasTurma.filter((_, i) => i !== realIdx);
-                                                  setDadosPreview({...dadosPreview, [turma]: novas});
-                                                }} className="text-red-500/30 hover:text-red-500"><X size={10} /></button>
-                                              </div>
-                                              <input 
-                                                value={a.materia}
-                                                onChange={e => {
-                                                  const novas = [...aulasTurma];
-                                                  novas[realIdx].materia = e.target.value;
-                                                  setDadosPreview({...dadosPreview, [turma]: novas});
-                                                }}
-                                                className="w-full bg-black/20 border-none rounded-lg p-2 text-[10px] font-black text-white italic outline-none"
-                                              />
-                                              <input 
-                                                value={a.professor}
-                                                onChange={e => {
-                                                  const novas = [...aulasTurma];
-                                                  novas[realIdx].professor = e.target.value;
-                                                  setDadosPreview({...dadosPreview, [turma]: novas});
-                                                }}
-                                                className="w-full bg-transparent border-none p-1 text-[9px] font-bold text-primary italic outline-none"
-                                              />
-                                            </div>
-                                          );
-                                        })}
-                                        <button 
-                                          onClick={() => {
-                                            const novas = [...aulasTurma, { dia, horario: '08:00', materia: 'NOVA AULA', professor: '' }];
-                                            setDadosPreview({...dadosPreview, [turma]: novas});
-                                          }}
-                                          className="w-full py-2 border border-dashed border-white/10 rounded-xl text-[8px] font-black uppercase text-white/20 hover:text-primary hover:border-primary/30 transition-all"
-                                        >
-                                          + Aula
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </section>
-
-                <section className="bg-surface-container-low rounded-[3.5rem] border border-white/5 p-10 space-y-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary"><Users size={24} /></div>
-                    <div>
-                      <h4 className="text-xl font-black uppercase italic text-white tracking-tighter">Reconciliação de Professores</h4>
-                      <p className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest">Confirme o vínculo entre o nome do arquivo e o banco de dados</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {professoresUnicosPreview.map(prof => (
-                      <div key={prof} className="bg-black/40 p-6 rounded-3xl border border-white/5 space-y-4 hover:border-primary/20 transition-all">
-                        <div className="flex flex-col gap-1">
-                          <span className="text-[8px] font-black uppercase text-on-surface-variant tracking-widest">No Arquivo</span>
-                          <span className="text-xs font-black text-white italic truncate">{prof}</span>
-                        </div>
-                        <div className="space-y-2">
-                           <span className="text-[8px] font-black uppercase text-primary tracking-widest">Vincular ao Sistema</span>
-                           <select 
-                            value={mapeamentoProfessores[prof]} 
-                            onChange={e => setMapeamentoProfessores({...mapeamentoProfessores, [prof]: e.target.value})}
-                            className="w-full bg-surface-container-high border-none p-4 rounded-xl text-[10px] font-black outline-none focus:ring-2 focus:ring-primary/30 appearance-none"
-                           >
-                            <option value="">Ignorar ou Criar...</option>
-                            {listaProfessoresNomes.map(p => <option key={p} value={p}>{p}</option>)}
-                           </select>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              </div>
-              <div className="p-10 border-t border-white/5 flex justify-end">
-                <button onClick={confirmarImportacaoFinal} disabled={processandoFinal} className="px-10 py-5 bg-primary text-black rounded-[2rem] font-black uppercase text-xs flex items-center gap-3 disabled:opacity-50">
-                   {processandoFinal ? <RefreshCw className="animate-spin" /> : <Check />} Confirmar Tudo
-                </button>
-              </div>
+              ))}
             </div>
-          </div>
-        )}
-      </AnimatePresence>
 
-      {/* Toast Mensagem */}
+            <button 
+              onClick={() => setLinhas([...linhas, { horario: '08:00', materia: '', professor: '', tipo: 'aula' }])}
+              className="mt-8 w-full py-6 border-2 border-dashed border-white/10 rounded-3xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-primary hover:border-primary/50 hover:bg-primary/5 transition-all"
+            >
+              <Plus size={18} /> Adicionar Nova Aula
+            </button>
+          </div>
+        </section>
+      </main>
+
       <AnimatePresence>
         {mensagem && (
-          <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} className={cn("fixed bottom-8 left-1/2 -translate-x-1/2 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl z-[200]", mensagem.tipo === 'sucesso' ? "bg-green-500 text-white" : "bg-red-500 text-white")}>
+          <motion.div 
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 50, opacity: 0 }}
+            className={cn(
+              "fixed bottom-10 right-10 px-8 py-5 rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-2xl z-[200]",
+              mensagem.tipo === 'sucesso' ? "bg-primary text-black" : "bg-red-500 text-white"
+            )}
+          >
             {mensagem.texto}
           </motion.div>
         )}
