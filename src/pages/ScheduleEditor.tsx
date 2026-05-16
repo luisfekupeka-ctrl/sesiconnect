@@ -203,7 +203,7 @@ export default function ScheduleEditor() {
         <div>
           <h1 className="text-4xl font-black italic tracking-tighter uppercase">Gestão <span className="text-primary">de Grades</span></h1>
           <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
-             <Zap size={12} className="text-primary" /> Sistema Ativo <span className="text-primary/20 ml-2">v2.5 — REFRESH_FIX</span>
+             <Zap size={12} className="text-primary" /> Sistema Ativo <span className="text-primary/20 ml-2">v2.6 — DB_PERMISSION_FIX</span>
           </p>
         </div>
         <div className="flex gap-4">
