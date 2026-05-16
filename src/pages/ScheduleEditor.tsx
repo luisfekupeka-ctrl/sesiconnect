@@ -7,7 +7,7 @@ import {
   GraduationCap, Zap
 } from 'lucide-react';
 import { useEscola } from '../context/ContextoEscola';
-import { salvarGradeSala } from '../services/dataService';
+import { salvarGradeSala, salvarPeriodos } from '../services/dataService';
 import { cn } from '../lib/utils';
 import { Sala, EntradaGradeSala } from '../types';
 
@@ -121,17 +121,15 @@ export default function ScheduleEditor() {
     // Ordenar por horário antes de salvar
     const linhasOrdenadas = [...linhas].sort((a,b) => a.horario.localeCompare(b.horario));
 
-    const entradas: Omit<EntradaGradeSala, 'id'>[] = linhasOrdenadas.map(l => ({
-      numeroSala: salaSelecionada.numero,
-      nomeSala: salaSelecionada.nome,
-      diaSemana: diaSelecionado,
+    const entradas: any[] = linhasOrdenadas.map(l => ({
+      numero_sala: Number(salaSelecionada.numero),
+      dia_semana: diaSelecionado,
       horario: l.horario,
-      nomeProfessor: l.professor || '—',
+      nome_professor: l.professor || '—',
       materia: l.materia || 'A DEFINIR',
       turma: salaSelecionada.ano || 'A DEFINIR',
-      // Mapeamento correto para o banco (Restaurando compatibilidade)
       tipo: l.tipo === 'laboratorio_idiomas' ? 'laboratorio_idiomas' : l.tipo === 'after' ? 'after' : 'regular',
-      listaAlunos: [] // Será preenchido pelo sistema de ensalamento baseado no tipo
+      lista_alunos: [] 
     }));
 
     try {
@@ -161,11 +159,16 @@ export default function ScheduleEditor() {
   };
 
   const handleSalvarPeriodos = async () => {
-    // Aqui chamaríamos um serviço para salvar na tabela 'periodos'
-    // Por enquanto, vamos simular o sucesso e atualizar o contexto
-    setMensagem({ tipo: 'sucesso', texto: 'Modelo de horários atualizado!' });
-    setModalPeriodosAberto(false);
-    atualizar();
+    setSalvando(true);
+    const ok = await salvarPeriodos(periodosEditaveis);
+    if (ok) {
+      setMensagem({ tipo: 'sucesso', texto: 'Modelo de horários atualizado!' });
+      setModalPeriodosAberto(false);
+      atualizar();
+    } else {
+      setMensagem({ tipo: 'erro', texto: 'Erro ao salvar o modelo.' });
+    }
+    setSalvando(false);
   };
 
   return (
