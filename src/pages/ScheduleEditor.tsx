@@ -632,32 +632,80 @@ export default function ScheduleEditor() {
                             </div>
                           </div>
 
-                          {/* Grade Visual (Expandida) */}
+                          {/* Grade Visual (Expandida) - Otimizada para Edição */}
                           <AnimatePresence>
                             {estaExpandido && (
-                              <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="border-t border-white/5 bg-black/40">
-                                <div className="p-8">
-                                  <div className="grid grid-cols-5 gap-4">
-                                    {DIAS_SEMANA.map(dia => (
-                                      <div key={dia} className="space-y-3">
-                                        <div className="text-[10px] font-black uppercase text-primary/40 text-center tracking-widest pb-3 border-b border-white/5">{dia}</div>
-                                        <div className="space-y-2">
-                                          {aulasTurma.filter(a => a.dia === dia).map((a, idx) => (
-                                            <div key={idx} className="bg-white/5 p-4 rounded-2xl border border-white/5 space-y-2 group hover:border-primary/30 transition-all">
-                                              <div className="text-[9px] font-black text-on-surface-variant opacity-40 group-hover:opacity-100">{a.horario}</div>
-                                              <div className="text-[11px] font-black text-white italic truncate">{a.materia}</div>
-                                              <div className="text-[9px] font-bold text-primary truncate italic">{a.professor}</div>
+                              <div className="border-t border-white/5 bg-black/40 p-4 md:p-8">
+                                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                                  {DIAS_SEMANA.map(dia => (
+                                    <div key={dia} className="space-y-3">
+                                      <div className="text-[10px] font-black uppercase text-primary/40 text-center tracking-widest pb-3 border-b border-white/5">{dia}</div>
+                                      <div className="space-y-2">
+                                        {aulasTurma.filter(a => a.dia === dia).map((a, idx) => {
+                                          const realIdx = aulasTurma.indexOf(a);
+                                          return (
+                                            <div key={idx} className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2 hover:border-primary/30 transition-all">
+                                              <div className="flex justify-between items-center">
+                                                <input 
+                                                  value={a.horario} 
+                                                  onChange={e => {
+                                                    const novas = [...aulasTurma];
+                                                    novas[realIdx].horario = e.target.value;
+                                                    setDadosPreview({...dadosPreview, [turma]: novas});
+                                                  }}
+                                                  className="bg-transparent border-none text-[8px] font-black text-on-surface-variant/40 outline-none w-16"
+                                                />
+                                                <select 
+                                                  value={a.dia}
+                                                  onChange={e => {
+                                                    const novas = [...aulasTurma];
+                                                    novas[realIdx].dia = e.target.value;
+                                                    setDadosPreview({...dadosPreview, [turma]: novas});
+                                                  }}
+                                                  className="bg-transparent border-none text-[8px] font-black text-primary outline-none cursor-pointer"
+                                                >
+                                                  {DIAS_SEMANA.map(d => <option key={d} value={d}>{d.slice(0,3)}</option>)}
+                                                </select>
+                                                <button onClick={() => {
+                                                  const novas = aulasTurma.filter((_, i) => i !== realIdx);
+                                                  setDadosPreview({...dadosPreview, [turma]: novas});
+                                                }} className="text-red-500/30 hover:text-red-500"><X size={10} /></button>
+                                              </div>
+                                              <input 
+                                                value={a.materia}
+                                                onChange={e => {
+                                                  const novas = [...aulasTurma];
+                                                  novas[realIdx].materia = e.target.value;
+                                                  setDadosPreview({...dadosPreview, [turma]: novas});
+                                                }}
+                                                className="w-full bg-black/20 border-none rounded-lg p-2 text-[10px] font-black text-white italic outline-none"
+                                              />
+                                              <input 
+                                                value={a.professor}
+                                                onChange={e => {
+                                                  const novas = [...aulasTurma];
+                                                  novas[realIdx].professor = e.target.value;
+                                                  setDadosPreview({...dadosPreview, [turma]: novas});
+                                                }}
+                                                className="w-full bg-transparent border-none p-1 text-[9px] font-bold text-primary italic outline-none"
+                                              />
                                             </div>
-                                          ))}
-                                          {aulasTurma.filter(a => a.dia === dia).length === 0 && (
-                                            <div className="py-12 border border-dashed border-white/5 rounded-2xl flex items-center justify-center opacity-10 text-[8px] font-black uppercase italic">Sem aulas</div>
-                                          )}
-                                        </div>
+                                          );
+                                        })}
+                                        <button 
+                                          onClick={() => {
+                                            const novas = [...aulasTurma, { dia, horario: '08:00', materia: 'NOVA AULA', professor: '' }];
+                                            setDadosPreview({...dadosPreview, [turma]: novas});
+                                          }}
+                                          className="w-full py-2 border border-dashed border-white/10 rounded-xl text-[8px] font-black uppercase text-white/20 hover:text-primary hover:border-primary/30 transition-all"
+                                        >
+                                          + Aula
+                                        </button>
                                       </div>
-                                    ))}
-                                  </div>
+                                    </div>
+                                  ))}
                                 </div>
-                              </motion.div>
+                              </div>
                             )}
                           </AnimatePresence>
                         </div>
