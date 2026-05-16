@@ -189,39 +189,46 @@ export default function ScheduleEditor() {
         for (const nomeAba of wb.SheetNames) {
           const ws = wb.Sheets[nomeAba];
           const turmaNome = nomeAba.replace(' SESI', '').trim();
-          const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:Z100');
-          const rows: any[][] = [];
           
-          for (let R = range.s.r; R <= range.e.r; ++R) {
+          // Limitamos a leitura para a área de interesse para evitar travamentos
+          // Colunas B=1, C=2, D=3, E=4, F=5, G=6
+          // Linhas de 0 a 20
+          const rows: any[][] = [];
+          for (let R = 0; R <= 20; R++) {
             const row = [];
-            for (let C = range.s.c; C <= range.e.c; ++C) {
+            for (let C = 0; C <= 7; C++) {
               const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
               row.push(cell ? cell.v : null);
             }
             rows.push(row);
           }
 
-          const diasIndices: { [key: string]: number } = {};
-          rows.forEach((row) => {
-            row.forEach((cell, cIdx) => {
-              const val = String(cell || '').toUpperCase().trim();
-              if (DIAS_SEMANA.includes(val)) diasIndices[val] = cIdx;
-            });
-          });
+          const diasIndices: { [key: string]: number } = {
+            'SEGUNDA': 2, 'TERÇA': 3, 'QUARTA': 4, 'QUINTA': 5, 'SEXTA': 6
+          };
 
           const itensTurma: any[] = [];
-          rows.forEach((row) => {
-            const horarioRaw = String(row[1] || '');
+          rows.forEach((row, rIdx) => {
+            const horarioRaw = String(row[1] || ''); // Coluna B
             if (horarioRaw.includes('-') && horarioRaw.includes(':')) {
               Object.entries(diasIndices).forEach(([dia, colIdx]) => {
                 const conteudo = String(row[colIdx] || '').trim();
                 if (conteudo && conteudo.length > 5) {
-                  const partes = conteudo.split('\n').map(p => p.trim());
+                  // Quebra por nova linha ou traço se o Excel não tiver quebra real
+                  const partes = conteudo.split(/[\n\r]+/).map(p => p.trim());
+                  const materia = partes[0] || 'A DEFINIR';
+                  
+                  let professor = '—';
+                  if (partes[1]) {
+                    // Pega o que vem antes do " - Sala" ou apenas o início
+                    professor = partes[1].split(/\s*-\s*Sala/i)[0].trim();
+                  }
+
                   itensTurma.push({
                     dia, 
                     horario: horarioRaw.trim(),
-                    materia: partes[0],
-                    professor: partes[1]?.split('-')[0]?.trim() || '—'
+                    materia,
+                    professor
                   });
                 }
               });
