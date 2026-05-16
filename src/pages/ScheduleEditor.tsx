@@ -324,6 +324,10 @@ export default function ScheduleEditor() {
             <h1 className="text-5xl font-black tracking-tighter italic">Editor <span className="text-primary">de Horários</span></h1>
             <p className="text-on-surface-variant font-medium mt-1 text-sm opacity-60">Configuração de aulas, professores e ensalamento nominal.</p>
           </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setModalFotoAberto(true)} className="px-5 py-3 bg-primary/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/20 transition-all flex items-center gap-2 border border-primary/20 text-primary shadow-lg shadow-primary/5">
+              <FileSpreadsheet size={16} /> Importar Grade (Excel)
+            </button>
             <button onClick={() => setModalMateriasAberto(true)} className="btn-secondary"><BookOpen size={14} /></button>
             <button onClick={handleSalvar} disabled={!salaSelecionada || salvando}
               className={cn("btn-primary shadow-xl shadow-primary/20", salvando && "opacity-50 animate-pulse")}>
@@ -396,7 +400,6 @@ export default function ScheduleEditor() {
                 <button onClick={() => setModalCopiaAberto(true)} className="px-5 py-3 bg-surface-container-low rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-primary/10 transition-all flex items-center gap-2 border border-transparent hover:border-primary/20"><Copy size={12} /> Copiar Dias</button>
                 <button onClick={() => setModalCopiaSalasAberto(true)} className="px-5 py-3 bg-surface-container-low rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-primary/10 transition-all flex items-center gap-2 border border-transparent hover:border-primary/20"><LayoutGrid size={12} /> Aplicar Salas</button>
                 <button onClick={() => setModalPlanoAberto(true)} className="px-5 py-3 bg-surface-container-low rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-primary/10 transition-all flex items-center gap-2 border border-transparent hover:border-primary/20 text-primary"><Edit3 size={12} /> Colar Texto</button>
-                <button onClick={() => setModalFotoAberto(true)} className="px-5 py-3 bg-primary/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-primary/20 transition-all flex items-center gap-2 border border-primary/20 text-primary shadow-lg shadow-primary/5"><FileSpreadsheet size={12} /> Importar Grade Geral (Planilha)</button>
               </div>
 
               <div className="space-y-2">
