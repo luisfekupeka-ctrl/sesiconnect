@@ -50,6 +50,10 @@ export default function ScheduleEditor() {
       const periodosDoSegmento = periodos.filter(p => p.segmento === segmentoSelecionado);
       const periodosAlvo = periodosDoSegmento.length > 0 ? periodosDoSegmento : periodos;
 
+      // Se a grade atual NÃO tem dados reais (matéria/professor) digitados, podemos trocar o esqueleto
+      const gradeEstaVazia = linhas.every(l => !l.materia || l.materia === 'INTERVALO' || l.materia === 'ALMOÇO') && 
+                            linhas.every(l => !l.professor || l.professor === '—');
+
       if (existentes.length > 0) {
         setLinhas(existentes.map((e, i) => ({
           id: e.id || `l-${i}`,
@@ -58,7 +62,8 @@ export default function ScheduleEditor() {
           materia: e.materia || '',
           professor: e.nomeProfessor || (e as any).nome_professor || ''
         })));
-      } else {
+      } else if (gradeEstaVazia || linhas.length === 0) {
+        // Se estiver vazia ou for uma troca de segmento sem dados manuais, aplica novo esqueleto
         setLinhas(periodosAlvo.map((p, i) => ({
           id: `p-${i}`,
           horario: `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`,
@@ -68,6 +73,7 @@ export default function ScheduleEditor() {
         })));
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [salaSelecionada, diaSelecionado, gradeCompleta, periodos, segmentoSelecionado]);
 
   const addLinha = () => {
