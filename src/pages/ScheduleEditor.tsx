@@ -167,12 +167,12 @@ export default function ScheduleEditor() {
         setMensagem({ tipo: 'erro', texto: 'Erro ao salvar. Verifique sua conexão.' });
       }
     } catch (err) {
+      console.error('[DEBUG] Erro catastrófico:', err);
       setMensagem({ tipo: 'erro', texto: 'Falha crítica ao salvar no banco.' });
-    }
     } finally {
       setSalvando(false);
+      setTimeout(() => setMensagem(null), 3000);
     }
-    setTimeout(() => setMensagem(null), 3000);
   };
 
   const getCorProf = (nome: string) => {
