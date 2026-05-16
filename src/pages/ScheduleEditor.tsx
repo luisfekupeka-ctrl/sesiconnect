@@ -39,20 +39,30 @@ export default function ScheduleEditor() {
     if (!salaSelecionada && salas.length > 0) setSalaSelecionada(salas[0]);
   }, [salas, salaSelecionada]);
 
-  // Carrega dados da sala/dia ou gera base por segmento
+  // Função para trocar segmento e forçar reset da grade com o esqueleto certo
+  const handleSegmentoChange = (novoSeg: string) => {
+    setSegmentoSelecionado(novoSeg);
+    
+    // Filtra os períodos do novo segmento
+    const periodosAlvo = periodos.filter(p => p.segmento === novoSeg);
+    if (periodosAlvo.length > 0) {
+      setLinhas(periodosAlvo.map((p, i) => ({
+        id: `p-${i}-${Date.now()}`,
+        horario: `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`,
+        tipo: p.tipo as any,
+        materia: p.tipo === 'intervalo' ? 'INTERVALO' : p.tipo === 'almoco' ? 'ALMOÇO' : '',
+        professor: p.tipo === 'intervalo' || p.tipo === 'almoco' ? '—' : ''
+      })));
+    }
+  };
+
+  // Carrega dados da sala/dia apenas na montagem ou troca de sala/dia
   useEffect(() => {
     if (salaSelecionada) {
       const existentes = gradeCompleta.filter(
         e => (Number(e.numeroSala) === Number(salaSelecionada.numero) || Number((e as any).numero_sala) === Number(salaSelecionada.numero)) && 
              (String(e.diaSemana).toUpperCase() === String(diaSelecionado).toUpperCase() || String((e as any).dia_semana).toUpperCase() === String(diaSelecionado).toUpperCase())
       ).sort((a,b) => (a.horario || '').localeCompare(b.horario || ''));
-
-      const periodosDoSegmento = periodos.filter(p => p.segmento === segmentoSelecionado);
-      const periodosAlvo = periodosDoSegmento.length > 0 ? periodosDoSegmento : periodos;
-
-      // Se a grade atual NÃO tem dados reais (matéria/professor) digitados, podemos trocar o esqueleto
-      const gradeEstaVazia = linhas.every(l => !l.materia || l.materia === 'INTERVALO' || l.materia === 'ALMOÇO') && 
-                            linhas.every(l => !l.professor || l.professor === '—');
 
       if (existentes.length > 0) {
         setLinhas(existentes.map((e, i) => ({
@@ -62,9 +72,9 @@ export default function ScheduleEditor() {
           materia: e.materia || '',
           professor: e.nomeProfessor || (e as any).nome_professor || ''
         })));
-      } else if (gradeEstaVazia || linhas.length === 0) {
-        // Se estiver vazia ou for uma troca de segmento sem dados manuais, aplica novo esqueleto
-        setLinhas(periodosAlvo.map((p, i) => ({
+      } else {
+        const pAlvo = periodos.filter(p => p.segmento === segmentoSelecionado);
+        setLinhas(pAlvo.map((p, i) => ({
           id: `p-${i}`,
           horario: `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`,
           tipo: p.tipo as any,
@@ -73,8 +83,7 @@ export default function ScheduleEditor() {
         })));
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [salaSelecionada, diaSelecionado, gradeCompleta, periodos, segmentoSelecionado]);
+  }, [salaSelecionada, diaSelecionado, gradeCompleta, periodos]); // Removi segmentoSelecionado daqui para não dar conflito
 
   const addLinha = () => {
     const ultimo = linhas[linhas.length - 1];
@@ -216,7 +225,7 @@ export default function ScheduleEditor() {
                  { id: '8e9', label: '8º e 9º Ano' },
                  { id: 'medio', label: 'Ensino Médio' }
                ].map(s => (
-                 <button key={s.id} onClick={() => setSegmentoSelecionado(s.id)} className={cn("w-full p-4 rounded-2xl text-[10px] font-black uppercase text-left transition-all border-2", segmentoSelecionado === s.id ? "bg-primary/10 border-primary text-primary" : "bg-black border-white/5 text-white/20")}>
+                 <button key={s.id} onClick={() => handleSegmentoChange(s.id)} className={cn("w-full p-4 rounded-2xl text-[10px] font-black uppercase text-left transition-all border-2", segmentoSelecionado === s.id ? "bg-primary/10 border-primary text-primary" : "bg-black border-white/5 text-white/20")}>
                    {s.label}
                  </button>
                ))}
