@@ -167,38 +167,50 @@ export default function ScheduleEditor() {
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
-          const items = textContent.items.map((item: any) => item.str);
-          const fullText = items.join(' ');
+          const fullText = textContent.items.map((item: any) => item.str).join(' ');
 
-          // Tenta detectar a Sala no cabeçalho (ex: "Sala 1")
           const salaMatch = fullText.match(/Sala\s+(\d+)/i);
-          const salaDetectada = salaMatch ? salaMatch[1] : `Pág ${i}`;
+          const salaDetectada = salaMatch ? `Sala ${salaMatch[1]}` : `Documento Pág ${i}`;
           
-          // Lógica simplificada de extração por padrões (Horário + Professor)
-          // Procura por horários 00:00 - 00:00 e textos próximos
           const aulas: any[] = [];
-          const lines = fullText.split(/\d{2}:\d{2}\s*•/).filter(l => l.trim());
+          // Procuramos por blocos de texto que tenham "-" (separador de prof/materia)
+          // E tentamos associar a um dia da semana por posição ou contexto
+          const blocos = fullText.split(/\s{2,}/); // Quebra por espaços grandes
           
-          // Nota: PDF.js retorna texto muitas vezes fora de ordem. 
-          // Para o seu modelo (Sala 1 - 8 Ano C), vamos tentar agrupar.
-          // Como o PDF é complexo, jogamos o texto bruto para o usuário conferir.
-          
-          // Simulação de extração baseada no seu print:
-          // Procuramos padrões de "NOME - MATERIA"
-          const profMateriaMatches = fullText.matchAll(/([A-Za-zÀ-ÿ\s]+)\s*-\s*([A-Za-zÀ-ÿ\s]+)/g);
-          for (const match of profMateriaMatches) {
-            aulas.push({
-              dia: 'REVISAR', 
-              horario: 'REVISAR',
-              materia: match[2].trim(),
-              professor: match[1].trim()
-            });
-          }
+          let diaAtual = 'SEGUNDA';
+          blocos.forEach(bloco => {
+            if (DIAS_SEMANA.includes(bloco.toUpperCase())) {
+              diaAtual = bloco.toUpperCase();
+            }
+            
+            if (bloco.includes('-')) {
+              const partes = bloco.split('-').map(p => p.trim());
+              if (partes.length >= 2) {
+                aulas.push({
+                  dia: diaAtual,
+                  horario: 'A DEF',
+                  materia: partes[1],
+                  professor: partes[0]
+                });
+              }
+            }
+          });
 
           if (aulas.length > 0) previewMap[salaDetectada] = aulas;
         }
 
+        const todosProfs = new Set<string>();
+        Object.values(previewMap).forEach(aulas => aulas.forEach(a => { if (a.professor !== '—') todosProfs.add(a.professor); }));
+        const autoMapProf: {[key: string]: string} = {};
+        Array.from(todosProfs).forEach(p => {
+          const m = professoresCMS.find(db => db.nome.toLowerCase() === p.toLowerCase());
+          autoMapProf[p] = m ? m.nome : '';
+        });
+
+        setProfessoresUnicosPreview(Array.from(todosProfs).sort());
         setDadosPreview(previewMap);
+        setMapeamentoSalas(Object.keys(previewMap).reduce((acc, c) => ({ ...acc, [c]: '' }), {}));
+        setMapeamentoProfessores(autoMapProf);
         setModalPreviewAberto(true);
         setModalFotoAberto(false);
       } catch (err: any) {
@@ -217,30 +229,47 @@ export default function ScheduleEditor() {
     setImportandoGeral(true);
     
     try {
-      const { data: { text } } = await Tesseract.recognize(file, 'por', {
-        logger: m => console.log(m)
-      });
-      
-      // Processa o texto do OCR
+      const { data: { text } } = await Tesseract.recognize(file, 'por');
       const previewMap: {[key: string]: any[]} = {};
       const aulas: any[] = [];
       
-      // Tenta detectar a sala
       const salaMatch = text.match(/Sala\s+(\d+)/i);
       const salaDetectada = salaMatch ? `Sala ${salaMatch[1]}` : "Foto";
 
-      // Procura padrões de NOME - MATERIA
-      const matches = text.matchAll(/([A-Za-zÀ-ÿ\s]+)\s*-\s*([A-Za-zÀ-ÿ\s\n]+)/g);
-      for (const match of matches) {
-        const prof = match[1].trim().split('\n').pop() || '';
-        const mat = match[2].trim().split('\n')[0] || '';
-        if (prof.length > 3 && mat.length > 3) {
-          aulas.push({ dia: 'REVISAR', horario: 'REVISAR', materia: mat, professor: prof });
+      // Regex melhorada para capturar Nome - Matéria
+      const linhasTexto = text.split('\n');
+      let diaAtual = 'SEGUNDA';
+
+      linhasTexto.forEach(linha => {
+        const up = linha.toUpperCase();
+        if (up.includes('SEGUNDA')) diaAtual = 'SEGUNDA';
+        else if (up.includes('TERÇA') || up.includes('TERCA')) diaAtual = 'TERÇA';
+        else if (up.includes('QUARTA')) diaAtual = 'QUARTA';
+        else if (up.includes('QUINTA')) diaAtual = 'QUINTA';
+        else if (up.includes('SEXTA')) diaAtual = 'SEXTA';
+
+        if (linha.includes('-')) {
+          const partes = linha.split('-').map(p => p.trim());
+          if (partes.length >= 2 && partes[0].length > 3) {
+            aulas.push({ dia: diaAtual, horario: 'Conferir', materia: partes[1], professor: partes[0] });
+          }
         }
-      }
+      });
 
       if (aulas.length > 0) previewMap[salaDetectada] = aulas;
+      
+      const todosProfs = new Set<string>();
+      Object.values(previewMap).forEach(aulas => aulas.forEach(a => { if (a.professor !== '—') todosProfs.add(a.professor); }));
+      const autoMapProf: {[key: string]: string} = {};
+      Array.from(todosProfs).forEach(p => {
+        const m = professoresCMS.find(db => db.nome.toLowerCase() === p.toLowerCase());
+        autoMapProf[p] = m ? m.nome : '';
+      });
+
+      setProfessoresUnicosPreview(Array.from(todosProfs).sort());
       setDadosPreview(previewMap);
+      setMapeamentoSalas(Object.keys(previewMap).reduce((acc, c) => ({ ...acc, [c]: '' }), {}));
+      setMapeamentoProfessores(autoMapProf);
       setModalPreviewAberto(true);
       setModalFotoAberto(false);
     } catch (err: any) {
