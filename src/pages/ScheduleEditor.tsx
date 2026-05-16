@@ -187,7 +187,7 @@ export default function ScheduleEditor() {
         <div>
           <h1 className="text-4xl font-black italic tracking-tighter uppercase">Gestão <span className="text-primary">de Grades</span></h1>
           <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
-             <Zap size={12} className="text-primary" /> Sistema de Inteligência de Ensalamento Ativo
+             <Zap size={12} className="text-primary" /> Sistema Ativo <span className="text-primary/20 ml-2">v2.5 — REFRESH_FIX</span>
           </p>
         </div>
         <div className="flex gap-4">
@@ -251,7 +251,10 @@ export default function ScheduleEditor() {
         </aside>
 
         {/* Workspace do Editor Intelignete */}
-        <main className="bg-white/5 p-12 rounded-[4rem] border border-white/5 relative shadow-3xl">
+        <main 
+          key={`${salaSelecionada?.id}-${diaSelecionado}-${segmentoSelecionado}`}
+          className="bg-white/5 p-12 rounded-[4rem] border border-white/5 relative shadow-3xl"
+        >
           <div className="flex items-center justify-between mb-12 pb-8 border-b border-white/10">
             <div className="flex items-center gap-8">
               <div className="w-24 h-24 bg-primary text-black rounded-[2rem] flex items-center justify-center text-5xl font-black italic shadow-2xl shadow-primary/30">
