@@ -189,11 +189,8 @@ export default function ScheduleEditor() {
         for (const nomeAba of wb.SheetNames) {
           const ws = wb.Sheets[nomeAba];
           const turmaNome = nomeAba.replace(' SESI', '').trim();
-          
-          // Limitamos a leitura para a área de interesse para evitar travamentos
-          // Colunas B=1, C=2, D=3, E=4, F=5, G=6
-          // Linhas de 0 a 20
           const rows: any[][] = [];
+          
           for (let R = 0; R <= 20; R++) {
             const row = [];
             for (let C = 0; C <= 7; C++) {
@@ -208,36 +205,25 @@ export default function ScheduleEditor() {
           };
 
           const itensTurma: any[] = [];
-          rows.forEach((row, rIdx) => {
-            const horarioRaw = String(row[1] || ''); // Coluna B
+          rows.forEach((row) => {
+            const horarioRaw = String(row[1] || '');
             if (horarioRaw.includes('-') && horarioRaw.includes(':')) {
               Object.entries(diasIndices).forEach(([dia, colIdx]) => {
                 const conteudo = String(row[colIdx] || '').trim();
                 if (conteudo && conteudo.length > 5) {
-                  // Quebra por nova linha ou traço se o Excel não tiver quebra real
                   const partes = conteudo.split(/[\n\r]+/).map(p => p.trim());
                   const materia = partes[0] || 'A DEFINIR';
-                  
                   let professor = '—';
                   if (partes[1]) {
-                    // Pega o que vem antes do " - Sala" ou apenas o início
                     professor = partes[1].split(/\s*-\s*Sala/i)[0].trim();
                   }
-
-                  itensTurma.push({
-                    dia, 
-                    horario: horarioRaw.trim(),
-                    materia,
-                    professor
-                  });
+                  itensTurma.push({ dia, horario: horarioRaw.trim(), materia, professor });
                 }
               });
             }
           });
           
-          if (itensTurma.length > 0) {
-            previewMap[turmaNome] = itensTurma;
-          }
+          if (itensTurma.length > 0) previewMap[turmaNome] = itensTurma;
         }
 
         const todosProfs = new Set<string>();
@@ -245,25 +231,22 @@ export default function ScheduleEditor() {
           aulas.forEach(a => { if (a.professor && a.professor !== '—') todosProfs.add(a.professor); });
         });
 
-        setProfessoresUnicosPreview(Array.from(todosProfs).sort());
-        
-        // Auto-mapeamento inicial por nome idêntico
         const autoMapProf: {[key: string]: string} = {};
-        todosProfs.forEach(pExcel => {
+        Array.from(todosProfs).forEach(pExcel => {
           const match = professoresCMS.find(pDb => pDb.nome.toLowerCase() === pExcel.toLowerCase());
           autoMapProf[pExcel] = match ? match.nome : '';
         });
 
+        setProfessoresUnicosPreview(Array.from(todosProfs).sort());
         setDadosPreview(previewMap);
         setMapeamentoSalas(Object.keys(previewMap).reduce((acc, curr) => ({ ...acc, [curr]: '' }), {}));
         setMapeamentoProfessores(autoMapProf);
         setModalPreviewAberto(true);
         setModalFotoAberto(false);
       } catch (err: any) {
-        setMensagem({ tipo: 'erro', texto: err.message || "Erro ao processar arquivo." });
+        setMensagem({ tipo: 'erro', texto: "Erro ao processar planilha: " + err.message });
       } finally {
         setImportandoGeral(false);
-        setTimeout(() => setMensagem(null), 5000);
       }
     };
     leitor.readAsArrayBuffer(file);
