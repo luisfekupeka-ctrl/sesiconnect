@@ -47,7 +47,11 @@ export default function ScheduleEditor() {
              (e.diaSemana === diaSelecionado || e.dia_semana === diaSelecionado)
       ).sort((a,b) => (a.horario || '').localeCompare(b.horario || ''));
 
+      const periodosDoSegmento = periodos.filter(p => p.segmento === segmentoSelecionado);
+      const periodosAlvo = periodosDoSegmento.length > 0 ? periodosDoSegmento : periodos;
+
       if (existentes.length > 0) {
+        // Se já existem aulas no banco, respeitamos elas
         setLinhas(existentes.map((e, i) => ({
           id: e.id || `l-${i}`,
           horario: e.horario || '07:30 - 08:15',
@@ -56,10 +60,7 @@ export default function ScheduleEditor() {
           professor: e.nomeProfessor || e.nome_professor || ''
         })));
       } else {
-        // Gera baseado no segmento selecionado (Restaurando a lógica de segmentação)
-        const periodosDoSegmento = periodos.filter(p => p.segmento === segmentoSelecionado);
-        const periodosAlvo = periodosDoSegmento.length > 0 ? periodosDoSegmento : periodos;
-        
+        // Se a grade estiver vazia, aplicamos o esqueleto do segmento
         setLinhas(periodosAlvo.map((p, i) => ({
           id: `p-${i}`,
           horario: `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`,
