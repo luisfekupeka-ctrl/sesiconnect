@@ -4,10 +4,13 @@ import {
   Save, Calendar, DoorOpen, User, BookOpen, Clock, 
   Trash2, Copy, Check, AlertCircle, RefreshCw, ChevronLeft, Shield, Zap, LayoutGrid,
   Plus, Coffee, X, Palette, Edit3, ArrowDown, ArrowUp, ToggleLeft, ToggleRight,
-  Users, Search, UserPlus
+  Users, Search, UserPlus, FileSpreadsheet
 } from 'lucide-react';
 import { useEscola } from '../context/ContextoEscola';
 import { salvarGradeSala, salvarProfessorCMS } from '../services/dataService';
+import { salvarGradeSala, salvarProfessorCMS } from '../services/dataService';
+import * as XLSX from 'xlsx';
+import { cn } from '../lib/utils';
 import { cn } from '../lib/utils';
 import { Sala, EntradaGradeSala } from '../types';
 
@@ -72,6 +75,10 @@ export default function ScheduleEditor() {
   // Estado para visualização do Ensalamento Lateral
   const [linhaFocada, setLinhaFocada] = useState<string | null>(null);
   const [buscaAluno, setBuscaAluno] = useState('');
+  const [modalPlanoAberto, setModalPlanoAberto] = useState(false);
+  const [conteudoPlano, setConteudoPlano] = useState('');
+  const [modalFotoAberto, setModalFotoAberto] = useState(false); // Reutilizando para Importação Geral
+  const [importandoGeral, setImportandoGeral] = useState(false);
 
   useEffect(() => { localStorage.setItem('sesi_materias', JSON.stringify(materias)); }, [materias]);
   const listaProfessoresNomes = professoresCMS.map(p => p.nome).sort();
@@ -132,6 +139,84 @@ export default function ScheduleEditor() {
       setLinhas(novasLinhas);
     }
   }, [salaSelecionada, diaSelecionado, gradeCompleta, periodos, segmentoSelecionado]);
+
+  const handleImportarPlano = () => {
+    const lines = conteudoPlano.split('\n').filter(l => l.trim());
+    const novasLinhas = [...linhas];
+    
+    lines.forEach((line, idx) => {
+      if (idx < novasLinhas.length) {
+        // Ignora linhas que já são intervalo ou almoço se o texto não for explicitamente isso
+        if (novasLinhas[idx].tipo === 'intervalo' || novasLinhas[idx].tipo === 'almoco') return;
+
+        const parts = line.split('|').map(p => p.trim());
+        if (parts.length >= 2) {
+          novasLinhas[idx].materia = parts[0];
+          novasLinhas[idx].professor = parts[1];
+          novasLinhas[idx].tipo = 'aula';
+        } else if (parts.length === 1 && parts[0]) {
+           novasLinhas[idx].materia = parts[0];
+           novasLinhas[idx].tipo = 'aula';
+        }
+      }
+    });
+    
+    setLinhas(novasLinhas);
+    setModalPlanoAberto(false);
+    setConteudoPlano('');
+    setMensagem({ tipo: 'sucesso', texto: 'Lista aplicada à grade!' });
+    setTimeout(() => setMensagem(null), 3000);
+  };
+
+  const handleUploadGradeGeral = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportandoGeral(true);
+    setMensagem(null);
+
+    const leitor = new FileReader();
+    leitor.onload = async (ev) => {
+      try {
+        const data = new Uint8Array(ev.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json<any>(ws);
+
+        // Processamento para o formato da tabela de grade
+        // Espera-se colunas como: Sala, Turma, Dia, Horario, Professor, Materia
+        const entradas: Omit<EntradaGradeSala, 'id'>[] = json.map(row => ({
+          numeroSala: Number(row.sala || row.Sala || row.SALA || 0),
+          nomeSala: String(row.nome_sala || row.Sala || `Sala ${row.sala}`),
+          anoTurma: String(row.turma || row.Turma || row.TURMA || 'A DEFINIR'),
+          diaSemana: String(row.dia || row.Dia || row.DIA || '').toUpperCase().trim(),
+          horario: String(row.horario || row.Horario || row.HORARIO || ''),
+          nomeProfessor: String(row.professor || row.Professor || row.PROFESSOR || '—'),
+          materia: String(row.materia || row.Materia || row.MATERIA || 'A DEFINIR'),
+          turma: String(row.turma || row.Turma || 'A DEFINIR'),
+          tipo: 'regular',
+          listaAlunos: []
+        })).filter(e => e.numeroSala > 0 && e.diaSemana && e.horario);
+
+        if (entradas.length === 0) throw new Error("Nenhum dado válido encontrado na planilha.");
+
+        const ok = await salvarGradeSala(entradas);
+        if (ok) {
+          setMensagem({ tipo: 'sucesso', texto: `${entradas.length} horários importados com sucesso!` });
+          atualizar();
+          setModalFotoAberto(false);
+        } else {
+          throw new Error("Erro ao salvar no banco de dados.");
+        }
+      } catch (err: any) {
+        setMensagem({ tipo: 'erro', texto: err.message || "Erro ao processar arquivo." });
+      } finally {
+        setImportandoGeral(false);
+        setTimeout(() => setMensagem(null), 5000);
+      }
+    };
+    leitor.readAsArrayBuffer(file);
+  };
 
   const atualizarLinha = (id: string, campo: keyof LinhaGrade, valor: any) => {
     setLinhas(prev => prev.map(l => l.id === id ? { ...l, [campo]: valor } : l));
@@ -241,8 +326,6 @@ export default function ScheduleEditor() {
             <h1 className="text-5xl font-black tracking-tighter italic">Editor <span className="text-primary">de Horários</span></h1>
             <p className="text-on-surface-variant font-medium mt-1 text-sm opacity-60">Configuração de aulas, professores e ensalamento nominal.</p>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            <button onClick={() => setModalCoresAberto(true)} className="btn-secondary"><Palette size={14} /></button>
             <button onClick={() => setModalMateriasAberto(true)} className="btn-secondary"><BookOpen size={14} /></button>
             <button onClick={handleSalvar} disabled={!salaSelecionada || salvando}
               className={cn("btn-primary shadow-xl shadow-primary/20", salvando && "opacity-50 animate-pulse")}>
@@ -314,6 +397,8 @@ export default function ScheduleEditor() {
               <div className="flex flex-wrap gap-2 mb-8">
                 <button onClick={() => setModalCopiaAberto(true)} className="px-5 py-3 bg-surface-container-low rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-primary/10 transition-all flex items-center gap-2 border border-transparent hover:border-primary/20"><Copy size={12} /> Copiar Dias</button>
                 <button onClick={() => setModalCopiaSalasAberto(true)} className="px-5 py-3 bg-surface-container-low rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-primary/10 transition-all flex items-center gap-2 border border-transparent hover:border-primary/20"><LayoutGrid size={12} /> Aplicar Salas</button>
+                <button onClick={() => setModalPlanoAberto(true)} className="px-5 py-3 bg-surface-container-low rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-primary/10 transition-all flex items-center gap-2 border border-transparent hover:border-primary/20 text-primary"><Edit3 size={12} /> Colar Texto</button>
+                <button onClick={() => setModalFotoAberto(true)} className="px-5 py-3 bg-primary/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-primary/20 transition-all flex items-center gap-2 border border-primary/20 text-primary shadow-lg shadow-primary/5"><FileSpreadsheet size={12} /> Importar Grade Geral (Planilha)</button>
               </div>
 
               <div className="space-y-2">
@@ -601,6 +686,84 @@ export default function ScheduleEditor() {
                  <button onClick={() => setModalCopiaSalasAberto(false)} className="flex-1 py-5 bg-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest">Cancelar</button>
                  <button onClick={() => handleCopiarParaSalas(salas.filter(s => s.numero !== salaSelecionada?.numero).map(s => s.numero))} className="flex-[2] py-5 bg-primary text-black rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20">Aplicar em TODAS</button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {modalPlanoAberto && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md" onClick={() => setModalPlanoAberto(false)}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#0d1117] p-10 rounded-[3.5rem] border border-[#30363d] max-w-2xl w-full space-y-6" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-3xl font-black tracking-tighter italic">Modo Plano <span className="text-[#42a0f5]">Colar Lista</span></h3>
+                  <p className="text-[10px] font-black uppercase text-white/40 tracking-widest mt-1">Importação rápida via texto/planilha</p>
+                </div>
+                <button onClick={() => setModalPlanoAberto(false)}><X size={24} className="text-white/20" /></button>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-xs font-medium text-on-surface-variant">Cole abaixo a lista de aulas para esta sala. Use o formato: <br/> 
+                  <code className="text-primary bg-primary/10 px-2 py-0.5 rounded">Matéria | Professor</code> (um por linha)</p>
+                
+                <textarea 
+                  value={conteudoPlano}
+                  onChange={e => setConteudoPlano(e.target.value)}
+                  placeholder="Exemplo:&#10;MATEMÁTICA | REVSON&#10;PORTUGUÊS | KÁTIA&#10;CIÊNCIAS | TIAGO"
+                  className="w-full h-64 bg-black border border-white/10 p-6 rounded-3xl text-sm font-medium text-white focus:border-[#42a0f5]/50 outline-none transition-all resize-none custom-scrollbar"
+                />
+
+                <div className="flex gap-4">
+                  <button onClick={() => setModalPlanoAberto(false)} className="flex-1 py-5 bg-white/5 rounded-2xl font-black uppercase text-[10px] tracking-widest">Cancelar</button>
+                  <button onClick={handleImportarPlano} className="flex-[2] py-5 bg-[#42a0f5] text-black rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-[#42a0f5]/20">Processar Lista e Aplicar</button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {modalFotoAberto && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md" onClick={() => !importandoGeral && setModalFotoAberto(false)}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#0d1117] p-10 rounded-[3.5rem] border border-primary/20 max-w-md w-full space-y-8 text-center" onClick={e => e.stopPropagation()}>
+              
+              <div className="space-y-4">
+                <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 text-primary">
+                  {importandoGeral ? <RefreshCw size={40} className="animate-spin" /> : <FileSpreadsheet size={40} />}
+                </div>
+                <h3 className="text-3xl font-black tracking-tighter italic">Importar <span className="text-primary">Grade Geral</span></h3>
+                <p className="text-xs font-medium text-on-surface-variant">Selecione a planilha Excel (.xlsx) enviada pela coordenação para atualizar todos os horários do sistema de uma vez.</p>
+              </div>
+
+              {!importandoGeral ? (
+                <div className="space-y-4">
+                  <label className="block w-full py-8 border-2 border-dashed border-white/10 rounded-3xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all">
+                    <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleUploadGradeGeral} />
+                    <div className="flex flex-col items-center gap-2">
+                      <Plus size={24} className="text-primary" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Selecionar Planilha</span>
+                    </div>
+                  </label>
+                  <div className="text-left bg-white/5 p-4 rounded-2xl space-y-2">
+                    <p className="text-[9px] font-black uppercase text-primary/60 tracking-widest">Colunas Esperadas:</p>
+                    <p className="text-[10px] font-bold text-white/40">sala, dia, horario, professor, materia, turma</p>
+                  </div>
+                  <button onClick={() => setModalFotoAberto(false)} className="w-full py-2 text-on-surface-variant font-black text-[10px] uppercase tracking-widest">Cancelar</button>
+                </div>
+              ) : (
+                <div className="py-10 space-y-4">
+                  <div className="flex justify-center gap-2">
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Processando Planilha...</p>
+                </div>
+              )}
             </motion.div>
           </div>
         )}
