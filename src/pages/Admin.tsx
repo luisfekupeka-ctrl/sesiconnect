@@ -33,7 +33,7 @@ import {
 type AbaAdmin =
   | 'alunos' | 'professores' | 'gestao-monitores' | 'substituicoes'
   | 'locais' | 'grade-professores'
-  | 'formularios' | 'language-lab' | 'after-school' | 'prontuario';
+  | 'formularios' | 'language-lab' | 'after-school' | 'prontuario' | 'usuarios';
 
 
 
@@ -90,12 +90,7 @@ export default function Admin() {
   } = useEscola();
 
   // 1. TODOS OS HOOKS NO TOPO
-  const [autenticado, setAutenticado] = useState(() => {
-    return localStorage.getItem('sesi_admin_auth') === 'true';
-  });
-  const [usuario, setUsuario] = useState('');
-  const [senha, setSenha] = useState('');
-  const [erroLogin, setErroLogin] = useState(false);
+  const { profile, loading: authLoading } = useAuth();
   const [abaAtiva, setAbaAtiva] = useState<AbaAdmin>('alunos');
   const [carregando, setCarregando] = useState(false);
   const [busca, setBusca] = useState('');
@@ -166,21 +161,7 @@ export default function Admin() {
   };
 
   // 2. FUNÇÕES DE SUPORTE
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (usuario === 'admin' && senha === 'admin2024') {
-      setAutenticado(true);
-      localStorage.setItem('sesi_admin_auth', 'true');
-      setErroLogin(false);
-    } else {
-      setErroLogin(true);
-    }
-  };
-
-  const handleLogout = () => {
-    setAutenticado(false);
-    localStorage.removeItem('sesi_admin_auth');
-  };
+  // Removido login local antigo
 
   const handleOpenAlunos = async (item: any) => {
     setEditingAlunos(item);
@@ -221,67 +202,11 @@ export default function Admin() {
     setCarregando(false);
   };
 
-  // 3. SE NÃO AUTENTICADO, RETORNA LOGIN (AGORA DEPOIS DOS HOOKS)
-  if (!autenticado) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-6 font-sans">
-        <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
-          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#42a0f5] blur-[120px] rounded-full" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#fbbf24] blur-[120px] rounded-full opacity-50" />
-        </div>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md bg-[#0a0a0a] border border-white/10 p-10 rounded-[2.5rem] shadow-2xl relative z-10"
-        >
-          <div className="flex flex-col items-center mb-10">
-            <div className="w-16 h-16 bg-[#fbbf24] text-black rounded-2xl flex items-center justify-center mb-6 shadow-glow-yellow">
-              <Shield size={32} />
-            </div>
-            <h1 className="text-3xl font-black text-white italic tracking-tighter">SESI <span className="text-[#fbbf24]">Connect</span></h1>
-            <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em] mt-2">Painel Administrativo</p>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Usuário</label>
-              <input 
-                type="text" value={usuario} onChange={e => setUsuario(e.target.value)}
-                className="w-full bg-black border border-white/10 p-5 rounded-2xl text-sm font-black text-white focus:border-[#fbbf24]/50 outline-none transition-all shadow-inner"
-                placeholder="Ex: admin"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Senha</label>
-              <input 
-                type="password" value={senha} onChange={e => setSenha(e.target.value)}
-                className="w-full bg-black border border-white/10 p-5 rounded-2xl text-sm font-black text-white focus:border-[#fbbf24]/50 outline-none transition-all shadow-inner"
-                placeholder="••••••••"
-              />
-            </div>
-
-            {erroLogin && (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-[10px] font-black uppercase text-center tracking-widest">
-                Credenciais Inválidas
-              </motion.p>
-            )}
-
-            <button 
-              type="submit"
-              className="w-full py-5 bg-[#fbbf24] text-black rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-xl shadow-[#fbbf24]/10 hover:scale-[1.02] active:scale-95 transition-all"
-            >
-              Acessar Dashboard
-            </button>
-          </form>
-
-          <div className="mt-12 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
-             <button onClick={() => navigate('/')} className="text-[10px] font-black text-white/20 uppercase tracking-widest hover:text-[#42a0f5] transition-colors">Voltar ao Site</button>
-             <span className="text-[8px] font-black text-white/10 uppercase tracking-[0.5em] italic">Segurança Sesi Connect</span>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
+  if (authLoading) return (
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+    </div>
+  );
   const listaProfessores = Array.from(new Set(
     gradeCompleta.map(e => e.nomeProfessor).filter(n => n && n !== '—' && n !== 'A DEFINIR')
   )).sort() as string[];
@@ -409,7 +334,8 @@ export default function Admin() {
     { id: 'language-lab', rotulo: 'Idioma', icone: BookOpen, badge: (languageLab || []).length },
     { id: 'after-school', rotulo: 'After School', icone: Clock, badge: (atividadesAfter || []).length },
     { id: 'formularios', rotulo: 'Ocorrências', icone: FileSpreadsheet, badge: (modelosFormulario || []).length },
-    { id: 'prontuario', rotulo: 'Prontuário Explorer', icone: DoorOpen },
+    { id: 'prontuario', rotulo: 'Prontuário', icone: DoorOpen },
+    { id: 'usuarios', rotulo: 'Usuários', icone: Shield, badge: 0 },
   ];
 
   return (
@@ -1241,12 +1167,14 @@ export default function Admin() {
                             <div className="grid grid-cols-2 gap-3">
                                 {[
                                     { tipo: 'texto', rotulo: 'Texto Curto', icon: AlignLeft },
-                                    { tipo: 'longo', rotulo: 'Texto Longo', icon: List },
+                                    { tipo: 'area_texto', rotulo: 'Texto Longo', icon: List },
                                     { tipo: 'selecao', rotulo: 'Seleção (Dropdown)', icon: ChevronDownSquare },
                                     { tipo: 'radio', rotulo: 'Escolha Única', icon: CircleDot },
                                     { tipo: 'checkbox', rotulo: 'Caixas de Seleção', icon: CheckSquare },
                                     { tipo: 'sessao', rotulo: 'Título de Sessão', icon: AlignLeft },
-                                    { tipo: 'aluno', rotulo: 'Aluno (Base de Dados)', icon: GraduationCap }
+                                    { tipo: 'autocomplete_aluno', rotulo: 'Aluno (Base de Dados)', icon: GraduationCap },
+                                    { tipo: 'serie_escolar', rotulo: 'Série Escolar', icon: List },
+                                    { tipo: 'data', rotulo: 'Data', icon: Calendar }
                                 ].map(t => (
                                     <button key={t.tipo} onClick={() => setEditandoModelo({ ...editandoModelo, campos: [...(editandoModelo.campos || []), { id: `f-${Date.now()}`, tipo: t.tipo as any, rotulo: t.rotulo, obrigatorio: false }] })}
                                         className="flex flex-col items-center justify-center p-5 bg-white/5 border border-white/10 rounded-2xl hover:bg-primary/20 hover:border-primary/50 transition-all group">
@@ -1303,12 +1231,14 @@ export default function Admin() {
                                       }}
                                       className="w-full bg-black/40 border border-white/10 p-5 rounded-2xl text-sm font-black uppercase outline-none focus:border-primary transition-all">
                                       <option value="texto">Texto Curto</option>
-                                      <option value="longo">Texto Longo</option>
+                                      <option value="area_texto">Texto Longo</option>
                                       <option value="selecao">Seleção (Dropdown)</option>
                                       <option value="radio">Escolha Única</option>
                                       <option value="checkbox">Caixas de Seleção</option>
                                       <option value="sessao">Título de Sessão</option>
-                                      <option value="aluno">Aluno (Base de Dados)</option>
+                                      <option value="autocomplete_aluno">Aluno (Base de Dados)</option>
+                                      <option value="serie_escolar">Série Escolar</option>
+                                      <option value="data">Data</option>
                                     </select>
                                 </div>
 
@@ -1407,6 +1337,12 @@ export default function Admin() {
                 ocorrencias={ocorrencias} 
                 atualizar={atualizar} 
               />
+            </motion.div>
+          )}
+
+          {abaAtiva === 'usuarios' && (
+            <motion.div key="usuarios" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
+              <GestaoUsuarios />
             </motion.div>
           )}
         </AnimatePresence>
@@ -2157,5 +2093,100 @@ function SeletorAlunos({ alunos, selecionados, onChange, turmaAlvo }: { alunos: 
          </div>
       </div>
     </div>
+  );
+}
+
+// ============================================================
+// COMPONENTE: Gestão de Usuários
+// ============================================================
+function GestaoUsuarios() {
+  const [perfis, setPerfis] = React.useState<any[]>([]);
+  const [carregando, setCarregando] = React.useState(true);
+  const { profile: myProfile } = useAuth();
+
+  const carregarPerfis = async () => {
+    setCarregando(true);
+    const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+    if (data) setPerfis(data);
+    setCarregando(false);
+  };
+
+  React.useEffect(() => { carregarPerfis(); }, []);
+
+  const handleUpdateStatus = async (id: string, status: string) => {
+    const { error } = await supabase.from('profiles').update({ status }).eq('id', id);
+    if (!error) carregarPerfis();
+  };
+
+  const handleUpdateRole = async (id: string, role: string) => {
+    const { error } = await supabase.from('profiles').update({ role }).eq('id', id);
+    if (!error) carregarPerfis();
+  };
+
+  if (carregando) return <div className="p-20 text-center"><div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto" /></div>;
+
+  return (
+    <Painel titulo="Controle de Acesso" subtitulo="Aprove novos usuários e defina cargos de confiança.">
+      <div className="grid gap-4">
+        {perfis.map(p => (
+          <div key={p.id} className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-surface-container-high transition-all">
+            <div className="flex items-center gap-4">
+              <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-on-surface-bright font-black text-xl shadow-lg",
+                p.status === 'approved' ? "bg-emerald-500" : p.status === 'pending' ? "bg-amber-500 animate-pulse" : "bg-red-500")}>
+                {p.full_name?.charAt(0) || '?'}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-black text-on-surface-bright">{p.full_name}</h3>
+                  {p.id === myProfile?.id && <span className="text-[8px] bg-white/10 px-1.5 py-0.5 rounded-full uppercase font-black tracking-widest">Você</span>}
+                </div>
+                <p className="text-xs text-on-surface-variant font-medium">{p.email}</p>
+                <div className="flex gap-2 mt-2">
+                  <span className={cn("text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md",
+                    p.role === 'super_admin' ? "bg-purple-500/10 text-purple-500" : "bg-primary/10 text-primary")}>
+                    {p.role}
+                  </span>
+                  <span className={cn("text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md",
+                    p.status === 'approved' ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500")}>
+                    {p.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {p.status === 'pending' && (
+                <>
+                  <button onClick={() => handleUpdateStatus(p.id, 'approved')} className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-emerald-600 transition-all">
+                    <Check size={14} /> Aprovar
+                  </button>
+                  <button onClick={() => handleUpdateStatus(p.id, 'rejected')} className="px-4 py-2 bg-red-500/10 text-red-500 rounded-xl text-[10px] font-black uppercase hover:bg-red-500/20 transition-all">
+                    Rejeitar
+                  </button>
+                </>
+              )}
+
+              {p.status === 'approved' && p.id !== myProfile?.id && (
+                <div className="flex gap-2">
+                  <select 
+                    value={p.role} 
+                    onChange={(e) => handleUpdateRole(p.id, e.target.value)}
+                    className="bg-surface-container-high border-2 border-white/5 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-primary/30"
+                  >
+                    <option value="user">Usuário Comum</option>
+                    <option value="monitor">Monitor</option>
+                    <option value="professor">Professor</option>
+                    <option value="admin">Administrador</option>
+                  </select>
+                  <button onClick={() => handleUpdateStatus(p.id, 'rejected')} className="p-2 text-on-surface-variant hover:text-red-500 transition-colors">
+                    <XCircle size={18} />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Painel>
   );
 }

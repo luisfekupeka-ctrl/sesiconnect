@@ -178,7 +178,7 @@ export interface LocalCMS {
 
 // --- Formulários ---
 
-export type TipoCampoFormulario = 'texto' | 'selecao' | 'autocomplete_aluno' | 'data' | 'area_texto' | 'checkbox' | 'radio' | 'serie_escolar';
+export type TipoCampoFormulario = 'texto' | 'selecao' | 'autocomplete_aluno' | 'data' | 'area_texto' | 'checkbox' | 'radio' | 'serie_escolar' | 'sessao';
 
 export interface CampoFormulario {
   id: string;

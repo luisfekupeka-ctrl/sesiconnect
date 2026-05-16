@@ -175,26 +175,49 @@ export default function FormsPage() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-5xl mx-auto space-y-10">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-on-surface mb-3">Comando Central: Forms</h1>
-          <p className="text-on-surface-variant text-lg font-medium leading-relaxed">
-            Crie formulários dinâmicos e visualize relatórios em tempo real.
-          </p>
+      {/* Header Premium - WOW Effect */}
+      <div className="relative mb-12 p-10 rounded-[3rem] overflow-hidden group border border-white/5 shadow-2xl">
+        {/* Fundo Decorativo Dinâmico */}
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-blue-600/10 to-transparent opacity-40 group-hover:opacity-60 transition-opacity duration-700" />
+        <div className="absolute top-[-50%] right-[-10%] w-80 h-80 bg-primary/20 blur-[120px] rounded-full animate-pulse" />
+        
+        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-10">
+          <div className="flex items-center gap-8">
+            <div className="w-24 h-24 bg-primary text-black rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-primary/40 rotate-6 group-hover:rotate-0 transition-all duration-700 ease-out">
+              <FileSpreadsheet size={48} />
+            </div>
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-[10px] font-black text-primary uppercase tracking-[0.4em] bg-primary/10 px-3 py-1 rounded-full">Sistema Ativo</span>
+                <div className="h-px w-12 bg-white/10" />
+              </div>
+              <h1 className="text-5xl md:text-6xl font-black text-white italic tracking-tighter leading-none">
+                REGISTRO DE <br />
+                <span className="text-primary drop-shadow-[0_0_20px_rgba(251,191,36,0.4)]">OCORRÊNCIA</span>
+              </h1>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4">
+             <div className="flex gap-1 p-1.5 bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl w-fit">
+                {([
+                  { id: 'nova', rotulo: 'Registrar' },
+                  { id: 'relatorios', rotulo: 'Dashboards' },
+                ] as const).map((aba) => (
+                  <button key={aba.id} onClick={() => setAbaAtiva(aba.id)}
+                    className={cn("px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                      abaAtiva === aba.id ? "bg-primary text-black shadow-lg scale-105" : "text-on-surface-variant hover:text-on-surface")}>
+                    {aba.rotulo}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-3 px-5 py-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl w-fit">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
+                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Ambiente Seguro</span>
+              </div>
+          </div>
         </div>
-        <div className="flex gap-1 p-1.5 bg-surface-container-low rounded-2xl">
-          {([
-            { id: 'nova', rotulo: 'Registrar' },
-            { id: 'relatorios', rotulo: 'Dashboards' },
-          ] as const).map((aba) => (
-            <button key={aba.id} onClick={() => setAbaAtiva(aba.id)}
-              className={cn("px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                abaAtiva === aba.id ? "bg-surface-container-low text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface")}>
-              {aba.rotulo}
-            </button>
-          ))}
-        </div>
-      </header>
+      </div>
 
       <AnimatePresence mode="wait">
         {/* === ABA: NOVA OCORRÊNCIA === */}
@@ -229,10 +252,19 @@ export default function FormsPage() {
                     <div key={campo.id} className="space-y-4 bg-white/[0.02] p-8 rounded-[2.5rem] border border-white/[0.05] relative overflow-hidden group/field">
                       <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-focus-within/field:bg-primary transition-all" />
                       
-                      <label className="text-[11px] font-black text-primary uppercase tracking-[0.2em] px-1 flex items-center gap-2 mb-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                        {campo.rotulo} {campo.obrigatorio && <span className="text-red-500">*</span>}
-                      </label>
+                      {campo.tipo !== 'sessao' && (
+                        <label className="text-[11px] font-black text-primary uppercase tracking-[0.2em] px-1 flex items-center gap-2 mb-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                          {campo.rotulo} {campo.obrigatorio && <span className="text-red-500">*</span>}
+                        </label>
+                      )}
+                      {campo.tipo === 'sessao' && (
+                        <div className="flex items-center gap-4 py-4">
+                          <div className="h-px flex-1 bg-primary/20" />
+                          <h3 className="text-sm font-black text-primary uppercase tracking-[0.3em] whitespace-nowrap">{campo.rotulo}</h3>
+                          <div className="h-px flex-1 bg-primary/20" />
+                        </div>
+                      )}
                       {campo.tipo === 'autocomplete_aluno' && (
                         <div className="space-y-3">
                           <AutocompleteAluno alunos={alunos} valor={alunoSelecionado?.nome || ''} aoSelecionar={setAlunoSelecionado} />
@@ -304,14 +336,22 @@ export default function FormsPage() {
                         </select>
                       )}
 
-                      {/* Campo de Texto Longo (Ocorrência) - Aumentado a pedido do usuário */}
+                      {campo.tipo === 'data' && (
+                        <input 
+                          type="date" 
+                          required={campo.obrigatorio} 
+                          value={dadosFormulario[campo.rotulo] || ''} 
+                          onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} 
+                          className="campo-input-base" 
+                        />
+                      )}
+
                       {campo.tipo === 'area_texto' && (
                         <textarea 
                           required={campo.obrigatorio} 
                           value={dadosFormulario[campo.rotulo] || ''} 
                           onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} 
-                          rows={12} 
-                          className="w-full bg-surface-container-high/50 border-2 border-white/5 rounded-[1.5rem] p-6 text-lg font-medium focus:ring-8 focus:ring-primary/5 focus:border-primary/40 focus:bg-surface-container-high transition-all resize-none shadow-inner editorial-leading text-on-surface placeholder:text-on-surface-variant/10" 
+                          className="w-full bg-surface-container-high/50 border-2 border-white/5 rounded-[1.5rem] p-6 text-lg font-medium focus:ring-8 focus:ring-primary/5 focus:border-primary/40 focus:bg-surface-container-high transition-all min-h-[300px] shadow-inner editorial-leading text-on-surface placeholder:text-on-surface-variant/10" 
                           placeholder="Descreva detalhadamente o ocorrido..." 
                         />
                       )}
