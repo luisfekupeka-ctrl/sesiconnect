@@ -12,7 +12,9 @@ import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 import FichaOcorrencia from '../components/FichaOcorrencia';
 import ExploradorProntuario from '../components/ExploradorProntuario';
-import { RegistroOcorrencia } from '../types';
+import { RegistroOcorrencia, Aluno, ProfessorCMS, LocalCMS, Monitor, GradeMonitor, LanguageLabRecord, AtividadeAfter, EntradaGradeSala, PeriodoConfig } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import {
   salvarAluno, excluirAluno, excluirTodosAlunos,
   salvarMonitor, excluirMonitor, excluirTodosMonitores,

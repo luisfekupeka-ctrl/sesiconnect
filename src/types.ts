@@ -58,6 +58,7 @@ export interface EntradaGradeSala {
   turma: string;             // Alias de anoTurma
   materia: string;
   tipo: TipoBloco;
+  segmento?: string;
   listaAlunos?: string[];
 }
 
@@ -243,7 +244,7 @@ export interface ProfessorConfig {
   area: AreaConhecimento;
 }
 
-export type TipoEventoEscola = 'PROVA' | 'FALTA';
+export type TipoEventoEscola = 'PROVA' | 'FALTA' | 'SUBSTITUICAO';
 export type StatusEvento = 'RASCUNHO' | 'EFETIVADO';
 
 export interface EventoEscola {

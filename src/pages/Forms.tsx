@@ -65,7 +65,16 @@ function AutocompleteAluno({
             exit={{ opacity: 0, y: 10, scale: 0.98 }}
             className="absolute z-[60] w-full mt-3 bg-[#121212] border border-white/10 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden backdrop-blur-xl"
           >
-                    {aluno.numeroSala > 0 ? `Sala ${aluno.numeroSala.toString().padStart(2, '0')}` : 'Sem Sala'}
+            {sugestoes.map(aluno => (
+              <button
+                key={aluno.id}
+                onClick={() => { aoSelecionar(aluno); setBusca(aluno.nome); setAberto(false); }}
+                className="w-full flex items-center justify-between p-4 hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0 text-left"
+              >
+                <div>
+                  <p className="text-sm font-black text-white">{aluno.nome}</p>
+                  <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">
+                    {aluno.turma} · {aluno.numeroSala > 0 ? `Sala ${aluno.numeroSala.toString().padStart(2, '0')}` : 'Sem Sala'}
                   </p>
                 </div>
                 <span className="text-[9px] font-black text-on-surface-variant bg-surface-container-low px-2.5 py-1 rounded-lg">{aluno.ano}</span>

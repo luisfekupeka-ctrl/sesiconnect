@@ -17,6 +17,7 @@ import {
   Professor,
   ProfessorCMS,
   LocalCMS,
+  PeriodoConfig,
 } from '../types';
 import {
   obterEstadoAtualDaEscola,
