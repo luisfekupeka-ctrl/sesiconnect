@@ -352,7 +352,7 @@ export default function ScheduleEditor() {
 
               <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-4 mb-10 custom-scrollbar">
                 {periodosEditaveis.map((p, idx) => (
-                  <div key={p.id} className="flex items-center gap-4 bg-white/5 p-4 rounded-3xl border border-white/5">
+                  <div key={p.id || idx} className="flex items-center gap-4 bg-white/5 p-4 rounded-3xl border border-white/5 group">
                     <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center text-[10px] font-black text-white/20">{idx + 1}</div>
                     <div className="flex items-center gap-2">
                        <input type="time" value={p.horarioInicio} onChange={e => {
@@ -368,14 +368,24 @@ export default function ScheduleEditor() {
                        }} className="bg-transparent border-none text-[10px] font-black text-white outline-none" />
                     </div>
                     <div className="flex-1">
-                      <input type="text" value={p.nome} onChange={e => {
+                      <input type="text" value={p.nome} placeholder="NOME DO PERÍODO" onChange={e => {
                          const novos = [...periodosEditaveis];
                          novos[idx].nome = e.target.value;
                          setPeriodosEditaveis(novos);
                        }} className="w-full bg-transparent border-none text-[10px] font-black text-primary outline-none uppercase" />
                     </div>
+                    <button onClick={() => setPeriodosEditaveis(periodosEditaveis.filter((_, i) => i !== idx))} className="p-2 text-red-500 opacity-0 group-hover:opacity-100 transition-all">
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 ))}
+                
+                <button 
+                  onClick={() => setPeriodosEditaveis([...periodosEditaveis, { id: `new-${Date.now()}`, horarioInicio: '07:30', horarioFim: '08:15', nome: 'NOVA AULA', segmento: segmentoSelecionado, tipo: 'aula' }])}
+                  className="w-full py-4 border-2 border-dashed border-white/5 rounded-3xl flex items-center justify-center gap-2 text-[10px] font-black uppercase text-white/20 hover:text-primary hover:border-primary/30 transition-all"
+                >
+                  <Plus size={14} /> Adicionar Novo Período ao Padrão
+                </button>
               </div>
 
               <div className="flex gap-4">
