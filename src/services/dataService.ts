@@ -795,3 +795,20 @@ export async function salvarRealocacao(realocacao: any): Promise<boolean> {
   const { error } = await supabase.from('realocacoes').insert([payload]);
   return !error;
 }
+
+export async function salvarPeriodos(lista: any[]): Promise<boolean> {
+  if (!lista || lista.length === 0) return false;
+  const segmento = lista[0].segmento;
+  if (segmento) {
+    await supabase.from('periodos_escolares').delete().eq('segmento', segmento);
+  }
+  const payloads = lista.map(p => ({
+    nome: p.nome,
+    horario_inicio: p.horarioInicio,
+    horario_fim: p.horarioFim,
+    segmento: p.segmento,
+    tipo: p.tipo || 'aula',
+  }));
+  const { error } = await supabase.from('periodos_escolares').insert(payloads);
+  return !error;
+}
