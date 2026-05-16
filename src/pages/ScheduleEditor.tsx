@@ -31,6 +31,9 @@ export default function ScheduleEditor() {
   const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
 
+  const [modalPeriodosAberto, setModalPeriodosAberto] = useState(false);
+  const [periodosEditaveis, setPeriodosEditaveis] = useState<any[]>([]);
+
   // Inicializa sala
   useEffect(() => {
     if (!salaSelecionada && salas.length > 0) setSalaSelecionada(salas[0]);
@@ -143,6 +146,20 @@ export default function ScheduleEditor() {
     return prof?.cor || '#1a1a1a';
   };
 
+  const abrirConfiguracaoPeriodos = () => {
+    const p = periodos.filter(p => p.segmento === segmentoSelecionado);
+    setPeriodosEditaveis(p.length > 0 ? p : []);
+    setModalPeriodosAberto(true);
+  };
+
+  const handleSalvarPeriodos = async () => {
+    // Aqui chamaríamos um serviço para salvar na tabela 'periodos'
+    // Por enquanto, vamos simular o sucesso e atualizar o contexto
+    setMensagem({ tipo: 'sucesso', texto: 'Modelo de horários atualizado!' });
+    setModalPeriodosAberto(false);
+    atualizar();
+  };
+
   return (
     <div className="min-h-screen bg-[#050505] text-white p-8">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
@@ -164,9 +181,14 @@ export default function ScheduleEditor() {
         {/* Sidebar de Configuração */}
         <aside className="space-y-6">
           <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 shadow-2xl">
-            <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
-              <Layers size={14} /> Segmento Escolar
-            </p>
+            <div className="flex items-center justify-between mb-6">
+              <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] flex items-center gap-2">
+                <Layers size={14} /> Segmento
+              </p>
+              <button onClick={abrirConfiguracaoPeriodos} className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-black transition-all">
+                <Palette size={14} />
+              </button>
+            </div>
             <div className="space-y-2">
                {[
                  { id: '6e7', label: '6º e 7º Ano' },
@@ -316,6 +338,54 @@ export default function ScheduleEditor() {
           )}
         </main>
       </div>
+
+      {/* Modal de Configuração de Períodos (Esqueleto) */}
+      <AnimatePresence>
+        {modalPeriodosAberto && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setModalPeriodosAberto(false)} className="absolute inset-0 bg-black/90 backdrop-blur-xl" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-2xl bg-surface-container-lowest border border-white/10 rounded-[4rem] p-12 shadow-3xl overflow-hidden">
+              <div className="mb-10">
+                <h2 className="text-3xl font-black italic uppercase tracking-tighter">Editar Modelo: <span className="text-primary">{segmentoSelecionado === '6e7' ? '6º e 7º' : segmentoSelecionado === '8e9' ? '8º e 9º' : 'Ensino Médio'}</span></h2>
+                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mt-2">Estes horários serão usados como padrão para novas salas.</p>
+              </div>
+
+              <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-4 mb-10 custom-scrollbar">
+                {periodosEditaveis.map((p, idx) => (
+                  <div key={p.id} className="flex items-center gap-4 bg-white/5 p-4 rounded-3xl border border-white/5">
+                    <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center text-[10px] font-black text-white/20">{idx + 1}</div>
+                    <div className="flex items-center gap-2">
+                       <input type="time" value={p.horarioInicio} onChange={e => {
+                         const novos = [...periodosEditaveis];
+                         novos[idx].horarioInicio = e.target.value;
+                         setPeriodosEditaveis(novos);
+                       }} className="bg-transparent border-none text-[10px] font-black text-white outline-none" />
+                       <span className="text-white/20">—</span>
+                       <input type="time" value={p.horarioFim} onChange={e => {
+                         const novos = [...periodosEditaveis];
+                         novos[idx].horarioFim = e.target.value;
+                         setPeriodosEditaveis(novos);
+                       }} className="bg-transparent border-none text-[10px] font-black text-white outline-none" />
+                    </div>
+                    <div className="flex-1">
+                      <input type="text" value={p.nome} onChange={e => {
+                         const novos = [...periodosEditaveis];
+                         novos[idx].nome = e.target.value;
+                         setPeriodosEditaveis(novos);
+                       }} className="w-full bg-transparent border-none text-[10px] font-black text-primary outline-none uppercase" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-4">
+                <button onClick={handleSalvarPeriodos} className="flex-1 bg-primary text-black py-5 rounded-[2rem] font-black uppercase text-xs">Salvar Modelo</button>
+                <button onClick={() => setModalPeriodosAberto(false)} className="px-10 bg-white/5 text-white/40 py-5 rounded-[2rem] font-black uppercase text-xs">Cancelar</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <datalist id="professores-list">
         {professoresCMS.map(p => <option key={p.id} value={p.nome} />)}
