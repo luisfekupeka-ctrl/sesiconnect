@@ -76,38 +76,36 @@ export async function buscarSalas(): Promise<Sala[]> {
   return salas.sort((a, b) => a.numero - b.numero);
 }
 
-export async function salvarGradeSala(entrada: Partial<EntradaGradeSala> | Partial<EntradaGradeSala>[]): Promise<boolean> {
-  const lista = Array.isArray(entrada) ? entrada : [entrada];
+export async function salvarGradeSala(entradas: any[]): Promise<boolean> {
+  if (!entradas || entradas.length === 0) return false;
 
-  const payloads = lista.map(grade => {
-    const nSala = Number(grade.numeroSala);
-    const diaFormatado = String(grade.diaSemana || '').toUpperCase().trim();
-    const horarioStr = String(grade.horario || '').trim();
+  const nSala = Number(entradas[0].numero_sala);
+  const dia = String(entradas[0].dia_semana).toUpperCase();
 
-    if (!nSala || nSala <= 0 || !diaFormatado || !horarioStr) return null;
+  if (!nSala || !dia) return false;
 
-    return {
-      numero_sala: nSala,
-      dia_semana: diaFormatado,
-      horario: horarioStr,
-      nome_professor: grade.nomeProfessor || '—',
-      turma: grade.turma || grade.anoTurma || 'A DEFINIR',
-      materia: grade.materia || 'A DEFINIR',
-      tipo: grade.tipo || 'regular',
-      lista_alunos: grade.listaAlunos || [],
-    };
-  }).filter(p => p !== null);
-
-  if (!payloads.length) return false;
-
-  const { error } = await supabase
+  // 1. Limpa a grade atual dessa sala no dia específico para evitar duplicatas ou lixo
+  const { error: deleteError } = await supabase
     .from('mapa_salas')
-    .upsert(payloads, { onConflict: 'numero_sala,dia_semana,horario' });
+    .delete()
+    .eq('numero_sala', nSala)
+    .eq('dia_semana', dia);
 
-  if (error) {
-    console.error('[DEBUG] Erro ao salvar grade:', error);
+  if (deleteError) {
+    console.error('[DEBUG] Erro ao limpar grade anterior:', deleteError);
     return false;
   }
+
+  // 2. Insere a nova grade limpa e organizada
+  const { error: insertError } = await supabase
+    .from('mapa_salas')
+    .insert(entradas);
+
+  if (insertError) {
+    console.error('[DEBUG] Erro ao inserir nova grade:', insertError);
+    return false;
+  }
+
   return true;
 }
 
