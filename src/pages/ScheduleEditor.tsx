@@ -253,13 +253,6 @@ export default function ScheduleEditor() {
         setModalPreviewAberto(true);
         setModalFotoAberto(false);
       } catch (err: any) {
-        setMensagem({ tipo: 'erro', texto: "Erro ao ler Excel." });
-      } finally {
-        setImportandoGeral(false);
-      }
-    };
-    };
-      } catch (err: any) {
         setMensagem({ tipo: 'erro', texto: err.message || "Erro ao processar arquivo." });
       } finally {
         setImportandoGeral(false);
