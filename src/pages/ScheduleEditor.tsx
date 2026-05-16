@@ -8,9 +8,7 @@ import {
 } from 'lucide-react';
 import { useEscola } from '../context/ContextoEscola';
 import { salvarGradeSala, salvarProfessorCMS } from '../services/dataService';
-import { salvarGradeSala, salvarProfessorCMS } from '../services/dataService';
 import * as XLSX from 'xlsx';
-import { cn } from '../lib/utils';
 import { cn } from '../lib/utils';
 import { Sala, EntradaGradeSala } from '../types';
 
