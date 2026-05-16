@@ -241,6 +241,8 @@ export default function ScheduleEditor() {
     leitor.readAsArrayBuffer(file);
   };
 
+  const [turmaExpandida, setTurmaExpandida] = useState<string | null>(null);
+
   const confirmarImportacaoFinal = async () => {
     setProcessandoFinal(true);
     try {
@@ -450,15 +452,45 @@ export default function ScheduleEditor() {
               </div>
               <div className="flex-1 overflow-y-auto p-10 space-y-12 custom-scrollbar">
                 <section>
-                  <h4 className="text-sm font-black uppercase tracking-widest text-white/80 mb-6">Turmas x Salas</h4>
+                  <h4 className="text-sm font-black uppercase tracking-widest text-white/80 mb-6 flex items-center gap-2">
+                    <DoorOpen size={16} className="text-primary" /> Turmas x Salas (Clique em "Revisar" para ver horários)
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {Object.keys(dadosPreview).map(turma => (
                       <div key={turma} className="bg-surface-container-low p-6 rounded-[2.5rem] border border-white/5 space-y-4">
-                        <span className="px-4 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black">{turma}</span>
+                        <div className="flex items-center justify-between">
+                          <span className="px-4 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black">{turma}</span>
+                          <button onClick={() => setTurmaExpandida(turmaExpandida === turma ? null : turma)} className="text-[9px] font-black uppercase text-primary hover:underline">
+                            {turmaExpandida === turma ? 'Fechar' : 'Revisar Horários'}
+                          </button>
+                        </div>
+                        
                         <select value={mapeamentoSalas[turma]} onChange={e => setMapeamentoSalas({...mapeamentoSalas, [turma]: e.target.value})} className="w-full bg-black/40 border border-white/10 p-4 rounded-2xl text-xs font-black outline-none">
                           <option value="">Vincular Sala...</option>
                           {Array.from({length: 31}, (_, i) => i + 1).map(n => <option key={n} value={n}>Sala {n}</option>)}
                         </select>
+
+                        {/* Detalhes da Grade para Revisão */}
+                        <AnimatePresence>
+                          {turmaExpandida === turma && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-black/20 rounded-2xl p-4 mt-2">
+                              <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                                {dadosPreview[turma].map((a, i) => (
+                                  <div key={i} className="flex flex-col border-b border-white/5 pb-2 last:border-0">
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-[9px] font-black text-primary/60">{a.dia}</span>
+                                      <span className="text-[9px] font-black text-white/40">{a.horario}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-[10px] font-black text-white truncate max-w-[100px]">{a.materia}</span>
+                                      <span className="text-[9px] font-medium text-white/60 truncate max-w-[80px]">{a.professor}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     ))}
                   </div>
