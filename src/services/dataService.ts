@@ -79,30 +79,12 @@ export async function buscarSalas(): Promise<Sala[]> {
 export async function salvarGradeSala(entradas: any[]): Promise<boolean> {
   if (!entradas || entradas.length === 0) return false;
 
-  const nSala = Number(entradas[0].numero_sala);
-  const dia = String(entradas[0].dia_semana).toUpperCase();
-
-  if (!nSala || !dia) return false;
-
-  // 1. Limpa a grade atual dessa sala no dia específico para evitar duplicatas ou lixo
-  const { error: deleteError } = await supabase
+  const { error } = await supabase
     .from('mapa_salas')
-    .delete()
-    .eq('numero_sala', nSala)
-    .eq('dia_semana', dia);
+    .upsert(entradas, { onConflict: 'numero_sala,dia_semana,horario' });
 
-  if (deleteError) {
-    console.error('[DEBUG] Erro ao limpar grade anterior:', deleteError);
-    return false;
-  }
-
-  // 2. Insere a nova grade limpa e organizada
-  const { error: insertError } = await supabase
-    .from('mapa_salas')
-    .insert(entradas);
-
-  if (insertError) {
-    console.error('[DEBUG] Erro ao inserir nova grade:', insertError);
+  if (error) {
+    console.error('[DEBUG] Erro ao salvar grade (upsert):', error);
     return false;
   }
 

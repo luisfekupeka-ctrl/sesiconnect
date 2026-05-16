@@ -39,20 +39,25 @@ export default function ScheduleEditor() {
     if (!salaSelecionada && salas.length > 0) setSalaSelecionada(salas[0]);
   }, [salas, salaSelecionada]);
 
-  // Função para trocar segmento e forçar reset da grade com o esqueleto certo
+  // Função para trocar segmento — APENAS se estiver vazia
   const handleSegmentoChange = (novoSeg: string) => {
     setSegmentoSelecionado(novoSeg);
     
-    // Filtra os períodos do novo segmento
-    const periodosAlvo = periodos.filter(p => p.segmento === novoSeg);
-    if (periodosAlvo.length > 0) {
-      setLinhas(periodosAlvo.map((p, i) => ({
-        id: `p-${i}-${Date.now()}`,
-        horario: `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`,
-        tipo: p.tipo as any,
-        materia: p.tipo === 'intervalo' ? 'INTERVALO' : p.tipo === 'almoco' ? 'ALMOÇO' : '',
-        professor: p.tipo === 'intervalo' || p.tipo === 'almoco' ? '—' : ''
-      })));
+    // Só reseta a grade se ela estiver "virgem"
+    const gradeRealmenteVazia = linhas.every(l => !l.materia || l.materia === 'INTERVALO' || l.materia === 'ALMOÇO') && 
+                               linhas.every(l => !l.professor || l.professor === '—');
+
+    if (gradeRealmenteVazia || linhas.length === 0) {
+      const periodosAlvo = periodos.filter(p => p.segmento === novoSeg);
+      if (periodosAlvo.length > 0) {
+        setLinhas(periodosAlvo.map((p, i) => ({
+          id: `p-${i}-${Date.now()}`,
+          horario: `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`,
+          tipo: p.tipo as any,
+          materia: p.tipo === 'intervalo' ? 'INTERVALO' : p.tipo === 'almoco' ? 'ALMOÇO' : '',
+          professor: p.tipo === 'intervalo' || p.tipo === 'almoco' ? '—' : ''
+        })));
+      }
     }
   };
 
@@ -146,8 +151,6 @@ export default function ScheduleEditor() {
         tipo: l.tipo === 'laboratorio_idiomas' ? 'laboratorio_idiomas' : l.tipo === 'after' ? 'after' : 'regular'
       };
 
-      // Só enviamos lista_alunos se necessário para evitar erros de tipo no upsert/insert
-      // se o banco permitir null ou tiver default [], remover o envio resolve o 400
       return payload;
     });
 
