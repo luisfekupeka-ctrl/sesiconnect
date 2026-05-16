@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Save, Calendar, DoorOpen, Clock, 
   Trash2, Plus, Coffee, Utensils, BookOpen,
-  RefreshCw, Search, User, Palette
+  RefreshCw, Search, User, Palette, Layers,
+  GraduationCap, Zap
 } from 'lucide-react';
 import { useEscola } from '../context/ContextoEscola';
 import { salvarGradeSala } from '../services/dataService';
@@ -12,24 +13,20 @@ import { Sala, EntradaGradeSala } from '../types';
 
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
-const PALETA_CORES = [
-  '#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6',
-  '#EC4899', '#06B6D4', '#F97316', '#14B8A6', '#6366F1'
-];
-
 interface LinhaGrade {
   id: string;
   horario: string;
-  tipo: 'aula' | 'intervalo' | 'almoco';
+  tipo: 'aula' | 'intervalo' | 'almoco' | 'after' | 'laboratorio_idiomas';
   materia: string;
   professor: string;
 }
 
 export default function ScheduleEditor() {
-  const { salas, gradeCompleta, professoresCMS, atualizar } = useEscola();
+  const { salas, gradeCompleta, professoresCMS, atualizar, periodos, atividadesAfter, languageLab } = useEscola();
 
   const [salaSelecionada, setSalaSelecionada] = useState<Sala | null>(null);
   const [diaSelecionado, setDiaSelecionado] = useState(DIAS_SEMANA[0]);
+  const [segmentoSelecionado, setSegmentoSelecionado] = useState<string>('6e7');
   const [linhas, setLinhas] = useState<LinhaGrade[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
@@ -39,7 +36,7 @@ export default function ScheduleEditor() {
     if (!salaSelecionada && salas.length > 0) setSalaSelecionada(salas[0]);
   }, [salas, salaSelecionada]);
 
-  // Carrega dados da sala/dia
+  // Carrega dados da sala/dia ou gera base por segmento
   useEffect(() => {
     if (salaSelecionada) {
       const existentes = gradeCompleta.filter(
@@ -51,24 +48,29 @@ export default function ScheduleEditor() {
         setLinhas(existentes.map((e, i) => ({
           id: e.id || `l-${i}`,
           horario: e.horario || '07:30 - 08:15',
-          tipo: e.materia === 'INTERVALO' ? 'intervalo' : e.materia === 'ALMOÇO' ? 'almoco' : 'aula',
+          tipo: (e.tipo as any) || (e.materia === 'INTERVALO' ? 'intervalo' : e.materia === 'ALMOÇO' ? 'almoco' : 'aula'),
           materia: e.materia || '',
           professor: e.nomeProfessor || e.nome_professor || ''
         })));
       } else {
-        // Default se estiver vazio
-        setLinhas([
-          { id: '1', horario: '07:30 - 08:15', tipo: 'aula', materia: '', professor: '' },
-          { id: '2', horario: '08:15 - 09:00', tipo: 'aula', materia: '', professor: '' },
-          { id: '3', horario: '09:00 - 09:20', tipo: 'intervalo', materia: 'INTERVALO', professor: '—' }
-        ]);
+        // Gera baseado no segmento selecionado (Restaurando a lógica de segmentação)
+        const periodosDoSegmento = periodos.filter(p => p.segmento === segmentoSelecionado);
+        const periodosAlvo = periodosDoSegmento.length > 0 ? periodosDoSegmento : periodos;
+        
+        setLinhas(periodosAlvo.map((p, i) => ({
+          id: `p-${i}`,
+          horario: `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`,
+          tipo: p.tipo as any,
+          materia: p.tipo === 'intervalo' ? 'INTERVALO' : p.tipo === 'almoco' ? 'ALMOÇO' : '',
+          professor: p.tipo === 'intervalo' || p.tipo === 'almoco' ? '—' : ''
+        })));
       }
     }
-  }, [salaSelecionada, diaSelecionado, gradeCompleta]);
+  }, [salaSelecionada, diaSelecionado, gradeCompleta, periodos, segmentoSelecionado]);
 
   const addLinha = () => {
-    const ultimoHorario = linhas.length > 0 ? linhas[linhas.length - 1].horario : '07:30 - 08:15';
-    setLinhas([...linhas, { id: `new-${Date.now()}`, horario: ultimoHorario, tipo: 'aula', materia: '', professor: '' }]);
+    const ultimo = linhas[linhas.length - 1];
+    setLinhas([...linhas, { id: `new-${Date.now()}`, horario: ultimo?.horario || '07:30 - 08:15', tipo: 'aula', materia: '', professor: '' }]);
   };
 
   const removeLinha = (id: string) => {
@@ -79,6 +81,17 @@ export default function ScheduleEditor() {
     setLinhas(linhas.map(l => {
       if (l.id === id) {
         const novo = { ...l, [field]: value };
+        
+        // Lógica de Vínculo Automático (Restaurando a Inteligência)
+        if (field === 'materia') {
+          const up = value.toUpperCase();
+          if (up.includes('ENGLISH') || up.includes('LAB') || up.includes('INGLES')) novo.tipo = 'laboratorio_idiomas';
+          else if (up.includes('AFTER') || up.includes('OFICINA')) novo.tipo = 'after';
+          else if (up === 'INTERVALO') { novo.tipo = 'intervalo'; novo.professor = '—'; }
+          else if (up === 'ALMOÇO' || up === 'ALMOCO') { novo.tipo = 'almoco'; novo.professor = '—'; }
+          else novo.tipo = 'aula';
+        }
+        
         if (field === 'tipo') {
           if (value === 'intervalo') { novo.materia = 'INTERVALO'; novo.professor = '—'; }
           else if (value === 'almoco') { novo.materia = 'ALMOÇO'; novo.professor = '—'; }
@@ -92,8 +105,12 @@ export default function ScheduleEditor() {
   const handleSalvar = async () => {
     if (!salaSelecionada) return;
     setSalvando(true);
+    setMensagem(null);
     
-    const entradas: Omit<EntradaGradeSala, 'id'>[] = linhas.map(l => ({
+    // Ordenar por horário antes de salvar
+    const linhasOrdenadas = [...linhas].sort((a,b) => a.horario.localeCompare(b.horario));
+
+    const entradas: Omit<EntradaGradeSala, 'id'>[] = linhasOrdenadas.map(l => ({
       numeroSala: salaSelecionada.numero,
       nomeSala: salaSelecionada.nome,
       diaSemana: diaSelecionado,
@@ -101,16 +118,21 @@ export default function ScheduleEditor() {
       nomeProfessor: l.professor || '—',
       materia: l.materia || 'A DEFINIR',
       turma: salaSelecionada.ano || 'A DEFINIR',
-      tipo: 'regular',
-      listaAlunos: []
+      // Mapeamento correto para o banco (Restaurando compatibilidade)
+      tipo: l.tipo === 'laboratorio_idiomas' ? 'laboratorio_idiomas' : l.tipo === 'after' ? 'after' : 'regular',
+      listaAlunos: [] // Será preenchido pelo sistema de ensalamento baseado no tipo
     }));
 
-    const ok = await salvarGradeSala(entradas);
-    if (ok) {
-      setMensagem({ tipo: 'sucesso', texto: 'Grade salva com sucesso!' });
-      atualizar();
-    } else {
-      setMensagem({ tipo: 'erro', texto: 'Erro ao salvar no banco.' });
+    try {
+      const ok = await salvarGradeSala(entradas);
+      if (ok) {
+        setMensagem({ tipo: 'sucesso', texto: 'Grade salva com sucesso!' });
+        atualizar();
+      } else {
+        setMensagem({ tipo: 'erro', texto: 'Erro ao salvar. Verifique sua conexão.' });
+      }
+    } catch (err) {
+      setMensagem({ tipo: 'erro', texto: 'Falha crítica ao salvar no banco.' });
     }
     setSalvando(false);
     setTimeout(() => setMensagem(null), 3000);
@@ -125,36 +147,59 @@ export default function ScheduleEditor() {
     <div className="min-h-screen bg-[#050505] text-white p-8">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <div>
-          <h1 className="text-4xl font-black italic tracking-tighter uppercase">Editor <span className="text-primary">Manual</span></h1>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-2">Gestão de horários sala a sala</p>
+          <h1 className="text-4xl font-black italic tracking-tighter uppercase">Gestão <span className="text-primary">de Grades</span></h1>
+          <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
+             <Zap size={12} className="text-primary" /> Sistema de Inteligência de Ensalamento Ativo
+          </p>
         </div>
         <div className="flex gap-4">
-          <button onClick={handleSalvar} disabled={salvando} className="bg-primary text-black px-8 py-4 rounded-2xl font-black uppercase text-xs flex items-center gap-3 hover:scale-105 transition-all shadow-xl shadow-primary/20">
-            {salvando ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}
-            {salvando ? 'Salvando...' : 'Salvar Alterações'}
+          <button onClick={handleSalvar} disabled={salvando} className="bg-primary text-black px-10 py-5 rounded-[2rem] font-black uppercase text-xs flex items-center gap-3 hover:scale-105 transition-all shadow-xl shadow-primary/20">
+            {salvando ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
+            {salvando ? 'Processando...' : 'Salvar Alterações'}
           </button>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-10">
-        {/* Sidebar de Seleção */}
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-10">
+        {/* Sidebar de Configuração */}
         <aside className="space-y-6">
-          <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5">
-            <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-6">Selecione a Sala</p>
-            <div className="grid grid-cols-4 gap-2">
+          <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 shadow-2xl">
+            <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
+              <Layers size={14} /> Segmento Escolar
+            </p>
+            <div className="space-y-2">
+               {[
+                 { id: '6e7', label: '6º e 7º Ano' },
+                 { id: '8e9', label: '8º e 9º Ano' },
+                 { id: 'medio', label: 'Ensino Médio' }
+               ].map(s => (
+                 <button key={s.id} onClick={() => setSegmentoSelecionado(s.id)} className={cn("w-full p-4 rounded-2xl text-[10px] font-black uppercase text-left transition-all border-2", segmentoSelecionado === s.id ? "bg-primary/10 border-primary text-primary" : "bg-black border-white/5 text-white/20")}>
+                   {s.label}
+                 </button>
+               ))}
+            </div>
+          </div>
+
+          <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 shadow-2xl">
+            <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
+               <DoorOpen size={14} /> Seleção de Sala
+            </p>
+            <div className="grid grid-cols-4 gap-3">
               {salas.map(s => (
-                <button key={s.id} onClick={() => setSalaSelecionada(s)} className={cn("aspect-square rounded-xl text-xs font-black transition-all border-2", salaSelecionada?.id === s.id ? "bg-primary border-primary text-black" : "bg-black border-white/5 text-white/40 hover:border-primary/50")}>
+                <button key={s.id} onClick={() => setSalaSelecionada(s)} className={cn("aspect-square rounded-2xl text-xs font-black transition-all border-2", salaSelecionada?.id === s.id ? "bg-primary border-primary text-black" : "bg-black border-white/5 text-white/40 hover:border-primary/50")}>
                   {s.numero}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5">
-            <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-6">Dia da Semana</p>
-            <div className="space-y-2">
+          <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 shadow-2xl">
+            <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
+              <Calendar size={14} /> Dia da Semana
+            </p>
+            <div className="grid grid-cols-1 gap-2">
               {DIAS_SEMANA.map(dia => (
-                <button key={dia} onClick={() => setDiaSelecionado(dia)} className={cn("w-full p-4 rounded-2xl text-[10px] font-black uppercase text-left transition-all border-2", diaSelecionado === dia ? "bg-primary/10 border-primary text-primary" : "bg-black border-white/5 text-white/40")}>
+                <button key={dia} onClick={() => setDiaSelecionado(dia)} className={cn("w-full p-4 rounded-2xl text-[10px] font-black uppercase text-left transition-all border-2", diaSelecionado === dia ? "bg-primary/10 border-primary text-primary shadow-lg shadow-primary/5" : "bg-black border-white/5 text-white/40")}>
                   {dia}
                 </button>
               ))}
@@ -162,34 +207,37 @@ export default function ScheduleEditor() {
           </div>
         </aside>
 
-        {/* Workspace do Editor */}
-        <main className="bg-white/5 p-10 rounded-[3.5rem] border border-white/5 relative">
-          <div className="flex items-center justify-between mb-10 pb-6 border-b border-white/5">
-            <div className="flex items-center gap-6">
-              <div className="w-20 h-20 bg-primary text-black rounded-3xl flex items-center justify-center text-4xl font-black italic shadow-2xl shadow-primary/20">
+        {/* Workspace do Editor Intelignete */}
+        <main className="bg-white/5 p-12 rounded-[4rem] border border-white/5 relative shadow-3xl">
+          <div className="flex items-center justify-between mb-12 pb-8 border-b border-white/10">
+            <div className="flex items-center gap-8">
+              <div className="w-24 h-24 bg-primary text-black rounded-[2rem] flex items-center justify-center text-5xl font-black italic shadow-2xl shadow-primary/30">
                 {salaSelecionada?.numero}
               </div>
               <div>
-                <h2 className="text-2xl font-black italic uppercase">{salaSelecionada?.nome}</h2>
-                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">{diaSelecionado} · {salaSelecionada?.ano}</p>
+                <h2 className="text-3xl font-black italic uppercase tracking-tighter">{salaSelecionada?.nome}</h2>
+                <div className="flex items-center gap-3 mt-3">
+                  <span className="px-3 py-1 bg-white/5 rounded-lg text-[9px] font-black text-primary uppercase tracking-widest">{diaSelecionado}</span>
+                  <span className="px-3 py-1 bg-white/5 rounded-lg text-[9px] font-black text-white/40 uppercase tracking-widest">{salaSelecionada?.ano}</span>
+                </div>
               </div>
             </div>
-            <button onClick={addLinha} className="bg-white/10 hover:bg-primary hover:text-black p-4 rounded-2xl transition-all group">
-              <Plus size={24} className="group-hover:rotate-90 transition-transform" />
+            <button onClick={addLinha} className="bg-primary/10 text-primary hover:bg-primary hover:text-black p-5 rounded-[2rem] transition-all group shadow-xl">
+              <Plus size={32} className="group-hover:rotate-90 transition-transform" />
             </button>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             {linhas.map((linha) => {
               const corProf = getCorProf(linha.professor);
               return (
-                <div key={linha.id} className="group flex items-center gap-4">
-                  <div className="flex-1 bg-black/40 border border-white/5 p-2 rounded-3xl flex items-center gap-4 transition-all hover:border-primary/30" style={{ borderLeft: `6px solid ${corProf}` }}>
+                <motion.div layout key={linha.id} className="group flex items-center gap-4">
+                  <div className={cn("flex-1 bg-black/60 border border-white/5 p-3 rounded-[2.5rem] flex items-center gap-6 transition-all hover:border-primary/40", linha.tipo !== 'aula' && "bg-black/20")} style={{ borderLeft: `8px solid ${corProf}` }}>
                     
-                    {/* Inputs de Horário Separados */}
-                    <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-2xl">
+                    {/* Inputs de Horário com Relógio */}
+                    <div className="flex items-center gap-3 bg-white/5 px-6 py-3 rounded-3xl border border-white/5">
                       <div className="flex flex-col items-center">
-                        <span className="text-[7px] font-black uppercase text-white/20 mb-1">Início</span>
+                        <span className="text-[8px] font-black uppercase text-white/20 mb-1">Início</span>
                         <input 
                           type="time" 
                           value={linha.horario.split('-')[0]?.trim() || '07:30'} 
@@ -197,12 +245,12 @@ export default function ScheduleEditor() {
                             const fim = linha.horario.split('-')[1]?.trim() || '08:15';
                             updateLinha(linha.id, 'horario', `${e.target.value} - ${fim}`);
                           }} 
-                          className="bg-transparent border-none text-[10px] font-black text-white w-16 outline-none uppercase appearance-none" 
+                          className="bg-transparent border-none text-[11px] font-black text-white w-16 outline-none uppercase appearance-none" 
                         />
                       </div>
-                      <div className="w-px h-6 bg-white/10 mx-1" />
+                      <div className="w-px h-8 bg-white/10 mx-1" />
                       <div className="flex flex-col items-center">
-                        <span className="text-[7px] font-black uppercase text-white/20 mb-1">Fim</span>
+                        <span className="text-[8px] font-black uppercase text-white/20 mb-1">Fim</span>
                         <input 
                           type="time" 
                           value={linha.horario.split('-')[1]?.trim() || '08:15'} 
@@ -210,49 +258,60 @@ export default function ScheduleEditor() {
                             const inicio = linha.horario.split('-')[0]?.trim() || '07:30';
                             updateLinha(linha.id, 'horario', `${inicio} - ${e.target.value}`);
                           }} 
-                          className="bg-transparent border-none text-[10px] font-black text-white w-16 outline-none uppercase appearance-none" 
+                          className="bg-transparent border-none text-[11px] font-black text-white w-16 outline-none uppercase appearance-none" 
                         />
                       </div>
                     </div>
 
-                    {/* Input de Matéria */}
+                    {/* Matéria Intelignete */}
                     <div className="flex-1">
-                      <input type="text" value={linha.materia} placeholder="MATÉRIA..." onChange={e => updateLinha(linha.id, 'materia', e.target.value)} className="w-full bg-transparent border-none text-xs font-black text-primary outline-none placeholder:text-white/5 uppercase" />
-                    </div>
-
-                    {/* Input de Professor */}
-                    <div className="flex-1 flex items-center gap-3">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: corProf }} />
+                      <div className="text-[8px] font-black uppercase text-white/20 mb-1 ml-1">Matéria / Atividade</div>
                       <input 
                         type="text" 
-                        value={linha.professor} 
-                        placeholder="PROFESSOR..." 
-                        list="professores-list"
-                        onChange={e => updateLinha(linha.id, 'professor', e.target.value)} 
-                        className="w-full bg-transparent border-none text-xs font-black text-white outline-none placeholder:text-white/5 uppercase" 
+                        value={linha.materia} 
+                        placeholder="EX: MATEMÁTICA..." 
+                        onChange={e => updateLinha(linha.id, 'materia', e.target.value)} 
+                        className="w-full bg-transparent border-none text-sm font-black text-primary outline-none placeholder:text-white/5 uppercase" 
                       />
                     </div>
 
-                    {/* Seletor de Tipo (Aula/Cafe/Almoco) */}
-                    <div className="flex gap-1 p-1 bg-black/40 rounded-2xl border border-white/5">
-                      <button onClick={() => updateLinha(linha.id, 'tipo', 'aula')} className={cn("p-2 rounded-xl transition-all", linha.tipo === 'aula' ? "bg-primary text-black" : "text-white/20 hover:text-white")}><BookOpen size={14} /></button>
-                      <button onClick={() => updateLinha(linha.id, 'tipo', 'intervalo')} className={cn("p-2 rounded-xl transition-all", linha.tipo === 'intervalo' ? "bg-amber-500 text-black" : "text-white/20 hover:text-white")}><Coffee size={14} /></button>
-                      <button onClick={() => updateLinha(linha.id, 'tipo', 'almoco')} className={cn("p-2 rounded-xl transition-all", linha.tipo === 'almoco' ? "bg-red-500 text-black" : "text-white/20 hover:text-white")}><Utensils size={14} /></button>
+                    {/* Professor Dinâmico */}
+                    <div className="flex-1">
+                      <div className="text-[8px] font-black uppercase text-white/20 mb-1 ml-1">Professor Responsável</div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full shadow-lg" style={{ backgroundColor: corProf }} />
+                        <input 
+                          type="text" 
+                          value={linha.professor} 
+                          placeholder="SELECIONE..." 
+                          list="professores-list"
+                          onChange={e => updateLinha(linha.id, 'professor', e.target.value)} 
+                          className="w-full bg-transparent border-none text-sm font-black text-white outline-none placeholder:text-white/5 uppercase" 
+                        />
+                      </div>
+                    </div>
+
+                    {/* Badge de Tipo Inteligente */}
+                    <div className="flex gap-2 p-2 bg-black/40 rounded-3xl border border-white/5">
+                      <button title="Aula Regular" onClick={() => updateLinha(linha.id, 'tipo', 'aula')} className={cn("p-3 rounded-2xl transition-all", linha.tipo === 'aula' ? "bg-primary text-black shadow-lg" : "text-white/20 hover:text-white")}><BookOpen size={16} /></button>
+                      <button title="Intervalo / Café" onClick={() => updateLinha(linha.id, 'tipo', 'intervalo')} className={cn("p-3 rounded-2xl transition-all", linha.tipo === 'intervalo' ? "bg-amber-500 text-black shadow-lg" : "text-white/20 hover:text-white")}><Coffee size={16} /></button>
+                      <button title="Language Lab" onClick={() => updateLinha(linha.id, 'tipo', 'laboratorio_idiomas')} className={cn("p-3 rounded-2xl transition-all", linha.tipo === 'laboratorio_idiomas' ? "bg-blue-500 text-black shadow-lg" : "text-white/20 hover:text-white")}><GraduationCap size={16} /></button>
+                      <button title="After School" onClick={() => updateLinha(linha.id, 'tipo', 'after')} className={cn("p-3 rounded-2xl transition-all", linha.tipo === 'after' ? "bg-purple-500 text-black shadow-lg" : "text-white/20 hover:text-white")}><Zap size={16} /></button>
                     </div>
                   </div>
 
-                  <button onClick={() => removeLinha(linha.id)} className="p-4 bg-red-500/10 text-red-500 rounded-2xl opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all">
-                    <Trash2 size={18} />
+                  <button onClick={() => removeLinha(linha.id)} className="p-5 bg-red-500/10 text-red-500 rounded-[2rem] opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all shadow-xl">
+                    <Trash2 size={24} />
                   </button>
-                </div>
+                </motion.div>
               );
             })}
           </div>
 
           {linhas.length === 0 && (
-            <div className="py-20 text-center opacity-10">
-              <RefreshCw size={64} className="mx-auto mb-4 animate-pulse" />
-              <p className="font-black uppercase tracking-[0.3em]">Clique no + para começar</p>
+            <div className="py-32 text-center opacity-10">
+              <RefreshCw size={100} className="mx-auto mb-8 animate-spin-slow" />
+              <p className="font-black uppercase tracking-[0.5em] text-lg">Selecione uma sala ou adicione aulas</p>
             </div>
           )}
         </main>
@@ -262,10 +321,18 @@ export default function ScheduleEditor() {
         {professoresCMS.map(p => <option key={p.id} value={p.nome} />)}
       </datalist>
 
-      {/* Notificação */}
+      {/* Notificação Flutuante Premium */}
       <AnimatePresence>
         {mensagem && (
-          <motion.div initial={{ y: 100 }} animate={{ y: 0 }} exit={{ y: 100 }} className={cn("fixed bottom-10 right-10 px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-2xl z-50", mensagem.tipo === 'sucesso' ? "bg-primary text-black" : "bg-red-500 text-white")}>
+          <motion.div 
+            initial={{ y: 100, opacity: 0, scale: 0.8 }} 
+            animate={{ y: 0, opacity: 1, scale: 1 }} 
+            exit={{ y: 100, opacity: 0, scale: 0.8 }} 
+            className={cn(
+              "fixed bottom-12 right-12 px-10 py-6 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] shadow-3xl z-50 border-2", 
+              mensagem.tipo === 'sucesso' ? "bg-primary text-black border-white/20" : "bg-red-500 text-white border-white/20"
+            )}
+          >
             {mensagem.texto}
           </motion.div>
         )}
