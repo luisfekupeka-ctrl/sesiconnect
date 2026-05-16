@@ -169,7 +169,9 @@ export default function ScheduleEditor() {
     } catch (err) {
       setMensagem({ tipo: 'erro', texto: 'Falha crítica ao salvar no banco.' });
     }
-    setSalvando(false);
+    } finally {
+      setSalvando(false);
+    }
     setTimeout(() => setMensagem(null), 3000);
   };
 
@@ -179,22 +181,29 @@ export default function ScheduleEditor() {
   };
 
   const abrirConfiguracaoPeriodos = () => {
-    const p = periodos.filter(p => p.segmento === segmentoSelecionado);
-    setPeriodosEditaveis(p.length > 0 ? p : []);
+    const periodosDoSegmento = periodos.filter(p => p.segmento === segmentoSelecionado);
+    setPeriodosEditaveis(periodosDoSegmento.length > 0 ? [...periodosDoSegmento] : []);
     setModalPeriodosAberto(true);
   };
 
   const handleSalvarPeriodos = async () => {
     setSalvando(true);
-    const ok = await salvarPeriodos(periodosEditaveis);
-    if (ok) {
-      setMensagem({ tipo: 'sucesso', texto: 'Modelo de horários atualizado!' });
-      setModalPeriodosAberto(false);
-      atualizar();
-    } else {
-      setMensagem({ tipo: 'erro', texto: 'Erro ao salvar o modelo.' });
+    try {
+      const paraSalvar = periodosEditaveis.map(p => ({ ...p, segmento: segmentoSelecionado }));
+      const ok = await salvarPeriodos(paraSalvar);
+      if (ok) {
+        setMensagem({ tipo: 'sucesso', texto: 'Modelo do Segmento salvo!' });
+        await atualizar(); 
+        setModalPeriodosAberto(false);
+      } else {
+        setMensagem({ tipo: 'erro', texto: 'Erro ao salvar modelo.' });
+      }
+    } catch (err) {
+      setMensagem({ tipo: 'erro', texto: 'Falha ao processar salvamento.' });
+    } finally {
+      setSalvando(false);
+      setTimeout(() => setMensagem(null), 3000);
     }
-    setSalvando(false);
   };
 
   return (
