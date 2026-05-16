@@ -180,74 +180,86 @@ export default function ScheduleEditor() {
     setMensagem(null);
 
     const leitor = new FileReader();
-    leitor.onload = async (ev) => {
-      try {
-        const data = new Uint8Array(ev.target?.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: 'array' });
-        const previewMap: {[key: string]: any[]} = {};
+    leitor.onload = (ev) => {
+      // Usamos setTimeout para não travar a UI e permitir que o loader apareça
+      setTimeout(async () => {
+        try {
+          const data = new Uint8Array(ev.target?.result as ArrayBuffer);
+          const wb = XLSX.read(data, { type: 'array', cellDates: false, cellHTML: false, cellFormula: false });
+          const previewMap: {[key: string]: any[]} = {};
 
-        for (const nomeAba of wb.SheetNames) {
-          const ws = wb.Sheets[nomeAba];
-          const turmaNome = nomeAba.replace(' SESI', '').trim();
-          const rows: any[][] = [];
-          
-          for (let R = 0; R <= 20; R++) {
-            const row = [];
-            for (let C = 0; C <= 7; C++) {
-              const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
-              row.push(cell ? cell.v : null);
+          if (!wb.SheetNames || wb.SheetNames.length === 0) throw new Error("Arquivo Excel vazio ou inválido.");
+
+          for (const nomeAba of wb.SheetNames) {
+            const ws = wb.Sheets[nomeAba];
+            if (!ws) continue;
+
+            const turmaNome = nomeAba.replace(' SESI', '').trim();
+            const rows: any[][] = [];
+            
+            // Lemos apenas as primeiras 20 linhas e 8 colunas (A-H)
+            for (let R = 0; R <= 20; R++) {
+              const row = [];
+              for (let C = 0; C <= 7; C++) {
+                const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+                row.push(cell ? cell.v : null);
+              }
+              rows.push(row);
             }
-            rows.push(row);
+
+            const diasIndices: { [key: string]: number } = {
+              'SEGUNDA': 2, 'TERÇA': 3, 'QUARTA': 4, 'QUINTA': 5, 'SEXTA': 6
+            };
+
+            const itensTurma: any[] = [];
+            rows.forEach((row) => {
+              if (!row || row.length < 2) return;
+              const horarioRaw = String(row[1] || '');
+              if (horarioRaw.includes('-') && horarioRaw.includes(':')) {
+                Object.entries(diasIndices).forEach(([dia, colIdx]) => {
+                  const conteudo = String(row[colIdx] || '').trim();
+                  if (conteudo && conteudo.length > 5) {
+                    const partes = conteudo.split(/[\n\r]+/).map(p => p.trim());
+                    const materia = partes[0] || 'A DEFINIR';
+                    let professor = '—';
+                    if (partes[1]) {
+                      professor = partes[1].split(/\s*-\s*Sala/i)[0].trim();
+                    }
+                    itensTurma.push({ dia, horario: horarioRaw.trim(), materia, professor });
+                  }
+                });
+              }
+            });
+            
+            if (itensTurma.length > 0) previewMap[turmaNome] = itensTurma;
           }
 
-          const diasIndices: { [key: string]: number } = {
-            'SEGUNDA': 2, 'TERÇA': 3, 'QUARTA': 4, 'QUINTA': 5, 'SEXTA': 6
-          };
+          if (Object.keys(previewMap).length === 0) throw new Error("Nenhum horário detectado. Verifique se os horários estão na Coluna B.");
 
-          const itensTurma: any[] = [];
-          rows.forEach((row) => {
-            const horarioRaw = String(row[1] || '');
-            if (horarioRaw.includes('-') && horarioRaw.includes(':')) {
-              Object.entries(diasIndices).forEach(([dia, colIdx]) => {
-                const conteudo = String(row[colIdx] || '').trim();
-                if (conteudo && conteudo.length > 5) {
-                  const partes = conteudo.split(/[\n\r]+/).map(p => p.trim());
-                  const materia = partes[0] || 'A DEFINIR';
-                  let professor = '—';
-                  if (partes[1]) {
-                    professor = partes[1].split(/\s*-\s*Sala/i)[0].trim();
-                  }
-                  itensTurma.push({ dia, horario: horarioRaw.trim(), materia, professor });
-                }
-              });
-            }
+          const todosProfs = new Set<string>();
+          Object.values(previewMap).forEach(aulas => {
+            aulas.forEach(a => { if (a.professor && a.professor !== '—') todosProfs.add(a.professor); });
           });
-          
-          if (itensTurma.length > 0) previewMap[turmaNome] = itensTurma;
+
+          const autoMapProf: {[key: string]: string} = {};
+          Array.from(todosProfs).forEach(pExcel => {
+            const match = professoresCMS.find(pDb => pDb.nome.toLowerCase() === pExcel.toLowerCase());
+            autoMapProf[pExcel] = match ? match.nome : '';
+          });
+
+          setProfessoresUnicosPreview(Array.from(todosProfs).sort());
+          setDadosPreview(previewMap);
+          setMapeamentoSalas(Object.keys(previewMap).reduce((acc, curr) => ({ ...acc, [curr]: '' }), {}));
+          setMapeamentoProfessores(autoMapProf);
+          setModalPreviewAberto(true);
+          setModalFotoAberto(false);
+        } catch (err: any) {
+          console.error("Erro na importação:", err);
+          setMensagem({ tipo: 'erro', texto: "Erro: " + (err.message || "Falha ao ler planilha") });
+        } finally {
+          setImportandoGeral(false);
         }
-
-        const todosProfs = new Set<string>();
-        Object.values(previewMap).forEach(aulas => {
-          aulas.forEach(a => { if (a.professor && a.professor !== '—') todosProfs.add(a.professor); });
-        });
-
-        const autoMapProf: {[key: string]: string} = {};
-        Array.from(todosProfs).forEach(pExcel => {
-          const match = professoresCMS.find(pDb => pDb.nome.toLowerCase() === pExcel.toLowerCase());
-          autoMapProf[pExcel] = match ? match.nome : '';
-        });
-
-        setProfessoresUnicosPreview(Array.from(todosProfs).sort());
-        setDadosPreview(previewMap);
-        setMapeamentoSalas(Object.keys(previewMap).reduce((acc, curr) => ({ ...acc, [curr]: '' }), {}));
-        setMapeamentoProfessores(autoMapProf);
-        setModalPreviewAberto(true);
-        setModalFotoAberto(false);
-      } catch (err: any) {
-        setMensagem({ tipo: 'erro', texto: "Erro ao processar planilha: " + err.message });
-      } finally {
-        setImportandoGeral(false);
-      }
+      }, 100);
     };
     leitor.readAsArrayBuffer(file);
   };
