@@ -24,7 +24,7 @@ import {
   salvarLanguageLab, excluirLanguageLab,
   salvarAtividadeAfter, excluirAtividadeAfter,
   salvarGradeMonitor, excluirGradeMonitor,
-  salvarGradeSala, buscarSalas,
+  salvarGradeSala, buscarSalas, excluirTodaGrade,
   atualizarListaAlunosGrade,
   getAlunosPorTurma
 } from '../services/dataService';
@@ -315,6 +315,7 @@ export default function Admin() {
       if (tipo === 'alunos') ok = await excluirTodosAlunos(ano);
       else if (tipo === 'professores') ok = await excluirTodosProfessores();
       else if (tipo === 'monitores') ok = await excluirTodosMonitores();
+      else if (tipo === 'grade') ok = await excluirTodaGrade();
 
       if (ok) {
         setMsg({ tipo: 'ok', texto: `Todos os ${tipo} foram removidos.` });
@@ -657,9 +658,14 @@ export default function Admin() {
                     A escala dos professores é montada automaticamente quando você preenche a grade das salas. Clique abaixo para abrir o painel de edição visual (por Dia da Semana).
                   </p>
                 </div>
-                <button onClick={() => navigate('/schedule-editor')} className="bg-emerald-500 text-white px-8 py-4 rounded-2xl font-black text-sm whitespace-nowrap hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-xl shadow-emerald-500/20">
-                  <Calendar size={18} /> Montar Grade das Salas
-                </button>
+                <div className="flex gap-4">
+                  <button onClick={() => navigate('/schedule-editor')} className="bg-emerald-500 text-white px-8 py-4 rounded-2xl font-black text-sm whitespace-nowrap hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-xl shadow-emerald-500/20">
+                    <Calendar size={18} /> Montar Grade das Salas
+                  </button>
+                  <button onClick={() => handleClearAll('grade' as any)} className="bg-red-500/10 text-red-500 px-6 py-4 rounded-2xl font-black text-sm hover:bg-red-500/20 transition-all flex items-center gap-2">
+                    <Trash2 size={18} /> Apagar Toda a Grade
+                  </button>
+                </div>
               </div>
 
               {/* Bloco 2: Visualização da Escala Pronta */}

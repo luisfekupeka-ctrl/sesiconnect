@@ -111,6 +111,11 @@ export async function salvarGradeSala(entrada: Partial<EntradaGradeSala> | Parti
   return true;
 }
 
+export async function excluirTodaGrade(): Promise<boolean> {
+  const { error } = await supabase.from('mapa_salas').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  return !error;
+}
+
 export async function salvarAlunosNaGrade(
   numeroSala: number,
   diaSemana: string,
