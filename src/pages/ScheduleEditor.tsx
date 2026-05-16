@@ -81,28 +81,36 @@ export default function ScheduleEditor() {
   };
 
   const updateLinha = (id: string, field: keyof LinhaGrade, value: string) => {
-    setLinhas(linhas.map(l => {
-      if (l.id === id) {
-        const novo = { ...l, [field]: value };
-        
-        // Lógica de Vínculo Automático (Restaurando a Inteligência)
-        if (field === 'materia') {
-          const up = value.toUpperCase();
-          if (up.includes('ENGLISH') || up.includes('LAB') || up.includes('INGLES')) novo.tipo = 'laboratorio_idiomas';
-          else if (up.includes('AFTER') || up.includes('OFICINA')) novo.tipo = 'after';
-          else if (up === 'INTERVALO') { novo.tipo = 'intervalo'; novo.professor = '—'; }
-          else if (up === 'ALMOÇO' || up === 'ALMOCO') { novo.tipo = 'almoco'; novo.professor = '—'; }
-          else novo.tipo = 'aula';
+    setLinhas(prev => {
+      const novas = prev.map(l => {
+        if (l.id === id) {
+          const novo = { ...l, [field]: value };
+          
+          // Lógica de Vínculo Automático
+          if (field === 'materia') {
+            const up = value.toUpperCase();
+            if (up.includes('ENGLISH') || up.includes('LAB') || up.includes('INGLES')) novo.tipo = 'laboratorio_idiomas';
+            else if (up.includes('AFTER') || up.includes('OFICINA')) novo.tipo = 'after';
+            else if (up === 'INTERVALO') { novo.tipo = 'intervalo'; novo.professor = '—'; }
+            else if (up === 'ALMOÇO' || up === 'ALMOCO') { novo.tipo = 'almoco'; novo.professor = '—'; }
+            else novo.tipo = 'aula';
+          }
+          
+          if (field === 'tipo') {
+            if (value === 'intervalo') { novo.materia = 'INTERVALO'; novo.professor = '—'; }
+            else if (value === 'almoco') { novo.materia = 'ALMOÇO'; novo.professor = '—'; }
+          }
+          return novo;
         }
-        
-        if (field === 'tipo') {
-          if (value === 'intervalo') { novo.materia = 'INTERVALO'; novo.professor = '—'; }
-          else if (value === 'almoco') { novo.materia = 'ALMOÇO'; novo.professor = '—'; }
-        }
-        return novo;
+        return l;
+      });
+
+      // Ordenação em Tempo Real (Só se o campo alterado for horário)
+      if (field === 'horario') {
+        return novas.sort((a, b) => a.horario.localeCompare(b.horario));
       }
-      return l;
-    }));
+      return novas;
+    });
   };
 
   const handleSalvar = async () => {
@@ -358,7 +366,7 @@ export default function ScheduleEditor() {
                        <input type="time" value={p.horarioInicio} onChange={e => {
                          const novos = [...periodosEditaveis];
                          novos[idx].horarioInicio = e.target.value;
-                         setPeriodosEditaveis(novos);
+                         setPeriodosEditaveis(novos.sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio)));
                        }} className="bg-transparent border-none text-[10px] font-black text-white outline-none" />
                        <span className="text-white/20">—</span>
                        <input type="time" value={p.horarioFim} onChange={e => {
