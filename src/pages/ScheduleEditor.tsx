@@ -34,10 +34,30 @@ export default function ScheduleEditor() {
   const [modalPeriodosAberto, setModalPeriodosAberto] = useState(false);
   const [periodosEditaveis, setPeriodosEditaveis] = useState<any[]>([]);
 
-  // Inicializa sala
+  // Helper: Detecta o código do segmento a partir do ano/turma da sala
+  const detectarSegmentoDaSala = (sala: Sala): string => {
+    const ano = (sala.ano || '').toLowerCase();
+    if (ano.includes('6') || ano.includes('7')) return '6e7';
+    if (ano.includes('8') || ano.includes('9')) return '8e9';
+    if (ano.includes('em') || ano.includes('médio') || ano.includes('medio') || ano.includes('1º ano e') || ano.includes('2º ano e') || ano.includes('3º ano e')) return 'medio';
+    return '6e7'; // fallback
+  };
+
+  // Inicializa sala e auto-detecta segmento
   useEffect(() => {
-    if (!salaSelecionada && salas.length > 0) setSalaSelecionada(salas[0]);
+    if (!salaSelecionada && salas.length > 0) {
+      setSalaSelecionada(salas[0]);
+      setSegmentoSelecionado(detectarSegmentoDaSala(salas[0]));
+    }
   }, [salas, salaSelecionada]);
+
+  // Auto-troca segmento quando muda a sala
+  useEffect(() => {
+    if (salaSelecionada) {
+      const segDetectado = detectarSegmentoDaSala(salaSelecionada);
+      setSegmentoSelecionado(segDetectado);
+    }
+  }, [salaSelecionada]);
 
   // Helper: Detecta tipo real do período pelo nome (o banco salva tudo como 'aula')
   const detectarTipoPeriodo = (nome: string): { tipo: string; materia: string; professor: string } => {
