@@ -136,7 +136,7 @@ export function calcularModoProva(
     resultados.push({
       id: `rep-${Math.random()}`,
       eventoId: 'modo-prova',
-      tipo: 'FALTA',
+      tipo: 'SUBSTITUICAO',
       professorOriginal: profFixo,
       professorSubstituto: substituto,
       turma: aula.turma,
@@ -148,6 +148,63 @@ export function calcularModoProva(
   });
 
   return resultados;
+}
+
+// ==========================================
+// CENÁRIO 1.1: MODO PROVA LOTE (Por Segmento)
+// ==========================================
+
+export function calcularModoProvaLote(
+  segmento: string,
+  horarios: string[],
+  dia: string,
+  grade: EntradaGradeSala[],
+  configs: ProfessorConfig[]
+): ResultadoRealocacao[] {
+  let resultadosGerais: ResultadoRealocacao[] = [];
+
+  // 1. Identifica todas as salas ocupadas por este segmento no dia/horários
+  const salasAfetadas = Array.from(new Set(
+    grade.filter(g => g.segmento === segmento && g.diaSemana === dia && horarios.includes(g.horario))
+      .map(g => g.numeroSala)
+  ));
+
+  // 2. Para cada sala, tenta eleger um Fiscal e calcular a realocação
+  const professoresJaAlocadosComoFiscal = new Set<string>();
+
+  salasAfetadas.forEach(salaNum => {
+    // Busca o professor que já está na sala no primeiro horário selecionado
+    const primeiroHorario = horarios.sort()[0];
+    const entradaBase = grade.find(g => g.numeroSala === salaNum && g.diaSemana === dia && g.horario === primeiroHorario);
+    
+    let fiscalSugerido = entradaBase ? entradaBase.nomeProfessor : '';
+
+    // Se o fiscal sugerido já estiver ocupado em outra sala (conflito de lote), tenta outro professor do mesmo segmento
+    if (!fiscalSugerido || professoresJaAlocadosComoFiscal.has(fiscalSugerido)) {
+      const outrosProfsNaSala = grade.filter(g => g.numeroSala === salaNum && g.diaSemana === dia && horarios.includes(g.horario)).map(g => g.nomeProfessor);
+      fiscalSugerido = outrosProfsNaSala.find(p => !professoresJaAlocadosComoFiscal.has(p)) || 'A DEFINIR';
+    }
+
+    if (fiscalSugerido !== 'A DEFINIR') {
+      professoresJaAlocadosComoFiscal.add(fiscalSugerido);
+    }
+
+    // Calcula para esta sala específica
+    const resultadosSala = calcularModoProva(
+      fiscalSugerido,
+      salaNum,
+      horarios,
+      dia,
+      segmento,
+      grade,
+      configs,
+      { regra: 'MESMO_ANO' }
+    );
+
+    resultadosGerais = [...resultadosGerais, ...resultadosSala];
+  });
+
+  return resultadosGerais;
 }
 
 // ==========================================
