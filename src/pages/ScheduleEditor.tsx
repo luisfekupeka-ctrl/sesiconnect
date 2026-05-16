@@ -39,23 +39,38 @@ export default function ScheduleEditor() {
     if (!salaSelecionada && salas.length > 0) setSalaSelecionada(salas[0]);
   }, [salas, salaSelecionada]);
 
+  // Helper: Detecta tipo real do período pelo nome (o banco salva tudo como 'aula')
+  const detectarTipoPeriodo = (nome: string): { tipo: string; materia: string; professor: string } => {
+    const n = (nome || '').toLowerCase().trim();
+    if (n.includes('lanche') || n.includes('intervalo')) return { tipo: 'intervalo', materia: nome.toUpperCase(), professor: '—' };
+    if (n.includes('almoço') || n.includes('almoco')) return { tipo: 'intervalo', materia: 'ALMOÇO', professor: '—' };
+    if (n.includes('after')) return { tipo: 'after', materia: '', professor: '' };
+    return { tipo: 'aula', materia: '', professor: '' };
+  };
+
+  // Monta linhas a partir do template do segmento
+  const montarLinhasDoSegmento = (seg: string) => {
+    const pAlvo = periodos.filter(p => p.segmento === seg);
+    return pAlvo.map((p, i) => {
+      const det = detectarTipoPeriodo(p.nome);
+      return {
+        id: `p-${i}-${Date.now()}`,
+        horario: `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`,
+        tipo: det.tipo as any,
+        materia: det.materia,
+        professor: det.professor,
+      };
+    });
+  };
+
   // Função para trocar segmento — Reativa e Definitiva
   const handleSegmentoChange = (novoSeg: string) => {
-    // Se a grade já tem dados, avisamos (opcional, mas vou forçar para ser reativo como você pediu)
-    const temDados = linhas.some(l => l.materia && l.materia !== 'INTERVALO' && l.materia !== 'ALMOÇO');
+    const temDados = linhas.some(l => l.materia && l.materia !== 'INTERVALO' && l.materia !== 'ALMOÇO' && l.materia !== 'LANCHE');
     
     const mudar = () => {
       setSegmentoSelecionado(novoSeg);
-      const pAlvo = periodos.filter(p => p.segmento === novoSeg);
-      if (pAlvo.length > 0) {
-        setLinhas(pAlvo.map((p, i) => ({
-          id: `p-${i}-${Date.now()}`,
-          horario: `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`,
-          tipo: p.tipo as any,
-          materia: p.tipo === 'intervalo' ? 'INTERVALO' : p.tipo === 'almoco' ? 'ALMOÇO' : '',
-          professor: p.tipo === 'intervalo' || p.tipo === 'almoco' ? '—' : ''
-        })));
-      }
+      const novasLinhas = montarLinhasDoSegmento(novoSeg);
+      if (novasLinhas.length > 0) setLinhas(novasLinhas);
     };
 
     if (temDados) {
@@ -79,22 +94,16 @@ export default function ScheduleEditor() {
         setLinhas(existentes.map((e, i) => ({
           id: e.id || `l-${i}`,
           horario: e.horario || '07:30 - 08:15',
-          tipo: (e.tipo as any) || (e.materia === 'INTERVALO' ? 'intervalo' : e.materia === 'ALMOÇO' ? 'almoco' : 'aula'),
+          tipo: (e.tipo as any) || (e.materia === 'INTERVALO' || e.materia === 'LANCHE' ? 'intervalo' : e.materia === 'ALMOÇO' ? 'intervalo' : 'aula'),
           materia: e.materia || '',
           professor: e.nomeProfessor || (e as any).nome_professor || ''
         })));
       } else {
-        const pAlvo = periodos.filter(p => p.segmento === segmentoSelecionado);
-        setLinhas(pAlvo.map((p, i) => ({
-          id: `p-${i}`,
-          horario: `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`,
-          tipo: p.tipo as any,
-          materia: p.tipo === 'intervalo' ? 'INTERVALO' : p.tipo === 'almoco' ? 'ALMOÇO' : '',
-          professor: p.tipo === 'intervalo' || p.tipo === 'almoco' ? '—' : ''
-        })));
+        const novasLinhas = montarLinhasDoSegmento(segmentoSelecionado);
+        if (novasLinhas.length > 0) setLinhas(novasLinhas);
       }
     }
-  }, [salaSelecionada, diaSelecionado, gradeCompleta, periodos]); // Removi segmentoSelecionado daqui para não dar conflito
+  }, [salaSelecionada, diaSelecionado, gradeCompleta, periodos]);
 
   const addLinha = () => {
     const ultimo = linhas[linhas.length - 1];
