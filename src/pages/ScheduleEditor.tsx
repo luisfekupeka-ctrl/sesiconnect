@@ -22,7 +22,7 @@ interface LinhaGrade {
 }
 
 export default function ScheduleEditor() {
-  const { salas, gradeCompleta, professoresCMS, atualizar, periodos, atividadesAfter, languageLab } = useEscola();
+  const { salas, gradeCompleta, professoresCMS, atualizar, periodos } = useEscola();
 
   const [salaSelecionada, setSalaSelecionada] = useState<Sala | null>(null);
   const [diaSelecionado, setDiaSelecionado] = useState(DIAS_SEMANA[0]);
@@ -43,24 +43,22 @@ export default function ScheduleEditor() {
   useEffect(() => {
     if (salaSelecionada) {
       const existentes = gradeCompleta.filter(
-        e => (e.numeroSala === salaSelecionada.numero || e.numero_sala === salaSelecionada.numero) && 
-             (e.diaSemana === diaSelecionado || e.dia_semana === diaSelecionado)
+        e => (Number(e.numeroSala) === Number(salaSelecionada.numero) || Number((e as any).numero_sala) === Number(salaSelecionada.numero)) && 
+             (String(e.diaSemana).toUpperCase() === String(diaSelecionado).toUpperCase() || String((e as any).dia_semana).toUpperCase() === String(diaSelecionado).toUpperCase())
       ).sort((a,b) => (a.horario || '').localeCompare(b.horario || ''));
 
       const periodosDoSegmento = periodos.filter(p => p.segmento === segmentoSelecionado);
       const periodosAlvo = periodosDoSegmento.length > 0 ? periodosDoSegmento : periodos;
 
       if (existentes.length > 0) {
-        // Se já existem aulas no banco, respeitamos elas
         setLinhas(existentes.map((e, i) => ({
           id: e.id || `l-${i}`,
           horario: e.horario || '07:30 - 08:15',
           tipo: (e.tipo as any) || (e.materia === 'INTERVALO' ? 'intervalo' : e.materia === 'ALMOÇO' ? 'almoco' : 'aula'),
           materia: e.materia || '',
-          professor: e.nomeProfessor || e.nome_professor || ''
+          professor: e.nomeProfessor || (e as any).nome_professor || ''
         })));
       } else {
-        // Se a grade estiver vazia, aplicamos o esqueleto do segmento
         setLinhas(periodosAlvo.map((p, i) => ({
           id: `p-${i}`,
           horario: `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`,
