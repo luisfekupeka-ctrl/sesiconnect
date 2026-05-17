@@ -48,35 +48,27 @@ export default function MonitorScheduleEditor() {
   // Sincronizar linhas quando monitor muda
   useEffect(() => {
     if (monitorSelecionado) {
-      const periodosAlvo = (periodos && periodos.length > 0) ? periodos : periodosFallback;
-      const finalPeriodos = [...periodosAlvo].sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
-
-      const baseLinhas: LinhaGradeMonitor[] = finalPeriodos.map((p, i) => ({
-        id: `l-${i}`,
-        horarioInicio: p.horarioInicio.slice(0, 5),
-        horarioFim: p.horarioFim.slice(0, 5),
-        posto: '',
-        funcao: p.tipo === 'intervalo' ? 'INTERVALO' : p.tipo === 'almoco' ? 'ALMOÇO' : 'Monitoria Geral',
-        tipo: p.tipo === 'almoco' || p.tipo === 'intervalo' ? 'almoco' : 'servico'
-      }));
-
       // Buscar dados de SEGUNDA como base (já que é fixa)
       const existentes = gradeMonitores.filter(
         e => e.monitorNome === monitorSelecionado.nome && e.diaSemana === 'SEGUNDA'
-      );
+      ).sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
 
-      existentes.forEach(e => {
-        const idx = baseLinhas.findIndex(l => l.horarioInicio === e.horarioInicio && l.horarioFim === e.horarioFim);
-        if (idx >= 0) {
-          baseLinhas[idx].posto = e.posto;
-          baseLinhas[idx].funcao = e.funcao;
-          baseLinhas[idx].tipo = (e.funcao === 'ALMOÇO' || e.funcao === 'INTERVALO') ? 'almoco' : 'servico';
-        }
-      });
-
-      setLinhas(baseLinhas);
+      if (existentes.length > 0) {
+        const carregaExistente: LinhaGradeMonitor[] = existentes.map((e, i) => ({
+          id: `l-${i}-${Date.now()}`,
+          horarioInicio: e.horarioInicio.slice(0, 5),
+          horarioFim: e.horarioFim.slice(0, 5),
+          posto: e.posto || '',
+          funcao: e.funcao || 'Monitoria Geral',
+          tipo: (e.funcao === 'ALMOÇO' || e.funcao === 'INTERVALO') ? 'almoco' : 'servico'
+        }));
+        setLinhas(carregaExistente);
+      } else {
+        // Se não tiver nada, começa vazio para criação manual
+        setLinhas([]);
+      }
     }
-  }, [monitorSelecionado, gradeMonitores, periodos, periodosFallback]);
+  }, [monitorSelecionado, gradeMonitores]);
 
   const atualizarLinha = (id: string, campo: keyof LinhaGradeMonitor, valor: any) => {
     setLinhas(prev => prev.map(l => l.id === id ? { ...l, [campo]: valor } : l));
