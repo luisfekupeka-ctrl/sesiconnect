@@ -489,22 +489,30 @@ export default function GestaoRealocacao() {
                 <h3 className="text-[10px] font-black mb-2 uppercase tracking-[0.2em] text-on-surface-variant ml-2 flex items-center gap-2"><Clock size={12} /> Selecione as Aulas</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                   {Array.from(new Set(
-                    gradeCompleta
-                      .filter(g => {
-                        const dataItem = datasSelecionadas[0];
-                        const dataObj = new Date(dataItem + 'T00:00:00');
-                        const diasSemanaMap = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO'];
-                        const diaSemanaItem = diasSemanaMap[dataObj.getDay()];
-                        
-                        const diaMatch = String(g.diaSemana || '').toUpperCase().trim() === String(diaSemanaItem || '').toUpperCase().trim();
-                        
-                        const targetMatch = tipoFluxo === 'SALA'
-                          ? (salasSelecionadas.length > 0 ? salasSelecionadas.includes(g.numeroSala) : true)
-                          : (profFaltouId ? String(g.nomeProfessor || '').toUpperCase().trim() === String(profFaltouId || '').toUpperCase().trim() : true);
-                        
-                        return diaMatch && targetMatch;
-                      })
-                      .map(g => g.horario)
+                    tipoFluxo === 'SALA'
+                      ? (() => {
+                          const segmentos = salas.filter(s => salasSelecionadas.includes(s.numero)).map(s => {
+                            const a = (s.ano || '').toLowerCase();
+                            if (a.includes('6') || a.includes('7')) return '6e7';
+                            if (a.includes('8') || a.includes('9')) return '8e9';
+                            if (a.includes('médio') || a.includes('medio') || a.includes('ano e')) return 'medio';
+                            return '6e7';
+                          });
+                          const segsUnicos = Array.from(new Set(segmentos));
+                          const pAlvo = periodos.filter(p => segsUnicos.includes(p.segmento));
+                          return pAlvo.map(p => `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`);
+                        })()
+                      : gradeCompleta
+                          .filter(g => {
+                            const dataItem = datasSelecionadas[0];
+                            const dataObj = new Date(dataItem + 'T00:00:00');
+                            const diasSemanaMap = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO'];
+                            const diaSemanaItem = diasSemanaMap[dataObj.getDay()];
+                            const diaMatch = String(g.diaSemana || '').toUpperCase().trim() === String(diaSemanaItem || '').toUpperCase().trim();
+                            const targetMatch = profFaltouId ? String(g.nomeProfessor || '').toUpperCase().trim() === String(profFaltouId || '').toUpperCase().trim() : true;
+                            return diaMatch && targetMatch;
+                          })
+                          .map(g => g.horario)
                   ))
                   .sort()
                   .map(horario => (
@@ -771,33 +779,33 @@ export default function GestaoRealocacao() {
                                 <thead>
                                   <tr className="bg-slate-100 border-b border-slate-200">
                                     <th className="p-4 text-[10px] font-black text-[#0c2340] uppercase tracking-wider border-r border-slate-200 w-[140px]">
-                                      Horário
+                                      Turma / Sala
                                     </th>
-                                    {turmasUnicas.map(turma => (
-                                      <th key={turma} className="p-4 text-[10px] font-black text-[#0c2340] uppercase tracking-wider text-center border-r border-slate-200 last:border-r-0">
-                                        <div className="flex flex-col items-center">
-                                          <span className="px-3 py-1 bg-slate-200 text-slate-800 text-[9px] font-black rounded-lg border border-slate-300">
-                                            {turma}
-                                          </span>
+                                    {horariosUnicos.map(horario => (
+                                      <th key={horario} className="p-4 text-[10px] font-black text-[#0c2340] uppercase tracking-wider text-center border-r border-slate-200 last:border-r-0">
+                                        <div className="flex flex-col items-center gap-1.5">
+                                          <Clock size={12} className="opacity-50" />
+                                          <span>{horario}</span>
                                         </div>
                                       </th>
                                     ))}
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {horariosUnicos.map(horario => (
-                                    <tr key={horario} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
+                                  {turmasUnicas.map(turma => (
+                                    <tr key={turma} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
                                       <td className="p-4 font-black text-slate-800 text-xs border-r border-slate-200 bg-slate-50/50">
-                                        <div className="flex items-center gap-1.5 text-[#0c2340]">
-                                          <Clock size={12} />
-                                          <span>{horario}</span>
+                                        <div className="flex items-center justify-center">
+                                          <span className="px-3 py-1 bg-slate-200 text-slate-800 text-[10px] font-black rounded-lg border border-slate-300">
+                                            {turma}
+                                          </span>
                                         </div>
                                       </td>
-                                      {turmasUnicas.map(turma => {
+                                      {horariosUnicos.map(horario => {
                                         const res = resultadosDia.find(r => r.horario === horario && r.turma === turma);
                                         if (!res) {
                                           return (
-                                            <td key={turma} className="p-4 text-center text-slate-300 border-r border-slate-200 last:border-r-0 bg-slate-50/20 italic text-[10px]">
+                                            <td key={horario} className="p-4 text-center text-slate-300 border-r border-slate-200 last:border-r-0 bg-slate-50/20 italic text-[10px]">
                                               -
                                             </td>
                                           );
@@ -812,14 +820,14 @@ export default function GestaoRealocacao() {
                                         const borderCol = is6o ? "bg-cyan-500" : is7o ? "bg-blue-500" : is8o ? "bg-amber-500" : is9o ? "bg-orange-500" : "bg-purple-500";
 
                                         return (
-                                          <td key={turma} className={cn("p-4 border-r border-slate-200 last:border-r-0 text-center relative overflow-hidden transition-all", cellBg)}>
+                                          <td key={horario} className={cn("p-4 border-r border-slate-200 last:border-r-0 text-center relative overflow-hidden transition-all", cellBg)}>
                                             <div className={cn("absolute top-0 left-0 w-1 h-full", borderCol)} />
                                             <div className="pl-1">
                                               <span className="block text-xs font-black text-slate-900">
                                                 {res.professorSubstituto}
                                               </span>
                                               <span className="block text-[8px] font-bold text-slate-400 mt-0.5">
-                                                Original: {res.professorOriginal}
+                                                Orig: {res.professorOriginal}
                                               </span>
                                             </div>
                                           </td>
