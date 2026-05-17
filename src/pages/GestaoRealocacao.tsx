@@ -641,26 +641,28 @@ export default function GestaoRealocacao() {
                   background: white !important;
                   color: black !important;
                 }
-                header, nav, aside, footer, button, .print\\:hidden, #root > div:not(.print-modal-container) {
-                  display: none !important;
+                body * {
+                  visibility: hidden !important;
                 }
-                .print-modal-container {
+                .print-section, .print-section * {
+                  visibility: visible !important;
+                }
+                .print-section {
                   position: absolute !important;
                   left: 0 !important;
                   top: 0 !important;
                   width: 100% !important;
-                  height: auto !important;
-                  background: white !important;
-                  padding: 0 !important;
-                }
-                .print-card-content {
-                  box-shadow: none !important;
-                  border: none !important;
                   margin: 0 !important;
                   padding: 0 !important;
-                  width: 100% !important;
-                  max-width: 100% !important;
-                  border-radius: 0 !important;
+                  border: none !important;
+                  box-shadow: none !important;
+                  background: white !important;
+                  color: black !important;
+                }
+                .print-modal-container {
+                  background: transparent !important;
+                  padding: 0 !important;
+                  overflow: visible !important;
                 }
                 * {
                   -webkit-print-color-adjust: exact !important;
@@ -673,7 +675,7 @@ export default function GestaoRealocacao() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-4xl bg-white text-slate-900 rounded-[2rem] overflow-hidden shadow-2xl my-8 print:my-0 print:rounded-none print-card-content border border-slate-200"
+              className="relative w-full max-w-4xl bg-white text-slate-900 rounded-[2rem] overflow-hidden shadow-2xl my-8 print:my-0 print:rounded-none print-card-content border border-slate-200 print-section"
             >
               {/* Header Oficial do Sesi */}
               <div className="relative w-full h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-8 select-none">
@@ -683,16 +685,20 @@ export default function GestaoRealocacao() {
                   <div className="absolute top-[20px] left-0 w-[40px] h-[100px] bg-[#fbbf24]" style={{ clipPath: 'polygon(0 0, 100% 30%, 80% 90%, 0 100%)' }} />
                 </div>
                 <div className="flex-1" />
-                <div className="relative z-10">
-                  <div className="flex flex-col items-end">
-                    <div className="flex items-center gap-1 leading-none">
-                      <span className="text-[10px] font-extrabold text-[#0c2340] lowercase tracking-normal">colégio</span>
-                      <div className="w-2 h-2 rounded-full bg-[#0c2340] mt-0.5" />
+                <div className="relative z-10 select-none scale-105">
+                  <div className="flex flex-col items-end mr-4">
+                    <div className="flex items-center gap-2 mr-1">
+                      <span className="text-[11px] font-extrabold text-[#0c2340] lowercase tracking-normal">colégio</span>
+                      {/* Ponto ícone estilizado do Sesi Internacional */}
+                      <div className="flex flex-col items-center gap-0.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#0c2340]" />
+                        <div className="w-2 h-3.5 rounded-full bg-[#0c2340]" />
+                      </div>
                     </div>
-                    <div className="text-[40px] font-black text-[#0c2340] leading-none tracking-tighter -mt-1 font-serif italic">
-                      Sesi
+                    <div className="text-[42px] font-bold text-[#0c2340] leading-none tracking-tight -mt-1 font-serif italic mr-6 relative">
+                      Ses<span className="relative">ı</span>
                     </div>
-                    <div className="bg-[#fbbf24] text-[#0c2340] text-[9px] font-black uppercase tracking-[0.2em] px-3.5 py-1.5 mt-1 rounded-sm transform -skew-x-6 origin-right leading-none">
+                    <div className="bg-[#fbbf24] text-[#0c2340] text-[9px] font-black uppercase tracking-[0.2em] px-4 py-2 mt-1.5 rounded-[8px] transform -skew-x-12 leading-none">
                       internacional
                     </div>
                   </div>
@@ -727,74 +733,144 @@ export default function GestaoRealocacao() {
                 <div className="grid grid-cols-3 gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
                   <div>
                     <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Período Letivo</span>
-                    <span className="text-sm font-bold text-slate-800">
+                    <span className="text-sm font-bold text-slate-800 text-slate-900">
                       {datasSelecionadas.map(d => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')).join(', ')}
                     </span>
                   </div>
                   <div>
                     <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Aulas / Horários</span>
-                    <span className="text-sm font-bold text-slate-800">{horariosSel.join(', ')}</span>
+                    <span className="text-sm font-bold text-slate-900">{horariosSel.join(', ')}</span>
                   </div>
                   <div>
                     <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Salas Planejadas</span>
-                    <span className="text-sm font-bold text-slate-800">{tipoFluxo === 'SALA' ? salasSelecionadas.length : 'Falta Docente'}</span>
+                    <span className="text-sm font-bold text-slate-900">{tipoFluxo === 'SALA' ? salasSelecionadas.length : 'Falta Docente'}</span>
                   </div>
                 </div>
 
                 {/* Grade Colorida do Ensalamento */}
                 <div className="space-y-4">
-                  <h3 className="text-sm font-black text-[#0c2340] uppercase tracking-wider border-b pb-2">Distribuição de Salas e Horários</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {resultados.map((item, idx) => (
-                      <div 
-                        key={idx} 
-                        className={cn(
-                          "p-5 rounded-2xl border-2 flex flex-col justify-between shadow-sm relative overflow-hidden transition-all",
-                          item.turma.includes('6º') ? "bg-cyan-50 border-cyan-200 text-cyan-900" :
-                          item.turma.includes('7º') ? "bg-blue-50 border-blue-200 text-blue-900" :
-                          item.turma.includes('8º') ? "bg-amber-50 border-amber-200 text-amber-900" :
-                          item.turma.includes('9º') ? "bg-orange-50 border-orange-200 text-orange-900" :
-                          "bg-purple-50 border-purple-200 text-purple-900"
-                        )}
-                      >
-                        {/* Faixa lateral decorativa de alta visibilidade */}
-                        <div 
-                          className={cn(
-                            "absolute top-0 left-0 w-2 h-full",
-                            item.turma.includes('6º') ? "bg-cyan-500" :
-                            item.turma.includes('7º') ? "bg-blue-500" :
-                            item.turma.includes('8º') ? "bg-amber-500" :
-                            item.turma.includes('9º') ? "bg-orange-500" :
-                            "bg-purple-500"
-                          )} 
-                        />
-                        
-                        <div className="pl-3 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black uppercase tracking-widest opacity-60">{item.horario}</span>
-                            <span className="text-[10px] font-black uppercase bg-white/80 px-2 py-0.5 rounded-md shadow-xs">
-                              {item.dia ? new Date(item.dia + 'T00:00:00').toLocaleDateString('pt-BR') : ''}
-                            </span>
-                          </div>
-                          
-                          <div className="flex justify-between items-end">
-                            <div>
-                              <h4 className="text-lg font-extrabold tracking-tight">{item.turma}</h4>
-                              <p className="text-xs font-semibold opacity-85">Professor Original: {item.professorOriginal}</p>
+                  {tipoFluxo === 'SALA' ? (
+                    <div className="space-y-8">
+                      {datasSelecionadas.map(d => {
+                        const resultadosDia = resultados.filter(r => r.dia === d);
+                        if (resultadosDia.length === 0) return null;
+
+                        const horariosUnicos = Array.from(new Set(resultadosDia.map(r => r.horario))).sort();
+                        const turmasUnicas = Array.from(new Set(resultadosDia.map(r => r.turma))).sort();
+
+                        return (
+                          <div key={d} className="space-y-4 break-after-page">
+                            <div className="flex items-center justify-between border-b pb-2 border-[#0c2340]/20">
+                              <h3 className="text-sm font-black text-[#0c2340] uppercase tracking-wider">
+                                Escala do Dia: {new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                              </h3>
                             </div>
                             
-                            <div className="text-right">
-                              <span className="block text-[8px] font-black uppercase tracking-wider opacity-60">Proctor / Fiscal</span>
-                              <span className="text-sm font-black bg-white px-3 py-1 rounded-lg border shadow-xs border-black/5 block mt-0.5">
-                                {item.professorSubstituto}
-                              </span>
+                            <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-xs">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-100 border-b border-slate-200">
+                                    <th className="p-4 text-[10px] font-black text-[#0c2340] uppercase tracking-wider border-r border-slate-200 w-[140px]">
+                                      Horário
+                                    </th>
+                                    {turmasUnicas.map(turma => (
+                                      <th key={turma} className="p-4 text-[10px] font-black text-[#0c2340] uppercase tracking-wider text-center border-r border-slate-200 last:border-r-0">
+                                        <div className="flex flex-col items-center">
+                                          <span className="px-3 py-1 bg-slate-200 text-slate-800 text-[9px] font-black rounded-lg border border-slate-300">
+                                            {turma}
+                                          </span>
+                                        </div>
+                                      </th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {horariosUnicos.map(horario => (
+                                    <tr key={horario} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
+                                      <td className="p-4 font-black text-slate-800 text-xs border-r border-slate-200 bg-slate-50/50">
+                                        <div className="flex items-center gap-1.5 text-[#0c2340]">
+                                          <Clock size={12} />
+                                          <span>{horario}</span>
+                                        </div>
+                                      </td>
+                                      {turmasUnicas.map(turma => {
+                                        const res = resultadosDia.find(r => r.horario === horario && r.turma === turma);
+                                        if (!res) {
+                                          return (
+                                            <td key={turma} className="p-4 text-center text-slate-300 border-r border-slate-200 last:border-r-0 bg-slate-50/20 italic text-[10px]">
+                                              -
+                                            </td>
+                                          );
+                                        }
+
+                                        const is6o = turma.includes('6º') || turma.includes('6 ');
+                                        const is7o = turma.includes('7º') || turma.includes('7 ');
+                                        const is8o = turma.includes('8º') || turma.includes('8 ');
+                                        const is9o = turma.includes('9º') || turma.includes('9 ');
+
+                                        const cellBg = is6o ? "bg-cyan-50/60" : is7o ? "bg-blue-50/60" : is8o ? "bg-amber-50/60" : is9o ? "bg-orange-50/60" : "bg-purple-50/60";
+                                        const borderCol = is6o ? "bg-cyan-500" : is7o ? "bg-blue-500" : is8o ? "bg-amber-500" : is9o ? "bg-orange-500" : "bg-purple-500";
+
+                                        return (
+                                          <td key={turma} className={cn("p-4 border-r border-slate-200 last:border-r-0 text-center relative overflow-hidden transition-all", cellBg)}>
+                                            <div className={cn("absolute top-0 left-0 w-1 h-full", borderCol)} />
+                                            <div className="pl-1">
+                                              <span className="block text-xs font-black text-slate-900">
+                                                {res.professorSubstituto}
+                                              </span>
+                                              <span className="block text-[8px] font-bold text-slate-400 mt-0.5">
+                                                Original: {res.professorOriginal}
+                                              </span>
+                                            </div>
+                                          </td>
+                                        );
+                                      })}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
                             </div>
                           </div>
-                        </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-black text-[#0c2340] uppercase tracking-wider border-b pb-2">Distribuição de Salas e Horários</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {resultados.map((item, idx) => (
+                          <div 
+                            key={idx} 
+                            className="p-5 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col justify-between shadow-sm relative overflow-hidden text-slate-900"
+                          >
+                            <div className="absolute top-0 left-0 w-2 h-full bg-slate-400" />
+                            <div className="pl-3 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{item.horario}</span>
+                                <span className="text-[10px] font-black uppercase bg-white px-2 py-0.5 rounded-md border text-slate-700">
+                                  {item.dia ? new Date(item.dia + 'T00:00:00').toLocaleDateString('pt-BR') : ''}
+                                </span>
+                              </div>
+                              
+                              <div className="flex justify-between items-end">
+                                <div>
+                                  <h4 className="text-lg font-extrabold tracking-tight">{item.turma}</h4>
+                                  <p className="text-xs font-semibold text-slate-500">Professor Original: {item.professorOriginal}</p>
+                                </div>
+                                
+                                <div className="text-right">
+                                  <span className="block text-[8px] font-black text-slate-400 uppercase tracking-wider">Substituto</span>
+                                  <span className="text-sm font-black bg-white text-slate-900 px-3 py-1 rounded-lg border shadow-sm border-black/5 block mt-0.5">
+                                    {item.professorSubstituto}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Rodapé e Assinaturas */}

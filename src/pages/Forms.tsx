@@ -263,16 +263,20 @@ export default function FormsPage() {
                   </div>
                   <div className="flex-1" />
                   {/* Logo Sesi */}
-                  <div className="relative z-10">
-                    <div className="flex flex-col items-end">
-                      <div className="flex items-center gap-1 leading-none">
-                        <span className="text-[10px] font-extrabold text-[#0c2340] lowercase tracking-normal">colégio</span>
-                        <div className="w-2 h-2 rounded-full bg-[#0c2340] mt-0.5" />
+                  <div className="relative z-10 select-none scale-105">
+                    <div className="flex flex-col items-end mr-4">
+                      <div className="flex items-center gap-2 mr-1">
+                        <span className="text-[11px] font-extrabold text-[#0c2340] lowercase tracking-normal">colégio</span>
+                        {/* Ponto ícone estilizado do Sesi Internacional */}
+                        <div className="flex flex-col items-center gap-0.5">
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#0c2340]" />
+                          <div className="w-2 h-3.5 rounded-full bg-[#0c2340]" />
+                        </div>
                       </div>
-                      <div className="text-[40px] font-black text-[#0c2340] leading-none tracking-tighter -mt-1 font-serif italic">
-                        Sesi
+                      <div className="text-[42px] font-bold text-[#0c2340] leading-none tracking-tight -mt-1 font-serif italic mr-6 relative">
+                        Ses<span className="relative">ı</span>
                       </div>
-                      <div className="bg-[#fbbf24] text-[#0c2340] text-[9px] font-black uppercase tracking-[0.2em] px-3.5 py-1.5 mt-1 rounded-sm transform -skew-x-6 origin-right leading-none">
+                      <div className="bg-[#fbbf24] text-[#0c2340] text-[9px] font-black uppercase tracking-[0.2em] px-4 py-2 mt-1.5 rounded-[8px] transform -skew-x-12 leading-none">
                         internacional
                       </div>
                     </div>
@@ -286,7 +290,7 @@ export default function FormsPage() {
                   </div>
                   <form onSubmit={handleSubmit} className="space-y-8">
                   {modeloSelecionado.campos.map(campo => (
-                    <div key={campo.id} className="space-y-4 bg-white/[0.02] p-8 rounded-[2.5rem] border border-white/[0.05] relative overflow-hidden group/field">
+                    <div key={campo.id} className="space-y-4 bg-white/[0.02] p-8 rounded-[2.5rem] border border-white/[0.05] relative group/field">
                       <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-focus-within/field:bg-primary transition-all" />
                       
                       {campo.tipo !== 'sessao' && (
@@ -388,7 +392,8 @@ export default function FormsPage() {
                           required={campo.obrigatorio} 
                           value={dadosFormulario[campo.rotulo] || ''} 
                           onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} 
-                          className="w-full bg-surface-container-high/50 border-2 border-white/5 rounded-[1.5rem] p-6 text-lg font-medium focus:ring-8 focus:ring-primary/5 focus:border-primary/40 focus:bg-surface-container-high transition-all min-h-[300px] shadow-inner editorial-leading text-on-surface placeholder:text-on-surface-variant/10" 
+                          className="w-full bg-surface-container-high/50 border-2 border-white/5 rounded-[1.5rem] p-6 text-lg font-medium focus:ring-8 focus:ring-primary/5 focus:border-primary/40 focus:bg-surface-container-high transition-all min-h-[300px] shadow-inner editorial-leading text-white placeholder:text-on-surface-variant/20 outline-none" 
+                          style={{ color: '#ffffff', caretColor: '#fbbf24' }}
                           placeholder="Descreva detalhadamente o ocorrido..." 
                         />
                       )}
