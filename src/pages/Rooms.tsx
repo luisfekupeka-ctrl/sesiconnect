@@ -3,12 +3,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Search, ChevronLeft, ChevronRight, UserCheck, ChevronDown, Users, Clock, DoorOpen, LayoutGrid } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
-import { obterBlocosDeHorario, obterDiaSemana, estaNoHorario } from '../services/motorEscolar';
+import { obterDiaSemana } from '../services/motorEscolar';
 import { Sala } from '../types';
 
 const LISTA_DIAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
-export default function RoomsPage() {  const { salas, estadoEscola, gradeCompleta, languageLab, atividadesAfter, horaAtual, alunos } = useEscola();
+export default function RoomsPage() {  const { salas, estadoEscola, gradeCompleta, languageLab, atividadesAfter, horaAtual, alunos, periodos } = useEscola();
   const [busca, setBusca] = useState('');
   const [diaGrade, setDiaGrade] = useState(obterDiaSemana(horaAtual));
   const [salaSelecionada, setSalaSelecionada] = useState<Sala | null>(null);
@@ -51,6 +51,39 @@ export default function RoomsPage() {  const { salas, estadoEscola, gradeComplet
     return Array.from(map.values());
   }, [salasFiltradas]);
 
+  const segDetectado = useMemo(() => {
+    if (!salaSelecionada) return '6e7';
+    const ano = (salaSelecionada.ano || '').toLowerCase();
+    if (ano.includes('6') || ano.includes('7')) return '6e7';
+    if (ano.includes('8') || ano.includes('9')) return '8e9';
+    if (ano.includes('em') || ano.includes('médio') || ano.includes('medio') || ano.includes('1º ano e') || ano.includes('2º ano e') || ano.includes('3º ano e')) return 'medio';
+    return '6e7';
+  }, [salaSelecionada]);
+
+  const blocosDaSala = useMemo(() => {
+    if (!salaSelecionada || !periodos) return [];
+    
+    // Filtra os períodos padrão do segmento detectado
+    const pAlvo = periodos.filter(p => p.segmento === segDetectado);
+    
+    // Deduplica por horário
+    const unique = new Map<string, any>();
+    for (const p of pAlvo) {
+      const key = `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`;
+      if (!unique.has(key)) {
+        unique.set(key, p);
+      }
+    }
+    
+    return Array.from(unique.values())
+      .sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio))
+      .map((p, idx) => ({
+        indice: idx,
+        inicio: p.horarioInicio.slice(0, 5),
+        fim: p.horarioFim.slice(0, 5)
+      }));
+  }, [salaSelecionada, segDetectado, periodos]);
+
   if (salaSelecionada) {
     return (
       <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="min-h-screen pb-20 px-2 md:px-8 pt-4 space-y-6">
@@ -86,7 +119,7 @@ export default function RoomsPage() {  const { salas, estadoEscola, gradeComplet
              
              {/* Blocos Verticais */}
              <div className="flex flex-col gap-3">
-                {obterBlocosDeHorario(gradeCompleta).map(bloco => (
+                {blocosDaSala.map(bloco => (
                    <BlocoHorarioSala key={bloco.indice} bloco={bloco} salaSelecionada={salaSelecionada} diaGrade={diaGrade} gradeCompleta={gradeCompleta} languageLab={languageLab} atividadesAfter={atividadesAfter} buscaFiltro={buscaAlunos} alunos={alunos} />
                 ))}
              </div>
@@ -172,10 +205,15 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
 
   const [expandido, setExpandido] = useState(estaNoBlocoAtual);
 
-  // Lista de alunos baseada no ANO da sala (fallback principal)
+  // Lista de alunos baseada no número da sala com fallback para o ANO/TURMA
   const alunosDaSala = useMemo(() => {
-    if (!salaSelecionada?.ano || !alunos) return [];
-    return (alunos || []).filter((a: any) => a.ano === salaSelecionada.ano || a.turma === salaSelecionada.ano).map((a: any) => a.nome);
+    if (!salaSelecionada || !alunos) return [];
+    const porSala = (alunos || []).filter((a: any) => Number(a.numeroSala) === Number(salaSelecionada.numero));
+    if (porSala.length > 0) return porSala.map((a: any) => a.nome);
+    
+    return (alunos || [])
+      .filter((a: any) => a.ano === salaSelecionada.ano || a.turma === salaSelecionada.ano)
+      .map((a: any) => a.nome);
   }, [alunos, salaSelecionada]);
 
   const lab = (languageLab || []).find((l: any) => 
@@ -192,7 +230,16 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
     a.horarioFim >= bloco.fim
   );
 
-  const entradaRegular = entradasDia.find((e: any) => estaNoHorario(bloco.inicio, e.horario));
+  // Auxiliar para padronizar horários e evitar cruzamento/duplicações
+  const cleanHorario = (h: string) => {
+    if (!h) return '';
+    const parts = h.split('-');
+    if (parts.length !== 2) return h.trim();
+    return `${parts[0].trim().slice(0, 5)} - ${parts[1].trim().slice(0, 5)}`;
+  };
+
+  const blocoKey = `${bloco.inicio} - ${bloco.fim}`;
+  const entradaRegular = entradasDia.find((e: any) => cleanHorario(e.horario) === blocoKey);
   
   let entradaFinal: any = null;
   let alunosNoBloco: string[] = [];
