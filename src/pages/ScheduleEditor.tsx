@@ -8,8 +8,8 @@ import {
 } from 'lucide-react';
 import { useEscola } from '../context/ContextoEscola';
 import { salvarGradeSala, salvarPeriodos } from '../services/dataService';
-import { cn } from '../lib/utils';
-import { Sala, EntradaGradeSala } from '../types';
+import { cn, normalizarNomeComum } from '../lib/utils';
+import type { Sala, EntradaGradeSala } from '../types';
 
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
@@ -68,10 +68,21 @@ export default function ScheduleEditor() {
     return { tipo: 'aula', materia: '', professor: '' };
   };
 
-  // Monta linhas a partir do template do segmento
+  // Monta linhas a partir do template do segmento com deduplicação de horários
   const montarLinhasDoSegmento = (seg: string) => {
     const pAlvo = periodos.filter(p => p.segmento === seg);
-    return pAlvo.map((p, i) => {
+
+    // Deduplicação estrita por horário de início/fim (HH:MM)
+    const unique = new Map<string, any>();
+    for (const p of pAlvo) {
+      const key = `${p.horarioInicio.slice(0, 5)}-${p.horarioFim.slice(0, 5)}`;
+      if (!unique.has(key)) {
+        unique.set(key, p);
+      }
+    }
+    const targetPeriodos = Array.from(unique.values()).sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
+
+    return targetPeriodos.map((p, i) => {
       const det = detectarTipoPeriodo(p.nome);
       return {
         id: `p-${i}-${Date.now()}`,
@@ -396,6 +407,14 @@ export default function ScheduleEditor() {
                           placeholder="SELECIONE..." 
                           list="professores-list"
                           onChange={e => updateLinha(linha.id, 'professor', e.target.value)} 
+                          onBlur={e => {
+                            const val = e.target.value;
+                            const listCanonNames = (professoresCMS || []).map(p => p.nome);
+                            if (val && listCanonNames.length > 0) {
+                              const normal = normalizarNomeComum(val, listCanonNames);
+                              updateLinha(linha.id, 'professor', normal);
+                            }
+                          }}
                           className="w-full bg-transparent border-none text-sm font-black text-white outline-none placeholder:text-white/5 uppercase" 
                         />
                       </div>

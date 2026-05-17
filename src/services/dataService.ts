@@ -36,15 +36,24 @@ export async function buscarPeriodos(): Promise<any[]> {
     return [];
   }
 
-  // Converte snake_case do banco para camelCase do frontend
-  return (data || []).map(p => ({
-    id: p.id,
-    nome: p.nome,
-    horarioInicio: p.horario_inicio,
-    horarioFim: p.horario_fim,
-    tipo: p.tipo || 'aula',
-    segmento: p.segmento,
-  }));
+  // Converte snake_case do banco para camelCase do frontend e corrige erros de escrita
+  return (data || []).map(p => {
+    let correctedName = String(p.nome || '');
+    correctedName = correctedName
+      .replace(/itervalo/gi, 'Intervalo')
+      .replace(/iter/gi, 'Inter')
+      .replace(/LANCHE/g, 'LANCHE')
+      .trim();
+
+    return {
+      id: p.id,
+      nome: correctedName,
+      horarioInicio: p.horario_inicio,
+      horarioFim: p.horario_fim,
+      tipo: p.tipo || 'aula',
+      segmento: p.segmento,
+    };
+  });
 }
 
 // ============================================================
@@ -59,7 +68,31 @@ export async function buscarMapaSalas(): Promise<EntradaGradeSala[]> {
     return [];
   }
 
-  return (data || []).map(item => ({
+  // Deduplicação automática: mesma sala, dia e horário.
+  // Mantemos o registro mais completo (com matéria, professor e alunos)
+  const uniqueMap = new Map<string, any>();
+  for (const item of (data || [])) {
+    const key = `${item.numero_sala}-${String(item.dia_semana).toUpperCase().trim()}-${String(item.horario).trim()}`;
+    const existing = uniqueMap.get(key);
+    if (!existing) {
+      uniqueMap.set(key, item);
+    } else {
+      const score = (x: any) => {
+        let s = 0;
+        if (x.materia && x.materia !== 'A DEFINIR' && x.materia !== '') s += 10;
+        if (x.nome_professor && x.nome_professor !== '—' && x.nome_professor !== '') s += 10;
+        if (x.lista_alunos && x.lista_alunos.length > 0) s += x.lista_alunos.length;
+        return s;
+      };
+      if (score(item) > score(existing)) {
+        uniqueMap.set(key, item);
+      }
+    }
+  }
+
+  const processedData = Array.from(uniqueMap.values());
+
+  return processedData.map(item => ({
     id: item.id || `${item.numero_sala}-${item.dia_semana}-${item.horario}`,
     numeroSala: item.numero_sala,
     nomeSala: `Sala ${item.numero_sala}`,

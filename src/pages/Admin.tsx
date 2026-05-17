@@ -225,39 +225,52 @@ export default function Admin() {
   }, [listaProfessores, professorSelecionado]);
 
   const periodosOrdenados = useMemo(() => {
+    let list: any[] = [];
     if (periodos && periodos.length > 0) {
-      return [...periodos].sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
+      list = [...periodos].sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
+    } else {
+      const horarios = Array.from(new Set((gradeCompleta || []).map(g => g.horario).filter(Boolean)));
+      if (horarios.length > 0) {
+        list = horarios.map((h, i) => {
+          const parts = h.split('-');
+          const inicio = parts[0]?.trim() || '07:30';
+          const fim = parts[1]?.trim() || '08:15';
+          return {
+            id: `slot-${i}`,
+            nome: `${i + 1}ª Aula`,
+            horarioInicio: inicio,
+            horarioFim: fim,
+            tipo: 'aula',
+            segmento: 'Todos'
+          };
+        }).sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
+      } else {
+        list = [
+          { id: '1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:15', tipo: 'aula', segmento: 'Todos' },
+          { id: '2', nome: '2ª Aula', horarioInicio: '08:15', horarioFim: '09:00', tipo: 'aula', segmento: 'Todos' },
+          { id: '3', nome: '3ª Aula', horarioInicio: '09:00', horarioFim: '09:45', tipo: 'aula', segmento: 'Todos' },
+          { id: '4', nome: '4ª Aula', horarioInicio: '10:00', horarioFim: '10:45', tipo: 'aula', segmento: 'Todos' },
+          { id: '5', nome: '5ª Aula', horarioInicio: '10:45', horarioFim: '11:30', tipo: 'aula', segmento: 'Todos' },
+          { id: '6', nome: '6ª Aula', horarioInicio: '11:30', horarioFim: '12:15', tipo: 'aula', segmento: 'Todos' },
+          { id: '7', nome: '7ª Aula', horarioInicio: '13:15', horarioFim: '14:00', tipo: 'aula', segmento: 'Todos' },
+          { id: '8', nome: '8ª Aula', horarioInicio: '14:00', horarioFim: '14:45', tipo: 'aula', segmento: 'Todos' },
+          { id: '9', nome: '9ª Aula', horarioInicio: '14:45', horarioFim: '15:30', tipo: 'aula', segmento: 'Todos' },
+          { id: '10', nome: '10ª Aula', horarioInicio: '15:45', horarioFim: '16:30', tipo: 'aula', segmento: 'Todos' },
+          { id: '11', nome: '11ª Aula', horarioInicio: '16:30', horarioFim: '17:15', tipo: 'aula', segmento: 'Todos' },
+          { id: '12', nome: '12ª Aula', horarioInicio: '17:15', horarioFim: '18:00', tipo: 'aula', segmento: 'Todos' }
+        ];
+      }
     }
-    const horarios = Array.from(new Set((gradeCompleta || []).map(g => g.horario).filter(Boolean)));
-    if (horarios.length > 0) {
-      return horarios.map((h, i) => {
-        const parts = h.split('-');
-        const inicio = parts[0]?.trim() || '07:30';
-        const fim = parts[1]?.trim() || '08:15';
-        return {
-          id: `slot-${i}`,
-          nome: `${i + 1}ª Aula`,
-          horarioInicio: inicio,
-          horarioFim: fim,
-          tipo: 'aula',
-          segmento: 'Todos'
-        };
-      }).sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
+
+    // Deduplicação estrita por horário de início/fim (HH:MM)
+    const unique = new Map<string, any>();
+    for (const p of list) {
+      const key = `${p.horarioInicio.slice(0, 5)}-${p.horarioFim.slice(0, 5)}`;
+      if (!unique.has(key)) {
+        unique.set(key, p);
+      }
     }
-    return [
-      { id: '1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:15', tipo: 'aula', segmento: 'Todos' },
-      { id: '2', nome: '2ª Aula', horarioInicio: '08:15', horarioFim: '09:00', tipo: 'aula', segmento: 'Todos' },
-      { id: '3', nome: '3ª Aula', horarioInicio: '09:00', horarioFim: '09:45', tipo: 'aula', segmento: 'Todos' },
-      { id: '4', nome: '4ª Aula', horarioInicio: '10:00', horarioFim: '10:45', tipo: 'aula', segmento: 'Todos' },
-      { id: '5', nome: '5ª Aula', horarioInicio: '10:45', horarioFim: '11:30', tipo: 'aula', segmento: 'Todos' },
-      { id: '6', nome: '6ª Aula', horarioInicio: '11:30', horarioFim: '12:15', tipo: 'aula', segmento: 'Todos' },
-      { id: '7', nome: '7ª Aula', horarioInicio: '13:15', horarioFim: '14:00', tipo: 'aula', segmento: 'Todos' },
-      { id: '8', nome: '8ª Aula', horarioInicio: '14:00', horarioFim: '14:45', tipo: 'aula', segmento: 'Todos' },
-      { id: '9', nome: '9ª Aula', horarioInicio: '14:45', horarioFim: '15:30', tipo: 'aula', segmento: 'Todos' },
-      { id: '10', nome: '10ª Aula', horarioInicio: '15:45', horarioFim: '16:30', tipo: 'aula', segmento: 'Todos' },
-      { id: '11', nome: '11ª Aula', horarioInicio: '16:30', horarioFim: '17:15', tipo: 'aula', segmento: 'Todos' },
-      { id: '12', nome: '12ª Aula', horarioInicio: '17:15', horarioFim: '18:00', tipo: 'aula', segmento: 'Todos' }
-    ];
+    return Array.from(unique.values()).sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
   }, [periodos, gradeCompleta]);
 
   const alunosBase = Array.isArray(alunos) ? alunos : [];
