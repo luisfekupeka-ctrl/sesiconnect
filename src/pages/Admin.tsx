@@ -26,7 +26,9 @@ import {
   salvarGradeMonitor, excluirGradeMonitor,
   salvarGradeSala, buscarSalas, excluirTodaGrade,
   atualizarListaAlunosGrade,
-  getAlunosPorTurma
+  getAlunosPorTurma,
+  salvarEntradaGradeIndividual,
+  excluirEntradaGradeIndividual
 } from '../services/dataService';
 
 // ============================================================
@@ -121,6 +123,7 @@ export default function Admin() {
 
   const [buscaGlobal, setBuscaGlobal] = useState('');
   const [mostrarResultadosGlobal, setMostrarResultadosGlobal] = useState(false);
+  const [professorSelecionado, setProfessorSelecionado] = useState<string | null>(null);
 
   // 1.1 LOGICA DE BUSCA GLOBAL
   const resultadosBuscaGlobal = useMemo(() => {
@@ -209,9 +212,53 @@ export default function Admin() {
       <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
     </div>
   );
-  const listaProfessores = Array.from(new Set(
-    gradeCompleta.map(e => e.nomeProfessor).filter(n => n && n !== '—' && n !== 'A DEFINIR')
-  )).sort() as string[];
+  const listaProfessores = useMemo(() => {
+    const cmsNomes = (professoresCMS || []).map(p => p.nome);
+    const gradeNomes = (gradeCompleta || []).map(e => e.nomeProfessor).filter(n => n && n !== '—' && n !== 'A DEFINIR');
+    return Array.from(new Set([...cmsNomes, ...gradeNomes])).filter(Boolean).sort() as string[];
+  }, [professoresCMS, gradeCompleta]);
+
+  useEffect(() => {
+    if (listaProfessores.length > 0 && !professorSelecionado) {
+      setProfessorSelecionado(listaProfessores[0]);
+    }
+  }, [listaProfessores, professorSelecionado]);
+
+  const periodosOrdenados = useMemo(() => {
+    if (periodos && periodos.length > 0) {
+      return [...periodos].sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
+    }
+    const horarios = Array.from(new Set((gradeCompleta || []).map(g => g.horario).filter(Boolean)));
+    if (horarios.length > 0) {
+      return horarios.map((h, i) => {
+        const parts = h.split('-');
+        const inicio = parts[0]?.trim() || '07:30';
+        const fim = parts[1]?.trim() || '08:15';
+        return {
+          id: `slot-${i}`,
+          nome: `${i + 1}ª Aula`,
+          horarioInicio: inicio,
+          horarioFim: fim,
+          tipo: 'aula',
+          segmento: 'Todos'
+        };
+      }).sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
+    }
+    return [
+      { id: '1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:15', tipo: 'aula', segmento: 'Todos' },
+      { id: '2', nome: '2ª Aula', horarioInicio: '08:15', horarioFim: '09:00', tipo: 'aula', segmento: 'Todos' },
+      { id: '3', nome: '3ª Aula', horarioInicio: '09:00', horarioFim: '09:45', tipo: 'aula', segmento: 'Todos' },
+      { id: '4', nome: '4ª Aula', horarioInicio: '10:00', horarioFim: '10:45', tipo: 'aula', segmento: 'Todos' },
+      { id: '5', nome: '5ª Aula', horarioInicio: '10:45', horarioFim: '11:30', tipo: 'aula', segmento: 'Todos' },
+      { id: '6', nome: '6ª Aula', horarioInicio: '11:30', horarioFim: '12:15', tipo: 'aula', segmento: 'Todos' },
+      { id: '7', nome: '7ª Aula', horarioInicio: '13:15', horarioFim: '14:00', tipo: 'aula', segmento: 'Todos' },
+      { id: '8', nome: '8ª Aula', horarioInicio: '14:00', horarioFim: '14:45', tipo: 'aula', segmento: 'Todos' },
+      { id: '9', nome: '9ª Aula', horarioInicio: '14:45', horarioFim: '15:30', tipo: 'aula', segmento: 'Todos' },
+      { id: '10', nome: '10ª Aula', horarioInicio: '15:45', horarioFim: '16:30', tipo: 'aula', segmento: 'Todos' },
+      { id: '11', nome: '11ª Aula', horarioInicio: '16:30', horarioFim: '17:15', tipo: 'aula', segmento: 'Todos' },
+      { id: '12', nome: '12ª Aula', horarioInicio: '17:15', horarioFim: '18:00', tipo: 'aula', segmento: 'Todos' }
+    ];
+  }, [periodos, gradeCompleta]);
 
   const alunosBase = Array.isArray(alunos) ? alunos : [];
   const alunosFiltrados = alunosBase.filter(a => {
@@ -655,60 +702,256 @@ export default function Admin() {
                 <div>
                   <h2 className="text-2xl font-black text-emerald-600">Grade de Aulas</h2>
                   <p className="text-sm font-medium text-emerald-700/80 mt-1 max-w-xl">
-                    A escala dos professores é montada automaticamente quando você preenche a grade das salas. Clique abaixo para abrir o painel de edição visual (por Dia da Semana).
+                    A escala dos professores é integrada diretamente com a grade escolar. Você pode gerenciar as aulas de cada docente de forma bidirecional ou fazer agendamentos em slots livres.
                   </p>
                 </div>
-                <div className="flex gap-4">
-                  <button onClick={() => navigate('/schedule-editor')} className="bg-emerald-500 text-white px-8 py-4 rounded-2xl font-black text-sm whitespace-nowrap hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-xl shadow-emerald-500/20">
-                    <Calendar size={18} /> Montar Grade das Salas
+                <div className="flex gap-4 w-full md:w-auto">
+                  <button onClick={() => navigate('/schedule-editor')} className="bg-emerald-500 text-white px-8 py-4 rounded-2xl font-black text-sm whitespace-nowrap hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-xl shadow-emerald-500/20 flex-1 md:flex-initial justify-center">
+                    <Calendar size={18} /> Montar Grade por Salas
                   </button>
-                  <button onClick={() => handleClearAll('grade' as any)} className="bg-red-500/10 text-red-500 px-6 py-4 rounded-2xl font-black text-sm hover:bg-red-500/20 transition-all flex items-center gap-2">
+                  <button onClick={() => handleClearAll('grade' as any)} className="bg-red-500/10 text-red-500 px-6 py-4 rounded-2xl font-black text-sm hover:bg-red-500/20 transition-all flex items-center gap-2 whitespace-nowrap flex-1 md:flex-initial justify-center">
                     <Trash2 size={18} /> Apagar Toda a Grade
                   </button>
                 </div>
               </div>
 
-              {/* Bloco 2: Visualização da Escala Pronta */}
-              <Painel titulo="Escala de Professores Gerada" subtitulo="Abaixo estão as aulas que o sistema já agrupou para cada professor.">
-                {listaProfessores.length === 0 ? <VazioMsg texto="Nenhum professor na grade ainda. Comece montando a grade no botão acima." /> : (
-                  <div className="space-y-6">
+              {/* Grid Layout Dividido: Esquerda Filtro / Direita Planejamento de Escala Semanal */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                {/* Lateral Esquerda: Lista/Diretório de Professores */}
+                <div className="lg:col-span-3 bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-6">
+                  <div>
+                    <h3 className="text-sm font-black text-white/90">Diretório de Docentes</h3>
+                    <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">Selecione para planejar a grade</p>
+                  </div>
+
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      placeholder="Pesquisar professor..." 
+                      value={busca} 
+                      onChange={e => setBusca(e.target.value)}
+                      className="w-full bg-black border border-white/10 p-4 pl-10 rounded-xl text-xs font-black uppercase outline-none focus:border-[#42a0f5]/40 transition-all"
+                    />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30"><Search size={14} /></span>
+                  </div>
+
+                  <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1 scrollbar-thin">
                     {listaProfessores.filter((n: string) => !busca || n.toLowerCase().includes(busca.toLowerCase())).map(nome => {
                       const aulas = gradeCompleta.filter(g => g.nomeProfessor === nome);
-                      const diasComAula = Array.from(new Set(aulas.map(a => a.diaSemana)));
+                      const especialidade = professoresCMS.find(p => p.nome === nome)?.especialidade || 'Docente';
+                      const selecionado = professorSelecionado === nome;
                       return (
-                        <div key={nome} className="bg-surface-container-low p-5 rounded-2xl">
-                          <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black">{(nome as string).charAt(0)}</div>
+                        <div 
+                          key={nome} 
+                          onClick={() => setProfessorSelecionado(nome)}
+                          className={cn(
+                            "p-4 rounded-2xl cursor-pointer transition-all border flex items-center justify-between group",
+                            selecionado 
+                              ? "bg-primary border-primary/20 text-on-primary" 
+                              : "bg-white/[0.02] border-white/5 hover:bg-white/[0.04] text-white/70 hover:text-white"
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm",
+                              selecionado ? "bg-white text-primary" : "bg-primary/10 text-primary"
+                            )}>
+                              {nome.charAt(0)}
+                            </div>
                             <div>
-                              <p className="text-sm font-black">{nome}</p>
-                              <p className="text-[10px] text-on-surface-variant">{aulas.length} aulas · {diasComAula.join(', ')}</p>
+                              <p className="text-xs font-black truncate max-w-[120px]">{nome}</p>
+                              <p className={cn("text-[9px] font-bold uppercase tracking-wider mt-0.5", selecionado ? "text-white/60" : "text-white/30")}>
+                                {especialidade}
+                              </p>
                             </div>
                           </div>
-                          <div className="grid grid-cols-5 gap-2">
-                            {DIAS_SEMANA.map(dia => {
-                              const aulasDia = aulas.filter(a => a.diaSemana === dia);
-                              return (
-                                <div key={dia} className="text-center">
-                                  <p className="text-[8px] font-black text-on-surface-variant uppercase mb-1">{dia.slice(0, 3)}</p>
-                                  {aulasDia.length === 0 ? (
-                                    <p className="text-[9px] text-on-surface-variant/30">—</p>
-                                  ) : aulasDia.map((a, i) => (
-                                    <div key={i} onClick={() => setEditandoGrade(a)} className="bg-surface-container-highest rounded-lg p-1.5 text-[8px] mb-1 shadow-sm cursor-pointer hover:ring-1 hover:ring-primary transition-all">
-                                      <p className="font-bold text-primary">{a.horario?.split('-')[0]?.trim()}</p>
-                                      <p className="text-on-surface-variant">{a.materia || '—'}</p>
-                                      <p className="font-medium">S{a.numeroSala}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              );
-                            })}
-                          </div>
+                          
+                          <span className={cn(
+                            "text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider",
+                            selecionado ? "bg-white/20 text-white" : "bg-white/5 text-white/40 group-hover:bg-white/10"
+                          )}>
+                            {aulas.length} Aulas
+                          </span>
                         </div>
                       );
                     })}
+
+                    {listaProfessores.filter((n: string) => !busca || n.toLowerCase().includes(busca.toLowerCase())).length === 0 && (
+                      <p className="text-[10px] text-center text-white/20 py-8 font-black uppercase">Nenhum professor encontrado</p>
+                    )}
                   </div>
-                )}
-              </Painel>
+                </div>
+
+                {/* Lateral Direita: Painel Semanal Completo */}
+                <div className="lg:col-span-9 space-y-6">
+                  {professorSelecionado ? (
+                    <Painel 
+                      titulo={`Planejamento Semanal — ${professorSelecionado}`} 
+                      subtitulo={`Grade interativa e bidirecional de aulas. Especialidade: ${professoresCMS.find(p => p.nome === professorSelecionado)?.especialidade || 'Docente'}`}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        {DIAS_SEMANA.map(dia => {
+                          const aulasDia = gradeCompleta.filter(g => g.nomeProfessor === professorSelecionado && g.diaSemana === dia);
+                          return (
+                            <div key={dia} className="space-y-4 bg-white/[0.01] border border-white/5 p-4 rounded-3xl">
+                              {/* Cabeçalho do Dia */}
+                              <div className="text-center pb-3 border-b border-white/5">
+                                <h4 className="text-xs font-black text-white/90 tracking-wider uppercase">{dia}</h4>
+                                <p className="text-[9px] text-[#42a0f5] font-black uppercase tracking-widest mt-1">
+                                  {aulasDia.length} {aulasDia.length === 1 ? 'Aula' : 'Aulas'}
+                                </p>
+                              </div>
+
+                              {/* Slots/Aulas do Dia */}
+                              <div className="space-y-3">
+                                {periodosOrdenados.map((slot) => {
+                                  const aulaSlot = gradeCompleta.find(g => 
+                                    g.nomeProfessor === professorSelecionado && 
+                                    g.diaSemana === dia &&
+                                    (g.horario?.includes(slot.horarioInicio) || slot.horarioInicio.includes(g.horario?.split('-')[0]?.trim() || ''))
+                                  );
+
+                                  if (aulaSlot) {
+                                    const hasEnrolled = aulaSlot.listaAlunos && aulaSlot.listaAlunos.length > 0;
+                                    const isLanguageLab = aulaSlot.tipo === 'language_lab';
+                                    const isAfterSchool = aulaSlot.tipo === 'after_school';
+                                    return (
+                                      <div 
+                                        key={slot.id} 
+                                        className={cn(
+                                          "p-4 rounded-2xl border transition-all relative group flex flex-col justify-between min-h-[140px] hover:scale-[1.02]",
+                                          isLanguageLab 
+                                            ? "bg-[#06b6d4]/10 border-[#06b6d4]/20 hover:border-[#06b6d4]/40" 
+                                            : isAfterSchool 
+                                              ? "bg-[#f59e0b]/10 border-[#f59e0b]/20 hover:border-[#f59e0b]/40"
+                                              : "bg-primary/10 border-primary/20 hover:border-primary/40"
+                                        )}
+                                      >
+                                        <div>
+                                          {/* Time Label */}
+                                          <div className="flex items-center justify-between mb-2">
+                                            <span className={cn(
+                                              "text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md",
+                                              isLanguageLab 
+                                                ? "bg-[#06b6d4]/20 text-[#06b6d4]" 
+                                                : isAfterSchool 
+                                                  ? "bg-[#f59e0b]/20 text-[#f59e0b]"
+                                                  : "bg-primary/20 text-primary"
+                                            )}>
+                                              {slot.nome}
+                                            </span>
+                                            <span className="text-[8px] font-black text-white/30 tracking-widest">{slot.horarioInicio}</span>
+                                          </div>
+
+                                          {/* Subject Name */}
+                                          <h5 className="text-sm font-black text-white leading-tight mb-1 truncate">
+                                            {aulaSlot.materia || 'Matéria'}
+                                          </h5>
+                                          
+                                          {/* Classroom info */}
+                                          <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                                            <DoorOpen size={10} className="text-white/40" /> Sala {aulaSlot.numeroSala}
+                                          </p>
+
+                                          {/* Group / Turma info */}
+                                          {aulaSlot.turma && (
+                                            <p className="text-[9px] text-[#42a0f5] font-black uppercase tracking-widest mt-1">
+                                              Turma: {aulaSlot.turma}
+                                            </p>
+                                          )}
+                                        </div>
+
+                                        {/* Actions & Students */}
+                                        <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
+                                          <span className="text-[8px] font-black text-white/30 uppercase tracking-wider flex items-center gap-1.5">
+                                            <Users size={10} /> {hasEnrolled ? `${aulaSlot.listaAlunos.length} Alunos` : 'Turma Cheia'}
+                                          </span>
+
+                                          <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all">
+                                            <button 
+                                              onClick={() => setEditandoGrade(aulaSlot)}
+                                              className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-all"
+                                              title="Editar Aula"
+                                            >
+                                              <Eye size={12} />
+                                            </button>
+                                            <button 
+                                              onClick={async () => {
+                                                if (confirm('Deseja realmente remover esta aula do professor?')) {
+                                                  setCarregando(true);
+                                                  const ok = await excluirEntradaGradeIndividual(aulaSlot.id);
+                                                  if (ok) {
+                                                    atualizar();
+                                                    setMsg({ tipo: 'ok', texto: 'Aula removida!' });
+                                                  } else {
+                                                    setMsg({ tipo: 'erro', texto: 'Erro ao remover!' });
+                                                  }
+                                                  setCarregando(false);
+                                                }
+                                              }}
+                                              className="p-1.5 bg-red-500/10 hover:bg-red-500/20 rounded-lg text-red-400 hover:text-red-300 transition-all"
+                                              title="Excluir Aula"
+                                            >
+                                              <Trash2 size={12} />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+
+                                  // Slot Livre
+                                  return (
+                                    <div 
+                                      key={slot.id}
+                                      onClick={() => {
+                                        const novoSlot: EntradaGradeSala = {
+                                          id: `new-${Date.now()}`,
+                                          numeroSala: locaisCMS[0]?.numero || 101,
+                                          nomeSala: `Sala ${locaisCMS[0]?.numero || 101}`,
+                                          anoTurma: '6º Ano',
+                                          diaSemana: dia,
+                                          horario: `${slot.horarioInicio} - ${slot.horarioFim}`,
+                                          nomeProfessor: professorSelecionado || '',
+                                          turma: '6º Ano',
+                                          materia: professoresCMS.find(p => p.nome === professorSelecionado)?.especialidade || 'Matéria',
+                                          tipo: 'regular',
+                                          listaAlunos: []
+                                        };
+                                        setEditandoGrade(novoSlot);
+                                      }}
+                                      className="group border border-dashed border-white/10 hover:border-emerald-500/50 hover:bg-emerald-500/5 cursor-pointer rounded-2xl flex flex-col justify-center items-center py-8 text-center min-h-[140px] transition-all"
+                                    >
+                                      <span className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1 group-hover:text-emerald-400/40">
+                                        {slot.nome} Livre
+                                      </span>
+                                      <p className="text-[10px] text-white/40 font-black uppercase tracking-wider group-hover:text-emerald-400 flex items-center gap-1 transition-all mt-1">
+                                        <Plus size={12} /> Alocar Aula
+                                      </p>
+                                      <span className="text-[8px] text-white/10 font-bold uppercase mt-1 group-hover:text-white/20 tracking-wider">
+                                        {slot.horarioInicio} - {slot.horarioFim}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </Painel>
+                  ) : (
+                    <div className="bg-surface-container-low p-12 rounded-[2rem] border border-white/5 flex flex-col items-center justify-center text-center">
+                      <Calendar size={48} className="text-white/20 mb-4" />
+                      <h3 className="text-base font-black text-white/80 uppercase tracking-widest">Nenhum Professor Selecionado</h3>
+                      <p className="text-xs text-white/40 mt-1 max-w-sm">
+                        Selecione um professor da lista lateral esquerda para visualizar, agendar ou editar seus horários de aula.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </motion.div>
           )}
 
@@ -1457,7 +1700,7 @@ export default function Admin() {
         <ModalForm aberto={!!editandoGrade} onClose={() => setEditandoGrade(null)}
           titulo="Editar Horário de Aula"
           largo={true}
-          onSalvar={() => doSave(salvarGradeSala([editandoGrade]), setEditandoGrade)} carregando={carregando}>
+          onSalvar={() => doSave(salvarEntradaGradeIndividual(editandoGrade), setEditandoGrade)} carregando={carregando}>
           {editandoGrade && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
               {/* Coluna Esquerda: Informações da Aula */}
@@ -1517,6 +1760,29 @@ export default function Admin() {
                   <CampoTexto label="Matéria" value={editandoGrade.materia || ''} onChange={v => setEditandoGrade({ ...editandoGrade, materia: v })} />
                   <CampoSelect label="Professor" value={editandoGrade.nomeProfessor} options={['—', 'A DEFINIR', ...listaProfessores]} onChange={v => setEditandoGrade({ ...editandoGrade, nomeProfessor: v })} />
                 </div>
+
+                {!editandoGrade.id?.startsWith('new-') && !editandoGrade.id?.startsWith('temp-') && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (confirm('Deseja realmente excluir este horário de aula?')) {
+                        setCarregando(true);
+                        const ok = await excluirEntradaGradeIndividual(editandoGrade.id);
+                        if (ok) {
+                          setEditandoGrade(null);
+                          atualizar();
+                          setMsg({ tipo: 'ok', texto: 'Horário de aula excluído com sucesso!' });
+                        } else {
+                          setMsg({ tipo: 'erro', texto: 'Erro ao excluir horário de aula.' });
+                        }
+                        setCarregando(false);
+                      }
+                    }}
+                    className="w-full mt-6 py-3.5 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 border border-red-500/20"
+                  >
+                    <Trash2 size={14} /> Excluir Horário de Aula
+                  </button>
+                )}
               </div>
 
               {/* Coluna Direita: Ensalamento */}

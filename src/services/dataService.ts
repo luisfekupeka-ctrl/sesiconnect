@@ -154,6 +154,39 @@ export async function salvarAlunosNaGrade(
   return !error;
 }
 
+export async function salvarEntradaGradeIndividual(entrada: any): Promise<boolean> {
+  const payload = {
+    id: !entrada.id || entrada.id.startsWith('temp-') || entrada.id.startsWith('new-') ? undefined : entrada.id,
+    numero_sala: parseInt(entrada.numeroSala),
+    dia_semana: entrada.diaSemana.toUpperCase().trim(),
+    horario: entrada.horario.trim(),
+    nome_professor: entrada.nomeProfessor || '—',
+    turma: entrada.turma || '6º Ano',
+    materia: entrada.materia || '',
+    tipo: entrada.tipo || 'regular',
+    lista_alunos: entrada.listaAlunos || []
+  };
+
+  const { error } = await supabase
+    .from('mapa_salas')
+    .upsert(payload);
+
+  if (error) {
+    console.error('[DEBUG] Erro ao salvar entrada individual da grade:', error);
+    return false;
+  }
+  return true;
+}
+
+export async function excluirEntradaGradeIndividual(id: string): Promise<boolean> {
+  if (!id || id.startsWith('temp-') || id.startsWith('new-')) return true;
+  const { error } = await supabase
+    .from('mapa_salas')
+    .delete()
+    .eq('id', id);
+  return !error;
+}
+
 // ============================================================
 // ALUNOS
 // ============================================================

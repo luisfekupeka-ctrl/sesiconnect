@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Save, Calendar, DoorOpen, Clock, 
   Trash2, Plus, Coffee, Utensils, BookOpen,
   RefreshCw, Search, User, Palette, Layers,
-  GraduationCap, Zap
+  GraduationCap, Zap, AlertCircle
 } from 'lucide-react';
 import { useEscola } from '../context/ContextoEscola';
 import { salvarGradeSala, salvarPeriodos } from '../services/dataService';
@@ -497,10 +497,11 @@ export default function ScheduleEditor() {
             animate={{ y: 0, opacity: 1, scale: 1 }} 
             exit={{ y: 100, opacity: 0, scale: 0.8 }} 
             className={cn(
-              "fixed bottom-12 right-12 px-10 py-6 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] shadow-3xl z-50 border-2", 
-              mensagem.tipo === 'sucesso' ? "bg-primary text-black border-white/20" : "bg-red-500 text-white border-white/20"
+              "fixed bottom-10 left-1/2 -translate-x-1/2 px-8 py-4 rounded-full font-black text-[10px] uppercase tracking-widest z-[400] shadow-2xl flex items-center gap-3",
+              mensagem.tipo === 'sucesso' ? "bg-primary text-black shadow-primary/20" : "bg-red-500 text-white shadow-red-500/20"
             )}
           >
+            {mensagem.tipo === 'sucesso' ? <Save size={14} /> : <AlertCircle size={14} />}
             {mensagem.texto}
           </motion.div>
         )}

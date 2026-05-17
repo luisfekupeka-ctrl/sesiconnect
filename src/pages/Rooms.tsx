@@ -21,6 +21,36 @@ export default function RoomsPage() {  const { salas, estadoEscola, gradeComplet
     });
   }, [salas, busca]);
 
+  const salasDeduplicadas = useMemo(() => {
+    const map = new Map<number, typeof salas[0]>();
+    salasFiltradas.forEach(sala => {
+      const existente = map.get(sala.numero);
+      if (!existente) {
+        map.set(sala.numero, sala);
+      } else {
+        let scoreExistente = 0;
+        let scoreNovo = 0;
+        
+        if (existente.nome && existente.nome !== `Sala ${existente.numero}`) scoreExistente += 2;
+        if (sala.nome && sala.nome !== `Sala ${sala.numero}`) scoreNovo += 2;
+        
+        if (existente.segmento && existente.segmento !== 'A DEFINIR') scoreExistente += 1;
+        if (sala.segmento && sala.segmento !== 'A DEFINIR') scoreNovo += 1;
+        
+        if (existente.ano && existente.ano !== 'A DEFINIR') scoreExistente += 2;
+        if (sala.ano && sala.ano !== 'A DEFINIR') scoreNovo += 2;
+        
+        if (existente.grade && existente.grade.length > 0) scoreExistente += existente.grade.length;
+        if (sala.grade && sala.grade.length > 0) scoreNovo += sala.grade.length;
+        
+        if (scoreNovo > scoreExistente) {
+          map.set(sala.numero, sala);
+        }
+      }
+    });
+    return Array.from(map.values());
+  }, [salasFiltradas]);
+
   if (salaSelecionada) {
     return (
       <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="min-h-screen pb-20 px-2 md:px-8 pt-4 space-y-6">
@@ -84,7 +114,7 @@ export default function RoomsPage() {  const { salas, estadoEscola, gradeComplet
 
       {/* Lista Vertical de Salas */}
       <div className="flex flex-col gap-3">
-        {salasFiltradas.map((sala) => {
+        {salasDeduplicadas.map((sala) => {
           const estadoSala = estadoEscola.salas.find(s => s.numeroSala === sala.numero);
           const ocupada = estadoSala?.estaOcupada || false;
           const aulaAtual = estadoSala?.aulaAtual;
@@ -199,6 +229,8 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
        ? entradaRegular.listaAlunos
        : alunosDaSala;
   }
+
+  alunosNoBloco = Array.from(new Set(alunosNoBloco.map(a => String(a).trim()))).filter(Boolean);
 
   if (!entradaFinal) return (
      <div className="p-4 rounded-xl bg-black border-2 border-dashed border-white/5 opacity-10 flex items-center justify-between">

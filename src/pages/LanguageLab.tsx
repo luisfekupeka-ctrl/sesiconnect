@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { MapPin, Clock, Users, Search, ChevronLeft, User, BookOpen, Globe, ChevronRight } from 'lucide-react';
 import { useEscola } from '../context/ContextoEscola';
@@ -9,9 +9,45 @@ export default function LanguageLab() {
   const [labSelecionado, setLabSelecionado] = useState<any | null>(null);
   const [busca, setBusca] = useState('');
 
+  const languageLabDeduplicado = useMemo(() => {
+    const map = new Map<string, typeof languageLab[0]>();
+    languageLab.forEach(lab => {
+      const key = (lab.nivel || '').trim().toUpperCase();
+      if (!key) return;
+      const existente = map.get(key);
+      if (!existente) {
+        map.set(key, lab);
+      } else {
+        let scoreExistente = 0;
+        let scoreNovo = 0;
+        
+        if (existente.professor && existente.professor !== 'A DEFINIR' && existente.professor !== '') scoreExistente += 1;
+        if (lab.professor && lab.professor !== 'A DEFINIR' && lab.professor !== '') scoreNovo += 1;
+        
+        if (existente.sala && existente.sala !== 'A DEFINIR' && existente.sala !== '') scoreExistente += 1;
+        if (lab.sala && lab.sala !== 'A DEFINIR' && lab.sala !== '') scoreNovo += 1;
+        
+        if (existente.horarioInicio && existente.horarioInicio !== '') scoreExistente += 1;
+        if (lab.horarioInicio && lab.horarioInicio !== '') scoreNovo += 1;
+        
+        if (existente.diaSemana && existente.diaSemana !== '') scoreExistente += 1;
+        if (lab.diaSemana && lab.diaSemana !== '') scoreNovo += 1;
+        
+        if (existente.listaAlunos && Array.isArray(existente.listaAlunos)) scoreExistente += existente.listaAlunos.length * 10;
+        if (lab.listaAlunos && Array.isArray(lab.listaAlunos)) scoreNovo += lab.listaAlunos.length * 10;
+        
+        if (scoreNovo > scoreExistente) {
+          map.set(key, lab);
+        }
+      }
+    });
+    return Array.from(map.values());
+  }, [languageLab]);
+
   if (labSelecionado) {
     const alunos = labSelecionado.listaAlunos || [];
-    const alunosFiltrados = alunos.filter((a: string) => a.toLowerCase().includes(busca.toLowerCase()));
+    const alunosDeduplicados = Array.from(new Set(alunos.map((a: string) => a.trim()))).filter(Boolean);
+    const alunosFiltrados = alunosDeduplicados.filter((a: string) => a.toLowerCase().includes(busca.toLowerCase()));
 
     return (
       <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="min-h-screen pb-20 px-2 md:px-8 pt-4 space-y-6">
@@ -64,7 +100,7 @@ export default function LanguageLab() {
       
       {/* Lista Vertical de Níveis */}
       <div className="flex flex-col gap-3">
-        {languageLab.map((lab) => (
+        {languageLabDeduplicado.map((lab) => (
           <motion.div key={lab.id} whileHover={{ x: 5 }} onClick={() => setLabSelecionado(lab)}
             className="bg-[#0d0d0d] p-5 rounded-2xl shadow-premium border-2 border-white/5 hover:border-[#42a0f5]/40 transition-all flex items-center justify-between group cursor-pointer overflow-hidden">
              <div className="flex items-center gap-6">

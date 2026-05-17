@@ -28,6 +28,22 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
 
   const ANOS = ['6º Ano', '7º Ano', '8º Ano', '9º Ano', '1º EM', '2º EM', '3º EM'];
 
+  const turmasDaUnidade = useMemo(() => {
+    if (!selecao.unidade) return [];
+    const prefix = selecao.unidade.split(' ')[0];
+    return Array.from(new Set(alunos.filter(a => (a.ano || '').includes(prefix)).map(a => a.turma))).filter(Boolean).sort() as string[];
+  }, [alunos, selecao.unidade]);
+
+  const alunosDaTurma = useMemo(() => {
+    if (!selecao.turma) return [];
+    return alunos.filter(a => a.turma === selecao.turma).sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [alunos, selecao.turma]);
+
+  const documentosDoAluno = useMemo(() => {
+    if (!selecao.aluno) return [];
+    return ocorrencias.filter(o => o.nomeAluno === selecao.aluno?.nome).sort((a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime());
+  }, [ocorrencias, selecao.aluno]);
+
   // Navegação
   const entrarUnidade = (ano: string) => {
     setSelecao({ unidade: ano });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Clock, Users, ChevronLeft, User, DoorOpen, Search, Star, ChevronRight } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -16,9 +16,45 @@ export default function AfterSchool() {
     (a.dias || []).some((d: string) => d.toUpperCase() === diaFiltro.toUpperCase())
   );
 
+  const atividadesDeduplicadas = useMemo(() => {
+    const map = new Map<string, typeof atividadesDoDia[0]>();
+    atividadesDoDia.forEach(ativ => {
+      const key = (ativ.nome || '').trim().toUpperCase();
+      if (!key) return;
+      const existente = map.get(key);
+      if (!existente) {
+        map.set(key, ativ);
+      } else {
+        let scoreExistente = 0;
+        let scoreNovo = 0;
+        
+        if (existente.nomeProfessor && existente.nomeProfessor !== 'A DEFINIR' && existente.nomeProfessor !== '') scoreExistente += 1;
+        if (ativ.nomeProfessor && ativ.nomeProfessor !== 'A DEFINIR' && ativ.nomeProfessor !== '') scoreNovo += 1;
+        
+        if (existente.local && existente.local !== 'A DEFINIR' && existente.local !== '') scoreExistente += 1;
+        if (ativ.local && ativ.local !== 'A DEFINIR' && ativ.local !== '') scoreNovo += 1;
+        
+        if (existente.horarioInicio && existente.horarioInicio !== '') scoreExistente += 1;
+        if (ativ.horarioInicio && ativ.horarioInicio !== '') scoreNovo += 1;
+        
+        if (existente.categoria && existente.categoria !== '') scoreExistente += 1;
+        if (ativ.categoria && ativ.categoria !== '') scoreNovo += 1;
+        
+        if (existente.listaAlunos && Array.isArray(existente.listaAlunos)) scoreExistente += existente.listaAlunos.length * 10;
+        if (ativ.listaAlunos && Array.isArray(ativ.listaAlunos)) scoreNovo += ativ.listaAlunos.length * 10;
+        
+        if (scoreNovo > scoreExistente) {
+          map.set(key, ativ);
+        }
+      }
+    });
+    return Array.from(map.values());
+  }, [atividadesDoDia]);
+
   if (ativSelecionada) {
     const alunos = ativSelecionada.listaAlunos || [];
-    const alunosFiltrados = alunos.filter((a: string) => a.toLowerCase().includes(busca.toLowerCase()));
+    const alunosDeduplicados = Array.from(new Set(alunos.map((a: string) => a.trim()))).filter(Boolean);
+    const alunosFiltrados = alunosDeduplicados.filter((a: string) => a.toLowerCase().includes(busca.toLowerCase()));
 
     return (
       <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="min-h-screen pb-20 px-2 md:px-8 pt-4 space-y-6">
@@ -80,7 +116,7 @@ export default function AfterSchool() {
       
       {/* Lista Vertical de Oficinas */}
       <div className="flex flex-col gap-3">
-        {atividadesDoDia.map((ativ) => (
+        {atividadesDeduplicadas.map((ativ) => (
           <motion.div key={ativ.id} whileHover={{ x: 5 }} onClick={() => setAtivSelecionada(ativ)}
             className="bg-[#0d0d0d] p-5 rounded-2xl shadow-premium border-2 border-white/5 hover:border-[#fbbf24]/40 transition-all flex items-center justify-between group cursor-pointer overflow-hidden">
              <div className="flex items-center gap-6">
@@ -99,7 +135,7 @@ export default function AfterSchool() {
              </div>
           </motion.div>
         ))}
-        {atividadesDoDia.length === 0 && (
+        {atividadesDeduplicadas.length === 0 && (
            <div className="py-16 text-center opacity-20 italic font-black text-sm border-2 border-dashed border-white/5 rounded-2xl">Sem atividades.</div>
         )}
       </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Settings, Calendar as CalendarIcon, BookOpen, UserMinus, FileSignature, CheckCircle2, AlertCircle, RefreshCw, DoorOpen, Users, ChevronRight, FileDown, ShieldCheck, ArrowLeft, FileText, Check, Info, ChevronDown, Coffee, Filter, Trash2, LayoutGrid, User, Clock, ChevronLeft } from 'lucide-react';
+import { Settings, Calendar as CalendarIcon, BookOpen, UserMinus, FileSignature, CheckCircle2, AlertCircle, RefreshCw, DoorOpen, Users, ChevronRight, FileDown, ShieldCheck, ArrowLeft, FileText, Check, Info, ChevronDown, Coffee, Filter, Trash2, LayoutGrid, User, Clock, ChevronLeft, Printer, X, Plus } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 import {
@@ -11,67 +11,47 @@ import {
 import {
   buscarProfessoresConfig,
   buscarRealocacoes,
-  calcularModoProva,
-  calcularModoProvaLote,
-  calcularCenarioFalta,
   salvarEventoEscola,
   salvarRealocacoes,
-  aprovarRascunho,
   excluirEvento
 } from '../services/motorRealocacao';
-const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
-const SEGMENTOS = ['6º e 7º', '8º e 9º', 'Ensino Médio'];
 
 export default function GestaoRealocacao() {
   const { professores, gradeCompleta, salas, periodos } = useEscola();
   const [professoresConfig, setProfessoresConfig] = useState<ProfessorConfig[]>([]);
   const [historico, setHistorico] = useState<ResultadoRealocacao[]>([]);
 
-  // ESTADO DO WIZARD
+  // ESTADO DO WIZARD REFORMULADO
   const [step, setStep] = useState(1);
-  const [dataSelecionada, setDataSelecionada] = useState(new Date().toISOString().split('T')[0]);
-  const [diaSel, setDiaSel] = useState('');
-  const [tipoFluxo, setTipoFluxo] = useState<'SALA' | 'PROFESSOR' | null>(null);
-  const [targetId, setTargetId] = useState<string>('');
-  const [segmentoSel, setSegmentoSel] = useState<string>('6º e 7º');
-  const [horariosSel, setHorariosSel] = useState<string[]>([]);
-  const [profFixoProva, setProfFixoProva] = useState('');
-  const [isModoProva, setIsModoProva] = useState(false);
-  const [isModoLote, setIsModoLote] = useState(false);
-  const [datasSelecionadas, setDatasSelecionadas] = useState<string[]>([]);
+  const [datasSelecionadas, setDatasSelecionadas] = useState<string[]>([new Date().toISOString().split('T')[0]]);
+  const [novaData, setNovaData] = useState(new Date().toISOString().split('T')[0]);
   
-  // REGRAS DE SUBSTITUIÇÃO
+  // Fluxos Principais
+  // PROFESSOR = Falta de Professor, SALA = Modo Prova / Ensalamento
+  const [tipoFluxo, setTipoFluxo] = useState<'SALA' | 'PROFESSOR' | null>(null);
+  
+  // Salas selecionadas (para fluxo Sala/Prova)
+  const [salasSelecionadas, setSalasSelecionadas] = useState<number[]>([]);
+  
+  // Professor Alvo (para fluxo Professor Faltou)
+  const [profFaltouId, setProfFaltouId] = useState<string>('');
+  
+  // Horários / Períodos das Provas
+  const [horariosSel, setHorariosSel] = useState<string[]>([]);
+  
+  // Fiscal geral pré-selecionado (opcional)
+  const [profFixoProva, setProfFixoProva] = useState('');
+  
+  // Regra de substituição para fluxo Professor Faltou
   const [regraSub, setRegraSub] = useState<'LIVRE' | 'MESMO_ANO' | 'DIRECIONADA'>('LIVRE');
   const [profDirecionado, setProfDirecionado] = useState('');
-
-  // Sincroniza o dia da semana com a data selecionada
-  useEffect(() => {
-    if (dataSelecionada) {
-      const data = new Date(dataSelecionada + 'T00:00:00');
-      const dias = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO'];
-      setDiaSel(dias[data.getDay()]);
-      // Por padrão, se não estiver em modo lote, a lista de datas é só a selecionada
-      if (!isModoLote) setDatasSelecionadas([dataSelecionada]);
-    }
-  }, [dataSelecionada, isModoLote]);
 
   const [resultados, setResultados] = useState<ResultadoRealocacao[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [filtroHistorico, setFiltroHistorico] = useState<'TODOS' | 'RASCUNHOS'>('TODOS');
-
-  // Lógica de Horários Consecutivos para Modo Prova
-  const verificarConsecutividade = () => {
-    if (horariosSel.length <= 1) return true;
-    const sorted = [...horariosSel].sort();
-    for (let i = 0; i < sorted.length - 1; i++) {
-      const fimAtual = sorted[i].split(' - ')[1];
-      const inicioProximo = sorted[i + 1].split(' - ')[0];
-      if (fimAtual !== inicioProximo) return false;
-    }
-    return true;
-  };
-
-  const horariosSaoConsecutivos = verificarConsecutividade();
+  
+  // Visualização de PDF/Impressão
+  const [mostrarPdfEnsalamento, setMostrarPdfEnsalamento] = useState(false);
 
   useEffect(() => {
     carregarDados();
@@ -96,43 +76,163 @@ export default function GestaoRealocacao() {
     setHistorico(rec);
   }
 
+  // Adicionar data à lista
+  const adicionarData = () => {
+    if (novaData && !datasSelecionadas.includes(novaData)) {
+      setDatasSelecionadas(prev => [...prev, novaData].sort());
+    }
+  };
+
+  // Remover data da lista
+  const removerData = (dt: string) => {
+    if (datasSelecionadas.length > 1) {
+      setDatasSelecionadas(prev => prev.filter(d => d !== dt));
+    }
+  };
+
+  // Seleção rápida de salas por ano
+  const selecionarTodasDoAno = (anoPrefixo: string) => {
+    const salasDoAno = salas
+      .filter(s => s.ano && s.ano.includes(anoPrefixo))
+      .map(s => s.numero);
+    
+    // Se todas já estiverem selecionadas, desmarque. Caso contrário, selecione todas.
+    const todasMarcadas = salasDoAno.every(num => salasSelecionadas.includes(num));
+    if (todasMarcadas) {
+      setSalasSelecionadas(prev => prev.filter(num => !salasDoAno.includes(num)));
+    } else {
+      setSalasSelecionadas(prev => Array.from(new Set([...prev, ...salasDoAno])));
+    }
+  };
+
+  // Seleção rápida de todas as salas do Ensino Médio
+  const selecionarTodasEnsinoMedio = () => {
+    const salasEM = salas
+      .filter(s => s.segmento === 'Ensino Médio')
+      .map(s => s.numero);
+    
+    const todasMarcadas = salasEM.every(num => salasSelecionadas.includes(num));
+    if (todasMarcadas) {
+      setSalasSelecionadas(prev => prev.filter(num => !salasEM.includes(num)));
+    } else {
+      setSalasSelecionadas(prev => Array.from(new Set([...prev, ...salasEM])));
+    }
+  };
+
+  const alternarSala = (numero: number) => {
+    setSalasSelecionadas(prev => 
+      prev.includes(numero) ? prev.filter(n => n !== numero) : [...prev, numero]
+    );
+  };
+
   const mudarSubstituto = (index: number, novoNome: string) => {
     setResultados(prev => prev.map((item, idx) =>
       idx === index ? { ...item, professorSubstituto: novoNome } : item
     ));
   };
 
+  // Lógica principal de cruzamento de horários (Modo Prova e Falta de Professor)
   const handleCalcular = () => {
     setCarregando(true);
-    setTimeout(async () => {
+    setTimeout(() => {
       let resGeral: ResultadoRealocacao[] = [];
-      
-      const diasParaProcessar = isModoLote ? datasSelecionadas : [dataSelecionada];
 
-      for (const dataItem of diasParaProcessar) {
+      for (const dataItem of datasSelecionadas) {
         const dataObj = new Date(dataItem + 'T00:00:00');
-        const diaSemanaItem = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO'][dataObj.getDay()];
-        
-        let resDia: ResultadoRealocacao[] = [];
+        const diasSemanaMap = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO'];
+        const diaSemanaItem = diasSemanaMap[dataObj.getDay()];
 
-        if (tipoFluxo === 'SALA' && isModoProva && isModoLote) {
-          resDia = calcularModoProvaLote(segmentoSel, horariosSel, diaSemanaItem, gradeCompleta, professoresConfig);
-        } else if (tipoFluxo === 'SALA' && isModoProva) {
-          resDia = calcularModoProva(profFixoProva, Number(targetId), horariosSel, diaSemanaItem, segmentoSel, gradeCompleta, professoresConfig, { regra: regraSub, professorAlvo: profDirecionado });
-        } else if (tipoFluxo === 'SALA') {
-          horariosSel.forEach(h => {
-            const entradaOriginal = gradeCompleta.find(g => g.numeroSala === Number(targetId) && g.diaSemana === diaSemanaItem && g.horario === h);
-            if (entradaOriginal) {
-              const subsHorario = calcularCenarioFalta(diaSemanaItem, [h], entradaOriginal.nomeProfessor, segmentoSel, gradeCompleta, professoresConfig);
-              resDia = [...resDia, ...subsHorario];
+        if (tipoFluxo === 'SALA') {
+          // --- MODO PROVA / ENSALAMENTO MULTI-SALAS ---
+          for (const salaNum of salasSelecionadas) {
+            const salaObj = salas.find(s => s.numero === salaNum);
+            const nomeSala = salaObj ? salaObj.nome : `Sala ${salaNum}`;
+            const segmentoSala = salaObj ? salaObj.segmento : '6º e 7º';
+
+            for (const h of horariosSel) {
+              // Encontra a aula original cadastrada para esta sala e horário
+              const entradaOriginal = gradeCompleta.find(g => 
+                g.numeroSala === salaNum && 
+                g.diaSemana === diaSemanaItem && 
+                g.horario === h
+              );
+
+              const originalTeacher = entradaOriginal ? entradaOriginal.nomeProfessor : 'LIVRE';
+              const originalMateria = entradaOriginal ? entradaOriginal.materia : 'Janela';
+              const turmaNome = entradaOriginal ? entradaOriginal.turma : (salaObj ? `${salaObj.ano} ${salaObj.nome}` : `Sala ${salaNum}`);
+
+              // O fiscal sugerido
+              let fiscalSugerido = profFixoProva || originalTeacher;
+              if (fiscalSugerido === 'LIVRE') {
+                fiscalSugerido = 'A DEFINIR';
+              }
+
+              resGeral.push({
+                id: `ensalamento-${Math.random()}`,
+                eventoId: 'modo-prova-salas',
+                tipo: 'PROVA',
+                professorOriginal: originalTeacher,
+                professorSubstituto: fiscalSugerido,
+                turma: turmaNome,
+                horario: h,
+                segmento: segmentoSala,
+                acao: `Prova (${originalMateria})`,
+                status: 'RASCUNHO',
+                dia: dataItem
+              });
             }
-          });
+          }
         } else {
-          resDia = calcularCenarioFalta(diaSemanaItem, horariosSel, targetId, segmentoSel, gradeCompleta, professoresConfig, { regra: regraSub, professorAlvo: profDirecionado });
-        }
+          // --- FLUXO AUSÊNCIA DE PROFESSOR (PROFESSOR FALTOU) ---
+          for (const h of horariosSel) {
+            const aulaAfetada = gradeCompleta.find(a =>
+              a.nomeProfessor === profFaltouId &&
+              a.diaSemana === diaSemanaItem &&
+              a.horario === h
+            );
 
-        // Adiciona a data aos resultados para exibição
-        resGeral = [...resGeral, ...resDia.map(r => ({ ...r, dia: dataItem }))];
+            if (!aulaAfetada) continue;
+
+            // Busca professores livres na hora
+            let substitutosValidos = professoresConfig.filter(c => {
+              const ocupado = gradeCompleta.some(g =>
+                g.nomeProfessor === c.nome &&
+                g.diaSemana === diaSemanaItem &&
+                g.horario === h
+              );
+              return !ocupado && c.nome !== profFaltouId;
+            });
+
+            // Aplicar regras
+            if (regraSub === 'DIRECIONADA' && profDirecionado) {
+              const profAlvo = professoresConfig.find(c => c.nome === profDirecionado);
+              if (profAlvo) {
+                const ocupado = gradeCompleta.some(g => g.nomeProfessor === profAlvo.nome && g.diaSemana === diaSemanaItem && g.horario === h);
+                if (!ocupado) substitutosValidos = [profAlvo];
+              }
+            } else if (regraSub === 'MESMO_ANO') {
+              const professoresDoAno = new Set(gradeCompleta.filter(g => g.turma === aulaAfetada.turma).map(g => g.nomeProfessor));
+              const filtrados = substitutosValidos.filter(s => professoresDoAno.has(s.nome));
+              if (filtrados.length > 0) substitutosValidos = filtrados;
+            }
+
+            const substituto = substitutosValidos.length > 0 ? substitutosValidos[0].nome : 'A DEFINIR';
+
+            resGeral.push({
+              id: `falta-${Math.random()}`,
+              eventoId: 'falta-id',
+              tipo: 'FALTA',
+              professorOriginal: profFaltouId,
+              professorSubstituto: substituto,
+              turma: aulaAfetada.turma,
+              horario: h,
+              segmento: aulaAfetada.segmento || 'Especializado',
+              acao: `Falta de ${profFaltouId}`,
+              status: 'RASCUNHO',
+              dia: dataItem
+            });
+          }
+        }
       }
 
       setResultados(resGeral);
@@ -141,22 +241,21 @@ export default function GestaoRealocacao() {
     }, 800);
   };
 
+  // Salvar registro de realocação histórico
   const handleFinalizar = async (isDraft: boolean) => {
     setCarregando(true);
     const status: StatusEvento = isDraft ? 'RASCUNHO' : 'EFETIVADO';
-    
-    try {
-      const diasParaProcessar = isModoLote ? datasSelecionadas : [dataSelecionada];
 
-      for (const dataItem of diasParaProcessar) {
+    try {
+      for (const dataItem of datasSelecionadas) {
         const resultadosDoDia = resultados.filter(r => r.dia === dataItem);
         if (resultadosDoDia.length === 0) continue;
 
         const eventoId = await salvarEventoEscola({
-          tipo: isModoProva ? 'PROVA' : 'FALTA',
+          tipo: tipoFluxo === 'SALA' ? 'PROVA' : 'FALTA',
           dia: dataItem,
           horarios: horariosSel,
-          professor: tipoFluxo === 'PROFESSOR' ? targetId : (isModoLote ? `Lote: ${segmentoSel}` : profFixoProva),
+          professor: tipoFluxo === 'PROFESSOR' ? profFaltouId : `Salas: ${salasSelecionadas.join(',')}`,
           status
         });
 
@@ -165,17 +264,27 @@ export default function GestaoRealocacao() {
         }
       }
 
-      alert(isDraft ? 'Rascunhos salvos com sucesso!' : 'Realocações efetivadas com sucesso!');
+      alert(isDraft ? 'Ensalamento salvo nos rascunhos!' : 'Ensalamento oficial registrado!');
       setStep(1);
       setResultados([]);
-      setIsModoLote(false);
-      setDatasSelecionadas([]);
+      setSalasSelecionadas([]);
+      setHorariosSel([]);
+      setProfFixoProva('');
       carregarDados();
     } catch (e) {
-      alert(isDraft ? 'Erro ao salvar rascunho.' : 'Erro ao efetivar.');
+      alert('Erro ao salvar as informações.');
     } finally {
       setCarregando(false);
     }
+  };
+
+  // Cores dinâmicas de acordo com o ano da sala
+  const obterCorAno = (turma: string) => {
+    if (turma.includes('6º')) return 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
+    if (turma.includes('7º')) return 'bg-blue-500/10 text-blue-400 border-blue-500/30';
+    if (turma.includes('8º')) return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+    if (turma.includes('9º')) return 'bg-orange-500/10 text-orange-400 border-orange-500/30';
+    return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
   };
 
   return (
@@ -188,7 +297,7 @@ export default function GestaoRealocacao() {
             </div>
             <div>
               <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">Smart Sub</h1>
-              <p className="text-blue-400 text-xs font-black uppercase tracking-[0.3em]">Inteligência em Realocação</p>
+              <p className="text-blue-400 text-xs font-black uppercase tracking-[0.3em]">Ensalamento e Provas</p>
             </div>
           </div>
             
@@ -203,69 +312,48 @@ export default function GestaoRealocacao() {
         {step === 1 && (
           <motion.div key="s1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-surface-container-lowest p-6 md:p-10 rounded-[2.5rem] md:rounded-[3rem] editorial-shadow border border-blue-800">
             <header className="mb-8 md:mb-10">
-              <h2 className="text-2xl md:text-3xl font-black text-on-surface-bright italic">1. Selecione a Data</h2>
-              <p className="text-on-surface-variant text-xs md:text-sm font-medium mt-2">Escolha qualquer dia do ano para gerenciar as substituições.</p>
+              <h2 className="text-2xl md:text-3xl font-black text-on-surface-bright italic">1. Selecione as Datas</h2>
+              <p className="text-on-surface-variant text-xs md:text-sm font-medium mt-2">Escolha um ou vários dias para aplicar o ensalamento / prova.</p>
             </header>
             
-            <div className="flex flex-col gap-8">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between px-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-amber">Calendário</label>
-                  <button 
-                    onClick={() => setIsModoLote(!isModoLote)}
-                    className={cn("px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2", isModoLote ? "bg-amber-700 text-white shadow-lg" : "bg-white/5 text-on-surface-variant")}
-                  >
-                    <LayoutGrid size={12} /> {isModoLote ? 'Semana de Provas' : 'Dia Único'}
-                  </button>
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col sm:flex-row gap-4 items-end bg-surface-container-low p-6 rounded-[2rem] border border-blue-800/20">
+                <div className="flex-1 space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-accent-amber ml-2">Escolher Nova Data</label>
+                  <input 
+                    type="date" 
+                    value={novaData} 
+                    onChange={e => setNovaData(e.target.value)}
+                    className="w-full bg-surface-container-high p-4 rounded-xl font-bold text-lg text-on-surface border border-blue-850 outline-none" 
+                  />
                 </div>
+                <button 
+                  onClick={adicionarData}
+                  className="px-6 py-4 bg-blue-800 hover:bg-blue-700 text-white rounded-xl font-black uppercase text-xs flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <Plus size={16} /> Adicionar
+                </button>
+              </div>
 
-                {isModoLote ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-on-surface-variant ml-2 uppercase">Início</label>
-                      <input type="date" value={dataSelecionada} onChange={e => setDataSelecionada(e.target.value)} className="w-full bg-surface-container-low p-5 rounded-2xl font-black text-xl text-on-surface border-2 border-blue-800 outline-none" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-on-surface-variant ml-2 uppercase">Fim</label>
-                      <input type="date" onChange={e => {
-                        const start = new Date(dataSelecionada + 'T00:00:00');
-                        const end = new Date(e.target.value + 'T00:00:00');
-                        const list = [];
-                        let curr = start;
-                        while(curr <= end) {
-                          list.push(curr.toISOString().split('T')[0]);
-                          curr.setDate(curr.getDate() + 1);
-                        }
-                        setDatasSelecionadas(list);
-                      }} className="w-full bg-surface-container-low p-5 rounded-2xl font-black text-xl text-on-surface border-2 border-blue-800 outline-none" />
-                    </div>
-                    <div className="sm:col-span-2 p-4 bg-amber-500/10 rounded-2xl border border-amber-500/20">
-                       <p className="text-[10px] font-black text-amber-500 uppercase flex items-center gap-2"><CheckCircle2 size={12} /> {datasSelecionadas.length} dias selecionados para realocação em lote.</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="relative group cursor-pointer" onClick={() => {
-                    const input = document.getElementById('calendario-principal') as HTMLInputElement;
-                    if (input) input.showPicker();
-                  }}>
-                    <div className="absolute left-8 top-1/2 -translate-y-1/2 text-blue-400 group-hover:text-accent-amber transition-colors">
-                      <CalendarIcon size={32} />
-                    </div>
-                    <input 
-                      id="calendario-principal"
-                      type="date" 
-                      value={dataSelecionada} 
-                      onChange={e => setDataSelecionada(e.target.value)}
-                      className="w-full bg-surface-container-low p-6 md:p-8 pl-20 md:pl-24 rounded-[1.5rem] md:rounded-[2rem] font-black text-2xl md:text-4xl text-on-surface border-2 border-blue-800 group-hover:border-accent-amber transition-all outline-none shadow-inner cursor-pointer"
-                    />
-                    <div className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:flex flex-col items-end">
-                      <span className="bg-amber-700 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl text-xs md:text-sm font-black uppercase shadow-xl group-hover:bg-amber-600 transition-colors">
-                        {diaSel}
-                      </span>
-                    </div>
-                  </div>
-                )}
-                <p className="text-[10px] text-on-surface-variant italic ml-2">As provas geralmente ocorrem em períodos de múltiplos dias.</p>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant ml-2">Datas Selecionadas</label>
+                <div className="flex flex-wrap gap-2">
+                  {datasSelecionadas.map(d => {
+                    const dataObj = new Date(d + 'T00:00:00');
+                    const diasSemana = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+                    const diaNome = diasSemana[dataObj.getDay()];
+                    return (
+                      <div key={d} className="flex items-center gap-2 bg-blue-900/30 border border-blue-800/60 px-4 py-2 rounded-xl text-sm font-black text-white">
+                        <span>{new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')} ({diaNome})</span>
+                        {datasSelecionadas.length > 1 && (
+                          <button onClick={() => removerData(d)} className="text-red-400 hover:text-red-300 ml-1 transition-colors cursor-pointer">
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -281,27 +369,19 @@ export default function GestaoRealocacao() {
         {step === 2 && (
           <motion.div key="s2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-surface-container-lowest p-6 md:p-10 rounded-[2.5rem] md:rounded-[3rem] editorial-shadow border border-blue-800">
             <h2 className="text-2xl md:text-3xl font-black mb-8 text-on-surface-bright italic">2. Tipo de Fluxo</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <button onClick={() => { setTipoFluxo('SALA'); setIsModoProva(false); setIsModoLote(false); setStep(3); }} className="group p-8 rounded-[2rem] bg-surface-container-low border-2 border-blue-800 hover:border-accent-amber transition-all text-left flex flex-col gap-6 shadow-xl">
-                <div className="w-12 h-12 bg-blue-800 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><LayoutGrid size={24} className="text-white" /></div>
-                <div>
-                  <h3 className="text-xl font-black text-white uppercase">Por Sala</h3>
-                  <p className="text-xs text-on-surface-variant mt-1">Realocar professores que atendem uma sala/turma específica.</p>
-                </div>
-              </button>
-              <button onClick={() => { setTipoFluxo('PROFESSOR'); setIsModoProva(false); setIsModoLote(false); setStep(3); }} className="group p-8 rounded-[2rem] bg-surface-container-low border-2 border-blue-800 hover:border-accent-amber transition-all text-left flex flex-col gap-6 shadow-xl">
-                <div className="w-12 h-12 bg-amber-700 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><User size={24} className="text-white" /></div>
-                <div>
-                  <h3 className="text-xl font-black text-white uppercase">Professor Faltou</h3>
-                  <p className="text-xs text-on-surface-variant mt-1">Ausência de um professor e cobrir todos os horários dele.</p>
-                </div>
-              </button>
-              <button onClick={() => { setTipoFluxo('SALA'); setIsModoProva(true); setIsModoLote(true); setStep(3); }} className="group p-8 rounded-[2rem] bg-amber-900/20 border-2 border-amber-600 hover:border-amber-400 transition-all text-left flex flex-col gap-6 shadow-xl relative overflow-hidden">
-                <div className="absolute top-4 right-4"><Coffee className="text-amber-500/30" size={40} /></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <button onClick={() => { setTipoFluxo('SALA'); setStep(3); }} className="group p-8 rounded-[2rem] bg-surface-container-low border-2 border-blue-800 hover:border-accent-amber transition-all text-left flex flex-col gap-6 shadow-xl cursor-pointer">
                 <div className="w-12 h-12 bg-amber-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><FileSignature size={24} className="text-white" /></div>
                 <div>
-                  <h3 className="text-xl font-black text-white uppercase tracking-tighter">Modo Prova (Lote)</h3>
-                  <p className="text-xs text-on-surface-variant mt-1">Configurar salas por Segmento/Ano e manter fiscais fixos.</p>
+                  <h3 className="text-xl font-black text-white uppercase tracking-tighter">Modo Prova / Ensalamento por Salas</h3>
+                  <p className="text-xs text-on-surface-variant mt-1">Escolher várias salas ao mesmo tempo, cruzar horários das aulas e gerar folha de ensalamento PDF.</p>
+                </div>
+              </button>
+              <button onClick={() => { setTipoFluxo('PROFESSOR'); setStep(3); }} className="group p-8 rounded-[2rem] bg-surface-container-low border-2 border-blue-800 hover:border-accent-amber transition-all text-left flex flex-col gap-6 shadow-xl cursor-pointer">
+                <div className="w-12 h-12 bg-blue-800 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><User size={24} className="text-white" /></div>
+                <div>
+                  <h3 className="text-xl font-black text-white uppercase">Ausência de Professor</h3>
+                  <p className="text-xs text-on-surface-variant mt-1">Registrar falta de um professor e cobrir automaticamente suas aulas livres no dia.</p>
                 </div>
               </button>
             </div>
@@ -315,107 +395,113 @@ export default function GestaoRealocacao() {
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
               <div className="space-y-8">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant ml-2">{isModoLote ? 'Selecionar Segmento' : 'Identificar Alvo'}</label>
-                  {isModoLote ? (
-                    <select 
-                      value={segmentoSel} 
-                      onChange={e => setSegmentoSel(e.target.value)} 
-                      className="w-full p-5 md:p-6 rounded-[1.5rem] md:rounded-[2rem] bg-surface-container-low border-2 border-blue-800 text-on-surface font-black text-xl outline-none focus:border-accent-amber transition-all shadow-xl"
-                    >
-                      {SEGMENTOS.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  ) : (
-                    <select 
-                      value={targetId} 
-                      onChange={e => setTargetId(e.target.value)} 
-                      className="w-full p-5 md:p-6 rounded-[1.5rem] md:rounded-[2rem] bg-surface-container-low border-2 border-blue-800 text-on-surface font-black text-xl outline-none focus:border-accent-amber transition-all shadow-xl"
-                    >
-                      <option value="">Selecione o Alvo...</option>
-                      {tipoFluxo === 'SALA' ? salas.map(s => <option key={s.numero} value={s.numero}>Sala {s.numero}</option>) : professores.map(p => <option key={p.nome} value={p.nome}>{p.nome}</option>)}
-                    </select>
-                  )}
-                </div>
-                
-                <div className={cn("p-6 md:p-8 rounded-[2rem] border-2 transition-all space-y-6 shadow-2xl", 
-                  tipoFluxo === 'SALA' ? (horariosSaoConsecutivos && horariosSel.length > 1 ? "bg-amber-500/5 border-amber-500/30" : "bg-surface-container-low border-transparent opacity-50") : "bg-blue-500/5 border-blue-500/30")}>
-                  
-                  {tipoFluxo === 'SALA' && (
-                    <label className="flex items-center gap-4 cursor-pointer mb-2">
-                      <input type="checkbox" disabled={!horariosSaoConsecutivos || horariosSel.length <= 1} checked={isModoProva} onChange={e => setIsModoProva(e.target.checked)} className="w-6 h-6 accent-amber-700" />
-                      <span className="font-black text-amber-500 uppercase tracking-widest text-sm">Modo Prova</span>
-                    </label>
-                  )}
-
-                  {(tipoFluxo === 'PROFESSOR' || (tipoFluxo === 'SALA' && isModoProva)) && (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-top-4">
-                      {tipoFluxo === 'SALA' && isModoProva && (
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black uppercase text-amber-600 ml-2 tracking-widest flex items-center gap-2"><User size={12} /> Escolha o Fiscal</label>
-                          <select value={profFixoProva} onChange={e => setProfFixoProva(e.target.value)} className="w-full p-4 rounded-2xl bg-surface-container-high border-none text-on-surface font-black outline-none shadow-md">
-                            <option value="">Selecione o Fiscal...</option>
-                            {Array.from(new Set(
-                              gradeCompleta
-                                .filter(g => {
-                                  const diaMatch = String(g.diaSemana || '').toUpperCase().trim() === String(diaSel || '').toUpperCase().trim();
-                                  return diaMatch && g.numeroSala === Number(targetId) && horariosSel.includes(g.horario);
-                                })
-                                .map(g => g.nomeProfessor)
-                            )).map(nome => (
-                              <option key={nome} value={nome}>{nome}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-
-                      <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase text-blue-400 ml-2 tracking-widest flex items-center gap-2"><RefreshCw size={12} /> Regras de Substituição</label>
-                        <div className="grid grid-cols-1 gap-3">
-                          <button onClick={() => setRegraSub('LIVRE')} className={cn("flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left shadow-md", regraSub === 'LIVRE' ? "bg-blue-800 border-blue-600 text-white" : "bg-surface-container-high border-transparent text-on-surface opacity-60")}>
-                            <RefreshCw size={18} />
-                            <div className="flex flex-col">
-                              <span className="text-[10px] font-black uppercase">Análise Livre</span>
-                            </div>
-                          </button>
-                          <button onClick={() => setRegraSub('MESMO_ANO')} className={cn("flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left shadow-md", regraSub === 'MESMO_ANO' ? "bg-blue-800 border-blue-600 text-white" : "bg-surface-container-high border-transparent text-on-surface opacity-60")}>
-                            <Users size={18} />
-                            <div className="flex flex-col">
-                              <span className="text-[10px] font-black uppercase tracking-tighter">Priorizar Mesmo Ano/Turma</span>
-                            </div>
-                          </button>
-                          <button onClick={() => setRegraSub('DIRECIONADA')} className={cn("flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left shadow-md", regraSub === 'DIRECIONADA' ? "bg-blue-800 border-blue-600 text-white" : "bg-surface-container-high border-transparent text-on-surface opacity-60")}>
-                            <UserMinus size={18} />
-                            <div className="flex flex-col">
-                              <span className="text-[10px] font-black uppercase">Direcionar a Professor</span>
-                            </div>
-                          </button>
-                        </div>
-                        
-                        {regraSub === 'DIRECIONADA' && (
-                          <select value={profDirecionado} onChange={e => setProfDirecionado(e.target.value)} className="w-full mt-3 p-4 rounded-2xl bg-surface-container-high border-none text-on-surface font-black text-xs shadow-md">
-                            <option value="">Escolher Substituto Principal...</option>
-                            {professores.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
-                          </select>
-                        )}
-                      </div>
+                {tipoFluxo === 'SALA' ? (
+                  /* MODO PROVA: SELECIONAR VÁRIAS SALAS SIMULTANEAMENTE */
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant ml-2">Selecione as Salas de Aula</label>
+                    
+                    {/* Botões de Seleção Rápida */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-surface-container-low p-4 rounded-2xl border border-blue-800/10">
+                      <button type="button" onClick={() => selecionarTodasDoAno('6º')} className="px-3 py-2 bg-white/5 hover:bg-white/10 text-[9px] font-bold uppercase rounded-lg text-white transition-colors cursor-pointer">Todas do 6º Ano</button>
+                      <button type="button" onClick={() => selecionarTodasDoAno('7º')} className="px-3 py-2 bg-white/5 hover:bg-white/10 text-[9px] font-bold uppercase rounded-lg text-white transition-colors cursor-pointer">Todas do 7º Ano</button>
+                      <button type="button" onClick={() => selecionarTodasDoAno('8º')} className="px-3 py-2 bg-white/5 hover:bg-white/10 text-[9px] font-bold uppercase rounded-lg text-white transition-colors cursor-pointer">Todas do 8º Ano</button>
+                      <button type="button" onClick={() => selecionarTodasDoAno('9º')} className="px-3 py-2 bg-white/5 hover:bg-white/10 text-[9px] font-bold uppercase rounded-lg text-white transition-colors cursor-pointer">Todas do 9º Ano</button>
+                      <button type="button" onClick={selecionarTodasEnsinoMedio} className="px-3 py-2 bg-white/5 hover:bg-white/10 text-[9px] font-bold uppercase rounded-lg text-white transition-colors cursor-pointer">Ensino Médio</button>
+                      <button type="button" onClick={() => setSalasSelecionadas([])} className="px-3 py-2 bg-red-900/20 hover:bg-red-900/30 text-[9px] font-bold uppercase rounded-lg text-red-400 transition-colors cursor-pointer">Limpar Seleção</button>
                     </div>
-                  )}
-                  {tipoFluxo === 'SALA' && !horariosSaoConsecutivos && <p className="text-[10px] text-red-500 mt-2 font-bold flex items-center gap-1 animate-pulse"><Info size={12} /> Selecione horários seguidos para ativar o Modo Prova.</p>}
-                </div>
+
+                    {/* Checkboxes das salas */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                      {salas.map(s => {
+                        const estaMarcada = salasSelecionadas.includes(s.numero);
+                        return (
+                          <button
+                            key={s.id}
+                            onClick={() => alternarSala(s.numero)}
+                            className={cn(
+                              "px-3 py-4 rounded-xl border text-xs font-black uppercase text-left transition-all flex items-center justify-between",
+                              estaMarcada ? "bg-amber-700/25 border-amber-600 text-white" : "bg-white/5 border-transparent text-on-surface-variant hover:border-white/15"
+                            )}
+                          >
+                            <span>Sala {s.numero} · {s.ano || 'Comum'}</span>
+                            <div className={cn("w-3 h-3 rounded-full border", estaMarcada ? "bg-amber-500 border-amber-400" : "border-white/20")} />
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Seleção do Fiscal */}
+                    <div className="space-y-2 pt-4 border-t border-white/5">
+                      <label className="text-[10px] font-black uppercase text-amber-600 ml-2 tracking-widest flex items-center gap-2"><User size={12} /> Fiscal de Prova Principal (Opcional)</label>
+                      <select value={profFixoProva} onChange={e => setProfFixoProva(e.target.value)} className="w-full p-4 rounded-xl bg-surface-container-high border-none text-on-surface font-black outline-none shadow-md">
+                        <option value="">Manter Professor Original da Aula...</option>
+                        {professores.map(p => (
+                          <option key={p.id} value={p.nome}>{p.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ) : (
+                  /* FLUXO PROFESSOR FALTOU */
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant ml-2">Quem Faltou?</label>
+                      <select 
+                        value={profFaltouId} 
+                        onChange={e => setProfFaltouId(e.target.value)} 
+                        className="w-full p-5 rounded-2xl bg-surface-container-low border-2 border-blue-800 text-on-surface font-black text-xl outline-none focus:border-accent-amber transition-all shadow-xl"
+                      >
+                        <option value="">Selecione o Professor...</option>
+                        {professores.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-black uppercase text-blue-400 ml-2 tracking-widest flex items-center gap-2"><RefreshCw size={12} /> Regra de Reposição</label>
+                      <div className="grid grid-cols-1 gap-3">
+                        <button onClick={() => setRegraSub('LIVRE')} className={cn("flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left shadow-md", regraSub === 'LIVRE' ? "bg-blue-800 border-blue-600 text-white" : "bg-surface-container-high border-transparent text-on-surface opacity-60")}>
+                          <RefreshCw size={18} />
+                          <div className="flex flex-col"><span className="text-[10px] font-black uppercase">Análise Livre</span></div>
+                        </button>
+                        <button onClick={() => setRegraSub('MESMO_ANO')} className={cn("flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left shadow-md", regraSub === 'MESMO_ANO' ? "bg-blue-800 border-blue-600 text-white" : "bg-surface-container-high border-transparent text-on-surface opacity-60")}>
+                          <Users size={18} />
+                          <div className="flex flex-col"><span className="text-[10px] font-black uppercase tracking-tighter">Priorizar Mesmo Ano/Turma</span></div>
+                        </button>
+                        <button onClick={() => setRegraSub('DIRECIONADA')} className={cn("flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left shadow-md", regraSub === 'DIRECIONADA' ? "bg-blue-800 border-blue-600 text-white" : "bg-surface-container-high border-transparent text-on-surface opacity-60")}>
+                          <UserMinus size={18} />
+                          <div className="flex flex-col"><span className="text-[10px] font-black uppercase">Direcionar a Professor</span></div>
+                        </button>
+                      </div>
+                      
+                      {regraSub === 'DIRECIONADA' && (
+                        <select value={profDirecionado} onChange={e => setProfDirecionado(e.target.value)} className="w-full mt-3 p-4 rounded-xl bg-surface-container-high border-none text-on-surface font-black text-xs shadow-md">
+                          <option value="">Escolher Substituto Principal...</option>
+                          {professores.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
+                        </select>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
+              {/* SELEÇÃO DE AULAS/HORÁRIOS */}
               <div className="space-y-4">
                 <h3 className="text-[10px] font-black mb-2 uppercase tracking-[0.2em] text-on-surface-variant ml-2 flex items-center gap-2"><Clock size={12} /> Selecione as Aulas</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                   {Array.from(new Set(
                     gradeCompleta
                       .filter(g => {
-                        const diaMatch = String(g.diaSemana || '').toUpperCase().trim() === String(diaSel || '').toUpperCase().trim();
-                        const targetMatch = isModoLote 
-                          ? g.segmento === segmentoSel
-                          : (tipoFluxo === 'SALA' 
-                              ? g.numeroSala === Number(targetId)
-                              : String(g.nomeProfessor || '').toUpperCase().trim() === String(targetId || '').toUpperCase().trim());
+                        const dataItem = datasSelecionadas[0];
+                        const dataObj = new Date(dataItem + 'T00:00:00');
+                        const diasSemanaMap = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO'];
+                        const diaSemanaItem = diasSemanaMap[dataObj.getDay()];
+                        
+                        const diaMatch = String(g.diaSemana || '').toUpperCase().trim() === String(diaSemanaItem || '').toUpperCase().trim();
+                        
+                        const targetMatch = tipoFluxo === 'SALA'
+                          ? (salasSelecionadas.length > 0 ? salasSelecionadas.includes(g.numeroSala) : true)
+                          : (profFaltouId ? String(g.nomeProfessor || '').toUpperCase().trim() === String(profFaltouId || '').toUpperCase().trim() : true);
+                        
                         return diaMatch && targetMatch;
                       })
                       .map(g => g.horario)
@@ -427,7 +513,7 @@ export default function GestaoRealocacao() {
                         horariosSel.includes(horario) ? "bg-amber-700 text-white border-amber-600 scale-95 shadow-inner" : "bg-surface-container-high border-blue-800/50 text-on-surface hover:border-blue-500")}
                     >
                       <div className="text-[10px] font-black uppercase opacity-60 tracking-widest">{horario}</div>
-                      <div className="text-xl font-black italic">Horário de Prova</div>
+                      <div className="text-xl font-black italic">Horário de Aula</div>
                       <div className="text-[9px] font-black uppercase text-blue-400">Clique para Selecionar</div>
                     </button>
                   ))}
@@ -439,10 +525,10 @@ export default function GestaoRealocacao() {
               <button onClick={() => setStep(2)} className="flex-1 py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-on-surface-variant hover:text-white border-2 border-transparent hover:border-white/10 transition-all flex items-center justify-center gap-2"><ChevronLeft size={16} /> Voltar</button>
               <button 
                 onClick={handleCalcular} 
-                disabled={!targetId || horariosSel.length === 0}
+                disabled={(tipoFluxo === 'SALA' ? salasSelecionadas.length === 0 : !profFaltouId) || horariosSel.length === 0}
                 className="flex-[2] py-6 bg-blue-800 text-white rounded-[1.5rem] font-black uppercase text-xs tracking-[0.3em] border border-blue-700 hover:bg-blue-700 shadow-2xl transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-3"
               >
-                Calcular Realocação <ChevronRight size={16} />
+                Calcular Ensalamento <ChevronRight size={16} />
               </button>
             </div>
           </motion.div>
@@ -452,12 +538,16 @@ export default function GestaoRealocacao() {
           <motion.div key="s4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-surface-container-lowest p-6 md:p-10 rounded-[2.5rem] md:rounded-[3rem] editorial-shadow border border-blue-800">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
               <div>
-                <h2 className="text-2xl md:text-3xl font-black text-on-surface-bright italic">4. Conferência Final</h2>
-                <p className="text-on-surface-variant text-xs md:text-sm font-medium mt-2">Revise as substituições sugeridas pelo algoritmo e ajuste se necessário.</p>
+                <h2 className="text-2xl md:text-3xl font-black text-on-surface-bright italic">4. Grade de Ensalamento</h2>
+                <p className="text-on-surface-variant text-xs md:text-sm font-medium mt-2">Revise as atribuições de fiscais/substitutos e gere o PDF Oficial colorido.</p>
               </div>
-              <div className="px-5 py-3 bg-amber-700/10 border border-amber-700/30 rounded-2xl flex items-center gap-3">
-                 <ShieldCheck className="text-amber-500" size={18} />
-                 <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">{regraSub === 'LIVRE' ? 'Análise Livre' : 'Análise Direcionada'}</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setMostrarPdfEnsalamento(true)}
+                  className="px-6 py-4 bg-amber-700 hover:bg-amber-600 text-white rounded-2xl flex items-center gap-2 text-xs font-black uppercase transition-all shadow-xl cursor-pointer"
+                >
+                  <Printer size={16} /> Gerar PDF Colorido
+                </button>
               </div>
             </div>
 
@@ -468,69 +558,48 @@ export default function GestaoRealocacao() {
                     <th className="p-5">Data/Dia</th>
                     <th className="p-5">Horário</th>
                     <th className="p-5">Turma/Sala</th>
-                    <th className="p-5">Original</th>
-                    <th className="p-5">Substituto</th>
+                    <th className="p-5">Aula/Original</th>
+                    <th className="p-5">Fiscal/Substituto</th>
                     <th className="p-5">Ação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {resultados.map((r, i) => {
-                    const temConflitoNaGrade = gradeCompleta.some(g => 
-                      g.nomeProfessor === r.professorSubstituto && 
-                      g.diaSemana === diaSel && 
-                      g.horario === r.horario &&
-                      g.numeroSala !== Number(targetId)
-                    );
-
                     const semProfessor = r.professorSubstituto === 'A DEFINIR';
-
                     return (
                       <tr key={i} className={cn("text-sm font-medium transition-colors", semProfessor ? "bg-red-900/30" : "hover:bg-surface-container-low/50 even:bg-surface-container-low/20")}>
                         <td className="p-5 font-black text-on-surface-bright">
                           <div className="flex flex-col">
                             <span>{r.dia ? new Date(r.dia + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</span>
-                            <span className="text-[8px] text-blue-400 uppercase tracking-widest">{r.diaSemana || diaSel}</span>
                           </div>
                         </td>
                         <td className="p-5 font-black text-on-surface-bright">{r.horario}</td>
                         <td className="p-5 text-on-surface">
-                          <div className="flex flex-col">
-                            <span>{r.turma}</span>
-                            <span className="text-[8px] opacity-60 uppercase">{r.tipo === 'PROVA' ? `Sala ${targetId || 'Lote'}` : ''}</span>
-                          </div>
-                        </td>
-                        <td className="p-5 text-on-surface-variant line-through">{r.professorOriginal}</td>
-                        <td className="p-5">
                           <div className="flex items-center gap-2">
-                            <div className="relative group/swap">
-                              <select
-                                value={r.professorSubstituto}
-                                onChange={(e) => mudarSubstituto(i, e.target.value)}
-                                className={cn("font-black px-3 py-2 rounded-xl outline-none appearance-none cursor-pointer pr-10 border transition-all shadow-md",
-                                  semProfessor ? "bg-red-900/40 text-red-400 border-red-700 animate-pulse" : "bg-blue-900/30 hover:bg-blue-900/50 text-on-surface-bright border-blue-800")}
-                              >
-                                {semProfessor && <option value="A DEFINIR">SELECIONAR...</option>}
-                                {professores.map(p => (
-                                  <option key={p.id} value={p.nome} className="text-on-surface bg-surface">{p.nome}</option>
-                                ))}
-                              </select>
-                              <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-accent-amber pointer-events-none opacity-60" />
-                            </div>
-                            {temConflitoNaGrade && (
-                              <div className="group relative">
-                                <AlertCircle size={14} className="text-red-500 animate-pulse cursor-help" />
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-red-600 text-white text-[10px] font-bold rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-xl">
-                                  Este professor já está em aula nesta sala!
-                                </div>
-                              </div>
-                            )}
+                            <span className={cn("px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border", obterCorAno(r.turma))}>
+                              {r.turma}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-5 text-on-surface-variant">{r.professorOriginal}</td>
+                        <td className="p-5">
+                          <div className="relative group/swap">
+                            <select
+                              value={r.professorSubstituto}
+                              onChange={(e) => mudarSubstituto(i, e.target.value)}
+                              className={cn("font-black px-3 py-2 rounded-xl outline-none appearance-none cursor-pointer pr-10 border transition-all shadow-md",
+                                semProfessor ? "bg-red-900/40 text-red-400 border-red-700 animate-pulse" : "bg-blue-900/30 hover:bg-blue-900/50 text-on-surface-bright border-blue-800")}
+                            >
+                              {semProfessor && <option value="A DEFINIR">SELECIONAR...</option>}
+                              {professores.map(p => (
+                                <option key={p.id} value={p.nome} className="text-on-surface bg-surface">{p.nome}</option>
+                              ))}
+                            </select>
+                            <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-accent-amber pointer-events-none opacity-60" />
                           </div>
                         </td>
                         <td className="p-5">
-                          <span className={cn(
-                            "px-3 py-1 rounded-full text-[8px] font-black uppercase bg-blue-900/30 text-accent-amber",
-                            temConflitoNaGrade && "bg-red-900/30 text-red-400"
-                          )}>
+                          <span className="px-3 py-1 rounded-full text-[8px] font-black uppercase bg-blue-900/30 text-accent-amber">
                             {r.acao}
                           </span>
                         </td>
@@ -540,29 +609,208 @@ export default function GestaoRealocacao() {
                 </tbody>
               </table>
             </div>
+
             <div className="flex gap-4 mt-10">
               <button
                 onClick={() => handleFinalizar(true)}
                 disabled={carregando}
-                className="flex-1 py-6 bg-surface-container-high text-on-surface rounded-3xl font-black uppercase text-xs tracking-[0.1em] border border-blue-800 hover:bg-blue-900/50 transition-all flex justify-center items-center gap-2"
+                className="flex-1 py-6 bg-surface-container-high text-on-surface rounded-3xl font-black uppercase text-xs tracking-[0.1em] border border-blue-800 hover:bg-blue-900/50 transition-all flex justify-center items-center gap-2 cursor-pointer"
               >
-                <FileText size={16} />
-                Salvar como Rascunho
+                <FileText size={16} /> Salvar nos Rascunhos
               </button>
               <button
                 onClick={() => handleFinalizar(false)}
                 disabled={carregando}
-                className="flex-[2] py-6 bg-amber-700 text-white rounded-3xl font-black uppercase text-xs tracking-[0.2em] shadow-2xl hover:bg-amber-600 transition-all flex justify-center items-center gap-2 border border-amber-600"
+                className="flex-[2] py-6 bg-blue-850 hover:bg-blue-800 text-white rounded-3xl font-black uppercase text-xs tracking-[0.2em] shadow-2xl transition-all flex justify-center items-center gap-2 border border-blue-700 cursor-pointer"
               >
-                {carregando ? (
-                  <RefreshCw className="animate-spin" size={16} />
-                ) : (
-                  <Check size={16} />
-                )}
-                Efetivar Grade Oficial
+                {carregando ? <RefreshCw className="animate-spin" size={16} /> : <Check size={16} />} Efetivar Registro Histórico
               </button>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DE ENSALAMENTO TIMBRADO E COLORIDO (PADRÃO SESI A4) */}
+      <AnimatePresence>
+        {mostrarPdfEnsalamento && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto print-modal-container">
+            {/* Print directives */}
+            <style dangerouslySetInnerHTML={{__html: `
+              @media print {
+                body {
+                  background: white !important;
+                  color: black !important;
+                }
+                header, nav, aside, footer, button, .print\\:hidden, #root > div:not(.print-modal-container) {
+                  display: none !important;
+                }
+                .print-modal-container {
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 100% !important;
+                  height: auto !important;
+                  background: white !important;
+                  padding: 0 !important;
+                }
+                .print-card-content {
+                  box-shadow: none !important;
+                  border: none !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  width: 100% !important;
+                  max-width: 100% !important;
+                  border-radius: 0 !important;
+                }
+                * {
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                }
+              }
+            `}} />
+
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-4xl bg-white text-slate-900 rounded-[2rem] overflow-hidden shadow-2xl my-8 print:my-0 print:rounded-none print-card-content border border-slate-200"
+            >
+              {/* Header Oficial do Sesi */}
+              <div className="relative w-full h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-8 select-none">
+                <div className="absolute top-0 left-0 w-[300px] h-full pointer-events-none">
+                  <div className="absolute top-0 left-0 w-[200px] h-[120px] bg-[#e2e8f0]" style={{ clipPath: 'polygon(0 0, 100% 0, 70% 100%, 0 80%)' }} />
+                  <div className="absolute top-0 left-0 w-[160px] h-[100px] bg-[#cbd5e1] opacity-40" style={{ clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0 60%)' }} />
+                  <div className="absolute top-[20px] left-0 w-[40px] h-[100px] bg-[#fbbf24]" style={{ clipPath: 'polygon(0 0, 100% 30%, 80% 90%, 0 100%)' }} />
+                </div>
+                <div className="flex-1" />
+                <div className="relative z-10">
+                  <div className="flex flex-col items-end">
+                    <div className="flex items-center gap-1 leading-none">
+                      <span className="text-[10px] font-extrabold text-[#0c2340] lowercase tracking-normal">colégio</span>
+                      <div className="w-2 h-2 rounded-full bg-[#0c2340] mt-0.5" />
+                    </div>
+                    <div className="text-[40px] font-black text-[#0c2340] leading-none tracking-tighter -mt-1 font-serif italic">
+                      Sesi
+                    </div>
+                    <div className="bg-[#fbbf24] text-[#0c2340] text-[9px] font-black uppercase tracking-[0.2em] px-3.5 py-1.5 mt-1 rounded-sm transform -skew-x-6 origin-right leading-none">
+                      internacional
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botões de Ações */}
+              <div className="absolute top-4 right-4 z-20 flex gap-2 print:hidden">
+                <button 
+                  onClick={() => window.print()}
+                  className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-sm cursor-pointer"
+                  title="Imprimir Ensalamento"
+                >
+                  <Printer size={18} />
+                </button>
+                <button 
+                  onClick={() => setMostrarPdfEnsalamento(false)}
+                  className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-sm cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Conteúdo Imprimível do Ensalamento */}
+              <div className="p-8 md:p-12 space-y-8 print:p-8 font-sans">
+                <div className="text-center border-b border-slate-200 pb-6">
+                  <h2 className="text-2xl font-extrabold uppercase tracking-widest text-[#0c2340]">Mapa de Ensalamento de Provas</h2>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Smart Sub · Relatório de Fiscais e Reposições</p>
+                </div>
+
+                {/* Resumo da Escala */}
+                <div className="grid grid-cols-3 gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                  <div>
+                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Período Letivo</span>
+                    <span className="text-sm font-bold text-slate-800">
+                      {datasSelecionadas.map(d => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')).join(', ')}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Aulas / Horários</span>
+                    <span className="text-sm font-bold text-slate-800">{horariosSel.join(', ')}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Salas Planejadas</span>
+                    <span className="text-sm font-bold text-slate-800">{tipoFluxo === 'SALA' ? salasSelecionadas.length : 'Falta Docente'}</span>
+                  </div>
+                </div>
+
+                {/* Grade Colorida do Ensalamento */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-black text-[#0c2340] uppercase tracking-wider border-b pb-2">Distribuição de Salas e Horários</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {resultados.map((item, idx) => (
+                      <div 
+                        key={idx} 
+                        className={cn(
+                          "p-5 rounded-2xl border-2 flex flex-col justify-between shadow-sm relative overflow-hidden transition-all",
+                          item.turma.includes('6º') ? "bg-cyan-50 border-cyan-200 text-cyan-900" :
+                          item.turma.includes('7º') ? "bg-blue-50 border-blue-200 text-blue-900" :
+                          item.turma.includes('8º') ? "bg-amber-50 border-amber-200 text-amber-900" :
+                          item.turma.includes('9º') ? "bg-orange-50 border-orange-200 text-orange-900" :
+                          "bg-purple-50 border-purple-200 text-purple-900"
+                        )}
+                      >
+                        {/* Faixa lateral decorativa de alta visibilidade */}
+                        <div 
+                          className={cn(
+                            "absolute top-0 left-0 w-2 h-full",
+                            item.turma.includes('6º') ? "bg-cyan-500" :
+                            item.turma.includes('7º') ? "bg-blue-500" :
+                            item.turma.includes('8º') ? "bg-amber-500" :
+                            item.turma.includes('9º') ? "bg-orange-500" :
+                            "bg-purple-500"
+                          )} 
+                        />
+                        
+                        <div className="pl-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-widest opacity-60">{item.horario}</span>
+                            <span className="text-[10px] font-black uppercase bg-white/80 px-2 py-0.5 rounded-md shadow-xs">
+                              {item.dia ? new Date(item.dia + 'T00:00:00').toLocaleDateString('pt-BR') : ''}
+                            </span>
+                          </div>
+                          
+                          <div className="flex justify-between items-end">
+                            <div>
+                              <h4 className="text-lg font-extrabold tracking-tight">{item.turma}</h4>
+                              <p className="text-xs font-semibold opacity-85">Professor Original: {item.professorOriginal}</p>
+                            </div>
+                            
+                            <div className="text-right">
+                              <span className="block text-[8px] font-black uppercase tracking-wider opacity-60">Proctor / Fiscal</span>
+                              <span className="text-sm font-black bg-white px-3 py-1 rounded-lg border shadow-xs border-black/5 block mt-0.5">
+                                {item.professorSubstituto}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Rodapé e Assinaturas */}
+                <div className="grid grid-cols-2 gap-8 pt-12 mt-12 border-t border-slate-200">
+                  <div className="text-center space-y-1">
+                    <div className="w-full border-b border-slate-300 h-10" />
+                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Assinatura da Coordenação</span>
+                  </div>
+                  <div className="text-center space-y-1">
+                    <div className="w-full border-b border-slate-300 h-10" />
+                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Data do Ensalamento</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
