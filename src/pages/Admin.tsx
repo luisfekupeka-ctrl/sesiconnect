@@ -1778,13 +1778,14 @@ export default function Admin() {
                   <CampoTexto label="Nível (Ex: B1 Intermediate)" value={editandoLanguageLab.nivel} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, nivel: v })} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <CampoTexto label="Professor" value={editandoLanguageLab.professor} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, professor: v })} />
+                  <CampoAutocompleteProfessores label="Professor" value={editandoLanguageLab.professor} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, professor: v })} professores={professores} />
                   <CampoTexto label="Sala / Local" value={editandoLanguageLab.sala} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, sala: v })} />
                 </div>
-                <CampoSelect label="Dia da Semana" value={editandoLanguageLab.diaSemana} options={DIAS_SEMANA} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, diaSemana: v })} />
+                <CampoMultiSelectDias label="Dia(s) da Semana" value={editandoLanguageLab.diaSemana} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, diaSemana: v })} />
                 <div className="grid grid-cols-2 gap-4">
                   <CampoTexto label="Início" value={editandoLanguageLab.horarioInicio} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, horarioInicio: v })} tipo="time" />
                   <CampoTexto label="Fim" value={editandoLanguageLab.horarioFim} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, horarioFim: v })} tipo="time" />
+                  <CampoGradePeriodos label="Apoio Visual (Grade)" periodos={periodos} onSelect={(i, f) => setEditandoLanguageLab({ ...editandoLanguageLab, horarioInicio: i, horarioFim: f })} />
                 </div>
               </div>
 
@@ -1982,13 +1983,14 @@ export default function Admin() {
                 <CampoSelect label="Categoria" value={editandoAfter.categoria} options={['Esporte', 'Oficina', 'Reforço', 'Outro']} onChange={v => setEditandoAfter({ ...editandoAfter, categoria: v })} />
                 
                 <div className="grid grid-cols-2 gap-4">
-                  <CampoTexto label="Professor" value={editandoAfter.nomeProfessor} onChange={v => setEditandoAfter({ ...editandoAfter, nomeProfessor: v })} />
+                  <CampoAutocompleteProfessores label="Professor" value={editandoAfter.nomeProfessor} onChange={v => setEditandoAfter({ ...editandoAfter, nomeProfessor: v })} professores={professores} />
                   <CampoTexto label="Local" value={editandoAfter.local} onChange={v => setEditandoAfter({ ...editandoAfter, local: v })} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <CampoTexto label="Horário de Início" value={editandoAfter.horarioInicio} tipo="time" onChange={v => setEditandoAfter({ ...editandoAfter, horarioInicio: v })} />
                   <CampoTexto label="Horário de Término" value={editandoAfter.horarioFim} tipo="time" onChange={v => setEditandoAfter({ ...editandoAfter, horarioFim: v })} />
+                  <CampoGradePeriodos label="Apoio Visual (Grade)" periodos={periodos} onSelect={(i, f) => setEditandoAfter({ ...editandoAfter, horarioInicio: i, horarioFim: f })} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -1996,22 +1998,7 @@ export default function Admin() {
                   <CampoTexto label="Vagas Totais" value={editandoAfter.vagas?.toString() || '20'} tipo="number" onChange={v => setEditandoAfter({ ...editandoAfter, vagas: parseInt(v) })} />
                 </div>
 
-                <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                  <label className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3 block">Dias da Semana</label>
-                  <div className="flex flex-wrap gap-2">
-                    {DIAS_SEMANA.map(dia => (
-                      <label key={dia} className="flex items-center gap-2 bg-black/40 p-2.5 rounded-xl text-[10px] font-black uppercase cursor-pointer hover:bg-primary/20 transition-all border border-white/5">
-                        <input type="checkbox" checked={editandoAfter.dias?.includes(dia)} onChange={e => {
-                          const dias = e.target.checked
-                            ? [...(editandoAfter.dias || []), dia]
-                            : (editandoAfter.dias || []).filter((d: string) => d !== dia);
-                          setEditandoAfter({ ...editandoAfter, dias });
-                        }} className="rounded text-primary bg-black border-white/20" />
-                        {dia}
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                <CampoMultiSelectDiasArray label="Dias da Semana" value={editandoAfter.dias || []} onChange={v => setEditandoAfter({ ...editandoAfter, dias: v })} />
                 
                 <CampoTexto label="Descrição / Detalhes" value={editandoAfter.descricao || ''} onChange={v => setEditandoAfter({ ...editandoAfter, descricao: v })} />
               </div>
@@ -2162,6 +2149,100 @@ function CampoSelect({ label, value, options, onChange }: { label: string; value
   );
 }
 
+
+function CampoAutocompleteProfessores({ label, value, onChange, professores }: { label: string; value: string; onChange: (v: string) => void; professores: any[] }) {
+  const [busca, setBusca] = React.useState(value);
+  const [aberto, setAberto] = React.useState(false);
+
+  React.useEffect(() => { setBusca(value); }, [value]);
+
+  const filtrados = professores.filter(p => p.nome.toLowerCase().includes(busca.toLowerCase()));
+
+  return (
+    <div className="space-y-1.5 relative">
+      <label className="text-xs font-black text-white/40 uppercase tracking-widest block ml-2">{label}</label>
+      <input type="text" value={busca} onChange={e => { setBusca(e.target.value); onChange(e.target.value); setAberto(true); }}
+        onFocus={() => setAberto(true)} onBlur={() => setTimeout(() => setAberto(false), 200)}
+        className="campo-input" placeholder="Buscar professor..." />
+      
+      {aberto && filtrados.length > 0 && (
+        <div className="absolute z-50 w-full mt-1 max-h-48 overflow-y-auto bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl">
+          {filtrados.map(p => (
+            <button key={p.id} type="button" onMouseDown={(e) => { e.preventDefault(); onChange(p.nome); setBusca(p.nome); setAberto(false); }}
+              className="w-full text-left px-4 py-3 text-xs font-bold text-white hover:bg-[#42a0f5]/20 hover:text-[#42a0f5] transition-all">
+              {p.nome}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CampoMultiSelectDias({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const selecionados = value ? value.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const DIAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
+
+  return (
+    <div className="space-y-2">
+      <label className="text-xs font-black text-white/40 uppercase tracking-widest block ml-2">{label}</label>
+      <div className="flex flex-wrap gap-2">
+        {DIAS.map(dia => {
+          const ativo = selecionados.includes(dia);
+          return (
+            <button key={dia} type="button" onClick={() => {
+              if (ativo) onChange(selecionados.filter(d => d !== dia).join(', '));
+              else onChange([...selecionados, dia].join(', '));
+            }}
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${ativo ? 'bg-[#42a0f5] text-black border-[#42a0f5]' : 'bg-[#0f0f0f] text-white/40 border-white/5 hover:bg-white/5'}`}>
+              {dia.slice(0, 3)}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CampoMultiSelectDiasArray({ label, value, onChange }: { label: string; value: string[]; onChange: (v: string[]) => void }) {
+  const DIAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
+  return (
+    <div className="space-y-2">
+      <label className="text-xs font-black text-white/40 uppercase tracking-widest block ml-2">{label}</label>
+      <div className="flex flex-wrap gap-2">
+        {DIAS.map(dia => {
+          const ativo = value.includes(dia);
+          return (
+            <button key={dia} type="button" onClick={() => {
+              if (ativo) onChange(value.filter(d => d !== dia));
+              else onChange([...value, dia]);
+            }}
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${ativo ? 'bg-[#42a0f5] text-black border-[#42a0f5]' : 'bg-[#0f0f0f] text-white/40 border-white/5 hover:bg-white/5'}`}>
+              {dia.slice(0, 3)}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CampoGradePeriodos({ label, periodos, onSelect }: { label: string; periodos: any[]; onSelect: (inicio: string, fim: string) => void }) {
+  return (
+    <div className="space-y-2 col-span-2">
+      <label className="text-xs font-black text-[#42a0f5] uppercase tracking-widest block ml-2 flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-[#42a0f5]"/> {label}</label>
+      <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+        {periodos.filter(p => p.tipo === 'aula' || p.tipo === 'after' || p.tipo === 'permanencia').sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio)).map(p => (
+          <button key={p.id} type="button" onClick={() => onSelect(p.horarioInicio, p.horarioFim)}
+            className="shrink-0 px-4 py-2 bg-[#0f0f0f] hover:bg-[#42a0f5]/20 border border-white/5 hover:border-[#42a0f5]/50 text-white rounded-xl flex flex-col items-start gap-1 transition-all group">
+            <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-[#42a0f5]">{p.nome}</span>
+            <span className="text-[8px] font-bold text-white/40 uppercase tracking-widest group-hover:text-white/60">{p.horarioInicio} - {p.horarioFim}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ============================================================
 // COMPONENTE: Gestão de Usuários
