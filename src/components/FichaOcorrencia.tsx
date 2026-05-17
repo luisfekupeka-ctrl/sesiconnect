@@ -123,13 +123,21 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
               <div className="pt-6 pl-2">
                 <div className="text-[8px] font-black tracking-[0.5em] text-blue-900/40 uppercase">SESI CONNECT SYSTEM</div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="bg-[#e30613] text-white font-extrabold px-3 py-1.5 text-2xl tracking-tighter italic rounded-[4px] shadow-sm leading-none flex items-center justify-center font-serif select-none">
-                  SESI
-                </div>
-                <div className="flex flex-col select-none leading-none">
-                  <span className="text-[10px] font-extrabold text-[#004a8e] tracking-widest leading-none">SENAI</span>
-                  <span className="text-[7px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-1">Internacional</span>
+              <div className="relative z-10 select-none scale-90 origin-right">
+                <div className="flex flex-col items-end mr-2">
+                  <div className="flex items-center gap-1.5 mr-0.5">
+                    <span className="text-[10px] font-extrabold text-[#0c2340] lowercase tracking-normal">colégio</span>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <div className="w-2 h-2 rounded-full bg-[#0c2340]" />
+                      <div className="w-1.5 h-2.5 rounded-full bg-[#0c2340]" />
+                    </div>
+                  </div>
+                  <div className="text-[34px] font-bold text-[#0c2340] leading-none tracking-tight -mt-0.5 font-serif italic mr-4 relative">
+                    Ses<span className="relative">ı</span>
+                  </div>
+                  <div className="bg-[#fbbf24] text-[#0c2340] text-[8px] font-black uppercase tracking-[0.2em] px-3.5 py-1.5 mt-1 rounded-[6px] transform -skew-x-12 leading-none">
+                    internacional
+                  </div>
                 </div>
               </div>
             </div>
