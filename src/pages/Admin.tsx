@@ -5,7 +5,8 @@ import {
   Shield, Upload, Check, X, Plus, Search, Eye, Trash2,
   DoorOpen, Users, BookOpen, Clock, Calendar, UserPlus,
   MapPin, FileSpreadsheet, ClipboardList, XCircle, FileText, Save,
-  List, Printer, AlignLeft, ChevronDownSquare, CircleDot, CheckSquare, GraduationCap, RefreshCw
+  List, Printer, AlignLeft, ChevronDownSquare, CircleDot, CheckSquare, GraduationCap, RefreshCw,
+  ArrowUp, ArrowDown
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
@@ -112,6 +113,18 @@ export default function Admin() {
   const [alunosTurma, setAlunosTurma] = useState<any[]>([]);
   const [selectedAlunos, setSelectedAlunos] = useState<string[]>([]);
   const [editandoModelo, setEditandoModelo] = useState<any>(null);
+
+  const moverCampo = (index: number, direcao: 'up' | 'down') => {
+    if (!editandoModelo || !editandoModelo.campos) return;
+    const novos = [...editandoModelo.campos];
+    if (direcao === 'up' && index > 0) {
+      [novos[index], novos[index - 1]] = [novos[index - 1], novos[index]];
+    } else if (direcao === 'down' && index < novos.length - 1) {
+      [novos[index], novos[index + 1]] = [novos[index + 1], novos[index]];
+    }
+    setEditandoModelo({ ...editandoModelo, campos: novos });
+  };
+
   const [editandoGrade, setEditandoGrade] = useState<any>(null);
   const [editandoLanguageLab, setEditandoLanguageLab] = useState<any>(null);
   const [editandoAfter, setEditandoAfter] = useState<any>(null);
@@ -1513,10 +1526,37 @@ export default function Admin() {
                         ) : (
                           editandoModelo.campos?.map((campo: any, idx: number) => (
                             <motion.div layout key={campo.id} className="p-8 bg-surface-container-high rounded-[2.5rem] border border-white/5 relative group shadow-xl">
-                              <button onClick={() => setEditandoModelo({ ...editandoModelo, campos: editandoModelo.campos.filter((c: any) => c.id !== campo.id) })}
-                                className="absolute top-6 right-6 p-2 bg-red-500/10 text-red-500 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white">
-                                <Trash2 size={16} />
-                              </button>
+                              <div className="absolute top-6 right-6 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all z-20">
+                                <button 
+                                  disabled={idx === 0}
+                                  onClick={(e) => { e.preventDefault(); moverCampo(idx, 'up'); }}
+                                  className={cn(
+                                    "p-2 bg-white/5 text-white/60 rounded-xl hover:bg-primary/20 hover:text-primary transition-all",
+                                    idx === 0 && "opacity-30 cursor-not-allowed"
+                                  )}
+                                  title="Mover para Cima"
+                                >
+                                  <ArrowUp size={14} />
+                                </button>
+                                <button 
+                                  disabled={idx === editandoModelo.campos.length - 1}
+                                  onClick={(e) => { e.preventDefault(); moverCampo(idx, 'down'); }}
+                                  className={cn(
+                                    "p-2 bg-white/5 text-white/60 rounded-xl hover:bg-primary/20 hover:text-primary transition-all",
+                                    idx === editandoModelo.campos.length - 1 && "opacity-30 cursor-not-allowed"
+                                  )}
+                                  title="Mover para Baixo"
+                                >
+                                  <ArrowDown size={14} />
+                                </button>
+                                <button 
+                                  onClick={(e) => { e.preventDefault(); setEditandoModelo({ ...editandoModelo, campos: editandoModelo.campos.filter((c: any) => c.id !== campo.id) }); }}
+                                  className="p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"
+                                  title="Excluir Campo"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
 
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-2">
@@ -1698,15 +1738,6 @@ export default function Admin() {
               <CampoSelect label="Ano Escolar / Turma" value={editandoLocal.segmento || ''} options={ANOS_ESCOLARES} onChange={v => setEditandoLocal({ ...editandoLocal, segmento: v })} />
               <CampoTexto label="Tipo (sala, quadra, etc)" value={editandoLocal.tipo} onChange={v => setEditandoLocal({ ...editandoLocal, tipo: v })} />
               <CampoTexto label="Capacidade" value={editandoLocal.capacidade?.toString() || ''} onChange={v => setEditandoLocal({ ...editandoLocal, capacidade: v ? parseInt(v) : undefined })} tipo="number" />
-              
-              <div className="mt-6 pt-4 border-t border-white/5">
-                <SeletorAlunos
-                  alunos={alunosBase}
-                  selecionados={editandoLocal.lista_alunos || []}
-                  turmaAlvo={editandoLocal.segmento}
-                  onChange={v => setEditandoLocal({ ...editandoLocal, lista_alunos: v })}
-                />
-              </div>
             </div>
           )}
         </ModalForm>
@@ -1757,10 +1788,13 @@ export default function Admin() {
 
         <ModalForm aberto={!!editandoGrade} onClose={() => setEditandoGrade(null)}
           titulo="Editar Horário de Aula"
-          largo={true}
+          largo={abaAtiva !== 'grade-professores'}
           onSalvar={() => doSave(salvarEntradaGradeIndividual(editandoGrade), setEditandoGrade)} carregando={carregando}>
           {editandoGrade && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <div className={cn(
+              "grid grid-cols-1 gap-8 items-start",
+              abaAtiva !== 'grade-professores' ? "lg:grid-cols-2" : "lg:grid-cols-1"
+            )}>
               {/* Coluna Esquerda: Informações da Aula */}
               <div className="space-y-6">
                 <div className="flex items-center gap-2 mb-2">
@@ -1844,69 +1878,71 @@ export default function Admin() {
               </div>
 
               {/* Coluna Direita: Ensalamento */}
-              <div className="space-y-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1.5 h-6 bg-[#fbbf24] rounded-full" />
-                  <h4 className="text-[10px] font-black uppercase text-[#fbbf24] tracking-[0.3em]">Gestão de Alunos</h4>
-                </div>
-
-                <div className="p-6 bg-white/[0.02] rounded-[2rem] border border-white/5 space-y-5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[9px] font-black uppercase text-white/40 tracking-widest flex items-center gap-2">
-                      <RefreshCw size={14} className="text-[#42a0f5]" /> Sincronização de Lista
-                    </label>
-                    <button 
-                      onClick={() => setEditandoGrade({ ...editandoGrade, lista_alunos: null, vinculado_id: null })}
-                      className="text-[8px] font-black uppercase bg-white/5 px-3 py-1.5 rounded-xl hover:bg-red-500/20 hover:text-red-500 transition-all border border-white/5"
-                    >
-                      Resetar para Turma Completa
-                    </button>
+              {abaAtiva !== 'grade-professores' && (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-1.5 h-6 bg-[#fbbf24] rounded-full" />
+                    <h4 className="text-[10px] font-black uppercase text-[#fbbf24] tracking-[0.3em]">Gestão de Alunos</h4>
                   </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[8px] font-black uppercase text-white/20 ml-2">Language Lab</label>
-                      <select 
-                        className="w-full bg-black border border-white/10 p-4 rounded-xl text-[10px] font-black uppercase outline-none focus:border-[#42a0f5]/40 transition-all"
-                        value={editandoGrade.vinculado_id || ''}
-                        onChange={(e) => {
-                          const id = e.target.value;
-                          const lab = languageLab.find(l => l.id === id);
-                          if (lab) setEditandoGrade({ ...editandoGrade, vinculado_id: id, lista_alunos: lab.listaAlunos, tipo: 'language_lab' });
-                        }}
-                      >
-                        <option value="">Não vinculado</option>
-                        {languageLab.map(l => <option key={l.id} value={l.id}>{l.nivel} - {l.professor}</option>)}
-                      </select>
-                    </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[8px] font-black uppercase text-white/20 ml-2">After School</label>
-                      <select 
-                        className="w-full bg-black border border-white/10 p-4 rounded-xl text-[10px] font-black uppercase outline-none focus:border-[#fbbf24]/40 transition-all"
-                        value={editandoGrade.vinculado_id || ''}
-                        onChange={(e) => {
-                          const id = e.target.value;
-                          const after = atividadesAfter.find(a => a.id === id);
-                          if (after) setEditandoGrade({ ...editandoGrade, vinculado_id: id, lista_alunos: after.listaAlunos, tipo: 'after_school' });
-                        }}
+                  <div className="p-6 bg-white/[0.02] rounded-[2rem] border border-white/5 space-y-5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[9px] font-black uppercase text-white/40 tracking-widest flex items-center gap-2">
+                        <RefreshCw size={14} className="text-[#42a0f5]" /> Sincronização de Lista
+                      </label>
+                      <button 
+                        onClick={() => setEditandoGrade({ ...editandoGrade, lista_alunos: null, vinculado_id: null })}
+                        className="text-[8px] font-black uppercase bg-white/5 px-3 py-1.5 rounded-xl hover:bg-red-500/20 hover:text-red-500 transition-all border border-white/5"
                       >
-                        <option value="">Não vinculado</option>
-                        {atividadesAfter.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
-                      </select>
+                        Resetar para Turma Completa
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-white/20 ml-2">Language Lab</label>
+                        <select 
+                          className="w-full bg-black border border-white/10 p-4 rounded-xl text-[10px] font-black uppercase outline-none focus:border-[#42a0f5]/40 transition-all"
+                          value={editandoGrade.vinculado_id || ''}
+                          onChange={(e) => {
+                            const id = e.target.value;
+                            const lab = languageLab.find(l => l.id === id);
+                            if (lab) setEditandoGrade({ ...editandoGrade, vinculado_id: id, lista_alunos: lab.listaAlunos, tipo: 'language_lab' });
+                          }}
+                        >
+                          <option value="">Não vinculado</option>
+                          {languageLab.map(l => <option key={l.id} value={l.id}>{l.nivel} - {l.professor}</option>)}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black uppercase text-white/20 ml-2">After School</label>
+                        <select 
+                          className="w-full bg-black border border-white/10 p-4 rounded-xl text-[10px] font-black uppercase outline-none focus:border-[#fbbf24]/40 transition-all"
+                          value={editandoGrade.vinculado_id || ''}
+                          onChange={(e) => {
+                            const id = e.target.value;
+                            const after = atividadesAfter.find(a => a.id === id);
+                            if (after) setEditandoGrade({ ...editandoGrade, vinculado_id: id, lista_alunos: after.listaAlunos, tipo: 'after_school' });
+                          }}
+                        >
+                          <option value="">Não vinculado</option>
+                          {atividadesAfter.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
+                        </select>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="bg-black/20 rounded-[2rem] border border-white/5 overflow-hidden">
-                  <SeletorAlunos
-                    alunos={alunosBase}
-                    selecionados={editandoGrade.lista_alunos || []}
-                    turmaAlvo={editandoGrade.turma}
-                    onChange={v => setEditandoGrade({ ...editandoGrade, lista_alunos: v })}
-                  />
+                  <div className="bg-black/20 rounded-[2rem] border border-white/5 overflow-hidden">
+                    <SeletorAlunos
+                      alunos={alunosBase}
+                      selecionados={editandoGrade.lista_alunos || []}
+                      turmaAlvo={editandoGrade.turma}
+                      onChange={v => setEditandoGrade({ ...editandoGrade, lista_alunos: v })}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </ModalForm>

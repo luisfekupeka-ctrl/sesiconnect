@@ -253,7 +253,10 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
         {estaNoBlocoAtual && (
           <div className="absolute top-0 left-0 w-1 h-full bg-[#fbbf24] animate-pulse" />
         )}
-        <div className="flex justify-between items-center relative z-10">
+        <div 
+          onClick={() => isActive && setExpandido(!expandido)} 
+          className={cn("flex justify-between items-center relative z-10", isActive && "cursor-pointer select-none")}
+        >
            <div className="flex items-center gap-4">
               <span className={cn("text-[9px] font-black uppercase tracking-[0.2em] italic", estaNoBlocoAtual ? "text-[#fbbf24]" : "opacity-40")}>
                 {bloco.inicio} — {bloco.fim}
@@ -262,9 +265,9 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
               {isActive && <span className="text-[8px] font-black px-2 py-0.5 rounded-md bg-[#fbbf24]/10 text-[#fbbf24]">{tipo.toUpperCase()}</span>}
            </div>
            {isActive && (
-             <button onClick={() => setExpandido(!expandido)} className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-[#fbbf24]">
+             <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-[#fbbf24]">
                 <Users size={12} /> {alunosNoBloco.length} Alunos <ChevronDown size={14} className={cn("transition-transform", expandido && "rotate-180")} />
-             </button>
+             </div>
            )}
         </div>
         <div className="relative z-10">

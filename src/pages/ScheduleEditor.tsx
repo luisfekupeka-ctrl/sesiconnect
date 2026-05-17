@@ -113,28 +113,70 @@ export default function ScheduleEditor() {
     }
   };
 
-  // Carrega dados da sala/dia apenas na montagem ou troca de sala/dia
+  // Carrega dados da sala/dia com alinhamento estrito ao esqueleto do segmento
   useEffect(() => {
     if (salaSelecionada) {
+      const segDetectado = detectarSegmentoDaSala(salaSelecionada);
+      
+      // 1. Obtém os períodos padrão do segmento de forma deduplicada
+      const pAlvo = periodos.filter(p => p.segmento === segDetectado);
+      const uniqueTemplates = new Map<string, any>();
+      for (const p of pAlvo) {
+        const key = `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`;
+        if (!uniqueTemplates.has(key)) {
+          uniqueTemplates.set(key, p);
+        }
+      }
+      const targetPeriodos = Array.from(uniqueTemplates.values()).sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
+
+      // 2. Filtra as entradas existentes no banco para essa sala e dia
       const existentes = gradeCompleta.filter(
         e => (Number(e.numeroSala) === Number(salaSelecionada.numero) || Number((e as any).numero_sala) === Number(salaSelecionada.numero)) && 
              (String(e.diaSemana).toUpperCase() === String(diaSelecionado).toUpperCase() || String((e as any).dia_semana).toUpperCase() === String(diaSelecionado).toUpperCase())
-      ).sort((a,b) => (a.horario || '').localeCompare(b.horario || ''));
+      );
 
-      if (existentes.length > 0) {
-        setLinhas(existentes.map((e, i) => ({
-          id: e.id || `l-${i}`,
-          horario: e.horario || '07:30 - 08:15',
-          tipo: (e.tipo as any) || (e.materia === 'INTERVALO' || e.materia === 'LANCHE' ? 'intervalo' : e.materia === 'ALMOÇO' ? 'intervalo' : 'aula'),
-          materia: e.materia || '',
-          professor: e.nomeProfessor || (e as any).nome_professor || ''
-        })));
-      } else {
-        const novasLinhas = montarLinhasDoSegmento(segmentoSelecionado);
-        if (novasLinhas.length > 0) setLinhas(novasLinhas);
-      }
+      // 3. Mapeia as entradas do banco por horário para mesclagem limpa
+      const existentesMap = new Map<string, any>();
+      existentes.forEach(e => {
+        const hKey = String(e.horario).trim();
+        if (!existentesMap.has(hKey)) {
+          existentesMap.set(hKey, e);
+        } else {
+          const prev = existentesMap.get(hKey);
+          if ((!prev.materia || prev.materia === 'A DEFINIR') && e.materia && e.materia !== 'A DEFINIR') {
+            existentesMap.set(hKey, e);
+          }
+        }
+      });
+
+      // 4. Reconstrói as linhas alinhadas estritamente com os períodos oficiais
+      const linhasMescladas = targetPeriodos.map((p, i) => {
+        const key = `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`;
+        const dbEntry = existentesMap.get(key);
+        
+        if (dbEntry) {
+          return {
+            id: dbEntry.id || `db-${i}-${Date.now()}`,
+            horario: key,
+            tipo: (dbEntry.tipo as any) || (dbEntry.materia === 'INTERVALO' || dbEntry.materia === 'LANCHE' ? 'intervalo' : dbEntry.materia === 'ALMOÇO' ? 'intervalo' : 'aula'),
+            materia: dbEntry.materia || '',
+            professor: dbEntry.nomeProfessor || dbEntry.nome_professor || ''
+          };
+        } else {
+          const det = detectarTipoPeriodo(p.nome);
+          return {
+            id: `template-${i}-${Date.now()}`,
+            horario: key,
+            tipo: det.tipo as any,
+            materia: det.materia,
+            professor: det.professor,
+          };
+        }
+      });
+
+      setLinhas(linhasMescladas);
     }
-  }, [salaSelecionada, diaSelecionado, gradeCompleta, periodos]);
+  }, [salaSelecionada, diaSelecionado, gradeCompleta, periodos, segmentoSelecionado]);
 
   const addLinha = () => {
     const ultimo = linhas[linhas.length - 1];

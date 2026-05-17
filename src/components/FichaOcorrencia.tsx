@@ -119,9 +119,18 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
               backgroundRepeat: 'no-repeat'
             }}>
             
-            <div className="flex justify-between items-start mb-24 relative z-10 pt-10 px-8">
+            <div className="flex justify-between items-center mb-24 relative z-10 pt-10 px-8">
               <div className="pt-6 pl-2">
                 <div className="text-[8px] font-black tracking-[0.5em] text-blue-900/40 uppercase">SESI CONNECT SYSTEM</div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="bg-[#e30613] text-white font-extrabold px-3 py-1.5 text-2xl tracking-tighter italic rounded-[4px] shadow-sm leading-none flex items-center justify-center font-serif select-none">
+                  SESI
+                </div>
+                <div className="flex flex-col select-none leading-none">
+                  <span className="text-[10px] font-extrabold text-[#004a8e] tracking-widest leading-none">SENAI</span>
+                  <span className="text-[7px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-1">Internacional</span>
+                </div>
               </div>
             </div>
 
@@ -161,13 +170,16 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                     <div className="w-1.5 h-4 bg-amber-400" />
                     <h4 className="text-[11px] font-black uppercase tracking-widest text-gray-900">Relato da Ocorrência</h4>
                   </div>
-                  <div className="bg-gray-50/30 p-8 rounded-[2rem] border-2 border-gray-100/50 min-h-[350px]">
-                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-[0.2em] mb-6">{ocorrencia.nomeModelo}</p>
-                    <div className="space-y-8">
+                  <div className="bg-gray-50/30 p-10 rounded-[2.5rem] border-2 border-gray-100/50 min-h-[350px]">
+                    <div className="flex items-center gap-2 mb-8 border-b border-amber-500/10 pb-4">
+                      <ClipboardList size={16} className="text-amber-500" />
+                      <p className="text-xs font-black text-amber-600 uppercase tracking-[0.2em]">{ocorrencia.nomeModelo}</p>
+                    </div>
+                    <div className="space-y-10">
                       {Object.entries(ocorrencia.dados || {}).map(([key, value]) => (
-                        <div key={key} className="space-y-2">
-                          <p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">{key}</p>
-                          <p className="text-lg font-medium text-gray-900 leading-relaxed whitespace-pre-wrap text-justify">
+                        <div key={key} className="border-b border-gray-100/80 pb-8 last:border-none last:pb-0">
+                          <p className="text-[10px] font-black text-amber-600 tracking-wider mb-3 uppercase">{key}</p>
+                          <p className="text-sm font-medium text-gray-800 leading-relaxed whitespace-pre-wrap text-justify pl-4 border-l-2 border-gray-200">
                             {Array.isArray(value) ? value.join(', ') : value}
                           </p>
                         </div>

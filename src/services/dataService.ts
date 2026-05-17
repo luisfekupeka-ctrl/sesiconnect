@@ -767,7 +767,7 @@ export async function salvarModeloFormulario(modelo: Partial<ModeloFormulario>):
 
   if (modelo.id && modelo.id !== 'novo') {
     payload.id = modelo.id;
-    const { error } = await supabase.from('modelos_formulario').update(payload).eq('id', modelo.id);
+    const { error } = await supabase.from('modelos_formulario').upsert([payload]);
     return !error;
   }
 

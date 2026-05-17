@@ -589,17 +589,23 @@ export default function FormsPage() {
                 </div>
 
                 {/* Conteúdo Dinâmico */}
-                <div className="space-y-6">
-                  {Object.entries(ocorrenciaSelecionada.dados).map(([campo, valor]) => {
-                    const stringValor = Array.isArray(valor) ? valor.join(', ') : String(valor);
-                    if (!stringValor) return null;
-                    return (
-                      <div key={campo} className="space-y-2 border-b border-slate-100 pb-4 last:border-0 last:pb-0">
-                        <span className="text-[10px] font-bold text-[#0c2340] uppercase tracking-wider block">{campo}</span>
-                        <div className="text-sm text-slate-700 leading-relaxed font-medium whitespace-pre-line">{stringValor}</div>
-                      </div>
-                    );
-                  })}
+                <div className="bg-slate-50/50 p-10 rounded-[2rem] border border-slate-100 space-y-10">
+                  <div className="flex items-center gap-2 mb-6 border-b border-slate-200/60 pb-4">
+                    <FileText size={18} className="text-[#0c2340]" />
+                    <span className="text-xs font-black text-[#0c2340] uppercase tracking-widest">{ocorrenciaSelecionada.nomeModelo}</span>
+                  </div>
+                  <div className="space-y-10">
+                    {Object.entries(ocorrenciaSelecionada.dados).map(([campo, valor]) => {
+                      const stringValor = Array.isArray(valor) ? valor.join(', ') : String(valor);
+                      if (!stringValor) return null;
+                      return (
+                        <div key={campo} className="border-b border-slate-100 pb-8 last:border-none last:pb-0">
+                          <span className="text-[10px] font-black text-[#0c2340] uppercase tracking-widest block mb-3">{campo}</span>
+                          <div className="text-sm text-slate-700 leading-relaxed font-medium whitespace-pre-line pl-4 border-l-2 border-slate-200">{stringValor}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Assinaturas */}
