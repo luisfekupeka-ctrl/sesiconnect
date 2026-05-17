@@ -10,7 +10,7 @@ import ModalChamada from '../components/ModalChamada';
 import { EntradaGradeSala, ResultadoRealocacao } from '../types';
 
 export default function ChamadaProfessor() {
-  const { professores, horaAtual, gradeCompleta } = useEscola();
+  const { professores, horaAtual, gradeCompleta, salas } = useEscola();
   const [professorSelecionado, setProfessorSelecionado] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
   const [diaFiltro, setDiaFiltro] = useState(obterDiaSemana(horaAtual));
@@ -232,16 +232,17 @@ export default function ChamadaProfessor() {
                     onClick={() => {
                       if (aulaRegular) setAulaParaChamada(aulaRegular);
                       else if (subAqui) {
+                        const salaCorrespondente = salas.find(s => s.ano === subAqui.turma || s.nome === subAqui.turma);
                         setAulaParaChamada({
                           id: subAqui.id,
-                          numeroSala: 0,
+                          numeroSala: salaCorrespondente ? salaCorrespondente.numero : 0,
                           nomeSala: subAqui.turma,
                           anoTurma: subAqui.turma,
                           diaSemana: diaFiltro,
                           horario: subAqui.horario,
                           nomeProfessor: subAqui.professorSubstituto,
                           turma: subAqui.turma,
-                          materia: subAqui.tipo === 'PROVA' ? 'PROVA' : 'SUBSTITUIÇÃO',
+                          materia: subAqui.tipo === 'PROVA' ? 'APLICAÇÃO DE PROVA' : 'SUBSTITUIÇÃO',
                           tipo: 'regular',
                           listaAlunos: []
                         });

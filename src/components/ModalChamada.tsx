@@ -19,15 +19,29 @@ export default function ModalChamada({ aula, onClose }: ModalChamadaProps) {
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
 
-  // Filtrar alunos desta sala/turma
-  // O filtro ideal depende da regra da escola. Por enquanto, se a aula tem uma 'turma', filtramos alunos por turma.
-  // Se não, pegamos todos daquela sala. Vamos tentar pela turma primeiro, depois pela sala.
-  const alunosDaTurma = alunos.filter(a => {
-    if (aula.turma && aula.turma !== 'A DEFINIR' && aula.turma !== '—') {
-      return a.turma === aula.turma;
+  // Filtrar alunos desta aula de forma sincronizada com o ensalamento real
+  const alunosDaTurma = React.useMemo(() => {
+    // 1. Se a aula possuir uma lista nominal de alunos específica (ensalamento real da grade)
+    if (aula.listaAlunos && aula.listaAlunos.length > 0) {
+      const namesSet = new Set(aula.listaAlunos.map(name => String(name).trim().toLowerCase()));
+      return alunos.filter(a => namesSet.has(a.nome.trim().toLowerCase()))
+                   .sort((a, b) => a.nome.localeCompare(b.nome));
     }
-    return a.numeroSala === aula.numeroSala;
-  }).sort((a, b) => a.nome.localeCompare(b.nome));
+
+    // 2. Fallback: filtrar por número da sala se cadastrado
+    const porSala = alunos.filter(a => Number(a.numeroSala) === Number(aula.numeroSala));
+    if (porSala.length > 0) {
+      return porSala.sort((a, b) => a.nome.localeCompare(b.nome));
+    }
+
+    // 3. Fallback secundário: filtrar por turma
+    return alunos.filter(a => {
+      if (aula.turma && aula.turma !== 'A DEFINIR' && aula.turma !== '—') {
+        return a.turma === aula.turma;
+      }
+      return false;
+    }).sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [alunos, aula]);
 
   useEffect(() => {
     // Tenta carregar chamada existente para esta aula
