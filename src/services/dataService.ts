@@ -285,9 +285,6 @@ export async function salvarAluno(aluno: Partial<Aluno>): Promise<boolean> {
   };
 
   if (aluno.id && aluno.id !== 'novo') payload.id = aluno.id;
-  if (aluno.numeroSala !== undefined && aluno.numeroSala !== null) {
-    payload.numero_sala = Number(aluno.numeroSala);
-  }
 
   const { error } = await supabase.from('alunos_cms').upsert([payload], { onConflict: 'nome' });
   if (error) console.error('[DEBUG] Erro ao salvar aluno:', error);

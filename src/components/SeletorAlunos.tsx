@@ -62,10 +62,22 @@ export default function SeletorAlunos({ alunos, selecionados, onChange, turmaAlv
 
   const handleCadastrarRapido = async (id_temp: string, nome: string) => {
     setCarregandoInterno(true);
+    let anoCorreto = '6º Ano';
+    if (turmaAlvo) {
+      const lower = turmaAlvo.toLowerCase();
+      if (lower.includes('6')) anoCorreto = '6º Ano';
+      else if (lower.includes('7')) anoCorreto = '7º Ano';
+      else if (lower.includes('8')) anoCorreto = '8º Ano';
+      else if (lower.includes('9')) anoCorreto = '9º Ano';
+      else if (lower.includes('1') || lower.includes('primeiro')) anoCorreto = '1º EM';
+      else if (lower.includes('2') || lower.includes('segundo')) anoCorreto = '2º EM';
+      else if (lower.includes('3') || lower.includes('terceiro')) anoCorreto = '3º EM';
+    }
+
     const novoAluno = { 
       nome, 
-      turma: turmaAlvo || '6º Ano', 
-      ano: turmaAlvo || '6º Ano', 
+      turma: turmaAlvo || 'Indefinido', 
+      ano: anoCorreto, 
       numeroSala: 0 
     };
     
