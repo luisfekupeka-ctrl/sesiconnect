@@ -9,6 +9,7 @@ import { Aluno, RegistroOcorrencia } from '../types';
 import { cn } from '../lib/utils';
 import { arquivarELimparMes } from '../services/dataService';
 import FichaOcorrencia from './FichaOcorrencia';
+import ProntuarioPDF from './ProntuarioPDF';
 
 interface Props {
   alunos: Aluno[];
@@ -24,20 +25,41 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
   const [selecao, setSelecao] = useState<{ unidade?: string; turma?: string; aluno?: Aluno }>({});
   const [busca, setBusca] = useState('');
   const [visualizandoDoc, setVisualizandoDoc] = useState<RegistroOcorrencia | null>(null);
+  const [dossieAberto, setDossieAberto] = useState(false);
   const [carregando, setCarregando] = useState(false);
 
-  const ANOS = ['6º Ano', '7º Ano', '8º Ano', '9º Ano', '1º EM', '2º EM', '3º EM'];
+  const ANOS_ORIGINAL = ['6º Ano', '7º Ano', '8º Ano', '9º Ano', '1º EM', '2º EM', '3º EM'];
+  
+  const ANOS = useMemo(() => {
+    return ANOS_ORIGINAL.filter(ano => 
+      ocorrencias.some(o => (o.anoAluno || '').includes(ano.split(' ')[0]))
+    );
+  }, [ocorrencias]);
 
   const turmasDaUnidade = useMemo(() => {
     if (!selecao.unidade) return [];
     const prefix = selecao.unidade.split(' ')[0];
-    return Array.from(new Set(alunos.filter(a => (a.ano || '').includes(prefix)).map(a => a.turma))).filter(Boolean).sort() as string[];
-  }, [alunos, selecao.unidade]);
+    const turmasValidas = Array.from(new Set(
+      ocorrencias
+        .filter(o => (o.anoAluno || '').includes(prefix))
+        .map(o => o.turmaAluno)
+        .filter(Boolean)
+    )) as string[];
+    return turmasValidas.sort();
+  }, [ocorrencias, selecao.unidade]);
 
   const alunosDaTurma = useMemo(() => {
     if (!selecao.turma) return [];
-    return alunos.filter(a => a.turma === selecao.turma).sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [alunos, selecao.turma]);
+    const nomesValidos = Array.from(new Set(
+      ocorrencias
+        .filter(o => o.turmaAluno === selecao.turma)
+        .map(o => o.nomeAluno)
+        .filter(Boolean)
+    ));
+    return alunos
+      .filter(a => nomesValidos.includes(a.nome) && a.turma === selecao.turma)
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [alunos, ocorrencias, selecao.turma]);
 
   const documentosDoAluno = useMemo(() => {
     if (!selecao.aluno) return [];
@@ -153,6 +175,18 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
         {/* Main Workspace */}
         <main className="flex-1 p-10 overflow-y-auto custom-scrollbar bg-black/10">
           
+          {viewMode === 'DOCUMENTOS' && documentosDoAluno.length > 0 && (
+            <div className="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/5 p-6 rounded-[2rem] border border-white/5">
+              <div>
+                <h3 className="text-xl font-black text-white">{selecao.aluno?.nome}</h3>
+                <p className="text-[10px] text-primary uppercase tracking-widest font-bold mt-1">{documentosDoAluno.length} Ocorrências Registradas</p>
+              </div>
+              <button onClick={() => setDossieAberto(true)} className="flex items-center gap-2 px-6 py-4 bg-primary text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white hover:scale-105 transition-all shadow-xl shadow-primary/20">
+                <Download size={16} /> Dossiê Completo (PDF)
+              </button>
+            </div>
+          )}
+
           <AnimatePresence mode="wait">
             <motion.div 
               key={viewMode}
@@ -230,6 +264,9 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
       <AnimatePresence>
         {visualizandoDoc && (
           <FichaOcorrencia ocorrencia={visualizandoDoc} onClose={() => setVisualizandoDoc(null)} />
+        )}
+        {dossieAberto && documentosDoAluno.length > 0 && (
+          <ProntuarioPDF ocorrencias={documentosDoAluno} onClose={() => setDossieAberto(false)} alunoNome={selecao.aluno?.nome || ''} />
         )}
       </AnimatePresence>
     </div>
