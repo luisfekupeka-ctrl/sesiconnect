@@ -27,6 +27,7 @@ import {
   obterAgendaProfessor,
   obterLocalizacaoProfessor,
 } from '../services/motorEscolar';
+import { buscarRealocacoes } from '../services/motorRealocacao';
 import {
   buscarSalas,
   buscarMapaSalas,
@@ -41,12 +42,14 @@ import {
   buscarGradeMonitores,
   buscarPeriodos,
 } from '../services/dataService';
+import { ResultadoRealocacao } from '../types';
 
 interface ContextoEscolaType {
   estadoEscola: EstadoEscola;
   horaAtual: Date;
   salas: Sala[];
   gradeCompleta: EntradaGradeSala[];
+  gradeBase: EntradaGradeSala[];
   alunos: Aluno[];
   languageLab: LanguageLabRecord[];
   atividadesAfter: AtividadeAfter[];
@@ -79,12 +82,13 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
   const [ocorrencias, setOcorrencias] = useState<RegistroOcorrencia[]>([]);
   const [gradeMonitores, setGradeMonitores] = useState<GradeMonitor[]>([]);
   const [periodos, setPeriodos] = useState<PeriodoConfig[]>([]);
+  const [realocacoes, setRealocacoes] = useState<ResultadoRealocacao[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   const carregarDados = useCallback(async () => {
     setCarregando(true);
     try {
-      const [s, g, a, li, aa, m, mf, oc, pCms, lCms, gm, periodosDB] = await Promise.all([
+      const [s, g, a, li, aa, m, mf, oc, pCms, lCms, gm, periodosDB, realocDB] = await Promise.all([
         buscarSalas(),
         buscarMapaSalas(),
         buscarAlunos(),
@@ -97,34 +101,21 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
         buscarLocaisCMS(),
         buscarGradeMonitores(),
         buscarPeriodos(),
+        buscarRealocacoes(),
       ]);
 
-      // === DADOS REAIS: PROFESSORES ===
       setProfessoresCMS(pCms || []);
-
-      // === DADOS REAIS: ALUNOS ===
       setAlunos(a || []);
-
-      // === DADOS REAIS: GRADE COMPLETA ===
       setGradeCompleta(g || []);
-
-      // === DADOS REAIS: SALAS ===
       setSalas(s || []);
-
       setAtividadesAfter(aa);
       setLocaisCMS(lCms);
       setOcorrencias(oc);
-
-      // === LANGUAGE LAB REAIS ===
       setLanguageLab(li || []);
-
-      // === GRADE MONITORES REAIS ===
       setGradeMonitores(gm || []);
-
-      // === MONITORES REAIS ===
       setMonitores(m || []);
+      setRealocacoes(realocDB || []);
 
-      // === FORMULÁRIO DE TESTE (se vazio) ===
       if (mf && mf.length > 0) {
         setModelosFormulario(mf);
       } else {
@@ -144,7 +135,6 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
         ]);
       }
 
-      // === PERIODOS: BUSCA DO BANCO DE DADOS ===
       if (periodosDB && periodosDB.length > 0) {
         setPeriodos(periodosDB as PeriodoConfig[]);
       } else {
@@ -174,6 +164,12 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
   // ============================================================
   const gradeProcessada = useMemo(() => {
     const listCanonNames = (professoresCMS || []).map(p => p.nome);
+    const dataAtualString = horaAtual.toISOString().split('T')[0];
+    const diaSemanaStr = obterDiaSemana(horaAtual);
+
+    const realocacoesHoje = realocacoes.filter(
+      r => r.dia === dataAtualString && r.status === 'EFETIVADO'
+    );
 
     return gradeCompleta.map(slot => {
       let nomeProf = slot.nomeProfessor;
@@ -181,6 +177,41 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
         nomeProf = normalizarNomeComum(nomeProf, listCanonNames);
       }
       const slotComProfNormalizado = { ...slot, nomeProfessor: nomeProf };
+
+      // Apply Realocation/Substitution Overrides if matched
+      if (slot.diaSemana === diaSemanaStr) {
+        const realoc = realocacoesHoje.find(r => {
+          if (r.horario !== slot.horario) return false;
+
+          const matchSala = 
+            r.turma === slot.turma ||
+            r.turma.includes(slot.turma) ||
+            r.turma.includes(slot.nomeSala) ||
+            r.turma.includes(`Sala ${slot.numeroSala}`);
+          
+          return matchSala;
+        });
+
+        if (realoc) {
+          if (realoc.tipo === 'PROVA') {
+            return {
+              ...slotComProfNormalizado,
+              materia: 'APLICAÇÃO DE PROVA',
+              nomeProfessor: realoc.professorSubstituto,
+              tipo: 'regular',
+            };
+          } else if (realoc.tipo === 'FALTA' || realoc.tipo === 'SUBSTITUICAO') {
+            if (realoc.professorOriginal?.trim().toLowerCase() === slot.nomeProfessor?.trim().toLowerCase()) {
+              return {
+                ...slotComProfNormalizado,
+                nomeProfessor: realoc.professorSubstituto,
+                tipo: 'regular',
+              };
+            }
+          }
+        }
+      }
+
       const tipoAtividade = slot.tipo || 'regular';
       const slotInicio = slot.horario?.split('-')[0]?.trim() || '';
 
@@ -194,7 +225,21 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
                  lab.horarioInicio <= slotInicio && lab.horarioFim > slotInicio;
         });
         if (labMatch) {
-          return { ...slotComProfNormalizado, materia: `Lab: ${labMatch.nivel}`, nomeProfessor: labMatch.professor, listaAlunos: labMatch.listaAlunos || [], tipo: 'language_lab' };
+          return { 
+            ...slotComProfNormalizado, 
+            materia: `Lab: ${labMatch.nivel}`, 
+            nomeProfessor: labMatch.professor, 
+            listaAlunos: labMatch.listaAlunos || [], 
+            tipo: 'language_lab' 
+          };
+        } else {
+          return {
+            ...slotComProfNormalizado,
+            materia: 'Language Lab (Não Agendado)',
+            nomeProfessor: 'A DEFINIR',
+            listaAlunos: [],
+            tipo: 'language_lab'
+          };
         }
       }
 
@@ -208,7 +253,21 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
                  after.horarioInicio <= slotInicio && after.horarioFim > slotInicio;
         });
         if (afterMatch) {
-          return { ...slotComProfNormalizado, materia: `After: ${afterMatch.nome}`, nomeProfessor: afterMatch.nomeProfessor, listaAlunos: afterMatch.listaAlunos || [], tipo: 'after_school' };
+          return { 
+            ...slotComProfNormalizado, 
+            materia: `After: ${afterMatch.nome}`, 
+            nomeProfessor: afterMatch.nomeProfessor, 
+            listaAlunos: afterMatch.listaAlunos || [], 
+            tipo: 'after_school' 
+          };
+        } else {
+          return {
+            ...slotComProfNormalizado,
+            materia: 'After School (Não Agendado)',
+            nomeProfessor: 'A DEFINIR',
+            listaAlunos: [],
+            tipo: 'after_school'
+          };
         }
       }
 
@@ -218,7 +277,6 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
         (slot.nomeSala && l.nome === slot.nomeSala)
       );
       if (localCmsMatch && localCmsMatch.lista_alunos && localCmsMatch.lista_alunos.length > 0) {
-        // Se a entrada da grade não tiver alunos próprios, herda da sala
         if (!slot.listaAlunos || slot.listaAlunos.length === 0) {
           return { ...slotComProfNormalizado, listaAlunos: localCmsMatch.lista_alunos, tipo: 'regular' };
         }
@@ -232,7 +290,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
 
       return slotComProfNormalizado;
     });
-  }, [gradeCompleta, languageLab, atividadesAfter, alunos, locaisCMS, professoresCMS]);
+  }, [gradeCompleta, languageLab, atividadesAfter, alunos, locaisCMS, professoresCMS, realocacoes, horaAtual]);
 
   let estadoEscola: EstadoEscola;
   try {
@@ -287,7 +345,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
         agendaDoDia: agenda,
       };
     });
-  }, [gradeCompleta, horaAtual]);
+  }, [gradeProcessada, horaAtual]);
 
   const adicionarOcorrencia = useCallback((ocorrencia: RegistroOcorrencia) => {
     setOcorrencias(prev => [ocorrencia, ...prev]);
@@ -301,6 +359,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
       horaAtual,
       salas,
       gradeCompleta: gradeProcessada,
+      gradeBase: gradeCompleta,
       alunos,
       languageLab,
       atividadesAfter,

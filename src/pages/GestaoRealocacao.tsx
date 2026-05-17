@@ -17,7 +17,7 @@ import {
 } from '../services/motorRealocacao';
 
 export default function GestaoRealocacao() {
-  const { professores, gradeCompleta, salas, periodos } = useEscola();
+  const { professores, gradeCompleta, gradeBase, salas, periodos, atualizar } = useEscola();
   const [professoresConfig, setProfessoresConfig] = useState<ProfessorConfig[]>([]);
   const [historico, setHistorico] = useState<ResultadoRealocacao[]>([]);
 
@@ -154,7 +154,7 @@ export default function GestaoRealocacao() {
             if (!fiscalUnicoDaSala) {
                 // Tenta pegar o professor original do primeiro horário selecionado (ou qualquer horário válido)
                 for (const h of horariosSel) {
-                  const entradaH = gradeCompleta.find(g => 
+                  const entradaH = gradeBase.find(g => 
                     g.numeroSala === salaNum && 
                     g.diaSemana === diaSemanaItem && 
                     g.horario === h &&
@@ -170,7 +170,7 @@ export default function GestaoRealocacao() {
 
             for (const h of horariosSel) {
               // Encontra a aula original cadastrada para esta sala e horário
-              const entradaOriginal = gradeCompleta.find(g => 
+              const entradaOriginal = gradeBase.find(g => 
                 g.numeroSala === salaNum && 
                 g.diaSemana === diaSemanaItem && 
                 g.horario === h
@@ -201,7 +201,7 @@ export default function GestaoRealocacao() {
         } else {
           // --- FLUXO AUSÊNCIA DE PROFESSOR (PROFESSOR FALTOU) ---
           for (const h of horariosSel) {
-            const aulaAfetada = gradeCompleta.find(a =>
+            const aulaAfetada = gradeBase.find(a =>
               a.nomeProfessor === profFaltouId &&
               a.diaSemana === diaSemanaItem &&
               a.horario === h
@@ -211,7 +211,7 @@ export default function GestaoRealocacao() {
 
             // Busca professores livres na hora
             let substitutosValidos = professoresConfig.filter(c => {
-              const ocupado = gradeCompleta.some(g =>
+              const ocupado = gradeBase.some(g =>
                 g.nomeProfessor === c.nome &&
                 g.diaSemana === diaSemanaItem &&
                 g.horario === h
@@ -223,11 +223,11 @@ export default function GestaoRealocacao() {
             if (regraSub === 'DIRECIONADA' && profDirecionado) {
               const profAlvo = professoresConfig.find(c => c.nome === profDirecionado);
               if (profAlvo) {
-                const ocupado = gradeCompleta.some(g => g.nomeProfessor === profAlvo.nome && g.diaSemana === diaSemanaItem && g.horario === h);
+                const ocupado = gradeBase.some(g => g.nomeProfessor === profAlvo.nome && g.diaSemana === diaSemanaItem && g.horario === h);
                 if (!ocupado) substitutosValidos = [profAlvo];
               }
             } else if (regraSub === 'MESMO_ANO') {
-              const professoresDoAno = new Set(gradeCompleta.filter(g => g.turma === aulaAfetada.turma).map(g => g.nomeProfessor));
+              const professoresDoAno = new Set(gradeBase.filter(g => g.turma === aulaAfetada.turma).map(g => g.nomeProfessor));
               const filtrados = substitutosValidos.filter(s => professoresDoAno.has(s.nome));
               if (filtrados.length > 0) substitutosValidos = filtrados;
             }
@@ -287,6 +287,7 @@ export default function GestaoRealocacao() {
       setHorariosSel([]);
       setProfFixoProva('');
       carregarDados();
+      atualizar();
     } catch (e) {
       alert('Erro ao salvar as informações.');
     } finally {
@@ -511,14 +512,14 @@ export default function GestaoRealocacao() {
                             const a = (s.ano || '').toLowerCase();
                             if (a.includes('6') || a.includes('7')) return '6e7';
                             if (a.includes('8') || a.includes('9')) return '8e9';
-                            if (a.includes('médio') || a.includes('medio') || a.includes('ano e')) return 'medio';
+                            if (a.includes('médio') || a.includes('medio') || a.includes('série') || a.includes('serie') || a.includes('1ª') || a.includes('2ª') || a.includes('3ª')) return 'medio';
                             return '6e7';
                           });
                           const segsUnicos = Array.from(new Set(segmentos));
                           const pAlvo = periodos.filter(p => segsUnicos.includes(p.segmento));
                           return pAlvo.map(p => `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`);
                         })()
-                      : gradeCompleta
+                      : gradeBase
                           .filter(g => {
                             const dataItem = datasSelecionadas[0];
                             const dataObj = new Date(dataItem + 'T00:00:00');
@@ -780,7 +781,7 @@ export default function GestaoRealocacao() {
                         if (resultadosDia.length === 0) return null;
 
                         const horariosUnicos = Array.from(new Set(resultadosDia.map(r => r.horario))).sort();
-                        const turmasUnicas = Array.from(new Set(resultadosDia.map(r => r.turma))).sort();
+                        const turmasUnicas = Array.from(new Set(resultadosDia.map(r => String(r.turma)))).sort();
 
                         return (
                           <div key={d} className="space-y-4 break-after-page">
@@ -808,7 +809,7 @@ export default function GestaoRealocacao() {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {turmasUnicas.map(turma => (
+                                  {turmasUnicas.map((turma: string) => (
                                     <tr key={turma} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
                                       <td className="p-4 font-black text-slate-800 text-xs border-r border-slate-200 bg-slate-50/50">
                                         <div className="flex items-center justify-center">

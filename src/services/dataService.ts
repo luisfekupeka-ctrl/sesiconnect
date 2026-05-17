@@ -218,7 +218,7 @@ export async function salvarEntradaGradeIndividual(entrada: any): Promise<boolea
     turma: entrada.turma || '6º Ano',
     materia: entrada.materia || '',
     tipo: entrada.tipo || 'regular',
-    lista_alunos: entrada.listaAlunos || []
+    lista_alunos: entrada.lista_alunos || entrada.listaAlunos || []
   };
 
   const { error } = await supabase
@@ -280,15 +280,19 @@ export async function salvarAluno(aluno: Partial<Aluno>): Promise<boolean> {
 
   const payload: any = {
     nome: aluno.nome.trim(),
-    turma: String(aluno.turma || '').trim(),
+    turma: String(aluno.turma || aluno.ano || '').trim(),
     ano: String(aluno.ano || '').trim(),
   };
 
-  if (aluno.id && aluno.id !== 'novo') payload.id = aluno.id;
-
-  const { error } = await supabase.from('alunos_cms').upsert([payload], { onConflict: 'nome' });
-  if (error) console.error('[DEBUG] Erro ao salvar aluno:', error);
-  return !error;
+  if (aluno.id && aluno.id !== 'novo') {
+    const { error } = await supabase.from('alunos_cms').update(payload).eq('id', aluno.id);
+    if (error) console.error('[DEBUG] Erro ao editar aluno:', error);
+    return !error;
+  } else {
+    const { error } = await supabase.from('alunos_cms').insert([payload]);
+    if (error) console.error('[DEBUG] Erro ao cadastrar aluno:', error);
+    return !error;
+  }
 }
 
 export async function excluirAluno(id: string): Promise<boolean> {
@@ -335,11 +339,27 @@ export async function salvarProfessorCMS(prof: Partial<ProfessorCMS>): Promise<b
     especialidade: prof.especialidade || '',
   };
 
-  if (prof.id && prof.id !== 'novo') payload.id = prof.id;
+  if (prof.id && prof.id !== 'novo') {
+    const { error } = await supabase.from('professores_cms').update(payload).eq('id', prof.id);
+    if (error) console.error('[DEBUG] Erro ao atualizar professor por ID:', error);
+    return !error;
+  }
 
-  const { error } = await supabase.from('professores_cms').upsert([payload], { onConflict: 'nome' });
-  if (error) console.error('[DEBUG] Erro ao salvar professor:', error);
-  return !error;
+  const { data: existing } = await supabase
+    .from('professores_cms')
+    .select('id')
+    .eq('nome', payload.nome)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase.from('professores_cms').update(payload).eq('id', existing.id);
+    if (error) console.error('[DEBUG] Erro ao atualizar professor por Nome:', error);
+    return !error;
+  } else {
+    const { error } = await supabase.from('professores_cms').insert([payload]);
+    if (error) console.error('[DEBUG] Erro ao inserir professor:', error);
+    return !error;
+  }
 }
 
 export async function excluirProfessorCMS(id: string): Promise<boolean> {
@@ -521,31 +541,40 @@ export async function salvarGradeMonitor(grade: Partial<GradeMonitor>): Promise<
 export async function salvarGradeMonitores(lista: Partial<GradeMonitor>[]): Promise<boolean> {
   if (!lista || lista.length === 0) return false;
 
-  const payloads = lista.map(grade => ({
-    monitor_nome: grade.monitorNome,
-    dia_semana: grade.diaSemana,
-    horario_inicio: grade.horarioInicio,
-    horario_fim: grade.horarioFim,
-    posto: grade.posto,
-    funcao: grade.funcao || 'Monitoria Geral',
-    instrucoes: grade.instrucoes || '',
-    cor_etiqueta: grade.corEtiqueta || '#3B82F6'
-  }));
+  const monitorNome = lista[0].monitorNome;
+  if (!monitorNome) return false;
+
+  const diasParaLimpar = Array.from(new Set(lista.map(l => l.diaSemana)));
 
   try {
-    for (const p of payloads) {
-      // Tenta inserir
-      const { error: insertError } = await supabase.from('grade_monitores').insert([p]);
-      
-      if (insertError && insertError.code === '23505') {
-        // Se duplicar (mesmo monitor, dia e horário), atualiza
-        await supabase.from('grade_monitores')
-          .update(p)
-          .eq('monitor_nome', p.monitor_nome)
-          .eq('dia_semana', p.dia_semana)
-          .eq('horario_inicio', p.horario_inicio);
-      }
+    const { error: deleteError } = await supabase
+      .from('grade_monitores')
+      .delete()
+      .eq('monitor_nome', monitorNome)
+      .in('dia_semana', diasParaLimpar);
+
+    if (deleteError) {
+      console.error('[DEBUG] Erro ao limpar grade antiga de monitores:', deleteError);
+      return false;
     }
+
+    const payloads = lista.map(grade => ({
+      monitor_nome: grade.monitorNome,
+      dia_semana: grade.diaSemana,
+      horario_inicio: grade.horarioInicio,
+      horario_fim: grade.horarioFim,
+      posto: grade.posto || 'A DEFINIR',
+      funcao: grade.funcao || 'Monitoria Geral',
+      instrucoes: grade.instrucoes || '',
+      cor_etiqueta: grade.corEtiqueta || '#3B82F6'
+    }));
+
+    const { error: insertError } = await supabase.from('grade_monitores').insert(payloads);
+    if (insertError) {
+      console.error('[DEBUG] Erro ao inserir nova grade de monitores:', insertError);
+      return false;
+    }
+
     return true;
   } catch (error) {
     console.error('Erro ao salvar grade de monitores:', error);
@@ -643,11 +672,27 @@ export async function salvarLocalCMS(local: Partial<LocalCMS>): Promise<boolean>
     lista_alunos: local.lista_alunos || []
   };
 
-  if (local.id && local.id !== 'novo') payload.id = local.id;
+  if (local.id && local.id !== 'novo') {
+    const { error } = await supabase.from('locais_cms').update(payload).eq('id', local.id);
+    if (error) console.error('[DEBUG] Erro ao atualizar local por ID:', error);
+    return !error;
+  }
 
-  const { error } = await supabase.from('locais_cms').upsert([payload], { onConflict: 'nome' });
-  if (error) console.error('[DEBUG] Erro ao salvar local:', error);
-  return !error;
+  const { data: existing } = await supabase
+    .from('locais_cms')
+    .select('id')
+    .eq('nome', payload.nome)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase.from('locais_cms').update(payload).eq('id', existing.id);
+    if (error) console.error('[DEBUG] Erro ao atualizar local por nome:', error);
+    return !error;
+  } else {
+    const { error } = await supabase.from('locais_cms').insert([payload]);
+    if (error) console.error('[DEBUG] Erro ao inserir local:', error);
+    return !error;
+  }
 }
 
 export async function excluirLocalCMS(id: string): Promise<boolean> {

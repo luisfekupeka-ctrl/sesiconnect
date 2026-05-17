@@ -297,27 +297,27 @@ export default function ScheduleEditor() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white p-8">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+    <div className="min-h-screen bg-[#050505] text-white p-4 md:p-8 pb-28 md:pb-8">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 md:mb-12">
         <div>
-          <h1 className="text-4xl font-black italic tracking-tighter uppercase">Gestão <span className="text-primary">de Grades</span></h1>
+          <h1 className="text-3xl md:text-4xl font-black italic tracking-tighter uppercase">Gestão <span className="text-primary">de Grades</span></h1>
           <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
              <Zap size={12} className="text-primary" /> Sistema Ativo <span className="text-primary/20 ml-2">v3.0</span>
           </p>
         </div>
-        <div className="flex gap-4">
-          <button onClick={handleSalvar} disabled={salvando} className="bg-primary text-black px-10 py-5 rounded-[2rem] font-black uppercase text-xs flex items-center gap-3 hover:scale-105 transition-all shadow-xl shadow-primary/20">
+        <div className="flex w-full md:w-auto gap-4">
+          <button onClick={handleSalvar} disabled={salvando} className="w-full md:w-auto bg-primary text-black px-6 md:px-10 py-4 md:py-5 rounded-[2rem] font-black uppercase text-xs flex items-center justify-center gap-3 hover:scale-105 transition-all shadow-xl shadow-primary/20">
             {salvando ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
             {salvando ? 'Processando...' : 'Salvar Alterações'}
           </button>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 lg:gap-10">
         {/* Sidebar de Configuração */}
-        <aside className="space-y-6">
-          <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 shadow-2xl">
-            <div className="flex items-center justify-between mb-6">
+        <aside className="space-y-4 lg:space-y-6">
+          <div className="bg-white/5 p-4 lg:p-8 rounded-[2rem] lg:rounded-[3rem] border border-white/5 shadow-2xl">
+            <div className="flex items-center justify-between mb-4 lg:mb-6">
               <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] flex items-center gap-2">
                 <Layers size={14} /> Segmento
               </p>
@@ -325,7 +325,7 @@ export default function ScheduleEditor() {
                 <Palette size={14} />
               </button>
             </div>
-            <div className="space-y-2">
+            <div className="hidden lg:block space-y-2">
                {[
                  { id: '6e7', label: '6º e 7º Ano' },
                  { id: '8e9', label: '8º e 9º Ano' },
@@ -336,55 +336,80 @@ export default function ScheduleEditor() {
                  </button>
                ))}
             </div>
+            <div className="lg:hidden flex gap-2 overflow-x-auto pb-1 no-scrollbar scroll-smooth">
+               {[
+                 { id: '6e7', label: '6º/7º Ano' },
+                 { id: '8e9', label: '8º/9º Ano' },
+                 { id: 'medio', label: 'E. Médio' }
+               ].map(s => (
+                 <button key={s.id} onClick={() => handleSegmentoChange(s.id)} className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase transition-all border-2 shrink-0", segmentoSelecionado === s.id ? "bg-primary/10 border-primary text-primary" : "bg-black border-white/5 text-white/40")}>
+                   {s.label}
+                 </button>
+               ))}
+            </div>
           </div>
 
-          <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 shadow-2xl">
-            <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
+          <div className="bg-white/5 p-4 lg:p-8 rounded-[2rem] lg:rounded-[3rem] border border-white/5 shadow-2xl">
+            <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-4 lg:mb-6 flex items-center gap-2">
                <DoorOpen size={14} /> Seleção de Sala
             </p>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="hidden lg:grid grid-cols-4 gap-3">
               {salas.map(s => (
                 <button key={s.id} onClick={() => setSalaSelecionada(s)} className={cn("aspect-square rounded-2xl text-xs font-black transition-all border-2", salaSelecionada?.id === s.id ? "bg-primary border-primary text-black" : "bg-black border-white/5 text-white/40 hover:border-primary/50")}>
                   {s.numero}
                 </button>
               ))}
             </div>
+            <div className="lg:hidden flex gap-2 overflow-x-auto pb-2 no-scrollbar scroll-smooth">
+              {salas.map(s => (
+                <button key={s.id} onClick={() => setSalaSelecionada(s)} className={cn("min-w-[44px] h-11 rounded-xl text-xs font-black transition-all border-2 shrink-0 flex items-center justify-center", salaSelecionada?.id === s.id ? "bg-primary border-primary text-black" : "bg-black border-white/5 text-white/40")}>
+                  {s.numero}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="bg-white/5 p-8 rounded-[3rem] border border-white/5 shadow-2xl">
-            <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
+          <div className="bg-white/5 p-4 lg:p-8 rounded-[2rem] lg:rounded-[3rem] border border-white/5 shadow-2xl">
+            <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-4 lg:mb-6 flex items-center gap-2">
               <Calendar size={14} /> Dia da Semana
             </p>
-            <div className="grid grid-cols-1 gap-2">
+            <div className="hidden lg:grid grid-cols-1 gap-2">
               {DIAS_SEMANA.map(dia => (
                 <button key={dia} onClick={() => setDiaSelecionado(dia)} className={cn("w-full p-4 rounded-2xl text-[10px] font-black uppercase text-left transition-all border-2", diaSelecionado === dia ? "bg-primary/10 border-primary text-primary shadow-lg shadow-primary/5" : "bg-black border-white/5 text-white/40")}>
                   {dia}
                 </button>
               ))}
             </div>
+            <div className="lg:hidden flex gap-2 overflow-x-auto pb-1 no-scrollbar scroll-smooth">
+              {DIAS_SEMANA.map(dia => (
+                <button key={dia} onClick={() => setDiaSelecionado(dia)} className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase transition-all border-2 shrink-0", diaSelecionado === dia ? "bg-primary/10 border-primary text-primary" : "bg-black border-white/5 text-white/40")}>
+                  {dia.slice(0, 3)}
+                </button>
+              ))}
+            </div>
           </div>
         </aside>
 
-        {/* Workspace do Editor Intelignete */}
+        {/* Workspace do Editor Inteligente */}
         <main 
           key={`${salaSelecionada?.id}-${diaSelecionado}-${segmentoSelecionado}`}
-          className="bg-white/5 p-12 rounded-[4rem] border border-white/5 relative shadow-3xl"
+          className="bg-white/5 p-4 md:p-8 lg:p-12 rounded-[2rem] lg:rounded-[4rem] border border-white/5 relative shadow-3xl"
         >
-          <div className="flex items-center justify-between mb-12 pb-8 border-b border-white/10">
-            <div className="flex items-center gap-8">
-              <div className="w-24 h-24 bg-primary text-black rounded-[2rem] flex items-center justify-center text-5xl font-black italic shadow-2xl shadow-primary/30">
+          <div className="flex items-center justify-between mb-8 md:mb-12 pb-6 md:pb-8 border-b border-white/10">
+            <div className="flex items-center gap-4 md:gap-8">
+              <div className="w-16 h-16 md:w-24 md:h-24 bg-primary text-black rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center text-3xl md:text-5xl font-black italic shadow-2xl shadow-primary/30">
                 {salaSelecionada?.numero}
               </div>
               <div>
-                <h2 className="text-3xl font-black italic uppercase tracking-tighter">{salaSelecionada?.nome}</h2>
-                <div className="flex items-center gap-3 mt-3">
-                  <span className="px-3 py-1 bg-white/5 rounded-lg text-[9px] font-black text-primary uppercase tracking-widest">{diaSelecionado}</span>
-                  <span className="px-3 py-1 bg-white/5 rounded-lg text-[9px] font-black text-white/40 uppercase tracking-widest">{salaSelecionada?.ano}</span>
+                <h2 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter">{salaSelecionada?.nome}</h2>
+                <div className="flex items-center gap-2 md:gap-3 mt-2 md:mt-3">
+                  <span className="px-2.5 py-1 bg-white/5 rounded-lg text-[8px] md:text-[9px] font-black text-primary uppercase tracking-widest">{diaSelecionado}</span>
+                  <span className="px-2.5 py-1 bg-white/5 rounded-lg text-[8px] md:text-[9px] font-black text-white/40 uppercase tracking-widest">{salaSelecionada?.ano}</span>
                 </div>
               </div>
             </div>
-            <button onClick={addLinha} className="bg-primary/10 text-primary hover:bg-primary hover:text-black p-5 rounded-[2rem] transition-all group shadow-xl">
-              <Plus size={32} className="group-hover:rotate-90 transition-transform" />
+            <button onClick={addLinha} className="bg-primary/10 text-primary hover:bg-primary hover:text-black p-4 md:p-5 rounded-[1.5rem] md:rounded-[2rem] transition-all group shadow-xl">
+              <Plus size={24} className="group-hover:rotate-90 transition-transform" />
             </button>
           </div>
 
@@ -392,14 +417,14 @@ export default function ScheduleEditor() {
             {linhas.map((linha) => {
               const corProf = getCorProf(linha.professor);
               return (
-                <motion.div layout key={linha.id} className="group flex items-center gap-4">
-                  <div className={cn("flex-1 bg-black/60 border border-white/5 p-3 rounded-[2.5rem] flex items-center gap-6 transition-all hover:border-primary/40", linha.tipo !== 'aula' && "bg-black/20")} style={{ borderLeft: `8px solid ${corProf}` }}>
+                <motion.div layout key={linha.id} className="group flex flex-col lg:flex-row items-stretch lg:items-center gap-4 bg-black/40 lg:bg-transparent p-4 lg:p-0 rounded-[2rem] border border-white/5 lg:border-none relative">
+                  <div className={cn("flex-1 bg-black/60 border border-white/5 p-4 lg:p-3 rounded-[2rem] lg:rounded-[2.5rem] flex flex-col md:flex-row items-stretch md:items-center gap-4 lg:gap-6 transition-all hover:border-primary/40", linha.tipo !== 'aula' && "bg-black/20")} style={{ borderLeft: `8px solid ${corProf}` }}>
                     
                     {/* Botão de Horário (Abre Modal de Detalhes) */}
                     <button 
                       type="button"
                       onClick={() => setSlotAlunosEditar(linha)}
-                      className="flex items-center gap-3 bg-white/5 hover:bg-[#42a0f5]/20 px-6 py-3 rounded-3xl border border-white/5 hover:border-[#42a0f5]/50 transition-all cursor-pointer group"
+                      className="flex items-center justify-between md:justify-center gap-3 bg-white/5 hover:bg-[#42a0f5]/20 px-6 py-3 rounded-3xl border border-white/5 hover:border-[#42a0f5]/50 transition-all cursor-pointer group"
                       title="Clique para Editar Detalhes e Ensalamento"
                     >
                       <div className="flex flex-col items-center">
@@ -458,16 +483,16 @@ export default function ScheduleEditor() {
                     </div>
 
                     {/* Badge de Tipo Inteligente */}
-                    <div className="flex gap-2 p-2 bg-black/40 rounded-3xl border border-white/5">
+                    <div className="flex gap-2 p-2 bg-black/40 rounded-3xl border border-white/5 justify-around md:justify-start">
                       <button title="Aula Regular" onClick={() => updateLinha(linha.id, 'tipo', 'aula')} className={cn("p-3 rounded-2xl transition-all", linha.tipo === 'aula' ? "bg-primary text-black shadow-lg" : "text-white/20 hover:text-white")}><BookOpen size={16} /></button>
                       <button title="Intervalo / Café" onClick={() => updateLinha(linha.id, 'tipo', 'intervalo')} className={cn("p-3 rounded-2xl transition-all", linha.tipo === 'intervalo' ? "bg-amber-500 text-black shadow-lg" : "text-white/20 hover:text-white")}><Coffee size={16} /></button>
                       <button title="Language Lab" onClick={() => updateLinha(linha.id, 'tipo', 'laboratorio_idiomas')} className={cn("p-3 rounded-2xl transition-all", linha.tipo === 'laboratorio_idiomas' ? "bg-blue-500 text-black shadow-lg" : "text-white/20 hover:text-white")}><GraduationCap size={16} /></button>
                       <button title="After School" onClick={() => updateLinha(linha.id, 'tipo', 'after')} className={cn("p-3 rounded-2xl transition-all", linha.tipo === 'after' ? "bg-purple-500 text-black shadow-lg" : "text-white/20 hover:text-white")}><Zap size={16} /></button>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button title="Remover Aula" onClick={() => removeLinha(linha.id)} className="p-4 bg-red-500/10 text-red-500 rounded-[2rem] hover:bg-red-500 hover:text-white transition-all shadow-xl">
-                      <Trash2 size={20} />
+                  <div className="flex lg:flex-col flex-row gap-2 justify-end lg:justify-start opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                    <button title="Remover Aula" onClick={() => removeLinha(linha.id)} className="w-full lg:w-auto p-3 lg:p-4 bg-red-500/10 text-red-500 rounded-[1.5rem] lg:rounded-[2rem] hover:bg-red-500 hover:text-white transition-all shadow-xl flex items-center justify-center gap-2 text-xs font-black uppercase">
+                      <Trash2 size={16} /> <span className="lg:hidden">Remover</span>
                     </button>
                   </div>
                 </motion.div>

@@ -268,7 +268,7 @@ export default function Admin() {
       const horarios = Array.from(new Set((gradeCompleta || []).map(g => g.horario).filter(Boolean)));
       if (horarios.length > 0) {
         list = horarios.map((h, i) => {
-          const parts = h.split('-');
+          const parts = String(h).split('-');
           const inicio = parts[0]?.trim() || '07:30';
           const fim = parts[1]?.trim() || '08:15';
           return {
@@ -1697,13 +1697,13 @@ export default function Admin() {
           )}
         </AnimatePresence>
 
-        {/* MODAIS CENTRALIZADOS */}
         <ModalForm aberto={!!editandoAluno} onClose={() => setEditandoAluno(null)}
           titulo={editandoAluno?.id === 'novo' ? 'Cadastrar Aluno' : 'Editar Aluno'}
           onSalvar={() => doSave(salvarAluno(editandoAluno), setEditandoAluno)} carregando={carregando}>
           {editandoAluno && <>
             <CampoTexto label="Nome Completo" value={editandoAluno.nome} onChange={v => setEditandoAluno({ ...editandoAluno, nome: v })} />
-            <CampoSelect label="Ano" value={editandoAluno.ano} options={ANOS_ESCOLARES} onChange={v => setEditandoAluno({ ...editandoAluno, ano: v, turma: v })} />
+            <CampoSelect label="Ano" value={editandoAluno.ano} options={ANOS_ESCOLARES} onChange={v => setEditandoAluno({ ...editandoAluno, ano: v, turma: (!editandoAluno.turma || editandoAluno.turma === editandoAluno.ano) ? v : editandoAluno.turma })} />
+            <CampoTexto label="Turma / Sub-Classe (Ex: 6º Ano A)" value={editandoAluno.turma || ''} onChange={v => setEditandoAluno({ ...editandoAluno, turma: v })} />
           </>}
         </ModalForm>
 
@@ -1778,7 +1778,7 @@ export default function Admin() {
                   <CampoTexto label="Nível (Ex: B1 Intermediate)" value={editandoLanguageLab.nivel} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, nivel: v })} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <CampoAutocompleteProfessores label="Professor" value={editandoLanguageLab.professor} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, professor: v })} professores={professores} />
+                  <CampoAutocompleteProfessores label="Professor" value={editandoLanguageLab.professor} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, professor: v })} professores={professoresCMS} />
                   <CampoTexto label="Sala / Local" value={editandoLanguageLab.sala} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, sala: v })} />
                 </div>
                 <CampoMultiSelectDias label="Dia(s) da Semana" value={editandoLanguageLab.diaSemana} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, diaSemana: v })} />
@@ -1983,7 +1983,7 @@ export default function Admin() {
                 <CampoSelect label="Categoria" value={editandoAfter.categoria} options={['Esporte', 'Oficina', 'Reforço', 'Outro']} onChange={v => setEditandoAfter({ ...editandoAfter, categoria: v })} />
                 
                 <div className="grid grid-cols-2 gap-4">
-                  <CampoAutocompleteProfessores label="Professor" value={editandoAfter.nomeProfessor} onChange={v => setEditandoAfter({ ...editandoAfter, nomeProfessor: v })} professores={professores} />
+                  <CampoAutocompleteProfessores label="Professor" value={editandoAfter.nomeProfessor} onChange={v => setEditandoAfter({ ...editandoAfter, nomeProfessor: v })} professores={professoresCMS} />
                   <CampoTexto label="Local" value={editandoAfter.local} onChange={v => setEditandoAfter({ ...editandoAfter, local: v })} />
                 </div>
 

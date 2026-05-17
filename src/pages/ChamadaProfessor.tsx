@@ -45,10 +45,10 @@ export default function ChamadaProfessor() {
 
   const professor = professores.find(p => p.nome === professorSelecionado);
 
-  // Pegar a agenda do professor para o dia de hoje
-  const minhaAgenda = professor?.agendaDoDia.filter(g =>
-    g.diaSemana === diaFiltro
-  ).sort((a, b) => a.horario.localeCompare(b.horario)) || [];
+  // Pegar a agenda do professor para o dia selecionado (usando a gradeCompleta que já vem processada e normalizada do contexto com ensalamento e substituições)
+  const minhaAgenda = gradeCompleta.filter(g =>
+    g.nomeProfessor === professorSelecionado && g.diaSemana === diaFiltro
+  ).sort((a, b) => a.horario.localeCompare(b.horario));
 
   // Calcular total de aulas (Regular + Subs confirmadas) para a barra de progresso
   const totalAulasHoje = obterBlocosDeHorario(gradeCompleta).filter(bloco => {
@@ -56,7 +56,7 @@ export default function ChamadaProfessor() {
     const temRegular = minhaAgenda.some(a => a.horario === range);
     const temSub = substituicoes.some(s => 
       s.professorSubstituto === professorSelecionado && 
-      s.dia === diaFiltro && 
+      s.dia && obterDiaSemana(new Date(s.dia + 'T12:00:00')) === diaFiltro && 
       s.horario === range
     );
     return temRegular || temSub;
@@ -171,7 +171,7 @@ export default function ChamadaProfessor() {
             // Tenta achar substituição confirmada para este prof/horário/dia
             const subAqui = substituicoes.find(s =>
               s.professorSubstituto === professorSelecionado &&
-              s.dia === diaFiltro &&
+              s.dia && obterDiaSemana(new Date(s.dia + 'T12:00:00')) === diaFiltro &&
               s.horario === range
             );
 
