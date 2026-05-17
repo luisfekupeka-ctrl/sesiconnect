@@ -124,6 +124,7 @@ export default function Admin() {
   const [buscaGlobal, setBuscaGlobal] = useState('');
   const [mostrarResultadosGlobal, setMostrarResultadosGlobal] = useState(false);
   const [professorSelecionado, setProfessorSelecionado] = useState<string | null>(null);
+  const [segmentoProf, setSegmentoProf] = useState<'6e7' | '8e9' | 'medio'>('6e7');
 
   // 1.1 LOGICA DE BUSCA GLOBAL
   const resultadosBuscaGlobal = useMemo(() => {
@@ -224,10 +225,31 @@ export default function Admin() {
     }
   }, [listaProfessores, professorSelecionado]);
 
+  // Auto-detect segments based on teacher's scheduled classes
+  useEffect(() => {
+    if (!professorSelecionado || !gradeCompleta || gradeCompleta.length === 0) return;
+    const primeiraAula = gradeCompleta.find(g => g.nomeProfessor === professorSelecionado);
+    if (primeiraAula) {
+      const salaObj = salas.find(s => Number(s.numero) === Number(primeiraAula.numeroSala));
+      if (salaObj) {
+        const ano = (salaObj.ano || '').toLowerCase();
+        if (ano.includes('6') || ano.includes('7')) {
+          setSegmentoProf('6e7');
+        } else if (ano.includes('8') || ano.includes('9')) {
+          setSegmentoProf('8e9');
+        } else if (ano.includes('em') || ano.includes('médio') || ano.includes('medio') || ano.includes('1º') || ano.includes('2º') || ano.includes('3º')) {
+          setSegmentoProf('medio');
+        }
+      }
+    }
+  }, [professorSelecionado, gradeCompleta, salas]);
+
   const periodosOrdenados = useMemo(() => {
     let list: any[] = [];
     if (periodos && periodos.length > 0) {
-      list = [...periodos].sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
+      // Filter by the selected segment
+      const filtered = periodos.filter(p => p.segmento === segmentoProf);
+      list = [...filtered].sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
     } else {
       const horarios = Array.from(new Set((gradeCompleta || []).map(g => g.horario).filter(Boolean)));
       if (horarios.length > 0) {
@@ -241,23 +263,23 @@ export default function Admin() {
             horarioInicio: inicio,
             horarioFim: fim,
             tipo: 'aula',
-            segmento: 'Todos'
+            segmento: segmentoProf
           };
         }).sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
       } else {
         list = [
-          { id: '1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:15', tipo: 'aula', segmento: 'Todos' },
-          { id: '2', nome: '2ª Aula', horarioInicio: '08:15', horarioFim: '09:00', tipo: 'aula', segmento: 'Todos' },
-          { id: '3', nome: '3ª Aula', horarioInicio: '09:00', horarioFim: '09:45', tipo: 'aula', segmento: 'Todos' },
-          { id: '4', nome: '4ª Aula', horarioInicio: '10:00', horarioFim: '10:45', tipo: 'aula', segmento: 'Todos' },
-          { id: '5', nome: '5ª Aula', horarioInicio: '10:45', horarioFim: '11:30', tipo: 'aula', segmento: 'Todos' },
-          { id: '6', nome: '6ª Aula', horarioInicio: '11:30', horarioFim: '12:15', tipo: 'aula', segmento: 'Todos' },
-          { id: '7', nome: '7ª Aula', horarioInicio: '13:15', horarioFim: '14:00', tipo: 'aula', segmento: 'Todos' },
-          { id: '8', nome: '8ª Aula', horarioInicio: '14:00', horarioFim: '14:45', tipo: 'aula', segmento: 'Todos' },
-          { id: '9', nome: '9ª Aula', horarioInicio: '14:45', horarioFim: '15:30', tipo: 'aula', segmento: 'Todos' },
-          { id: '10', nome: '10ª Aula', horarioInicio: '15:45', horarioFim: '16:30', tipo: 'aula', segmento: 'Todos' },
-          { id: '11', nome: '11ª Aula', horarioInicio: '16:30', horarioFim: '17:15', tipo: 'aula', segmento: 'Todos' },
-          { id: '12', nome: '12ª Aula', horarioInicio: '17:15', horarioFim: '18:00', tipo: 'aula', segmento: 'Todos' }
+          { id: '1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:15', tipo: 'aula', segmento: segmentoProf },
+          { id: '2', nome: '2ª Aula', horarioInicio: '08:15', horarioFim: '09:00', tipo: 'aula', segmento: segmentoProf },
+          { id: '3', nome: '3ª Aula', horarioInicio: '09:00', horarioFim: '09:45', tipo: 'aula', segmento: segmentoProf },
+          { id: '4', nome: '4ª Aula', horarioInicio: '10:00', horarioFim: '10:45', tipo: 'aula', segmento: segmentoProf },
+          { id: '5', nome: '5ª Aula', horarioInicio: '10:45', horarioFim: '11:30', tipo: 'aula', segmento: segmentoProf },
+          { id: '6', nome: '6ª Aula', horarioInicio: '11:30', horarioFim: '12:15', tipo: 'aula', segmento: segmentoProf },
+          { id: '7', nome: '7ª Aula', horarioInicio: '13:15', horarioFim: '14:00', tipo: 'aula', segmento: segmentoProf },
+          { id: '8', nome: '8ª Aula', horarioInicio: '14:00', horarioFim: '14:45', tipo: 'aula', segmento: segmentoProf },
+          { id: '9', nome: '9ª Aula', horarioInicio: '14:45', horarioFim: '15:30', tipo: 'aula', segmento: segmentoProf },
+          { id: '10', nome: '10ª Aula', horarioInicio: '15:45', horarioFim: '16:30', tipo: 'aula', segmento: segmentoProf },
+          { id: '11', nome: '11ª Aula', horarioInicio: '16:30', horarioFim: '17:15', tipo: 'aula', segmento: segmentoProf },
+          { id: '12', nome: '12ª Aula', horarioInicio: '17:15', horarioFim: '18:00', tipo: 'aula', segmento: segmentoProf }
         ];
       }
     }
@@ -271,7 +293,7 @@ export default function Admin() {
       }
     }
     return Array.from(unique.values()).sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
-  }, [periodos, gradeCompleta]);
+  }, [periodos, gradeCompleta, segmentoProf]);
 
   const alunosBase = Array.isArray(alunos) ? alunos : [];
   const alunosFiltrados = alunosBase.filter(a => {
@@ -802,6 +824,28 @@ export default function Admin() {
                     <Painel 
                       titulo={`Planejamento Semanal — ${professorSelecionado}`} 
                       subtitulo={`Grade interativa e bidirecional de aulas. Especialidade: ${professoresCMS.find(p => p.nome === professorSelecionado)?.especialidade || 'Docente'}`}
+                      acao={
+                        <div className="flex gap-2 p-1 bg-black/40 border border-white/5 rounded-xl">
+                          {([
+                            { id: '6e7', label: 'Fund. II (6º/7º)' },
+                            { id: '8e9', label: 'Fund. II (8º/9º)' },
+                            { id: 'medio', label: 'Ensino Médio' }
+                          ] as const).map(seg => (
+                            <button
+                              key={seg.id}
+                              onClick={() => setSegmentoProf(seg.id)}
+                              className={cn(
+                                "px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                                segmentoProf === seg.id 
+                                  ? "bg-primary text-black font-black" 
+                                  : "text-white/40 hover:bg-white/5"
+                              )}
+                            >
+                              {seg.label}
+                            </button>
+                          ))}
+                        </div>
+                      }
                     >
                       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                         {DIAS_SEMANA.map(dia => {
@@ -819,10 +863,11 @@ export default function Admin() {
                               {/* Slots/Aulas do Dia */}
                               <div className="space-y-3">
                                 {periodosOrdenados.map((slot) => {
+                                  const cleanTime = (t: string) => t ? t.trim().slice(0, 5) : '';
                                   const aulaSlot = gradeCompleta.find(g => 
                                     g.nomeProfessor === professorSelecionado && 
                                     g.diaSemana === dia &&
-                                    (g.horario?.includes(slot.horarioInicio) || slot.horarioInicio.includes(g.horario?.split('-')[0]?.trim() || ''))
+                                    cleanTime(g.horario?.split('-')[0]) === cleanTime(slot.horarioInicio)
                                   );
 
                                   if (aulaSlot) {
@@ -925,7 +970,7 @@ export default function Admin() {
                                           nomeSala: `Sala ${locaisCMS[0]?.numero || 101}`,
                                           anoTurma: '6º Ano',
                                           diaSemana: dia,
-                                          horario: `${slot.horarioInicio} - ${slot.horarioFim}`,
+                                          horario: `${cleanTime(slot.horarioInicio)} - ${cleanTime(slot.horarioFim)}`,
                                           nomeProfessor: professorSelecionado || '',
                                           turma: '6º Ano',
                                           materia: professoresCMS.find(p => p.nome === professorSelecionado)?.especialidade || 'Matéria',
@@ -943,7 +988,7 @@ export default function Admin() {
                                         <Plus size={12} /> Alocar Aula
                                       </p>
                                       <span className="text-[8px] text-white/10 font-bold uppercase mt-1 group-hover:text-white/20 tracking-wider">
-                                        {slot.horarioInicio} - {slot.horarioFim}
+                                        {cleanTime(slot.horarioInicio)} - {cleanTime(slot.horarioFim)}
                                       </span>
                                     </div>
                                   );
