@@ -111,39 +111,77 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
           </div>
 
           {/* Área de Impressão (Direita) */}
-          {/* Área de Impressão (Direita) */}
-          <div id="printable-occurrence" className="flex-1 overflow-y-auto bg-white print:overflow-visible custom-scrollbar relative flex flex-col"
-            style={{
-              backgroundImage: 'url("/src/assets/papel_timbrado.png")',
-              backgroundSize: '100% 100%',
-              backgroundRepeat: 'no-repeat'
-            }}>
+          <div id="printable-occurrence" className="flex-1 overflow-y-auto bg-white print:overflow-visible custom-scrollbar relative flex flex-col">
             
-            <div className="flex-1 px-12 md:px-20 pt-32 md:pt-48 pb-20 print:pt-[180px] print:px-[80px] space-y-12">
-               {/* Cabeçalho do Documento */}
-               <div className="space-y-1.5 text-sm text-gray-900 font-medium">
+            {/* Header Oficial do Sesi */}
+            <div className="relative w-full h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-8 select-none print:flex">
+              <div className="absolute top-0 left-0 w-[300px] h-full pointer-events-none">
+                <div className="absolute top-0 left-0 w-[200px] h-[120px] bg-[#e2e8f0]" style={{ clipPath: 'polygon(0 0, 100% 0, 70% 100%, 0 80%)' }} />
+                <div className="absolute top-0 left-0 w-[160px] h-[100px] bg-[#cbd5e1] opacity-40" style={{ clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0 60%)' }} />
+                <div className="absolute top-[20px] left-0 w-[40px] h-[100px] bg-[#fbbf24]" style={{ clipPath: 'polygon(0 0, 100% 30%, 80% 90%, 0 100%)' }} />
+              </div>
+              <div className="flex-1" />
+              <div className="relative z-10 select-none scale-105">
+                <div className="flex flex-col items-end mr-4">
+                  <div className="flex items-center gap-2 mr-1">
+                    <span className="text-[11px] font-extrabold text-[#0c2340] lowercase tracking-normal">colégio</span>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#0c2340]" />
+                      <div className="w-2 h-3.5 rounded-full bg-[#0c2340]" />
+                    </div>
+                  </div>
+                  <div className="text-[42px] font-bold text-[#0c2340] leading-none tracking-tight -mt-1 font-serif italic mr-6 relative">
+                    Ses<span className="relative">ı</span>
+                  </div>
+                  <div className="bg-[#fbbf24] text-[#0c2340] text-[9px] font-black uppercase tracking-[0.2em] px-4 py-2 mt-1.5 rounded-[8px] transform -skew-x-12 leading-none">
+                    internacional
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1 px-12 md:px-20 pt-12 pb-20 print:pt-12 print:px-16 space-y-10">
+               {/* Cabeçalho do Documento - Alocado de maneira inteligente */}
+               <div className="space-y-1.5 text-sm text-[#0c2340] font-medium border-b border-gray-200 pb-6">
                  <p><span className="font-bold mr-2">Nome do Aluno:</span> {ocorrencia.nomeAluno}</p>
                  <p><span className="font-bold mr-2">Ano:</span> {ocorrencia.anoAluno || ocorrencia.turmaAluno}</p>
-                 <p><span className="font-bold mr-2">Professor/Responsável:</span> {ocorrencia.professorAtual || 'Administração'}</p>
-                 <p><span className="font-bold mr-2">Data:</span> {new Date(ocorrencia.criadoEm || '').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                 <p><span className="font-bold mr-2">Professor/Responsável:</span> {(() => {
+                   const key = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase() === 'professor responsável' || k.toLowerCase() === 'professor');
+                   return key ? String(ocorrencia.dados[key]) : (ocorrencia.professorAtual || 'Administração');
+                 })()}</p>
+                 <p><span className="font-bold mr-2">Data:</span> {(() => {
+                   const key = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase() === 'data');
+                   const rawDate = key ? String(ocorrencia.dados[key]) : ocorrencia.criadoEm;
+                   if (!rawDate) return '';
+                   if (rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                     const [y, m, d] = rawDate.split('-');
+                     return `${d}/${m}/${y}`;
+                   }
+                   return new Date(rawDate).toLocaleDateString('pt-BR');
+                 })()}</p>
                </div>
 
                {/* Título */}
-               <div className="pt-4">
-                 <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tight">
+               <div>
+                 <h1 className="text-2xl font-black text-[#0c2340] uppercase tracking-tight">
                     Registro de Ocorrência
                  </h1>
                  <p className="text-sm font-bold text-gray-500 uppercase mt-1">
-                    {ocorrencia.nomeModelo}
+                    {(() => {
+                      const key = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase() === 'tipo de ocorrência' || k.toLowerCase() === 'tipo de ocorrencia');
+                      return key ? String(ocorrencia.dados[key]) : ocorrencia.nomeModelo;
+                    })()}
                  </p>
                </div>
 
-               {/* Descrição */}
+               {/* Descrição - Campos Restantes */}
                <div className="space-y-6 text-sm text-gray-800 leading-relaxed text-justify pt-4">
-                  {Object.entries(ocorrencia.dados || {}).map(([key, value]) => (
+                  {Object.entries(ocorrencia.dados || {})
+                    .filter(([key]) => !['professor responsável', 'professor responsavel', 'professor', 'data', 'tipo de ocorrência', 'tipo de ocorrencia'].includes(key.toLowerCase()))
+                    .map(([key, value]) => (
                     <div key={key}>
-                      <p className="font-bold mb-1 uppercase text-xs text-gray-900">{key}</p>
-                      <p className="whitespace-pre-wrap">{Array.isArray(value) ? value.join(', ') : value}</p>
+                      <p className="font-bold mb-1 uppercase text-xs text-[#0c2340]">{key}</p>
+                      <p className="whitespace-pre-wrap text-gray-700">{Array.isArray(value) ? value.join(', ') : String(value)}</p>
                     </div>
                   ))}
                </div>
