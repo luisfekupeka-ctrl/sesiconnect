@@ -3,6 +3,7 @@
 // Provedor de dados em tempo real (Supabase)
 // ============================================================
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
+import { normalizarNomeComum } from '../lib/utils';
 import {
   EstadoEscola,
   Sala,
@@ -172,7 +173,14 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
   // MOTOR DE CRUZAMENTO INTELIGENTE (HERANÇA DE DADOS)
   // ============================================================
   const gradeProcessada = useMemo(() => {
+    const listCanonNames = (professoresCMS || []).map(p => p.nome);
+
     return gradeCompleta.map(slot => {
+      let nomeProf = slot.nomeProfessor;
+      if (nomeProf && listCanonNames.length > 0) {
+        nomeProf = normalizarNomeComum(nomeProf, listCanonNames);
+      }
+      const slotComProfNormalizado = { ...slot, nomeProfessor: nomeProf };
       const tipoAtividade = slot.tipo || 'regular';
       const slotInicio = slot.horario?.split('-')[0]?.trim() || '';
 
@@ -186,7 +194,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
                  lab.horarioInicio <= slotInicio && lab.horarioFim > slotInicio;
         });
         if (labMatch) {
-          return { ...slot, materia: `Lab: ${labMatch.nivel}`, nomeProfessor: labMatch.professor, listaAlunos: labMatch.listaAlunos || [], tipo: 'language_lab' };
+          return { ...slotComProfNormalizado, materia: `Lab: ${labMatch.nivel}`, nomeProfessor: labMatch.professor, listaAlunos: labMatch.listaAlunos || [], tipo: 'language_lab' };
         }
       }
 
@@ -200,7 +208,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
                  after.horarioInicio <= slotInicio && after.horarioFim > slotInicio;
         });
         if (afterMatch) {
-          return { ...slot, materia: `After: ${afterMatch.nome}`, nomeProfessor: afterMatch.nomeProfessor, listaAlunos: afterMatch.listaAlunos || [], tipo: 'after_school' };
+          return { ...slotComProfNormalizado, materia: `After: ${afterMatch.nome}`, nomeProfessor: afterMatch.nomeProfessor, listaAlunos: afterMatch.listaAlunos || [], tipo: 'after_school' };
         }
       }
 
@@ -212,19 +220,19 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
       if (localCmsMatch && localCmsMatch.lista_alunos && localCmsMatch.lista_alunos.length > 0) {
         // Se a entrada da grade não tiver alunos próprios, herda da sala
         if (!slot.listaAlunos || slot.listaAlunos.length === 0) {
-          return { ...slot, listaAlunos: localCmsMatch.lista_alunos, tipo: 'regular' };
+          return { ...slotComProfNormalizado, listaAlunos: localCmsMatch.lista_alunos, tipo: 'regular' };
         }
       }
 
       // Fallback: Turma Base (Se não houver matriz de sala nem alunos na grade)
       if (!slot.listaAlunos || slot.listaAlunos.length === 0) {
         const alunosDaTurma = (alunos || []).filter(a => a.turma === slot.turma).map(a => a.nome);
-        return { ...slot, listaAlunos: alunosDaTurma, tipo: 'regular' };
+        return { ...slotComProfNormalizado, listaAlunos: alunosDaTurma, tipo: 'regular' };
       }
 
-      return slot;
+      return slotComProfNormalizado;
     });
-  }, [gradeCompleta, languageLab, atividadesAfter, alunos, locaisCMS]);
+  }, [gradeCompleta, languageLab, atividadesAfter, alunos, locaisCMS, professoresCMS]);
 
   let estadoEscola: EstadoEscola;
   try {

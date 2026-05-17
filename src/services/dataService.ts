@@ -3,6 +3,7 @@
 // ============================================================
 
 import { supabase } from '../lib/supabase';
+import { normalizarNomeComum } from '../lib/utils';
 import type {
   Sala,
   EntradaGradeSala,
@@ -108,7 +109,19 @@ export async function salvarGradeSala(entradas: any[]): Promise<boolean> {
   const numeroSala = entradas[0].numero_sala;
   const diaSemana = entradas[0].dia_semana;
 
-  // 1. APAGAR todos os registros antigos desta sala+dia
+  // 1. Obter todos os professores registrados para normalizar nomes
+  const { data: profData } = await supabase.from('professores_cms').select('nome');
+  const canonicalNames = (profData || []).map(p => p.nome);
+
+  const entradasNormalizadas = entradas.map(e => {
+    let nomeProf = e.nome_professor;
+    if (nomeProf && canonicalNames.length > 0) {
+      nomeProf = normalizarNomeComum(nomeProf, canonicalNames);
+    }
+    return { ...e, nome_professor: nomeProf };
+  });
+
+  // 2. APAGAR todos os registros antigos desta sala+dia
   const { error: delErr } = await supabase
     .from('mapa_salas')
     .delete()
@@ -120,10 +133,10 @@ export async function salvarGradeSala(entradas: any[]): Promise<boolean> {
     return false;
   }
 
-  // 2. INSERIR os novos registros limpos
+  // 3. INSERIR os novos registros limpos e normalizados
   const { error: insErr } = await supabase
     .from('mapa_salas')
-    .insert(entradas);
+    .insert(entradasNormalizadas);
 
   if (insErr) {
     console.error('[DEBUG] Erro ao inserir grade nova:', insErr);
@@ -155,12 +168,20 @@ export async function salvarAlunosNaGrade(
 }
 
 export async function salvarEntradaGradeIndividual(entrada: any): Promise<boolean> {
+  const { data: profData } = await supabase.from('professores_cms').select('nome');
+  const canonicalNames = (profData || []).map(p => p.nome);
+
+  let nomeProf = entrada.nomeProfessor || '—';
+  if (nomeProf && canonicalNames.length > 0) {
+    nomeProf = normalizarNomeComum(nomeProf, canonicalNames);
+  }
+
   const payload = {
     id: !entrada.id || entrada.id.startsWith('temp-') || entrada.id.startsWith('new-') ? undefined : entrada.id,
     numero_sala: parseInt(entrada.numeroSala),
     dia_semana: entrada.diaSemana.toUpperCase().trim(),
     horario: entrada.horario.trim(),
-    nome_professor: entrada.nomeProfessor || '—',
+    nome_professor: nomeProf,
     turma: entrada.turma || '6º Ano',
     materia: entrada.materia || '',
     tipo: entrada.tipo || 'regular',
