@@ -149,6 +149,25 @@ export default function GestaoRealocacao() {
             const nomeSala = salaObj ? salaObj.nome : `Sala ${salaNum}`;
             const segmentoSala = salaObj ? salaObj.segmento : '6º e 7º';
 
+            // Determina o fiscal fixo para todos os horários desta sala
+            let fiscalUnicoDaSala = profFixoProva;
+            if (!fiscalUnicoDaSala) {
+                // Tenta pegar o professor original do primeiro horário selecionado (ou qualquer horário válido)
+                for (const h of horariosSel) {
+                  const entradaH = gradeCompleta.find(g => 
+                    g.numeroSala === salaNum && 
+                    g.diaSemana === diaSemanaItem && 
+                    g.horario === h &&
+                    g.nomeProfessor !== 'LIVRE'
+                  );
+                  if (entradaH) {
+                    fiscalUnicoDaSala = entradaH.nomeProfessor;
+                    break;
+                  }
+                }
+                if (!fiscalUnicoDaSala) fiscalUnicoDaSala = 'A DEFINIR';
+            }
+
             for (const h of horariosSel) {
               // Encontra a aula original cadastrada para esta sala e horário
               const entradaOriginal = gradeCompleta.find(g => 
@@ -161,11 +180,8 @@ export default function GestaoRealocacao() {
               const originalMateria = entradaOriginal ? entradaOriginal.materia : 'Janela';
               const turmaNome = entradaOriginal ? entradaOriginal.turma : (salaObj ? `${salaObj.ano} ${salaObj.nome}` : `Sala ${salaNum}`);
 
-              // O fiscal sugerido
-              let fiscalSugerido = profFixoProva || originalTeacher;
-              if (fiscalSugerido === 'LIVRE') {
-                fiscalSugerido = 'A DEFINIR';
-              }
+              // O fiscal sugerido é o fiscal ÚNICO determinado acima!
+              let fiscalSugerido = fiscalUnicoDaSala;
 
               resGeral.push({
                 id: `ensalamento-${Math.random()}`,
