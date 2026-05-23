@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useOutletContext } from 'react-router-dom';
 import { 
   User, Search, Clock, MapPin, ChevronLeft, 
   CheckCircle2, XCircle, ClipboardCheck, Users,
@@ -12,17 +13,61 @@ const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
 export default function TeachersPage() {
   const { professores, gradeCompleta, languageLab, atividadesAfter, salas } = useEscola();
-  const [busca, setBusca] = useState('');
+  
+  const context = useOutletContext<any>() || {};
+  const buscaGlobal = context.buscaGlobal !== undefined ? context.buscaGlobal : '';
+  const setBuscaGlobal = context.setBuscaGlobal || (() => {});
+  const buscaAtiva = buscaGlobal;
+
   const [profSelecionadoId, setProfSelecionadoId] = useState<string | null>(null);
   const [diaFiltro, setDiaFiltro] = useState('SEGUNDA');
   const [aulaParaChamada, setAulaParaChamada] = useState<any | null>(null);
   const [chamada, setChamada] = useState<Record<string, boolean>>({});
   const [buscaAlunos, setBuscaAlunos] = useState('');
 
-  const professoresFiltrados = professores.filter(p => 
-    p.nome.toLowerCase().includes(busca.toLowerCase()) ||
-    p.materia.toLowerCase().includes(busca.toLowerCase())
-  );
+  const professoresFiltrados = useMemo(() => {
+    if (!buscaAtiva.trim()) return professores;
+    const query = buscaAtiva.toLowerCase();
+    
+    return professores.filter(p => {
+      // 1. Direct match on professor details
+      const nomeMatch = p.nome.toLowerCase().includes(query);
+      const materiaMatch = p.materia.toLowerCase().includes(query);
+      if (nomeMatch || materiaMatch) return true;
+      
+      // 2. Check their regular classes in gradeCompleta
+      const regularClasses = gradeCompleta.filter(aula => 
+        aula.nomeProfessor.toLowerCase() === p.nome.toLowerCase()
+      );
+      const regularMatch = regularClasses.some(aula => 
+        (aula.materia || '').toLowerCase().includes(query) ||
+        (aula.listaAlunos || []).some((aluno: string) => aluno.toLowerCase().includes(query))
+      );
+      if (regularMatch) return true;
+      
+      // 3. Check their After School workshops
+      const afterWorkshops = (atividadesAfter || []).filter(a => 
+        (a.nomeProfessor || '').toLowerCase() === p.nome.toLowerCase()
+      );
+      const afterMatch = afterWorkshops.some(a => 
+        (a.nome || '').toLowerCase().includes(query) ||
+        (a.listaAlunos || []).some((aluno: string) => aluno.toLowerCase().includes(query))
+      );
+      if (afterMatch) return true;
+      
+      // 4. Check their Language Lab classes
+      const labClasses = (languageLab || []).filter(l => 
+        (l.professor || '').toLowerCase() === p.nome.toLowerCase()
+      );
+      const labMatch = labClasses.some(l => 
+        (l.nivel || '').toLowerCase().includes(query) ||
+        (l.listaAlunos || []).some((aluno: string) => aluno.toLowerCase().includes(query))
+      );
+      if (labMatch) return true;
+      
+      return false;
+    });
+  }, [professores, gradeCompleta, atividadesAfter, languageLab, buscaAtiva]);
 
   const professorAtivo = professores.find(p => p.id === profSelecionadoId);
 
@@ -218,7 +263,7 @@ export default function TeachersPage() {
         </div>
         <div className="relative group w-full lg:w-[300px]">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-[#42a0f5]" size={18} />
-          <input type="text" placeholder="Achar professor..." value={busca} onChange={(e) => setBusca(e.target.value)} className="w-full pl-12 pr-6 py-4 bg-[#0a0a0a] border-2 border-white/5 rounded-2xl text-white font-black text-xs focus:ring-4 focus:ring-[#42a0f5]/5 outline-none" />
+          <input type="text" placeholder="Achar professor..." value={buscaGlobal} onChange={(e) => setBuscaGlobal(e.target.value)} className="w-full pl-12 pr-6 py-4 bg-[#0a0a0a] border-2 border-white/5 rounded-2xl text-white font-black text-xs focus:ring-4 focus:ring-[#42a0f5]/5 outline-none" />
         </div>
       </header>
       

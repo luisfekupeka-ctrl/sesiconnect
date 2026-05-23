@@ -6,6 +6,7 @@ import { Search, User, Clock, Menu, X } from 'lucide-react';
 export function Layout() {
   const [time, setTime] = useState(new Date());
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [buscaGlobal, setBuscaGlobal] = useState('');
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
 
@@ -57,6 +58,8 @@ export function Layout() {
             <input 
               type="text" 
               placeholder="Buscar..." 
+              value={buscaGlobal}
+              onChange={(e) => setBuscaGlobal(e.target.value)}
               className="w-full bg-surface-container-low rounded-2xl py-4 pl-14 pr-6 text-sm font-semibold transition-all outline-none border-2 border-transparent focus:border-[#42a0f5] text-on-surface"
             />
           </div>
@@ -82,7 +85,7 @@ export function Layout() {
         </header>
 
         <main className="flex-1 p-4 md:p-8 pb-32 md:pb-8 max-w-full">
-          <Outlet />
+          <Outlet context={{ buscaGlobal, setBuscaGlobal }} />
         </main>
       </div>
 

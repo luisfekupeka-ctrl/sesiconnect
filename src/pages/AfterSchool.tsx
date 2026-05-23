@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
+import { useOutletContext } from 'react-router-dom';
 import { Clock, Users, ChevronLeft, User, DoorOpen, Search, Star, ChevronRight } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
@@ -32,6 +33,12 @@ export default function AfterSchool() {
   const { atividadesAfter } = useEscola();
   const [diaFiltro, setDiaFiltro] = useState<string>('TODOS');
   const [ativSelecionada, setAtivSelecionada] = useState<any | null>(null);
+  
+  const context = useOutletContext<any>() || {};
+  const buscaGlobal = context.buscaGlobal !== undefined ? context.buscaGlobal : '';
+  const setBuscaGlobal = context.setBuscaGlobal || (() => {});
+  const buscaAtiva = buscaGlobal;
+
   const [busca, setBusca] = useState('');
 
   const atividadesDoDia = diaFiltro === 'TODOS'
@@ -74,6 +81,20 @@ export default function AfterSchool() {
     });
     return Array.from(map.values());
   }, [atividadesDoDia]);
+
+  const atividadesFiltradas = useMemo(() => {
+    if (!buscaAtiva.trim()) return atividadesDeduplicadas;
+    const query = buscaAtiva.toLowerCase();
+    return atividadesDeduplicadas.filter(ativ => {
+      const nomeMatch = (ativ.nome || '').toLowerCase().includes(query);
+      const categoriaMatch = (ativ.categoria || '').toLowerCase().includes(query);
+      const profMatch = (ativ.nomeProfessor || '').toLowerCase().includes(query);
+      const alunosMatch = (ativ.listaAlunos || []).some((aluno: string) => 
+        aluno.toLowerCase().includes(query)
+      );
+      return nomeMatch || categoriaMatch || profMatch || alunosMatch;
+    });
+  }, [atividadesDeduplicadas, buscaAtiva]);
 
   if (ativSelecionada) {
     const alunos = ativSelecionada.listaAlunos || [];
@@ -127,20 +148,28 @@ export default function AfterSchool() {
           <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white mb-2 italic leading-none">After <span className="text-[#fbbf24]">School</span></h1>
           <p className="text-white/40 text-sm md:text-lg font-medium italic border-l-4 border-[#fbbf24]/20 pl-4">Consulta de oficinas.</p>
         </div>
-        <div className="flex gap-1 p-1 bg-[#0a0a0a] rounded-xl border border-white/5 overflow-x-auto no-scrollbar">
-          {DIAS.map(dia => (
-            <button key={dia} onClick={() => setDiaFiltro(dia)}
-              className={cn("px-4 py-2 rounded-lg text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all",
-                diaFiltro === dia ? "bg-[#fbbf24] text-black shadow-md" : "text-white/40 hover:bg-white/5")}>
-              {dia === 'TODOS' ? 'TODOS' : dia.slice(0, 3)}
-            </button>
-          ))}
+        <div className="flex flex-col sm:flex-row gap-4 items-center w-full lg:w-auto">
+          <div className="relative group w-full sm:w-[240px]">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-[#fbbf24]" size={16} />
+            <input type="text" placeholder="Buscar oficina..." value={buscaGlobal} onChange={(e) => setBuscaGlobal(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-[#0a0a0a] border-2 border-white/5 rounded-xl text-white font-black text-[11px] focus:ring-4 focus:ring-[#fbbf24]/5 outline-none"
+            />
+          </div>
+          <div className="flex gap-1 p-1 bg-[#0a0a0a] rounded-xl border border-white/5 overflow-x-auto no-scrollbar w-full sm:w-auto justify-center">
+            {DIAS.map(dia => (
+              <button key={dia} onClick={() => setDiaFiltro(dia)}
+                className={cn("px-4 py-2 rounded-lg text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all",
+                  diaFiltro === dia ? "bg-[#fbbf24] text-black shadow-md" : "text-white/40 hover:bg-white/5")}>
+                {dia === 'TODOS' ? 'TODOS' : dia.slice(0, 3)}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
       
       {/* Lista Vertical de Oficinas */}
       <div className="flex flex-col gap-3">
-        {atividadesDeduplicadas.map((ativ) => (
+        {atividadesFiltradas.map((ativ) => (
           <motion.div key={ativ.id} whileHover={{ x: 5 }} onClick={() => setAtivSelecionada(ativ)}
             className="bg-[#0d0d0d] p-5 rounded-2xl shadow-premium border-2 border-white/5 hover:border-[#fbbf24]/40 transition-all flex items-center justify-between group cursor-pointer overflow-hidden">
              <div className="flex items-center gap-6">
@@ -163,7 +192,7 @@ export default function AfterSchool() {
              </div>
           </motion.div>
         ))}
-        {atividadesDeduplicadas.length === 0 && (
+        {atividadesFiltradas.length === 0 && (
            <div className="py-16 text-center opacity-20 italic font-black text-sm border-2 border-dashed border-white/5 rounded-2xl">Sem atividades.</div>
         )}
       </div>

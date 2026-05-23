@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useOutletContext } from 'react-router-dom';
 import { Search, ChevronLeft, ChevronRight, UserCheck, ChevronDown, Users, Clock, DoorOpen, LayoutGrid } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
@@ -9,17 +10,64 @@ import { Sala } from '../types';
 const LISTA_DIAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
 export default function RoomsPage() {  const { salas, estadoEscola, gradeCompleta, languageLab, atividadesAfter, horaAtual, alunos, periodos } = useEscola();
-  const [busca, setBusca] = useState('');
+  const context = useOutletContext<any>() || {};
+  const buscaGlobal = context.buscaGlobal !== undefined ? context.buscaGlobal : '';
+  const setBuscaGlobal = context.setBuscaGlobal || (() => {});
+  const buscaAtiva = buscaGlobal;
+
   const [diaGrade, setDiaGrade] = useState(obterDiaSemana(horaAtual));
   const [salaSelecionada, setSalaSelecionada] = useState<Sala | null>(null);
   const [buscaAlunos, setBuscaAlunos] = useState('');
 
   const salasFiltradas = useMemo(() => {
     return salas.filter((sala) => {
-      const coincideBusca = sala.nome.toLowerCase().includes(busca.toLowerCase()) || sala.numero.toString().includes(busca);
-      return coincideBusca;
+      if (!buscaAtiva.trim()) return true;
+      const query = buscaAtiva.toLowerCase();
+      
+      const coincideSala = sala.nome.toLowerCase().includes(query) || sala.numero.toString().includes(query);
+      if (coincideSala) return true;
+      
+      // Check regular schedule grade for subject, professor, or student
+      const gradeMatch = (sala.grade || []).some(entry => 
+        (entry.materia || '').toLowerCase().includes(query) ||
+        (entry.nomeProfessor || '').toLowerCase().includes(query) ||
+        (entry.listaAlunos || []).some((aluno: string) => aluno.toLowerCase().includes(query))
+      );
+      if (gradeMatch) return true;
+
+      // Check any After School workshop in this room
+      const afterMatch = (atividadesAfter || []).some(a => {
+        const isThisRoom = a.local && (
+          a.local.includes(String(sala.numero)) || 
+          a.local.toLowerCase().includes(sala.nome.toLowerCase())
+        );
+        if (!isThisRoom) return false;
+        return (
+          (a.nome || '').toLowerCase().includes(query) ||
+          (a.nomeProfessor || '').toLowerCase().includes(query) ||
+          (a.listaAlunos || []).some((aluno: string) => aluno.toLowerCase().includes(query))
+        );
+      });
+      if (afterMatch) return true;
+
+      // Check any Language Lab in this room
+      const labMatch = (languageLab || []).some(l => {
+        const isThisRoom = l.sala && (
+          l.sala.includes(String(sala.numero)) || 
+          l.sala.toLowerCase().includes(sala.nome.toLowerCase())
+        );
+        if (!isThisRoom) return false;
+        return (
+          (l.nivel || '').toLowerCase().includes(query) ||
+          (l.professor || '').toLowerCase().includes(query) ||
+          (l.listaAlunos || []).some((aluno: string) => aluno.toLowerCase().includes(query))
+        );
+      });
+      if (labMatch) return true;
+
+      return false;
     });
-  }, [salas, busca]);
+  }, [salas, buscaAtiva, atividadesAfter, languageLab]);
 
   const salasDeduplicadas = useMemo(() => {
     const map = new Map<number, typeof salas[0]>();
@@ -139,7 +187,7 @@ export default function RoomsPage() {  const { salas, estadoEscola, gradeComplet
         </div>
         <div className="relative group w-full lg:w-[300px]">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-[#fbbf24]" size={18} />
-          <input type="text" placeholder="Buscar sala..." value={busca} onChange={(e) => setBusca(e.target.value)}
+          <input type="text" placeholder="Buscar sala..." value={buscaGlobal} onChange={(e) => setBuscaGlobal(e.target.value)}
             className="w-full pl-12 pr-6 py-4 bg-[#0a0a0a] border-2 border-white/5 rounded-2xl text-white font-black text-xs focus:ring-4 focus:ring-[#fbbf24]/5 outline-none"
           />
         </div>

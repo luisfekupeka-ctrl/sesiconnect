@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useOutletContext } from 'react-router-dom';
 import { 
   Clock, DoorOpen, ChevronLeft, ChevronRight, 
   Sparkles, UserCheck, Search, Activity, User, ArrowRight, Calendar,
@@ -14,7 +15,11 @@ export default function Dashboard() {
   const { gradeCompleta, horaAtual, monitores } = useEscola();
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [salaSelecionada, setSalaSelecionada] = useState<number | null>(null);
-  const [buscaGlobal, setBuscaGlobal] = useState('');
+  
+  const context = useOutletContext<any>() || {};
+  const buscaGlobal = context.buscaGlobal !== undefined ? context.buscaGlobal : '';
+  const setBuscaGlobal = context.setBuscaGlobal || (() => {});
+
   const [buscaAluno, setBuscaAluno] = useState('');
 
   const diaHoje = new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(horaAtual).toUpperCase();
@@ -34,8 +39,18 @@ export default function Dashboard() {
     });
   }, [gradeCompleta, diaHoje, horaMinAgora]);
 
-  const totalPaginas = Math.ceil(gradeAgora.length / TAMANHO_PAGINA) || 1;
-  const salasExibidas = gradeAgora.slice((paginaAtual - 1) * TAMANHO_PAGINA, paginaAtual * TAMANHO_PAGINA);
+  const gradeAgoraFiltrada = useMemo(() => {
+    if (!buscaGlobal.trim()) return gradeAgora;
+    const query = buscaGlobal.toLowerCase();
+    return gradeAgora.filter(slot => 
+      (slot.materia || '').toLowerCase().includes(query) ||
+      (slot.nomeProfessor || '').toLowerCase().includes(query) ||
+      (slot.listaAlunos || []).some(a => a.toLowerCase().includes(query))
+    );
+  }, [gradeAgora, buscaGlobal]);
+
+  const totalPaginas = Math.ceil(gradeAgoraFiltrada.length / TAMANHO_PAGINA) || 1;
+  const salasExibidas = gradeAgoraFiltrada.slice((paginaAtual - 1) * TAMANHO_PAGINA, paginaAtual * TAMANHO_PAGINA);
 
   const stats = {
     aulasAtivas: gradeAgora.length,
@@ -126,7 +141,7 @@ export default function Dashboard() {
             {buscaGlobal.length >= 3 && (
               <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute top-full mt-2 left-0 w-full bg-[#141414] rounded-2xl border border-white/10 shadow-premium z-50 p-3 space-y-1">
                 {resultadosBusca.map((r, i) => (
-                  <div key={i} className="p-3 hover:bg-[#fbbf24] hover:text-black rounded-xl transition-all cursor-default text-xs flex flex-col gap-0.5">
+                  <div key={i} onClick={() => { setSalaSelecionada(r.numeroSala); setBuscaGlobal(''); }} className="p-3 hover:bg-[#fbbf24] hover:text-black rounded-xl transition-all cursor-pointer text-xs flex flex-col gap-0.5">
                      <p className="font-black italic">{r.materia}</p>
                      <p className="text-[8px] font-black uppercase opacity-60 tracking-widest">Sala {r.numeroSala}</p>
                   </div>
