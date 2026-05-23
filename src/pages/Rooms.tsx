@@ -91,7 +91,7 @@ export default function RoomsPage() {  const { salas, estadoEscola, gradeComplet
           <div className="p-6 bg-[#fbbf24] text-black relative">
              <button onClick={() => setSalaSelecionada(null)} className="absolute top-6 right-6 w-10 h-10 bg-black/10 rounded-xl flex items-center justify-center hover:bg-black/20 transition-all"><ChevronLeft size={20} /></button>
              <div className="flex items-center gap-6">
-                <div className="w-14 h-14 bg-black text-[#fbbf24] rounded-2xl flex items-center justify-center text-2xl font-black">{salaSelecionada.numero}</div>
+                <div className="w-14 h-14 bg-black text-[#fbbf24] rounded-2xl flex items-center justify-center text-2xl font-black">{salaSelecionada.numero || salaSelecionada.nome.charAt(0)}</div>
                 <div>
                   <h2 className="text-xl md:text-3xl font-black tracking-tighter italic leading-none">{salaSelecionada.nome}</h2>
                   <p className="text-[10px] font-bold opacity-70 mt-1 italic">{salaSelecionada.segmento}</p>
@@ -188,10 +188,15 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
 
   const entradasDia = useMemo(() => {
     if (!salaSelecionada || !gradeCompleta) return [];
-    return gradeCompleta.filter((e: any) => 
-      String(e.numeroSala) === String(salaSelecionada.numero) && 
-      String(e.diaSemana).toUpperCase() === String(diaGrade).toUpperCase()
-    );
+    return gradeCompleta.filter((e: any) => {
+      const matchDia = String(e.diaSemana).toUpperCase() === String(diaGrade).toUpperCase();
+      if (!matchDia) return false;
+      
+      const numMatch = salaSelecionada.numero && Number(e.numeroSala) === Number(salaSelecionada.numero);
+      const nomeMatch = salaSelecionada.nome && e.nomeSala?.toLowerCase() === salaSelecionada.nome.toLowerCase();
+      
+      return numMatch || nomeMatch;
+    });
   }, [gradeCompleta, salaSelecionada, diaGrade]);
 
   const estaNoBlocoAtual = useMemo(() => {
@@ -216,19 +221,29 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
       .map((a: any) => a.nome);
   }, [alunos, salaSelecionada]);
 
-  const lab = (languageLab || []).find((l: any) => 
-    (l.sala || '').includes(String(salaSelecionada?.numero)) && 
+  const lab = (languageLab || []).find((l: any) => {
+    const numStr = salaSelecionada?.numero ? String(salaSelecionada.numero) : '';
+    const nomeStr = salaSelecionada?.nome ? String(salaSelecionada.nome) : '';
+    return (
+      (numStr && (l.sala || '').includes(numStr)) ||
+      (nomeStr && (l.sala || '').includes(nomeStr))
+    ) && 
     l.diaSemana === diaGrade && 
     l.horarioInicio <= bloco.inicio && 
-    l.horarioFim >= bloco.fim
-  );
+    l.horarioFim >= bloco.fim;
+  });
 
-  const after = (atividadesAfter || []).find((a: any) => 
-    (a.local || '').includes(String(salaSelecionada?.numero)) && 
+  const after = (atividadesAfter || []).find((a: any) => {
+    const numStr = salaSelecionada?.numero ? String(salaSelecionada.numero) : '';
+    const nomeStr = salaSelecionada?.nome ? String(salaSelecionada.nome) : '';
+    return (
+      (numStr && (a.local || '').includes(numStr)) ||
+      (nomeStr && (a.local || '').includes(nomeStr))
+    ) && 
     (a.dias || []).includes(diaGrade) && 
     a.horarioInicio <= bloco.inicio && 
-    a.horarioFim >= bloco.fim
-  );
+    a.horarioFim >= bloco.fim;
+  });
 
   // Auxiliar para padronizar horários e evitar cruzamento/duplicações
   const cleanHorario = (h: string) => {
