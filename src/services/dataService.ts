@@ -264,9 +264,34 @@ export const getAlunosPorTurma = async (turma: string) => {
 };
 
 export async function buscarAlunos(): Promise<Aluno[]> {
-  const { data, error } = await supabase.from('alunos_cms').select('*');
-  if (error) return [];
-  return (data || []).map(item => ({
+  let allData: any[] = [];
+  let from = 0;
+  const limit = 1000;
+  let keepFetching = true;
+
+  while (keepFetching) {
+    const { data, error } = await supabase
+      .from('alunos_cms')
+      .select('*')
+      .range(from, from + limit - 1);
+
+    if (error) {
+      console.error('[DEBUG] Erro ao buscar alunos:', error);
+      break;
+    }
+
+    if (data && data.length > 0) {
+      allData = [...allData, ...data];
+      from += limit;
+      if (data.length < limit) {
+        keepFetching = false;
+      }
+    } else {
+      keepFetching = false;
+    }
+  }
+
+  return allData.map(item => ({
     id: item.id,
     nome: item.nome,
     turma: item.turma,

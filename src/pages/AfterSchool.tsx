@@ -4,14 +4,14 @@ import { Clock, Users, ChevronLeft, User, DoorOpen, Search, Star, ChevronRight }
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 
-const DIAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
+const DIAS = ['TODOS', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
 function obterLocalParaExibicao(localStr: string, dia?: string): string {
   if (!localStr || localStr === 'A DEFINIR') return 'A DEFINIR';
   try {
     const obj = JSON.parse(localStr);
     if (obj && typeof obj === 'object') {
-      if (dia && obj[dia]) {
+      if (dia && dia !== 'TODOS' && obj[dia]) {
         return obj[dia];
       }
       const parts = Object.entries(obj)
@@ -30,13 +30,15 @@ function obterLocalParaExibicao(localStr: string, dia?: string): string {
 
 export default function AfterSchool() {
   const { atividadesAfter } = useEscola();
-  const [diaFiltro, setDiaFiltro] = useState<string>(DIAS[0]);
+  const [diaFiltro, setDiaFiltro] = useState<string>('TODOS');
   const [ativSelecionada, setAtivSelecionada] = useState<any | null>(null);
   const [busca, setBusca] = useState('');
 
-  const atividadesDoDia = atividadesAfter.filter(a => 
-    (a.dias || []).some((d: string) => d.toUpperCase() === diaFiltro.toUpperCase())
-  );
+  const atividadesDoDia = diaFiltro === 'TODOS'
+    ? atividadesAfter
+    : atividadesAfter.filter(a => 
+        (a.dias || []).some((d: string) => d.toUpperCase() === diaFiltro.toUpperCase())
+      );
 
   const atividadesDeduplicadas = useMemo(() => {
     const map = new Map<string, typeof atividadesDoDia[0]>();
@@ -130,7 +132,7 @@ export default function AfterSchool() {
             <button key={dia} onClick={() => setDiaFiltro(dia)}
               className={cn("px-4 py-2 rounded-lg text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all",
                 diaFiltro === dia ? "bg-[#fbbf24] text-black shadow-md" : "text-white/40 hover:bg-white/5")}>
-              {dia.slice(0, 3)}
+              {dia === 'TODOS' ? 'TODOS' : dia.slice(0, 3)}
             </button>
           ))}
         </div>

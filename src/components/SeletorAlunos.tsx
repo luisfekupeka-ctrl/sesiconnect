@@ -262,7 +262,10 @@ export default function SeletorAlunos({ alunos, selecionados, onChange, turmaAlv
                             onChange={(e) => setBusca(e.target.value)}
                           />
                           <div className="max-h-32 overflow-y-auto space-y-1 custom-scrollbar">
-                            {alunos.filter(a => normalize(a.nome).includes(normalize(busca))).slice(0, 5).map(a => (
+                            {alunos
+                              .filter(a => normalize(a.nome).includes(normalize(busca)))
+                              .sort((a, b) => a.nome.localeCompare(b.nome))
+                              .map(a => (
                               <button key={a.id} type="button" onClick={() => handleVincularManual(r.id_temp, a)}
                                 className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-white/5 text-left transition-colors">
                                 <span className="text-xs font-bold text-white/80">{a.nome}</span>
