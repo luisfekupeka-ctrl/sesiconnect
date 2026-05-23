@@ -1984,7 +1984,14 @@ export default function Admin() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <CampoAutocompleteProfessores label="Professor" value={editandoAfter.nomeProfessor} onChange={v => setEditandoAfter({ ...editandoAfter, nomeProfessor: v })} professores={professoresCMS} />
-                  <CampoTexto label="Local" value={editandoAfter.local} onChange={v => setEditandoAfter({ ...editandoAfter, local: v })} />
+                  <CampoSelectLocal 
+                    label="Local" 
+                    value={editandoAfter.local} 
+                    onChange={v => setEditandoAfter({ ...editandoAfter, local: v })} 
+                    locais={locaisCMS}
+                    gradeCompleta={gradeCompleta}
+                    editandoAfter={editandoAfter}
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -2144,6 +2151,88 @@ function CampoSelect({ label, value, options, onChange }: { label: string; value
       <label className="text-xs font-black text-white/40 uppercase tracking-widest block ml-2">{label}</label>
       <select value={value || ''} onChange={e => onChange(e.target.value)} className="campo-input">
         {options.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function CampoSelectLocal({
+  label,
+  value,
+  onChange,
+  locais,
+  gradeCompleta,
+  editandoAfter
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  locais: any[];
+  gradeCompleta: any[];
+  editandoAfter: any;
+}) {
+  const opçõesLocais = locais.map(l => {
+    let status = 'Disponível';
+    let conflitoInfo = '';
+    let temConflito = false;
+
+    if (editandoAfter && editandoAfter.dias && editandoAfter.dias.length > 0 && editandoAfter.horarioInicio && editandoAfter.horarioFim) {
+      const hInicio = editandoAfter.horarioInicio;
+      const hFim = editandoAfter.horarioFim;
+
+      const conflito = gradeCompleta.find(g => {
+        const mesmoLocal = g.numeroSala === l.numero || g.nomeSala?.toLowerCase() === l.nome?.toLowerCase();
+        if (!mesmoLocal) return false;
+
+        const mesmoDia = editandoAfter.dias.includes(g.diaSemana);
+        if (!mesmoDia) return false;
+
+        if (!g.horario) return false;
+        const partes = g.horario.split('-');
+        if (partes.length < 2) return false;
+
+        const slotInicio = partes[0].trim();
+        const slotFim = partes[1].trim();
+
+        return slotInicio < hFim && slotFim > hInicio;
+      });
+
+      if (conflito) {
+        temConflito = true;
+        status = 'Ocupada';
+        conflitoInfo = `${conflito.materia} (${conflito.horario})`;
+      }
+    }
+
+    return {
+      local: l,
+      temConflito,
+      status,
+      conflitoInfo,
+      textoExibição: temConflito 
+        ? `${l.nome} (⚠️ Ocupada: ${conflitoInfo})` 
+        : `${l.nome} (✓ Disponível)`
+    };
+  });
+
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-black text-white/40 uppercase tracking-widest block ml-2">{label}</label>
+      <select 
+        value={value || ''} 
+        onChange={e => onChange(e.target.value)} 
+        className="campo-input"
+      >
+        <option value="">Selecione um Local...</option>
+        {opçõesLocais.map(op => (
+          <option 
+            key={op.local.id} 
+            value={op.local.nome}
+            className={op.temConflito ? 'text-red-500 font-semibold bg-black' : 'text-emerald-500 font-semibold bg-black'}
+          >
+            {op.textoExibição}
+          </option>
+        ))}
       </select>
     </div>
   );
