@@ -2085,8 +2085,7 @@ export default function Admin() {
                   dias={editandoAfter.dias || []}
                   localJson={editandoAfter.local || ''}
                   locais={locaisCMS}
-                  onDiasChange={diasNovos => setEditandoAfter({ ...editandoAfter, dias: diasNovos })}
-                  onLocalJsonChange={localJsonNovo => setEditandoAfter({ ...editandoAfter, local: localJsonNovo })}
+                  onChange={(diasNovos, localJsonNovo) => setEditandoAfter({ ...editandoAfter, dias: diasNovos, local: localJsonNovo })}
                 />
               </div>
 
@@ -2346,14 +2345,12 @@ function CampoMultiSelectDiasELocais({
   dias,
   localJson,
   locais,
-  onDiasChange,
-  onLocalJsonChange
+  onChange
 }: {
   dias: string[];
   localJson: string;
   locais: any[];
-  onDiasChange: (d: string[]) => void;
-  onLocalJsonChange: (l: string) => void;
+  onChange: (d: string[], l: string) => void;
 }) {
   const DIAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
   
@@ -2386,13 +2383,12 @@ function CampoMultiSelectDiasELocais({
       novosDias = [...dias, dia];
       novoMap[dia] = ''; // valor padrão vazio
     }
-    onDiasChange(novosDias);
-    onLocalJsonChange(JSON.stringify(novoMap));
+    onChange(novosDias, JSON.stringify(novoMap));
   };
 
   const handleRoomChange = (dia: string, sala: string) => {
     const novoMap = { ...localMap, [dia]: sala };
-    onLocalJsonChange(JSON.stringify(novoMap));
+    onChange(dias, JSON.stringify(novoMap));
   };
 
   return (
