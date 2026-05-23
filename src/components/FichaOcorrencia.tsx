@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { RegistroOcorrencia } from '../types';
-import { Printer, X, User, ClipboardList, MapPin, CheckSquare, Square } from 'lucide-react';
+import { Printer, X, User, ClipboardList, MapPin, CheckSquare, Square, Plus, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface Props {
@@ -19,6 +19,26 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
     mostrarEmissor: true,
     nomeEmissor: ocorrencia.professorAtual || 'Administração'
   });
+
+  interface AssinaturaExtra {
+    papel: string;
+    nome: string;
+  }
+
+  const [assinaturasExtras, setAssinaturasExtras] = useState<AssinaturaExtra[]>([]);
+  const [novoNomeExtra, setNovoNomeExtra] = useState('');
+  const [novoTipoExtra, setNovoTipoExtra] = useState('Aluno');
+
+  const adicionarAssinaturaExtra = () => {
+    if (novoNomeExtra.trim()) {
+      setAssinaturasExtras(prev => [...prev, { papel: novoTipoExtra, nome: novoNomeExtra.trim() }]);
+      setNovoNomeExtra('');
+    }
+  };
+
+  const removerAssinaturaExtra = (index: number) => {
+    setAssinaturasExtras(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handlePrint = () => {
     window.print();
@@ -96,6 +116,98 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                     placeholder="Nome do Coordenador"
                     className="w-full bg-white border border-gray-200 p-3 rounded-xl text-xs font-bold focus:border-primary outline-none transition-all"
                   />
+                )}
+              </div>
+
+              {/* Assinaturas Extras */}
+              <div className="space-y-3 pt-3 border-t border-gray-200">
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-900 flex items-center justify-between">
+                  <span>Assinaturas Extras</span>
+                  {assinaturasExtras.length > 0 && (
+                    <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-[9px]">
+                      {assinaturasExtras.length}
+                    </span>
+                  )}
+                </label>
+                
+                <div className="space-y-2 bg-white border border-gray-100 p-3 rounded-2xl shadow-sm">
+                  <div>
+                    <label className="text-[9px] font-bold text-gray-400 uppercase">Tipo</label>
+                    <select
+                      value={novoTipoExtra}
+                      onChange={e => setNovoTipoExtra(e.target.value)}
+                      className="w-full bg-gray-50 border border-gray-150 p-2 rounded-xl text-xs font-bold focus:border-primary outline-none transition-all mt-1"
+                    >
+                      <option value="Aluno">Aluno</option>
+                      <option value="Colaborador">Colaborador</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold text-gray-400 uppercase">Nome</label>
+                    <div className="flex gap-2 mt-1">
+                      <input 
+                        type="text" 
+                        value={novoNomeExtra} 
+                        onChange={e => setNovoNomeExtra(e.target.value)}
+                        placeholder="Nome de quem vai assinar"
+                        className="flex-1 bg-gray-50 border border-gray-150 p-2 rounded-xl text-xs font-bold focus:border-primary outline-none transition-all"
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            adicionarAssinaturaExtra();
+                          }
+                        }}
+                      />
+                      <button 
+                        type="button"
+                        onClick={adicionarAssinaturaExtra}
+                        className="p-2 bg-gray-900 text-white rounded-xl text-xs font-bold hover:bg-gray-800 transition-all flex items-center justify-center shrink-0"
+                        title="Adicionar Assinatura"
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {assinaturasExtras.length > 0 && (
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                    {assinaturasExtras.map((extra, index) => (
+                      <div key={index} className="space-y-1.5 bg-white border border-gray-100 p-2.5 rounded-xl text-xs shadow-sm">
+                        <div className="flex items-center justify-between gap-2">
+                          <select
+                            value={extra.papel}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setAssinaturasExtras(prev => prev.map((item, i) => i === index ? { ...item, papel: val } : item));
+                            }}
+                            className="bg-transparent border-0 outline-none font-bold text-primary text-[10px] uppercase tracking-wider cursor-pointer"
+                          >
+                            <option value="Aluno">Aluno</option>
+                            <option value="Colaborador">Colaborador</option>
+                          </select>
+                          <button 
+                            onClick={() => removerAssinaturaExtra(index)}
+                            className="text-gray-400 hover:text-red-500 transition-all p-1 shrink-0"
+                            type="button"
+                            title="Remover"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                        <input 
+                          type="text" 
+                          value={extra.nome} 
+                          onChange={e => {
+                            const val = e.target.value;
+                            setAssinaturasExtras(prev => prev.map((item, i) => i === index ? { ...item, nome: val } : item));
+                          }}
+                          className="w-full bg-gray-50 p-1.5 px-2 border-0 outline-none font-bold text-gray-700 rounded-lg text-xs"
+                          placeholder="Nome de quem vai assinar"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
@@ -202,6 +314,13 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                       {configAssinaturas.nomeResponsavel && <p className="text-[10px] text-gray-500 uppercase mt-1">{configAssinaturas.nomeResponsavel}</p>}
                     </div>
                   )}
+                  {assinaturasExtras.map((extra, index) => (
+                    <div key={index} className="text-center">
+                      <div className="w-full border-b border-gray-900 mb-2"></div>
+                      <p className="text-xs font-bold text-gray-900 uppercase">Assinatura do {extra.papel}</p>
+                      <p className="text-[10px] text-gray-500 uppercase mt-1">{extra.nome}</p>
+                    </div>
+                  ))}
                   {configAssinaturas.mostrarEmissor && (
                     <div className="text-center col-span-2 max-w-sm mx-auto w-full">
                       <div className="w-full border-b border-gray-900 mb-2"></div>
