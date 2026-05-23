@@ -214,61 +214,62 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
 
       const tipoAtividade = slot.tipo || 'regular';
       const slotInicio = slot.horario?.split('-')[0]?.trim() || '';
+      const salaStr = String(slot.numeroSala || '');
+      const nomeSalaStr = slot.nomeSala || '';
 
-      // 1. Matriz Language Lab
-      if (tipoAtividade === 'language_lab') {
-        const labMatch = languageLab.find(lab => {
-          const salaStr = String(slot.numeroSala || '');
-          const nomeSalaStr = slot.nomeSala || '';
-          return lab.diaSemana === slot.diaSemana &&
-                 ((lab.sala || '').includes(salaStr) || (lab.sala || '').includes(nomeSalaStr)) &&
-                 lab.horarioInicio <= slotInicio && lab.horarioFim > slotInicio;
-        });
-        if (labMatch) {
-          return { 
-            ...slotComProfNormalizado, 
-            materia: `Lab: ${labMatch.nivel}`, 
-            nomeProfessor: labMatch.professor, 
-            listaAlunos: labMatch.listaAlunos || [], 
-            tipo: 'language_lab' 
-          };
-        } else {
-          return {
-            ...slotComProfNormalizado,
-            materia: 'Language Lab (Não Agendado)',
-            nomeProfessor: 'A DEFINIR',
-            listaAlunos: [],
-            tipo: 'language_lab'
-          };
-        }
+      // 1. Cruzamento prioritário de dados com o Language Lab (para qualquer slot)
+      const labMatch = languageLab.find(lab => {
+        return lab.diaSemana === slot.diaSemana &&
+               ((lab.sala || '').includes(salaStr) || (lab.sala || '').includes(nomeSalaStr)) &&
+               lab.horarioInicio <= slotInicio && lab.horarioFim > slotInicio;
+      });
+
+      if (labMatch) {
+        return { 
+          ...slotComProfNormalizado, 
+          materia: `Lab: ${labMatch.nivel}`, 
+          nomeProfessor: labMatch.professor, 
+          listaAlunos: labMatch.listaAlunos || [], 
+          tipo: 'language_lab' 
+        };
       }
 
-      // 2. Matriz After School
+      // 2. Cruzamento prioritário de dados com o After School (para qualquer slot)
+      const afterMatch = atividadesAfter.find(after => {
+        return (after.dias || []).includes(slot.diaSemana) &&
+               ((after.local || '').includes(salaStr) || (after.local || '').includes(nomeSalaStr)) &&
+               after.horarioInicio <= slotInicio && after.horarioFim > slotInicio;
+      });
+
+      if (afterMatch) {
+        return { 
+          ...slotComProfNormalizado, 
+          materia: `After: ${afterMatch.nome}`, 
+          nomeProfessor: afterMatch.nomeProfessor, 
+          listaAlunos: afterMatch.listaAlunos || [], 
+          tipo: 'after_school' 
+        };
+      }
+
+      // 3. Fallbacks se o slot for explicitamente de um tipo no banco mas sem cruzamento ativo
+      if (tipoAtividade === 'language_lab') {
+        return {
+          ...slotComProfNormalizado,
+          materia: 'Language Lab (Não Agendado)',
+          nomeProfessor: 'A DEFINIR',
+          listaAlunos: [],
+          tipo: 'language_lab'
+        };
+      }
+
       if (tipoAtividade === 'after_school') {
-        const afterMatch = atividadesAfter.find(after => {
-          const salaStr = String(slot.numeroSala || '');
-          const nomeSalaStr = slot.nomeSala || '';
-          return (after.dias || []).includes(slot.diaSemana) &&
-                 ((after.local || '').includes(salaStr) || (after.local || '').includes(nomeSalaStr)) &&
-                 after.horarioInicio <= slotInicio && after.horarioFim > slotInicio;
-        });
-        if (afterMatch) {
-          return { 
-            ...slotComProfNormalizado, 
-            materia: `After: ${afterMatch.nome}`, 
-            nomeProfessor: afterMatch.nomeProfessor, 
-            listaAlunos: afterMatch.listaAlunos || [], 
-            tipo: 'after_school' 
-          };
-        } else {
-          return {
-            ...slotComProfNormalizado,
-            materia: 'After School (Não Agendado)',
-            nomeProfessor: 'A DEFINIR',
-            listaAlunos: [],
-            tipo: 'after_school'
-          };
-        }
+        return {
+          ...slotComProfNormalizado,
+          materia: 'After School (Não Agendado)',
+          nomeProfessor: 'A DEFINIR',
+          listaAlunos: [],
+          tipo: 'after_school'
+        };
       }
 
       // 3. Matriz de Sala (Aula Regular) - Busca nos locais cadastrados no CMS
