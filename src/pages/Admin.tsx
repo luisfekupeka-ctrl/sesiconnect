@@ -2181,6 +2181,9 @@ function CampoSelectLocal({
       const hFim = editandoAfter.horarioFim;
 
       const conflito = gradeCompleta.find(g => {
+        // Ignorar se a entrada na grade for do tipo after ou after_school
+        if (g.tipo === 'after' || g.tipo === 'after_school' || g.materia?.toLowerCase().includes('after')) return false;
+
         const mesmoLocal = g.numeroSala === l.numero || g.nomeSala?.toLowerCase() === l.nome?.toLowerCase();
         if (!mesmoLocal) return false;
 
