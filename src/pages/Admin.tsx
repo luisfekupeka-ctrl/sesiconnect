@@ -1734,29 +1734,88 @@ export default function Admin() {
           largo={true}
           onSalvar={() => doSave(salvarLocalCMS(editandoLocal), setEditandoLocal)} carregando={carregando}>
           {editandoLocal && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <div className={cn(
+              "grid gap-8 items-start",
+              editandoLocal.tipo === 'sala' ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1 max-w-xl mx-auto"
+            )}>
               <div className="space-y-4">
+                {/* Referência Categoria */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black text-white/40 uppercase tracking-widest block ml-2">Categoria do Local</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditandoLocal({ 
+                        ...editandoLocal, 
+                        tipo: 'sala' 
+                      })}
+                      className={cn(
+                        "flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all border",
+                        editandoLocal.tipo === 'sala'
+                          ? "bg-[#42a0f5] text-black border-[#42a0f5]"
+                          : "bg-black text-white/40 border-white/5 hover:bg-white/5"
+                      )}
+                    >
+                      Sala de Aula
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditandoLocal({ 
+                        ...editandoLocal, 
+                        tipo: editandoLocal.tipo === 'sala' ? 'restaurante' : editandoLocal.tipo,
+                        segmento: undefined,
+                        lista_alunos: []
+                      })}
+                      className={cn(
+                        "flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all border",
+                        editandoLocal.tipo !== 'sala'
+                          ? "bg-[#42a0f5] text-black border-[#42a0f5]"
+                          : "bg-black text-white/40 border-white/5 hover:bg-white/5"
+                      )}
+                    >
+                      Espaço Comum / Outros
+                    </button>
+                  </div>
+                </div>
+
                 <CampoTexto label="Nome do Local" value={editandoLocal.nome} onChange={v => setEditandoLocal({ ...editandoLocal, nome: v })} />
                 <CampoTexto label="Número (se houver)" value={editandoLocal.numero?.toString() || ''} onChange={v => setEditandoLocal({ ...editandoLocal, numero: v ? parseInt(v) : undefined })} tipo="number" />
-                <CampoSelect label="Ano Escolar / Turma" value={editandoLocal.segmento || ''} options={ANOS_ESCOLARES} onChange={v => setEditandoLocal({ ...editandoLocal, segmento: v })} />
-                <CampoTexto label="Tipo (sala, quadra, etc)" value={editandoLocal.tipo} onChange={v => setEditandoLocal({ ...editandoLocal, tipo: v })} />
+                
+                {editandoLocal.tipo === 'sala' ? (
+                  <CampoSelect 
+                    label="Ano Escolar / Turma" 
+                    value={editandoLocal.segmento || ''} 
+                    options={ANOS_ESCOLARES} 
+                    onChange={v => setEditandoLocal({ ...editandoLocal, segmento: v })} 
+                  />
+                ) : (
+                  <CampoSelect 
+                    label="Tipo do Espaço" 
+                    value={editandoLocal.tipo} 
+                    options={['restaurante', 'arena', 'quadra', 'patio', 'especializado', 'outro']} 
+                    onChange={v => setEditandoLocal({ ...editandoLocal, tipo: v })} 
+                  />
+                )}
+                
                 <CampoTexto label="Capacidade" value={editandoLocal.capacidade?.toString() || ''} onChange={v => setEditandoLocal({ ...editandoLocal, capacidade: v ? parseInt(v) : undefined })} tipo="number" />
               </div>
 
-              <div className="space-y-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1.5 h-6 bg-[#42a0f5] rounded-full" />
-                  <h4 className="text-[10px] font-black uppercase text-[#42a0f5] tracking-[0.3em]">Alunos Ensalados</h4>
+              {editandoLocal.tipo === 'sala' && (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-1.5 h-6 bg-[#42a0f5] rounded-full" />
+                    <h4 className="text-[10px] font-black uppercase text-[#42a0f5] tracking-[0.3em]">Alunos Ensalados</h4>
+                  </div>
+                  <div className="bg-black/20 rounded-[2rem] border border-white/5 overflow-hidden">
+                    <SeletorAlunos
+                      alunos={alunosBase}
+                      selecionados={editandoLocal.lista_alunos || []}
+                      onChange={v => setEditandoLocal({ ...editandoLocal, lista_alunos: v })}
+                      turmaAlvo={editandoLocal.segmento}
+                    />
+                  </div>
                 </div>
-                <div className="bg-black/20 rounded-[2rem] border border-white/5 overflow-hidden">
-                  <SeletorAlunos
-                    alunos={alunosBase}
-                    selecionados={editandoLocal.lista_alunos || []}
-                    onChange={v => setEditandoLocal({ ...editandoLocal, lista_alunos: v })}
-                    turmaAlvo={editandoLocal.segmento}
-                  />
-                </div>
-              </div>
+              )}
             </div>
           )}
         </ModalForm>
