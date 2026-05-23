@@ -2039,7 +2039,7 @@ export default function Admin() {
                 </div>
 
                 <CampoTexto label="Nome da Atividade" value={editandoAfter.nome} onChange={v => setEditandoAfter({ ...editandoAfter, nome: v })} />
-                <CampoSelect label="Categoria" value={editandoAfter.categoria} options={['Esporte', 'Oficina', 'Reforço', 'Outro']} onChange={v => setEditandoAfter({ ...editandoAfter, categoria: v })} />
+                <CampoSelect label="Categoria" value={editandoAfter.categoria} options={['Esporte', 'Arte', 'Dança', 'Música', 'Teatro', 'Robótica / Tecnologia', 'Idiomas', 'Ciências', 'Oficina', 'Reforço', 'Outro']} onChange={v => setEditandoAfter({ ...editandoAfter, categoria: v })} />
                 
                 <div className="grid grid-cols-2 gap-4">
                   <CampoAutocompleteProfessores label="Professor" value={editandoAfter.nomeProfessor} onChange={v => setEditandoAfter({ ...editandoAfter, nomeProfessor: v })} professores={professoresCMS} />
