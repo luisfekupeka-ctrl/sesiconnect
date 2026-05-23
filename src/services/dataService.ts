@@ -415,7 +415,7 @@ export async function buscarAtividadesAfter(): Promise<AtividadeAfter[]> {
     dias: item.dias || [],
     nomeProfessor: item.nome_professor,
     descricao: item.descricao,
-    quantidadeAlunos: item.quantidade_alunos,
+    quantidadeAlunos: item.lista_alunos ? item.lista_alunos.length : (item.quantidade_alunos || 0),
     grupoAlunos: item.grupo_alunos,
     vagas: item.vagas,
     listaAlunos: item.lista_alunos || []
@@ -432,7 +432,7 @@ export async function salvarAtividadeAfter(atividade: Partial<AtividadeAfter>): 
     dias: atividade.dias,
     nome_professor: atividade.nomeProfessor,
     descricao: atividade.descricao,
-    quantidade_alunos: atividade.quantidadeAlunos,
+    quantidade_alunos: atividade.listaAlunos ? atividade.listaAlunos.length : (atividade.quantidadeAlunos || 0),
     grupo_alunos: atividade.grupoAlunos,
     vagas: atividade.vagas,
     lista_alunos: atividade.listaAlunos || []
