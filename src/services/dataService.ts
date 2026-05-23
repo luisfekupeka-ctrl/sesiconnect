@@ -313,6 +313,19 @@ export async function salvarAluno(aluno: Partial<Aluno>): Promise<boolean> {
     const { error } = await supabase.from('alunos_cms').update(payload).eq('id', aluno.id);
     if (error) console.error('[DEBUG] Erro ao editar aluno:', error);
     return !error;
+  }
+
+  // Evita duplicação comparando pelo nome exato (ilike)
+  const { data: existing } = await supabase
+    .from('alunos_cms')
+    .select('id')
+    .ilike('nome', payload.nome)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase.from('alunos_cms').update(payload).eq('id', existing.id);
+    if (error) console.error('[DEBUG] Erro ao atualizar aluno existente por Nome:', error);
+    return !error;
   } else {
     const { error } = await supabase.from('alunos_cms').insert([payload]);
     if (error) console.error('[DEBUG] Erro ao cadastrar aluno:', error);

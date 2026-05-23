@@ -1671,7 +1671,7 @@ export default function Admin() {
                         </div>
                         <div className="mt-8 pt-4 border-t border-white/5 flex justify-between items-center text-xs font-black uppercase tracking-widest">
                           <span className="text-amber-500">{ativ.horarioInicio} — {ativ.horarioFim}</span>
-                          <span className="text-on-surface-variant/60">{(ativ.listaAlunos || []).length} / {ativ.vagas || '∞'} Alunos</span>
+                          <span className="text-on-surface-variant/60">{(ativ.listaAlunos || []).length} Alunos</span>
                         </div>
                       </div>
                     ))}
@@ -2076,17 +2076,14 @@ export default function Admin() {
                   <CampoGradePeriodos label="Apoio Visual (Grade)" periodos={periodos} onSelect={(i, f) => setEditandoAfter({ ...editandoAfter, horarioInicio: i, horarioFim: f })} />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-black text-white/40 uppercase tracking-widest block ml-2">Alunos Matriculados</label>
-                    <input 
-                      type="text" 
-                      readOnly 
-                      value={(editandoAfter.listaAlunos || []).length.toString()} 
-                      className="campo-input opacity-60 cursor-not-allowed" 
-                    />
-                  </div>
-                  <CampoTexto label="Vagas Totais" value={editandoAfter.vagas?.toString() || '20'} tipo="number" onChange={v => setEditandoAfter({ ...editandoAfter, vagas: parseInt(v) })} />
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black text-white/40 uppercase tracking-widest block ml-2">Alunos Matriculados</label>
+                  <input 
+                    type="text" 
+                    readOnly 
+                    value={(editandoAfter.listaAlunos || []).length.toString()} 
+                    className="campo-input opacity-60 cursor-not-allowed" 
+                  />
                 </div>
 
                 <CampoMultiSelectDiasELocais
