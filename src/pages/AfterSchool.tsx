@@ -6,6 +6,28 @@ import { useEscola } from '../context/ContextoEscola';
 
 const DIAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
+function obterLocalParaExibicao(localStr: string, dia?: string): string {
+  if (!localStr || localStr === 'A DEFINIR') return 'A DEFINIR';
+  try {
+    const obj = JSON.parse(localStr);
+    if (obj && typeof obj === 'object') {
+      if (dia && obj[dia]) {
+        return obj[dia];
+      }
+      const parts = Object.entries(obj)
+        .filter(([_, room]) => !!room)
+        .map(([d, room]) => `${d.slice(0, 3)}: ${room}`);
+      if (parts.length > 0) {
+        return parts.join(', ');
+      }
+      return 'A DEFINIR';
+    }
+  } catch (e) {
+    // Não é JSON
+  }
+  return localStr;
+}
+
 export default function AfterSchool() {
   const { atividadesAfter } = useEscola();
   const [diaFiltro, setDiaFiltro] = useState<string>(DIAS[0]);
@@ -71,7 +93,7 @@ export default function AfterSchool() {
           </div>
           <div className="p-6 space-y-8 bg-surface-container-lowest">
              <div className="grid grid-cols-3 gap-2">
-                <InfoBox label="Ambiente" value={ativSelecionada.local} icon={<DoorOpen size={12} />} color="yellow" />
+                <InfoBox label="Ambiente" value={obterLocalParaExibicao(ativSelecionada.local, diaFiltro)} icon={<DoorOpen size={12} />} color="yellow" />
                 <InfoBox label="Docente" value={ativSelecionada.nomeProfessor} icon={<User size={12} />} color="yellow" />
                 <InfoBox label="Hora" value={ativSelecionada.horarioInicio} icon={<Clock size={12} />} color="yellow" />
              </div>
@@ -123,7 +145,11 @@ export default function AfterSchool() {
                 <div className="w-12 h-12 bg-[#fbbf24] text-black rounded-xl flex items-center justify-center text-2xl font-black">{ativ.nome.charAt(0)}</div>
                 <div>
                    <h3 className="text-lg font-black text-white italic tracking-tighter group-hover:text-[#fbbf24]">{ativ.nome}</h3>
-                   <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">{ativ.categoria}</p>
+                   <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                      <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">{ativ.categoria}</span>
+                      <span className="w-1 h-1 rounded-full bg-white/20" />
+                      <span className="text-[9px] font-bold text-[#fbbf24] italic uppercase">{obterLocalParaExibicao(ativ.local, diaFiltro)}</span>
+                   </div>
                 </div>
              </div>
              <div className="flex items-center gap-6">

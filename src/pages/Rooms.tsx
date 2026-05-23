@@ -236,13 +236,34 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
   const after = (atividadesAfter || []).find((a: any) => {
     const numStr = salaSelecionada?.numero ? String(salaSelecionada.numero) : '';
     const nomeStr = salaSelecionada?.nome ? String(salaSelecionada.nome) : '';
+    if (!(a.dias || []).includes(diaGrade)) return false;
+
+    let localEspecifico = '';
+    if (a.local) {
+      try {
+        const obj = JSON.parse(a.local);
+        if (obj && typeof obj === 'object') {
+          localEspecifico = obj[diaGrade] || '';
+        } else {
+          localEspecifico = a.local;
+        }
+      } catch (e) {
+        localEspecifico = a.local;
+      }
+    }
+
+    const localMatch = localEspecifico && (
+      (numStr && localEspecifico.includes(numStr)) ||
+      (nomeStr && localEspecifico.includes(nomeStr)) ||
+      (numStr && numStr.includes(localEspecifico)) ||
+      (nomeStr && nomeStr.includes(localEspecifico))
+    );
+
     return (
-      (numStr && (a.local || '').includes(numStr)) ||
-      (nomeStr && (a.local || '').includes(nomeStr))
-    ) && 
-    (a.dias || []).includes(diaGrade) && 
-    a.horarioInicio <= bloco.inicio && 
-    a.horarioFim >= bloco.fim;
+      localMatch && 
+      a.horarioInicio <= bloco.inicio && 
+      a.horarioFim >= bloco.fim
+    );
   });
 
   // Auxiliar para padronizar horários e evitar cruzamento/duplicações

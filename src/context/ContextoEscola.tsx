@@ -236,9 +236,30 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
 
       // 2. Cruzamento prioritário de dados com o After School (para qualquer slot)
       const afterMatch = atividadesAfter.find(after => {
-        return (after.dias || []).includes(slot.diaSemana) &&
-               ((after.local || '').includes(salaStr) || (after.local || '').includes(nomeSalaStr)) &&
-               after.horarioInicio <= slotInicio && after.horarioFim > slotInicio;
+        if (!(after.dias || []).includes(slot.diaSemana)) return false;
+
+        let localEspecifico = '';
+        if (after.local) {
+          try {
+            const obj = JSON.parse(after.local);
+            if (obj && typeof obj === 'object') {
+              localEspecifico = obj[slot.diaSemana] || '';
+            } else {
+              localEspecifico = after.local;
+            }
+          } catch (e) {
+            localEspecifico = after.local;
+          }
+        }
+
+        const localMatch = localEspecifico && (
+          localEspecifico.includes(salaStr) || 
+          localEspecifico.includes(nomeSalaStr) || 
+          salaStr.includes(localEspecifico) || 
+          nomeSalaStr.includes(localEspecifico)
+        );
+
+        return localMatch && after.horarioInicio <= slotInicio && after.horarioFim > slotInicio;
       });
 
       if (afterMatch) {

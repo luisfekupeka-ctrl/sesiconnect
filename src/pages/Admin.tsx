@@ -168,7 +168,7 @@ export default function Admin() {
 
     // After School
     atividadesAfter.filter(a => (a.nome || '').toLowerCase().includes(q) || (a.nomeProfessor || '').toLowerCase().includes(q)).slice(0, 3).forEach(a => 
-      res.push({ id: a.id, tipo: 'AFTER', titulo: a.nome, subtitulo: `${a.nomeProfessor} · ${a.local}`, aba: 'after-school' }));
+      res.push({ id: a.id, tipo: 'AFTER', titulo: a.nome, subtitulo: `${a.nomeProfessor} · ${formatarLocalAfter(a.local)}`, aba: 'after-school' }));
 
     return res;
   }, [buscaGlobal, alunos, professoresCMS, monitores, locaisCMS, languageLab, atividadesAfter]);
@@ -1663,7 +1663,7 @@ export default function Admin() {
                           </div>
                         </div>
                         <h3 className="text-lg font-black text-white">{ativ.nome}</h3>
-                        <p className="text-xs font-bold text-on-surface-variant mt-2 uppercase tracking-wide">{ativ.nomeProfessor} · {ativ.local}</p>
+                        <p className="text-xs font-bold text-on-surface-variant mt-2 uppercase tracking-wide">{ativ.nomeProfessor} · {formatarLocalAfter(ativ.local)}</p>
                         <div className="mt-6 flex flex-wrap gap-2">
                           {ativ.dias.map(d => (
                             <span key={d} className="px-3 py-1 bg-surface-container-high border border-white/5 rounded-lg text-[10px] font-black uppercase tracking-widest text-on-surface-variant">{d.slice(0, 3)}</span>
@@ -1892,11 +1892,35 @@ export default function Admin() {
                       let listaAlunos = editandoGrade.lista_alunos;
                       
                       if (v === 'after_school') {
-                        const match = atividadesAfter.find(a => 
-                          a.local.includes(editandoGrade.numeroSala?.toString()) && 
-                          a.horarioInicio <= (editandoGrade.horario?.split('-')[0]?.trim() || '') &&
-                          a.dias.includes(editandoGrade.diaSemana)
-                        );
+                        const match = atividadesAfter.find(a => {
+                          const numSalaStr = editandoGrade.numeroSala?.toString() || '';
+                          const nomeSalaStr = editandoGrade.nomeSala || '';
+                          
+                          let localEspecifico = '';
+                          if (a.local) {
+                            try {
+                              const obj = JSON.parse(a.local);
+                              if (obj && typeof obj === 'object') {
+                                localEspecifico = obj[editandoGrade.diaSemana] || '';
+                              } else {
+                                localEspecifico = a.local;
+                              }
+                            } catch (e) {
+                              localEspecifico = a.local;
+                            }
+                          }
+                          
+                          const localMatch = localEspecifico && (
+                            localEspecifico.includes(numSalaStr) || 
+                            localEspecifico.includes(nomeSalaStr) ||
+                            (numSalaStr && numSalaStr.includes(localEspecifico)) ||
+                            (nomeSalaStr && nomeSalaStr.includes(localEspecifico))
+                          );
+                          
+                          return localMatch && 
+                            a.horarioInicio <= (editandoGrade.horario?.split('-')[0]?.trim() || '') &&
+                            a.dias.includes(editandoGrade.diaSemana);
+                        });
                         if (match) {
                           vinculadoId = match.id;
                           listaAlunos = match.listaAlunos;
@@ -2041,14 +2065,9 @@ export default function Admin() {
                 <CampoTexto label="Nome da Atividade" value={editandoAfter.nome} onChange={v => setEditandoAfter({ ...editandoAfter, nome: v })} />
                 <CampoSelect label="Categoria" value={editandoAfter.categoria} options={['Esporte', 'Arte', 'Dança', 'Música', 'Teatro', 'Robótica / Tecnologia', 'Idiomas', 'Ciências', 'Oficina', 'Reforço', 'Outro']} onChange={v => setEditandoAfter({ ...editandoAfter, categoria: v })} />
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <CampoAutocompleteProfessores label="Professor" value={editandoAfter.nomeProfessor} onChange={v => setEditandoAfter({ ...editandoAfter, nomeProfessor: v })} professores={professoresCMS} />
-                  <CampoSelectLocal 
-                    label="Local" 
-                    value={editandoAfter.local} 
-                    onChange={v => setEditandoAfter({ ...editandoAfter, local: v })} 
-                    locais={locaisCMS}
-                  />
+                  <CampoTexto label="Descrição / Detalhes" value={editandoAfter.descricao || ''} onChange={v => setEditandoAfter({ ...editandoAfter, descricao: v })} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -2062,9 +2081,13 @@ export default function Admin() {
                   <CampoTexto label="Vagas Totais" value={editandoAfter.vagas?.toString() || '20'} tipo="number" onChange={v => setEditandoAfter({ ...editandoAfter, vagas: parseInt(v) })} />
                 </div>
 
-                <CampoMultiSelectDiasArray label="Dias da Semana" value={editandoAfter.dias || []} onChange={v => setEditandoAfter({ ...editandoAfter, dias: v })} />
-                
-                <CampoTexto label="Descrição / Detalhes" value={editandoAfter.descricao || ''} onChange={v => setEditandoAfter({ ...editandoAfter, descricao: v })} />
+                <CampoMultiSelectDiasELocais
+                  dias={editandoAfter.dias || []}
+                  localJson={editandoAfter.local || ''}
+                  locais={locaisCMS}
+                  onDiasChange={diasNovos => setEditandoAfter({ ...editandoAfter, dias: diasNovos })}
+                  onLocalJsonChange={localJsonNovo => setEditandoAfter({ ...editandoAfter, local: localJsonNovo })}
+                />
               </div>
 
               <div className="space-y-6">
@@ -2297,6 +2320,136 @@ function CampoMultiSelectDias({ label, value, onChange }: { label: string; value
           );
         })}
       </div>
+    </div>
+  );
+}
+
+export function formatarLocalAfter(localStr: string): string {
+  if (!localStr || localStr === 'A DEFINIR') return 'A DEFINIR';
+  try {
+    const obj = JSON.parse(localStr);
+    if (obj && typeof obj === 'object') {
+      const parts = Object.entries(obj)
+        .filter(([_, room]) => !!room)
+        .map(([day, room]) => `${day.slice(0, 3)}: ${room}`);
+      if (parts.length > 0) {
+        return parts.join(', ');
+      }
+    }
+  } catch (e) {
+    // Não é JSON, retorna original
+  }
+  return localStr;
+}
+
+function CampoMultiSelectDiasELocais({
+  dias,
+  localJson,
+  locais,
+  onDiasChange,
+  onLocalJsonChange
+}: {
+  dias: string[];
+  localJson: string;
+  locais: any[];
+  onDiasChange: (d: string[]) => void;
+  onLocalJsonChange: (l: string) => void;
+}) {
+  const DIAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
+  
+  // Parse JSON com tratamento de erros e retrocompatibilidade
+  let localMap: Record<string, string> = {};
+  if (localJson) {
+    try {
+      const parsed = JSON.parse(localJson);
+      if (parsed && typeof parsed === 'object') {
+        localMap = parsed;
+      } else {
+        dias.forEach(d => {
+          localMap[d] = localJson;
+        });
+      }
+    } catch (e) {
+      dias.forEach(d => {
+        localMap[d] = localJson;
+      });
+    }
+  }
+
+  const toggleDia = (dia: string) => {
+    let novosDias: string[];
+    const novoMap = { ...localMap };
+    if (dias.includes(dia)) {
+      novosDias = dias.filter(d => d !== dia);
+      delete novoMap[dia];
+    } else {
+      novosDias = [...dias, dia];
+      novoMap[dia] = ''; // valor padrão vazio
+    }
+    onDiasChange(novosDias);
+    onLocalJsonChange(JSON.stringify(novoMap));
+  };
+
+  const handleRoomChange = (dia: string, sala: string) => {
+    const novoMap = { ...localMap, [dia]: sala };
+    onLocalJsonChange(JSON.stringify(novoMap));
+  };
+
+  return (
+    <div className="space-y-4 p-5 bg-[#0d0d0d] rounded-3xl border border-white/5 col-span-2">
+      <div className="space-y-2">
+        <label className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] block ml-2">
+          Dias da Semana
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {DIAS.map(dia => {
+            const ativo = dias.includes(dia);
+            return (
+              <button
+                key={dia}
+                type="button"
+                onClick={() => toggleDia(dia)}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                  ativo
+                    ? 'bg-[#fbbf24] text-black border-[#fbbf24]'
+                    : 'bg-[#0f0f0f] text-white/40 border-white/5 hover:bg-white/5'
+                }`}
+              >
+                {dia.slice(0, 3)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {dias.length > 0 && (
+        <div className="space-y-4 pt-4 border-t border-white/5">
+          <label className="text-[9px] font-black text-[#fbbf24] uppercase tracking-[0.2em] block ml-2">
+            Local/Sala por Dia da Semana
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {dias.map(dia => (
+              <div key={dia} className="space-y-1.5 bg-black/40 p-4 rounded-2xl border border-white/5">
+                <span className="text-[10px] font-black text-white/80 tracking-widest uppercase">
+                  {dia}
+                </span>
+                <select
+                  value={localMap[dia] || ''}
+                  onChange={e => handleRoomChange(dia, e.target.value)}
+                  className="w-full bg-[#0d0d0d] border border-white/10 p-3.5 rounded-xl text-[10px] font-black uppercase outline-none focus:border-[#fbbf24]/40 transition-all mt-1"
+                >
+                  <option value="">Selecione um Local...</option>
+                  {locais.map(l => (
+                    <option key={l.id} value={l.nome}>
+                      {l.nome} ({l.tipo})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
