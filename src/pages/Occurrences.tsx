@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2, Copy } from 'lucide-react';
+import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2, Copy, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { occurrenceService } from '../services/occurrenceService';
 import { generateOccurrencesPDF, generateOccurrencesExcel } from '../lib/reportGenerator';
@@ -57,6 +57,7 @@ export function Occurrences() {
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedRecord, setSelectedRecord] = useState<DailyOccurrenceRecord | null>(null);
   const [emissorName, setEmissorName] = useState('');
+  const [generatedMessageAfterSubmit, setGeneratedMessageAfterSubmit] = useState('');
 
   useEffect(() => {
     if (profile?.nome) {
@@ -119,6 +120,10 @@ export function Occurrences() {
         occurrence_type: occurrenceType,
         report: finalReport
       });
+      if (occurrenceType === 'Sem uniforme') {
+        setGeneratedMessageAfterSubmit(getUniformMessage());
+      }
+
       setSuccessMessage('Ocorrência registrada com sucesso!');
       setStudentName('');
       setSchoolYear('');
@@ -260,6 +265,44 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                 <PlusCircle className="w-5 h-5 text-blue-500" />
                 Nova Ocorrência
               </h2>
+
+              <AnimatePresence>
+                {generatedMessageAfterSubmit && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }} 
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="mb-6 p-4 md:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 relative"
+                  >
+                    <button 
+                      onClick={() => setGeneratedMessageAfterSubmit('')}
+                      className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4 pr-10">
+                      <h3 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-blue-500" />
+                        Mensagem Gerada (Copie e envie aos responsáveis)
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedMessageAfterSubmit);
+                          alert('Mensagem copiada para a área de transferência!');
+                        }}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors shadow-sm"
+                      >
+                        <Copy className="w-4 h-4" />
+                        Copiar Mensagem
+                      </button>
+                    </div>
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm text-slate-600 dark:text-slate-400 whitespace-pre-line font-medium leading-relaxed">
+                      {generatedMessageAfterSubmit}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {successMessage && (
                 <motion.div 
@@ -414,38 +457,18 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors shadow-sm shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <PlusCircle className="w-5 h-5" />}
-                    Registrar Ocorrência
+                    {isSubmitting ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <PlusCircle className="w-5 h-5" />
+                        Registrar Ocorrência
+                      </>
+                    )}
                   </button>
                 </div>
-
-                {occurrenceType === 'Sem uniforme' && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }} 
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-6 p-4 md:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                      <h3 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-blue-500" />
-                        Mensagem para os Responsáveis
-                      </h3>
-                      <button
-                        type="button"
-                        onClick={copyUniformMessage}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors shadow-sm"
-                      >
-                        <Copy className="w-4 h-4" />
-                        Copiar Mensagem
-                      </button>
-                    </div>
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm text-slate-600 dark:text-slate-400 whitespace-pre-line font-medium leading-relaxed">
-                      {getUniformMessage()}
-                    </div>
-                  </motion.div>
-                )}
               </form>
             </div>
           )}
