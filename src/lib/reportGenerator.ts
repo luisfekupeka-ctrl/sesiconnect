@@ -157,15 +157,34 @@ export const buildFichaOcorrenciaDoc = async (
 
     currentY += 8;
     doc.setFont('helvetica', 'bold');
-    doc.text('Professor/Responsável:', marginX, currentY);
+    doc.text('Responsável:', marginX, currentY);
     doc.setFont('helvetica', 'normal');
-    doc.text(profsText || 'Administração', marginX + 45, currentY);
+    doc.text(profsText || 'Administração', marginX + 35, currentY);
 
     currentY += 8;
     doc.setFont('helvetica', 'bold');
     doc.text('Data:', marginX, currentY);
     doc.setFont('helvetica', 'normal');
-    doc.text(new Date(ocorrencia.dataOcorrencia || '').toLocaleDateString('pt-BR'), marginX + 12, currentY);
+    
+    // Robust date parsing to avoid timezone bugs
+    const rawDate = ocorrencia.dataOcorrencia || ocorrencia.criadoEm || new Date().toISOString();
+    let dateStr = rawDate;
+    if (rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [y, m, d] = rawDate.split('-');
+      dateStr = `${d}/${m}/${y}`;
+    } else {
+      try {
+        const dt = new Date(rawDate);
+        if (!isNaN(dt.getTime())) {
+          const useUTC = !rawDate.includes('T') && !rawDate.includes(' ');
+          dateStr = dt.toLocaleDateString('pt-BR', useUTC ? { timeZone: 'UTC' } : undefined);
+        }
+      } catch (e) {
+        dateStr = rawDate;
+      }
+    }
+    
+    doc.text(dateStr, marginX + 12, currentY);
 
     const numAtaKey = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase().includes('número da ata') || k.toLowerCase().includes('numero da ata') || k.toLowerCase() === 'ata');
     if (numAtaKey && ocorrencia.dados[numAtaKey]) {

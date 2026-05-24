@@ -266,7 +266,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                <div className="space-y-1.5 text-sm text-[#0c2340] font-medium border-b border-gray-200 pb-6">
                  <p><span className="font-bold mr-2">Nome do Aluno:</span> {configAssinaturas.nomeAluno || ocorrencia.nomeAluno}</p>
                  <p><span className="font-bold mr-2">Ano:</span> {ocorrencia.anoAluno || ocorrencia.turmaAluno}</p>
-                 <p><span className="font-bold mr-2">Professor/Responsável:</span> {(() => {
+                 <p><span className="font-bold mr-2">Responsável:</span> {(() => {
                    const profs = [];
                    if (configAssinaturas.nomeEmissor && configAssinaturas.nomeEmissor.toUpperCase() !== 'A DEFINIR') {
                      profs.push(configAssinaturas.nomeEmissor);
@@ -291,7 +291,8 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                    try {
                      const dt = new Date(rawDate);
                      if (isNaN(dt.getTime())) return rawDate;
-                     return dt.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+                     const useUTC = !rawDate.includes('T') && !rawDate.includes(' ');
+                     return dt.toLocaleDateString('pt-BR', useUTC ? { timeZone: 'UTC' } : undefined);
                    } catch (e) {
                      return rawDate;
                    }

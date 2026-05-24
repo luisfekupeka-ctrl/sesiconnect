@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2, Copy, X } from 'lucide-react';
+import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2, Copy, X, Printer, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { occurrenceService } from '../services/occurrenceService';
 import { generateOccurrencesPDF, generateOccurrencesExcel, generateSingleOccurrencePDF } from '../lib/reportGenerator';
@@ -716,15 +716,43 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
               </div>
 
               {/* Botão Fechar / Ações no Topo (Oculto na Impressão) */}
-              <div className="absolute top-4 right-4 z-20 flex gap-2">
+              <div className="absolute top-4 right-4 z-20 flex gap-2 print:hidden">
                 {isAdmin && (
-                  <button 
-                    onClick={() => generateSingleOccurrencePDF(selectedRecord)}
-                    className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-sm cursor-pointer"
-                    title="Baixar Documento PDF"
-                  >
-                    <Download className="w-[18px] h-[18px]" />
-                  </button>
+                  <>
+                    <button 
+                      onClick={async () => {
+                        if (window.confirm('Tem certeza que deseja apagar este registro?')) {
+                          try {
+                            if (selectedRecord.id) {
+                              await occurrenceService.deleteRecord(selectedRecord.id);
+                              setRecords(prev => prev.filter(r => r.id !== selectedRecord.id));
+                              setSelectedRecord(null);
+                            }
+                          } catch(e) {
+                            alert('Erro ao apagar registro.');
+                          }
+                        }
+                      }}
+                      className="p-3 rounded-full bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-sm cursor-pointer"
+                      title="Apagar Registro"
+                    >
+                      <Trash2 className="w-[18px] h-[18px]" />
+                    </button>
+                    <button 
+                      onClick={() => window.print()}
+                      className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-sm cursor-pointer"
+                      title="Imprimir Modelo Atual"
+                    >
+                      <Printer className="w-[18px] h-[18px]" />
+                    </button>
+                    <button 
+                      onClick={() => generateSingleOccurrencePDF(selectedRecord)}
+                      className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-sm cursor-pointer"
+                      title="Baixar Documento PDF"
+                    >
+                      <Download className="w-[18px] h-[18px]" />
+                    </button>
+                  </>
                 )}
                 <button 
                   onClick={() => setSelectedRecord(null)}

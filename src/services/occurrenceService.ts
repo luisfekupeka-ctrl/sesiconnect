@@ -17,6 +17,18 @@ export const occurrenceService = {
     return data;
   },
 
+  async deleteRecord(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('daily_occurrence_records')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting daily occurrence record:', error);
+      throw error;
+    }
+  },
+
   async fetchRecords(filters?: {
     student_name?: string;
     school_year?: string;
