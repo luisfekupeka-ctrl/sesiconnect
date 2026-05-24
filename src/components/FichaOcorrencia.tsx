@@ -74,7 +74,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                     value={configAssinaturas.nomeAluno} 
                     onChange={e => setConfigAssinaturas(prev => ({ ...prev, nomeAluno: e.target.value }))}
                     placeholder="Nome do Aluno"
-                    className="w-full bg-white border border-gray-200 p-3 rounded-xl text-xs font-bold focus:border-primary outline-none transition-all"
+                    className="w-full bg-white border border-gray-200 p-3 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all"
                   />
                 )}
               </div>
@@ -94,7 +94,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                     value={configAssinaturas.nomeResponsavel} 
                     onChange={e => setConfigAssinaturas(prev => ({ ...prev, nomeResponsavel: e.target.value }))}
                     placeholder="Nome do Responsável (Opcional)"
-                    className="w-full bg-white border border-gray-200 p-3 rounded-xl text-xs font-bold focus:border-primary outline-none transition-all"
+                    className="w-full bg-white border border-gray-200 p-3 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all"
                   />
                 )}
               </div>
@@ -114,7 +114,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                     value={configAssinaturas.nomeEmissor} 
                     onChange={e => setConfigAssinaturas(prev => ({ ...prev, nomeEmissor: e.target.value }))}
                     placeholder="Nome do Coordenador"
-                    className="w-full bg-white border border-gray-200 p-3 rounded-xl text-xs font-bold focus:border-primary outline-none transition-all"
+                    className="w-full bg-white border border-gray-200 p-3 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all"
                   />
                 )}
               </div>
@@ -139,7 +139,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                       value={novoTipoExtra}
                       onChange={e => setNovoTipoExtra(e.target.value)}
                       placeholder="Ex: Monitor, Professor..."
-                      className="w-full bg-gray-50 border border-gray-150 p-2 rounded-xl text-xs font-bold focus:border-primary outline-none transition-all mt-1"
+                      className="w-full bg-gray-50 border border-gray-150 p-2 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all mt-1"
                     />
                     <datalist id="cargos-list">
                       <option value="Monitor" />
@@ -157,7 +157,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                         value={novoNomeExtra} 
                         onChange={e => setNovoNomeExtra(e.target.value)}
                         placeholder="Nome de quem vai assinar"
-                        className="flex-1 bg-gray-50 border border-gray-150 p-2 rounded-xl text-xs font-bold focus:border-primary outline-none transition-all"
+                        className="flex-1 bg-gray-50 border border-gray-150 p-2 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all"
                         onKeyDown={e => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
