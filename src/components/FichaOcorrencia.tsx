@@ -260,8 +260,11 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                  <p><span className="font-bold mr-2">Nome do Aluno:</span> {ocorrencia.nomeAluno}</p>
                  <p><span className="font-bold mr-2">Ano:</span> {ocorrencia.anoAluno || ocorrencia.turmaAluno}</p>
                  <p><span className="font-bold mr-2">Professor/Responsável:</span> {(() => {
-                   const key = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase() === 'responsável' || k.toLowerCase() === 'professor');
-                   return key ? String(ocorrencia.dados[key]) : (ocorrencia.professorAtual || 'Administração');
+                   const profs = [];
+                   if (configAssinaturas.nomeEmissor) profs.push(configAssinaturas.nomeEmissor);
+                   const extraProfs = assinaturasExtras.filter(e => e.papel.toLowerCase().includes('professor')).map(e => e.nome);
+                   const profsText = [...profs, ...extraProfs].join(', ');
+                   return profsText || 'Administração';
                  })()}</p>
                  <p><span className="font-bold mr-2">Data:</span> {(() => {
                    const key = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase() === 'data');
@@ -273,12 +276,19 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                    }
                    return new Date(rawDate).toLocaleDateString('pt-BR');
                  })()}</p>
+                 {(() => {
+                   const numAtaKey = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase().includes('número da ata') || k.toLowerCase().includes('numero da ata') || k.toLowerCase() === 'ata');
+                   if (numAtaKey && ocorrencia.dados[numAtaKey]) {
+                     return <p><span className="font-bold mr-2">Número da Ata:</span> {String(ocorrencia.dados[numAtaKey])}</p>;
+                   }
+                   return null;
+                 })()}
                </div>
 
                {/* Título */}
                <div>
                  <h1 className="text-2xl font-black text-[#0c2340] uppercase tracking-tight">
-                    Registro de Ocorrência
+                    Registro de Ata
                  </h1>
                  <p className="text-sm font-bold text-gray-500 uppercase mt-1">
                     {(() => {

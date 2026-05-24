@@ -134,15 +134,35 @@ export const generateFichaOcorrenciaPDF = async (
     
     currentY += 8;
     doc.setFont('helvetica', 'bold');
-    doc.text('Ano Letivo:', marginX, currentY);
+    doc.text('Ano:', marginX, currentY);
     doc.setFont('helvetica', 'normal');
-    doc.text(ocorrencia.anoAluno || 'Não informado', marginX + 25, currentY);
+    doc.text(ocorrencia.anoAluno || ocorrencia.turmaAluno || 'Não informado', marginX + 10, currentY);
+
+    const profs = [];
+    if (configAssinaturas.nomeEmissor) profs.push(configAssinaturas.nomeEmissor);
+    const extraProfs = assinaturasExtras.filter(e => e.papel.toLowerCase().includes('professor')).map(e => e.nome);
+    const profsText = [...profs, ...extraProfs].join(', ');
+
+    currentY += 8;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Professor/Responsável:', marginX, currentY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(profsText || 'Administração', marginX + 45, currentY);
 
     currentY += 8;
     doc.setFont('helvetica', 'bold');
     doc.text('Data:', marginX, currentY);
     doc.setFont('helvetica', 'normal');
     doc.text(new Date(ocorrencia.dataOcorrencia || '').toLocaleDateString('pt-BR'), marginX + 12, currentY);
+
+    const numAtaKey = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase().includes('número da ata') || k.toLowerCase().includes('numero da ata') || k.toLowerCase() === 'ata');
+    if (numAtaKey && ocorrencia.dados[numAtaKey]) {
+      currentY += 8;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Número da Ata:', marginX, currentY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(ocorrencia.dados[numAtaKey]), marginX + 30, currentY);
+    }
 
     currentY += 15;
     doc.setDrawColor(220, 220, 220);
@@ -152,7 +172,7 @@ export const generateFichaOcorrenciaPDF = async (
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
     doc.setTextColor(12, 35, 64);
-    doc.text('REGISTRO DE OCORRÊNCIA', marginX, currentY);
+    doc.text('REGISTRO DE ATA', marginX, currentY);
     
     currentY += 8;
     doc.setFontSize(12);
