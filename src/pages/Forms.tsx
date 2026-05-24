@@ -186,13 +186,13 @@ export default function FormsPage() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-5xl mx-auto space-y-10">
       {/* Header Premium - WOW Effect */}
-      <div className="relative mb-12 p-10 rounded-[3rem] overflow-hidden group border border-white/5 shadow-2xl">
+      <div className="relative mb-12 p-4 md:p-10 rounded-[3rem] overflow-hidden group border border-white/5 shadow-2xl">
         {/* Fundo Decorativo Dinâmico */}
         <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-blue-600/10 to-transparent opacity-40 group-hover:opacity-60 transition-opacity duration-700" />
         <div className="absolute top-[-50%] right-[-10%] w-80 h-80 bg-primary/20 blur-[120px] rounded-full animate-pulse" />
         
         <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-10">
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4 md:gap-8">
             <div className="w-24 h-24 bg-primary text-black rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-primary/40 rotate-6 group-hover:rotate-0 transition-all duration-700 ease-out">
               <FileSpreadsheet size={48} />
             </div>
@@ -283,14 +283,14 @@ export default function FormsPage() {
                   </div>
                 </div>
 
-                <div className="p-8 md:p-10 space-y-8">
+                <div className="p-4 md:p-8 md:p-4 md:p-10 space-y-8">
                   <div className="mb-4">
                     <h2 className="text-xl font-black text-on-surface mb-1">{modeloSelecionado.nome}</h2>
                     <p className="text-on-surface-variant font-medium text-sm">{modeloSelecionado.descricao}</p>
                   </div>
                   <form onSubmit={handleSubmit} className="space-y-8">
                   {modeloSelecionado.campos.map(campo => (
-                    <div key={campo.id} className="space-y-4 bg-white/[0.02] p-8 rounded-[2.5rem] border border-white/[0.05] relative group/field">
+                    <div key={campo.id} className="space-y-4 bg-white/[0.02] p-4 md:p-8 rounded-[2.5rem] border border-white/[0.05] relative group/field">
                       <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-focus-within/field:bg-primary transition-all" />
                       
                       {campo.tipo !== 'sessao' && (
@@ -392,7 +392,7 @@ export default function FormsPage() {
                           required={campo.obrigatorio} 
                           value={dadosFormulario[campo.rotulo] || ''} 
                           onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} 
-                          className="w-full bg-surface-container-high/50 border-2 border-white/5 rounded-[1.5rem] p-6 text-lg font-medium focus:ring-8 focus:ring-primary/5 focus:border-primary/40 focus:bg-surface-container-high transition-all min-h-[300px] shadow-inner editorial-leading text-white placeholder:text-on-surface-variant/20 outline-none" 
+                          className="w-full bg-surface-container-high/50 border-2 border-white/5 rounded-[1.5rem] p-4 md:p-6 text-lg font-medium focus:ring-8 focus:ring-primary/5 focus:border-primary/40 focus:bg-surface-container-high transition-all min-h-[300px] shadow-inner editorial-leading text-white placeholder:text-on-surface-variant/20 outline-none" 
                           style={{ color: '#ffffff', caretColor: '#fbbf24' }}
                           placeholder="Descreva detalhadamente o ocorrido..." 
                         />
@@ -440,7 +440,7 @@ export default function FormsPage() {
             </div>
 
             <div className="bg-surface-container-lowest rounded-[2.5rem] editorial-shadow overflow-hidden">
-                <div className="p-6 border-b flex items-center justify-between">
+                <div className="p-4 md:p-6 border-b flex items-center justify-between">
                     <h3 className="font-black">Eventos Recentes</h3>
                     <div className="flex gap-2">
                       {ocorrenciasFiltradas.length > 0 && <button className="btn-mini"><Download size={12}/> XLS</button>}
@@ -562,14 +562,14 @@ export default function FormsPage() {
               </div>
 
               {/* Corpo da Ocorrência */}
-              <div className="p-8 md:p-12 space-y-8 print:p-8 font-sans">
+              <div className="p-4 md:p-8 md:p-12 space-y-8 print:p-4 md:p-8 font-sans">
                 <div className="text-center border-b border-slate-200 pb-6">
                   <h2 className="text-2xl font-extrabold uppercase tracking-widest text-[#0c2340]">Registro de Ocorrência</h2>
                   <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">{ocorrenciaSelecionada.nomeModelo}</p>
                 </div>
 
                 {/* Info do Aluno */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-4 md:p-6 rounded-2xl border border-slate-100">
                   <div>
                     <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Aluno</span>
                     <span className="text-sm font-bold text-slate-800">{ocorrenciaSelecionada.nomeAluno}</span>
@@ -589,7 +589,7 @@ export default function FormsPage() {
                 </div>
 
                 {/* Conteúdo Dinâmico */}
-                <div className="bg-slate-50/50 p-10 rounded-[2rem] border border-slate-100 space-y-10">
+                <div className="bg-slate-50/50 p-4 md:p-10 rounded-[2rem] border border-slate-100 space-y-10">
                   <div className="flex items-center gap-2 mb-6 border-b border-slate-200/60 pb-4">
                     <FileText size={18} className="text-[#0c2340]" />
                     <span className="text-xs font-black text-[#0c2340] uppercase tracking-widest">{ocorrenciaSelecionada.nomeModelo}</span>
@@ -609,7 +609,7 @@ export default function FormsPage() {
                 </div>
 
                 {/* Assinaturas */}
-                <div className="grid grid-cols-2 gap-8 pt-12 mt-12 border-t border-slate-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 pt-12 mt-12 border-t border-slate-200">
                   <div className="text-center space-y-1">
                     <div className="w-full border-b border-slate-300 h-10" />
                     <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Assinatura do Responsável</span>
@@ -635,7 +635,7 @@ function CardResumoMini({ titulo, valor, subtitulo, cor, icone: Icone }: { titul
     indigo: 'bg-indigo-500/10 text-indigo-600',
   };
   return (
-    <div className="bg-surface-container-low p-6 rounded-[1.5rem] editorial-shadow flex items-center gap-4">
+    <div className="bg-surface-container-low p-4 md:p-6 rounded-[1.5rem] editorial-shadow flex items-center gap-4">
       <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", cores[cor])}><Icone size={24}/></div>
       <div>
         <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">{titulo}</p>

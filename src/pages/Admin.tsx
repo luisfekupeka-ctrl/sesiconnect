@@ -440,7 +440,7 @@ export default function Admin() {
   return (
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8 pb-20">
-        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-500/10 text-red-600 rounded-full mb-4 font-black text-xs uppercase tracking-widest">
               <Shield size={14} /> Master CMS
@@ -449,7 +449,7 @@ export default function Admin() {
             <p className="text-on-surface-variant font-medium mt-2">Cadastre listas, configure grades e crie formulários.</p>
           </div>
 
-          <div className="relative w-full md:w-96">
+          <div className="relative w-full md:w-full md:w-96">
             <div className="relative group">
               <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-all" />
               <input 
@@ -667,7 +667,7 @@ export default function Admin() {
                 </div>
 
                 {professoresCMS.length === 0 ? (
-                  <p className="p-10 text-center text-on-surface-variant/50 font-black uppercase tracking-widest text-[10px]">Nenhum professor cadastrado.</p>
+                  <p className="p-4 md:p-10 text-center text-on-surface-variant/50 font-black uppercase tracking-widest text-[10px]">Nenhum professor cadastrado.</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {professoresCMS.filter(p => {
@@ -747,7 +747,7 @@ export default function Admin() {
             <motion.div key="grade-prof" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
 
               {/* Bloco 1: Acesso ao Editor */}
-              <div className="bg-emerald-500/10 border-2 border-emerald-500/20 p-8 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="bg-emerald-500/10 border-2 border-emerald-500/20 p-4 md:p-8 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6">
                 <div>
                   <h2 className="text-2xl font-black text-emerald-600">Grade de Aulas</h2>
                   <p className="text-sm font-medium text-emerald-700/80 mt-1 max-w-xl">
@@ -765,10 +765,10 @@ export default function Admin() {
               </div>
 
               {/* Grid Layout Dividido: Esquerda Filtro / Direita Planejamento de Escala Semanal */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8 items-start">
                 
                 {/* Lateral Esquerda: Lista/Diretório de Professores */}
-                <div className="lg:col-span-3 bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-6">
+                <div className="lg:col-span-3 bg-surface-container-low p-4 md:p-6 rounded-[2rem] border border-white/5 space-y-6">
                   <div>
                     <h3 className="text-sm font-black text-white/90">Diretório de Docentes</h3>
                     <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">Selecione para planejar a grade</p>
@@ -1100,7 +1100,7 @@ export default function Admin() {
               {subAbaMonitor === 'ESCALA' && (
                 <div className="space-y-8">
                   {/* Bloco: Acesso ao Editor */}
-                  <div className="bg-primary/10 border-2 border-primary/20 p-8 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="bg-primary/10 border-2 border-primary/20 p-4 md:p-8 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6">
                     <div>
                       <h2 className="text-2xl font-black text-primary italic">Diner de Monitores</h2>
                       <p className="text-sm font-medium text-on-surface-variant mt-1 max-w-xl">
@@ -1143,7 +1143,7 @@ export default function Admin() {
 
               {subAbaMonitor === 'DASHBOARD' && (
                 <div className="space-y-6">
-                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface-container-low p-4 md:p-6 rounded-2xl md:rounded-3xl border border-primary/5">
+                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface-container-low p-4 md:p-4 md:p-6 rounded-2xl md:rounded-3xl border border-primary/5">
                       <div>
                          <h3 className="text-base md:text-lg font-black italic tracking-tighter">Dashboard Colorido</h3>
                          <p className="text-[10px] md:text-xs text-on-surface-variant font-medium">Visualize a escala completa ou individual.</p>
@@ -1166,7 +1166,7 @@ export default function Admin() {
                       </div>
                    </div>
 
-                   <div className="bg-surface-container-low rounded-2xl md:rounded-[2rem] border border-primary/5 overflow-hidden p-4 md:p-6">
+                   <div className="bg-surface-container-low rounded-2xl md:rounded-[2rem] border border-primary/5 overflow-hidden p-4 md:p-4 md:p-6">
                       {(() => {
                          const diaSel = diaMonitor;
                          const gradeDia = gradeMonitores.filter(g => g.diaSemana === diaSel && (anoFiltro === 'Todos' || g.monitorNome === anoFiltro));
@@ -1295,7 +1295,7 @@ export default function Admin() {
 
                     <div className="p-4 bg-surface-container-high rounded-2xl border border-outline-variant/10">
                       <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-3 block">Horário de Trabalho (Padrão)</label>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <CampoTexto label="Entrada" value={editandoMonitor.horarioInicio} onChange={v => setEditandoMonitor({ ...editandoMonitor, horarioInicio: v })} tipo="time" />
                         <CampoTexto label="Saída" value={editandoMonitor.horarioFim} onChange={v => setEditandoMonitor({ ...editandoMonitor, horarioFim: v })} tipo="time" />
                       </div>
@@ -1303,7 +1303,7 @@ export default function Admin() {
 
                     <div className="p-4 bg-surface-container-high rounded-2xl border border-outline-variant/10">
                       <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-3 block">Horário de Almoço (Padrão)</label>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <CampoTexto label="Início Almoço" value={editandoMonitor.almocoInicio || ''} onChange={v => setEditandoMonitor({ ...editandoMonitor, almocoInicio: v })} tipo="time" />
                         <CampoTexto label="Fim Almoço" value={editandoMonitor.almocoFim || ''} onChange={v => setEditandoMonitor({ ...editandoMonitor, almocoFim: v })} tipo="time" />
                       </div>
@@ -1321,7 +1321,7 @@ export default function Admin() {
               <div className="space-y-4">
                 <CampoSelect label="Monitor" value={editandoGradeMonitor.monitorNome} options={monitores.map(m => m.nome)} onChange={v => setEditandoGradeMonitor({ ...editandoGradeMonitor, monitorNome: v })} />
                 <CampoTexto label="Posto / Local" value={editandoGradeMonitor.posto} onChange={v => setEditandoGradeMonitor({ ...editandoGradeMonitor, posto: v })} />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <CampoTexto label="Início" value={editandoGradeMonitor.horarioInicio} onChange={v => setEditandoGradeMonitor({ ...editandoGradeMonitor, horarioInicio: v })} tipo="time" />
                   <CampoTexto label="Fim" value={editandoGradeMonitor.horarioFim} onChange={v => setEditandoGradeMonitor({ ...editandoGradeMonitor, horarioFim: v })} tipo="time" />
                 </div>
@@ -1386,10 +1386,10 @@ export default function Admin() {
               <Painel titulo="Construtor de Formulários" subtitulo="Crie e gerencie modelos de formulários dinâmicos."
                 acao={<button onClick={() => setEditandoModelo({ id: 'novo', nome: 'Novo Formulário', descricao: '', campos: [{ id: 'f1', tipo: 'autocomplete_aluno', rotulo: 'Aluno', obrigatorio: true }] })} className="btn-primary"><Plus size={14} /> Novo Modelo</button>}>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
                   {modelosFormulario.length === 0 ? <VazioMsg texto="Nenhum modelo criado." /> :
                     modelosFormulario.map(m => (
-                      <div key={m.id} className="bg-surface-container-low p-6 rounded-[2.5rem] editorial-shadow group border border-primary/5 hover:bg-primary/5 transition-all">
+                      <div key={m.id} className="bg-surface-container-low p-4 md:p-6 rounded-[2.5rem] editorial-shadow group border border-primary/5 hover:bg-primary/5 transition-all">
                         <div className="flex justify-between items-start mb-4">
                           <div>
                             <h3 className="text-sm font-black">{m.nome}</h3>
@@ -1410,7 +1410,7 @@ export default function Admin() {
                 </div>
 
                 <div className="bg-surface-container-low rounded-[2.5rem] border border-outline-variant/10 overflow-hidden">
-                  <div className="p-6 border-b flex items-center justify-between flex-wrap gap-4">
+                  <div className="p-4 md:p-6 border-b flex items-center justify-between flex-wrap gap-4">
                     <div>
                       <h3 className="font-black text-sm">Histórico de Ocorrências</h3>
                       <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">Consulte por aluno ou turma</p>
@@ -1470,7 +1470,7 @@ export default function Admin() {
                 titulo={editandoModelo?.id === 'novo' ? 'Novo Modelo de Formulário' : 'Editar Modelo de Formulário'}
                 onSalvar={() => doSave(salvarModeloFormulario(editandoModelo), setEditandoModelo)} carregando={carregando}>
                 {editandoModelo && (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
                     {/* Lado Esquerdo: Configurações Gerais */}
                     <div className="lg:col-span-1 space-y-6">
                         <div className="flex items-center gap-2 mb-4">
@@ -1487,7 +1487,7 @@ export default function Admin() {
                                 <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
                                 <h4 className="text-xs font-black uppercase text-blue-500 tracking-[0.3em]">Quick Add: Clique para Adicionar</h4>
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {[
                                     { tipo: 'texto', rotulo: 'Texto Curto', icon: AlignLeft },
                                     { tipo: 'area_texto', rotulo: 'Texto Longo', icon: List },
@@ -1526,7 +1526,7 @@ export default function Admin() {
                             </div>
                         ) : (
                           editandoModelo.campos?.map((campo: any, idx: number) => (
-                            <motion.div layout key={campo.id} className="p-8 bg-surface-container-high rounded-[2.5rem] border border-white/5 relative group shadow-xl">
+                            <motion.div layout key={campo.id} className="p-4 md:p-8 bg-surface-container-high rounded-[2.5rem] border border-white/5 relative group shadow-xl">
                               <div className="absolute top-6 right-6 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all z-20">
                                 <button 
                                   disabled={idx === 0}
@@ -1559,7 +1559,7 @@ export default function Admin() {
                                 </button>
                               </div>
 
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                                 <div className="space-y-2">
                                     <label className="text-xs font-black uppercase text-white/40 tracking-widest ml-2">Rótulo / Pergunta</label>
                                     <input type="text" value={campo.rotulo}
@@ -1645,14 +1645,14 @@ export default function Admin() {
                   <input type="text" placeholder="Buscar por Nome, Categoria, Professor ou Aluno..." value={busca} onChange={e => setBusca(e.target.value)} className="campo-input pl-10" />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   {(atividadesAfter || []).length === 0 ? <VazioMsg texto="Nenhuma atividade cadastrada." /> :
                     atividadesAfter.filter(ativ => {
                       const q = busca.toLowerCase();
                       const matchAlunos = ativ.listaAlunos?.some((nome: string) => nome.toLowerCase().includes(q));
                       return !q || ativ.nome.toLowerCase().includes(q) || ativ.categoria.toLowerCase().includes(q) || (ativ.nomeProfessor || '').toLowerCase().includes(q) || matchAlunos;
                     }).map(ativ => (
-                      <div key={ativ.id} className="bg-surface-container-low p-8 rounded-[3rem] border border-amber-500/20 group hover:bg-amber-500/5 transition-all shadow-xl">
+                      <div key={ativ.id} className="bg-surface-container-low p-4 md:p-8 rounded-[3rem] border border-amber-500/20 group hover:bg-amber-500/5 transition-all shadow-xl">
                         <div className="flex justify-between items-start mb-6">
                           <div className="px-4 py-1.5 bg-amber-500 text-on-surface-bright rounded-full text-xs font-black uppercase tracking-widest">
                             {ativ.categoria}
@@ -1735,7 +1735,7 @@ export default function Admin() {
           onSalvar={() => doSave(salvarLocalCMS(editandoLocal), setEditandoLocal)} carregando={carregando}>
           {editandoLocal && (
             <div className={cn(
-              "grid gap-8 items-start",
+              "grid gap-4 md:gap-8 items-start",
               editandoLocal.tipo === 'sala' ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1 max-w-xl mx-auto"
             )}>
               <div className="space-y-4">
@@ -1825,23 +1825,23 @@ export default function Admin() {
           largo={true}
           onSalvar={() => doSave(salvarLanguageLab(editandoLanguageLab), setEditandoLanguageLab)} carregando={carregando}>
           {editandoLanguageLab && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8 items-start">
               <div className="space-y-6">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-1.5 h-6 bg-primary rounded-full" />
                   <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.3em]">Informações Básicas</h4>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <CampoTexto label="Turma (Ex: 9º Ano A)" value={editandoLanguageLab.turma} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, turma: v })} />
                   <CampoTexto label="Nível (Ex: B1 Intermediate)" value={editandoLanguageLab.nivel} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, nivel: v })} />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <CampoAutocompleteProfessores label="Professor" value={editandoLanguageLab.professor} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, professor: v })} professores={professoresCMS} />
                   <CampoTexto label="Sala / Local" value={editandoLanguageLab.sala} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, sala: v })} />
                 </div>
                 <CampoMultiSelectDias label="Dia(s) da Semana" value={editandoLanguageLab.diaSemana} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, diaSemana: v })} />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <CampoTexto label="Início" value={editandoLanguageLab.horarioInicio} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, horarioInicio: v })} tipo="time" />
                   <CampoTexto label="Fim" value={editandoLanguageLab.horarioFim} onChange={v => setEditandoLanguageLab({ ...editandoLanguageLab, horarioFim: v })} tipo="time" />
                   <CampoGradePeriodos label="Apoio Visual (Grade)" periodos={periodos} onSelect={(i, f) => setEditandoLanguageLab({ ...editandoLanguageLab, horarioInicio: i, horarioFim: f })} />
@@ -1871,7 +1871,7 @@ export default function Admin() {
           onSalvar={() => doSave(salvarEntradaGradeIndividual(editandoGrade), setEditandoGrade)} carregando={carregando}>
           {editandoGrade && (
             <div className={cn(
-              "grid grid-cols-1 gap-8 items-start",
+              "grid grid-cols-1 gap-4 md:gap-8 items-start",
               abaAtiva !== 'grade-professores' ? "lg:grid-cols-2" : "lg:grid-cols-1"
             )}>
               {/* Coluna Esquerda: Informações da Aula */}
@@ -1881,7 +1881,7 @@ export default function Admin() {
                   <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.3em]">Informações da Aula</h4>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <CampoSelect label="Dia" value={editandoGrade.diaSemana} options={DIAS_SEMANA} onChange={v => setEditandoGrade({ ...editandoGrade, diaSemana: v })} />
                   <CampoSelect 
                     label="Tipo de Atividade" 
@@ -1946,12 +1946,12 @@ export default function Admin() {
 
                 <CampoTexto label="Horário (Ex: 07:30 - 08:20)" value={editandoGrade.horario} onChange={v => setEditandoGrade({ ...editandoGrade, horario: v })} />
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <CampoTexto label="Turma" value={editandoGrade.turma} onChange={v => setEditandoGrade({ ...editandoGrade, turma: v })} />
                   <CampoTexto label="Número da Sala" value={editandoGrade.numeroSala?.toString()} tipo="number" onChange={v => setEditandoGrade({ ...editandoGrade, numeroSala: parseInt(v) })} />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <CampoTexto label="Matéria" value={editandoGrade.materia || ''} onChange={v => setEditandoGrade({ ...editandoGrade, materia: v })} />
                   <CampoSelect label="Professor" value={editandoGrade.nomeProfessor} options={['—', 'A DEFINIR', ...listaProfessores]} onChange={v => setEditandoGrade({ ...editandoGrade, nomeProfessor: v })} />
                 </div>
@@ -1988,7 +1988,7 @@ export default function Admin() {
                     <h4 className="text-[10px] font-black uppercase text-[#fbbf24] tracking-[0.3em]">Gestão de Alunos</h4>
                   </div>
 
-                  <div className="p-6 bg-white/[0.02] rounded-[2rem] border border-white/5 space-y-5">
+                  <div className="p-4 md:p-6 bg-white/[0.02] rounded-[2rem] border border-white/5 space-y-5">
                     <div className="flex items-center justify-between">
                       <label className="text-[9px] font-black uppercase text-white/40 tracking-widest flex items-center gap-2">
                         <RefreshCw size={14} className="text-[#42a0f5]" /> Sincronização de Lista
@@ -2055,7 +2055,7 @@ export default function Admin() {
           largo={true}
           onSalvar={() => doSave(salvarAtividadeAfter(editandoAfter), setEditandoAfter)} carregando={carregando}>
           {editandoAfter && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8 items-start">
               <div className="space-y-6">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-1.5 h-6 bg-primary rounded-full" />
@@ -2070,7 +2070,7 @@ export default function Admin() {
                   <CampoTexto label="Descrição / Detalhes" value={editandoAfter.descricao || ''} onChange={v => setEditandoAfter({ ...editandoAfter, descricao: v })} />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <CampoTexto label="Horário de Início" value={editandoAfter.horarioInicio} tipo="time" onChange={v => setEditandoAfter({ ...editandoAfter, horarioInicio: v })} />
                   <CampoTexto label="Horário de Término" value={editandoAfter.horarioFim} tipo="time" onChange={v => setEditandoAfter({ ...editandoAfter, horarioFim: v })} />
                   <CampoGradePeriodos label="Apoio Visual (Grade)" periodos={periodos} onSelect={(i, f) => setEditandoAfter({ ...editandoAfter, horarioInicio: i, horarioFim: f })} />
@@ -2149,7 +2149,7 @@ export default function Admin() {
 
 function Painel({ titulo, subtitulo, acao, children }: { titulo: string; subtitulo?: string; acao?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="bg-surface-container-lowest rounded-[2.5rem] editorial-shadow p-8">
+    <div className="bg-surface-container-lowest rounded-[2.5rem] editorial-shadow p-4 md:p-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-black tracking-tighter">{titulo}</h2>
@@ -2192,12 +2192,12 @@ function ModalForm({ aberto, onClose, titulo, onSalvar, carregando, children, la
 }) {
   if (!aberto) return null;
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-black/60 backdrop-blur-md" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-4 md:p-6 bg-black/60 backdrop-blur-md" onClick={onClose}>
       <motion.div 
         initial={{ scale: 0.95, opacity: 0, y: 20 }} 
         animate={{ scale: 1, opacity: 1, y: 0 }}
         className={cn(
-          "bg-[#0a0a0a] border border-white/10 p-6 md:p-10 rounded-[2.5rem] shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] w-full space-y-6 relative overflow-hidden", 
+          "bg-[#0a0a0a] border border-white/10 p-4 md:p-6 md:p-4 md:p-10 rounded-[2.5rem] shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] w-full space-y-6 relative overflow-hidden", 
           largo ? "max-w-5xl" : "max-w-xl"
         )} 
         onClick={e => e.stopPropagation()}
@@ -2528,7 +2528,7 @@ function GestaoUsuarios() {
     <Painel titulo="Controle de Acesso" subtitulo="Aprove novos usuários e defina cargos de confiança.">
       <div className="grid gap-4">
         {perfis.map(p => (
-          <div key={p.id} className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-surface-container-high transition-all">
+          <div key={p.id} className="bg-surface-container-low p-4 md:p-6 rounded-[2rem] border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 hover:bg-surface-container-high transition-all">
             <div className="flex items-center gap-4">
               <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-on-surface-bright font-black text-xl shadow-lg",
                 p.status === 'approved' ? "bg-emerald-500" : p.status === 'pending' ? "bg-amber-500 animate-pulse" : "bg-red-500")}>

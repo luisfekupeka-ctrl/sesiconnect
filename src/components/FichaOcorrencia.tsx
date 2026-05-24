@@ -52,7 +52,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
       )}>
           
           {/* Configurações (Esquerda) - Oculta na impressão */}
-          <div className="w-full md:w-80 bg-gray-50 border-r border-gray-100 p-8 flex flex-col gap-6 print:hidden overflow-y-auto">
+          <div className="w-full md:w-80 bg-gray-50 border-r border-gray-100 p-4 md:p-8 flex flex-col gap-4 md:gap-6 print:hidden overflow-y-auto">
             <div>
               <h3 className="font-black text-lg mb-1">Configurar Documento</h3>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Personalize as assinaturas</p>
@@ -299,7 +299,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                </div>
 
                {/* Assinaturas - Margem superior grande para empurrar para o fundo ou separar bem */}
-               <div className="pt-24 print:pt-32 grid grid-cols-2 gap-x-12 gap-y-20">
+               <div className="pt-24 print:pt-32 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-20">
                   {configAssinaturas.mostrarAluno && (
                     <div className="text-center">
                       <div className="w-full border-b border-gray-900 mb-2"></div>

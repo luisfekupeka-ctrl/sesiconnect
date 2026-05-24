@@ -118,7 +118,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
     <div className="bg-[#050505] text-white rounded-[3.5rem] overflow-hidden shadow-3xl flex flex-col h-[750px] border border-white/5 font-sans">
       
       {/* Top Header Toolbar */}
-      <div className="bg-white/5 p-6 flex items-center gap-6 border-b border-white/5">
+      <div className="bg-white/5 p-4 md:p-6 flex items-center gap-4 md:gap-6 border-b border-white/5">
         <div className="flex gap-2">
           <button onClick={voltar} disabled={viewMode === 'UNIDADES'} 
             className="p-3 hover:bg-white/10 rounded-2xl disabled:opacity-10 transition-all text-primary">
@@ -150,7 +150,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
       <div className="flex flex-1 overflow-hidden">
         
         {/* Sidebar Simplificada */}
-        <aside className="w-64 bg-black/20 border-r border-white/5 p-8 flex flex-col justify-between">
+        <aside className="w-64 bg-black/20 border-r border-white/5 p-4 md:p-8 flex flex-col justify-between">
           <div className="space-y-8">
             <div>
               <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] mb-6 ml-2">Acesso Direto</p>
@@ -173,10 +173,10 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
         </aside>
 
         {/* Main Workspace */}
-        <main className="flex-1 p-10 overflow-y-auto custom-scrollbar bg-black/10">
+        <main className="flex-1 p-4 md:p-10 overflow-y-auto custom-scrollbar bg-black/10">
           
           {viewMode === 'DOCUMENTOS' && documentosDoAluno.length > 0 && (
-            <div className="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/5 p-6 rounded-[2rem] border border-white/5">
+            <div className="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/5 p-4 md:p-6 rounded-[2rem] border border-white/5">
               <div>
                 <h3 className="text-xl font-black text-white">{selecao.aluno?.nome}</h3>
                 <p className="text-[10px] text-primary uppercase tracking-widest font-bold mt-1">{documentosDoAluno.length} Ocorrências Registradas</p>
@@ -193,7 +193,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8"
+              className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-8"
             >
               {viewMode === 'UNIDADES' && ANOS.map(ano => (
                 <button key={ano} onClick={() => entrarUnidade(ano)} className="flex flex-col items-center gap-4 group">
@@ -251,7 +251,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
 
       {/* Footer Info */}
       <div className="bg-white/5 px-10 py-4 border-t border-white/5 flex items-center justify-between text-[8px] font-black uppercase tracking-[0.2em] text-white/20">
-        <div className="flex gap-8">
+        <div className="flex gap-4 md:gap-8">
             <span>{alunosDaTurma.length} Itens na Turma</span>
             <span>{ocorrencias.length} Registros Totais</span>
         </div>

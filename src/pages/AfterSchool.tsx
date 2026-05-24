@@ -104,9 +104,9 @@ export default function AfterSchool() {
     return (
       <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="min-h-screen pb-20 px-2 md:px-8 pt-4 space-y-6">
         <div className="bg-[#0a0a0a] rounded-[1.5rem] border border-white/5 overflow-hidden shadow-premium">
-          <div className="p-6 md:p-8 bg-[#fbbf24] text-black relative">
+          <div className="p-4 md:p-6 md:p-4 md:p-8 bg-[#fbbf24] text-black relative">
              <button onClick={() => setAtivSelecionada(null)} className="absolute top-6 right-6 w-10 h-10 bg-black/10 rounded-xl flex items-center justify-center hover:bg-black/20 transition-all"><ChevronLeft size={20} /></button>
-             <div className="flex items-center gap-6">
+             <div className="flex items-center gap-4 md:gap-6">
                 <div className="w-14 h-14 bg-black text-[#fbbf24] rounded-2xl flex items-center justify-center text-2xl font-black">{ativSelecionada.nome.charAt(0)}</div>
                 <div>
                   <h2 className="text-xl md:text-3xl font-black tracking-tighter italic leading-none">{ativSelecionada.nome}</h2>
@@ -114,8 +114,8 @@ export default function AfterSchool() {
                 </div>
              </div>
           </div>
-          <div className="p-6 space-y-8 bg-surface-container-lowest">
-             <div className="grid grid-cols-3 gap-2">
+          <div className="p-4 md:p-6 space-y-8 bg-surface-container-lowest">
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 <InfoBox label="Ambiente" value={obterLocalParaExibicao(ativSelecionada.local, diaFiltro)} icon={<DoorOpen size={12} />} color="yellow" />
                 <InfoBox label="Docente" value={ativSelecionada.nomeProfessor} icon={<User size={12} />} color="yellow" />
                 <InfoBox label="Hora" value={ativSelecionada.horarioInicio} icon={<Clock size={12} />} color="yellow" />
@@ -143,7 +143,7 @@ export default function AfterSchool() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8 md:space-y-12 pb-20 px-4">
-      <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+      <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 md:gap-6">
         <div>
           <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white mb-2 italic leading-none">After <span className="text-[#fbbf24]">School</span></h1>
           <p className="text-white/40 text-sm md:text-lg font-medium italic border-l-4 border-[#fbbf24]/20 pl-4">Consulta de oficinas.</p>
@@ -172,7 +172,7 @@ export default function AfterSchool() {
         {atividadesFiltradas.map((ativ) => (
           <motion.div key={ativ.id} whileHover={{ x: 5 }} onClick={() => setAtivSelecionada(ativ)}
             className="bg-[#0d0d0d] p-5 rounded-2xl shadow-premium border-2 border-white/5 hover:border-[#fbbf24]/40 transition-all flex items-center justify-between group cursor-pointer overflow-hidden">
-             <div className="flex items-center gap-6">
+             <div className="flex items-center gap-4 md:gap-6">
                 <div className="w-12 h-12 bg-[#fbbf24] text-black rounded-xl flex items-center justify-center text-2xl font-black">{ativ.nome.charAt(0)}</div>
                 <div>
                    <h3 className="text-lg font-black text-white italic tracking-tighter group-hover:text-[#fbbf24]">{ativ.nome}</h3>
@@ -183,7 +183,7 @@ export default function AfterSchool() {
                    </div>
                 </div>
              </div>
-             <div className="flex items-center gap-6">
+             <div className="flex items-center gap-4 md:gap-6">
                 <div className="hidden md:flex flex-col items-end">
                    <p className="text-[10px] font-black text-white tracking-widest">{ativ.horarioInicio}</p>
                    <p className="text-[9px] font-black text-[#fbbf24] uppercase italic">Oficina</p>
