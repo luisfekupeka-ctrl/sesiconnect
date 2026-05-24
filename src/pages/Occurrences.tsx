@@ -41,9 +41,9 @@ export function Occurrences() {
   };
 
   const filteredStudents = useMemo(() => {
-    if (!studentName) return [];
+    if (!studentName) return alunos.slice(0, 5);
     const query = studentName.toLowerCase();
-    return alunos.filter(a => a.nome.toLowerCase().includes(query)).slice(0, 5);
+    return alunos.filter(a => a.nome?.toLowerCase().includes(query)).slice(0, 5);
   }, [studentName, alunos]);
 
   const handleSelectStudent = (aluno: any) => {
