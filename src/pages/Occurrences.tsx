@@ -95,7 +95,7 @@ export function Occurrences() {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12">
+    <div className="space-y-6 max-w-6xl mx-auto pb-4 md:pb-0">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
@@ -109,7 +109,7 @@ export function Occurrences() {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-1 p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl w-full max-w-md backdrop-blur-sm border border-slate-200 dark:border-slate-700/50">
+      <div className="flex space-x-1 p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl w-full max-w-md mx-auto md:mx-0 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50">
         {[
           { id: 'registro', label: 'Registro', icon: PlusCircle },
           { id: 'consulta', label: 'Consulta', icon: Search },
@@ -118,7 +118,7 @@ export function Occurrences() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 sm:py-2.5 px-2 sm:px-4 rounded-lg text-[10px] sm:text-sm font-medium transition-all duration-200 ${
               activeTab === tab.id
                 ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50'
@@ -141,7 +141,7 @@ export function Occurrences() {
         >
           {/* TAB: REGISTRO */}
           {activeTab === 'registro' && (
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
               
               <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
@@ -244,7 +244,7 @@ export function Occurrences() {
           {/* TAB: CONSULTA */}
           {activeTab === 'consulta' && (
             <div className="space-y-6">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row gap-4 items-end">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row gap-4 items-stretch md:items-end">
                 <div className="flex-1 space-y-2 w-full">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Buscar Aluno</label>
                   <input
@@ -359,7 +359,7 @@ export function Occurrences() {
                 <button
                   onClick={handleGeneratePDF}
                   disabled={records.length === 0}
-                  className="bg-white text-blue-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
+                  className="w-full sm:w-auto justify-center bg-white text-blue-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
                 >
                   <FileText className="w-5 h-5" />
                   Gerar Relatório PDF
@@ -377,7 +377,7 @@ export function Occurrences() {
                 <button
                   onClick={handleGenerateExcel}
                   disabled={records.length === 0}
-                  className="bg-white text-emerald-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
+                  className="w-full sm:w-auto justify-center bg-white text-emerald-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
                 >
                   <FileSpreadsheet className="w-5 h-5" />
                   Gerar Planilha (XLSX)
