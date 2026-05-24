@@ -143,13 +143,22 @@ export function Occurrences() {
   };
 
   const fetchRecords = async () => {
+    if (activeTab === 'consulta' && !searchName && !filterYear && !filterType) {
+      setRecords([]);
+      return;
+    }
+
     setIsLoadingRecords(true);
     try {
-      const data = await occurrenceService.fetchRecords({
-        student_name: searchName || undefined,
-        school_year: filterYear || undefined,
-        occurrence_type: filterType || undefined
-      });
+      const params = activeTab === 'relatorios' 
+        ? {} // No relatórios busca tudo para depois filtrar localmente
+        : {
+            student_name: searchName || undefined,
+            school_year: filterYear || undefined,
+            occurrence_type: filterType || undefined
+          };
+
+      const data = await occurrenceService.fetchRecords(params);
       setRecords(data);
     } catch (error) {
       console.error(error);
@@ -159,14 +168,22 @@ export function Occurrences() {
   };
 
   useEffect(() => {
+    if (activeTab === 'consulta' && !searchName && !filterYear && !filterType) {
+      setRecords([]);
+    }
+  }, [searchName, filterYear, filterType, activeTab]);
+
+  useEffect(() => {
     if (activeTab === 'consulta' || activeTab === 'relatorios') {
       fetchRecords();
     }
   }, [activeTab]);
 
+  const normalizeYear = (y: string) => (y || '').toLowerCase().replace(/[^0-9a-z]/gi, '');
+
   const handleGeneratePDF = async () => {
     const dataToExport = reportFilterYear 
-      ? records.filter(r => (r.school_year || '').toLowerCase().replace(/[º°ª]/g, '') === reportFilterYear.toLowerCase().replace(/[º°ª]/g, ''))
+      ? records.filter(r => normalizeYear(r.school_year || '') === normalizeYear(reportFilterYear))
       : records;
     await generateOccurrencesPDF(dataToExport);
   };
@@ -206,7 +223,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
 
   const handleGenerateExcel = () => {
     const dataToExport = reportFilterYear 
-      ? records.filter(r => (r.school_year || '').toLowerCase().replace(/[º°ª]/g, '') === reportFilterYear.toLowerCase().replace(/[º°ª]/g, ''))
+      ? records.filter(r => normalizeYear(r.school_year || '') === normalizeYear(reportFilterYear))
       : records;
     generateOccurrencesExcel(dataToExport);
   };
@@ -598,7 +615,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                 </div>
                 <div className="text-sm text-slate-500 dark:text-slate-400 mt-2 sm:mt-6">
                   {reportFilterYear 
-                    ? `Exportando apenas registros filtrados por "${reportFilterYear}" (${records.filter(r => (r.school_year || '').toLowerCase().replace(/[º°ª]/g, '') === reportFilterYear.toLowerCase().replace(/[º°ª]/g, '')).length} encontrados).`
+                    ? `Exportando apenas registros filtrados por "${reportFilterYear}" (${records.filter(r => normalizeYear(r.school_year || '') === normalizeYear(reportFilterYear)).length} encontrados).`
                     : `Exportando todos os registros da base.`}
                 </div>
               </div>
@@ -614,7 +631,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                   </p>
                   <button
                     onClick={handleGeneratePDF}
-                    disabled={reportFilterYear ? records.filter(r => (r.school_year || '').toLowerCase().replace(/[º°ª]/g, '') === reportFilterYear.toLowerCase().replace(/[º°ª]/g, '')).length === 0 : records.length === 0}
+                    disabled={reportFilterYear ? records.filter(r => normalizeYear(r.school_year || '') === normalizeYear(reportFilterYear)).length === 0 : records.length === 0}
                     className="w-full sm:w-auto justify-center bg-white text-blue-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
                   >
                     <FileText className="w-5 h-5" />
@@ -632,7 +649,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                   </p>
                   <button
                     onClick={handleGenerateExcel}
-                    disabled={reportFilterYear ? records.filter(r => (r.school_year || '').toLowerCase().replace(/[º°ª]/g, '') === reportFilterYear.toLowerCase().replace(/[º°ª]/g, '')).length === 0 : records.length === 0}
+                    disabled={reportFilterYear ? records.filter(r => normalizeYear(r.school_year || '') === normalizeYear(reportFilterYear)).length === 0 : records.length === 0}
                     className="w-full sm:w-auto justify-center bg-white text-emerald-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
                   >
                     <FileSpreadsheet className="w-5 h-5" />
