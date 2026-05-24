@@ -151,7 +151,7 @@ export default function GestaoRealocacao() {
         if (tipoFluxo === 'SALA') {
           // --- MODO PROVA / ENSALAMENTO MULTI-SALAS ---
           for (const salaNum of salasSelecionadas) {
-            const salaObj = salas.find(s => s.numero === salaNum);
+            const salaObj = salas.find(s => Number(s.numero) === Number(salaNum));
             const nomeSala = salaObj ? salaObj.nome : `Sala ${salaNum}`;
             const segmentoSala = salaObj ? salaObj.segmento : '6º e 7º';
 
@@ -161,8 +161,8 @@ export default function GestaoRealocacao() {
                 // Tenta pegar o professor original do primeiro horário selecionado (ou qualquer horário válido)
                 for (const h of horariosSel) {
                   const entradaH = gradeBase.find(g => 
-                    g.numeroSala === salaNum && 
-                    g.diaSemana === diaSemanaItem && 
+                    Number(g.numeroSala) === Number(salaNum) && 
+                    String(g.diaSemana || '').toUpperCase().trim() === diaSemanaItem.toUpperCase().trim() && 
                     g.horario === h &&
                     g.nomeProfessor !== 'LIVRE'
                   );
@@ -177,8 +177,8 @@ export default function GestaoRealocacao() {
             for (const h of horariosSel) {
               // Encontra a aula original cadastrada para esta sala e horário
               const entradaOriginal = gradeBase.find(g => 
-                g.numeroSala === salaNum && 
-                g.diaSemana === diaSemanaItem && 
+                Number(g.numeroSala) === Number(salaNum) && 
+                String(g.diaSemana || '').toUpperCase().trim() === diaSemanaItem.toUpperCase().trim() && 
                 g.horario === h
               );
 
@@ -560,7 +560,7 @@ export default function GestaoRealocacao() {
                     
                     const aulasNoHorario = tipoFluxo === 'SALA' 
                       ? gradeBase.filter(g => 
-                          salasSelecionadas.includes(g.numeroSala) && 
+                          salasSelecionadas.map(Number).includes(Number(g.numeroSala)) && 
                           g.horario === horario && 
                           String(g.diaSemana || '').toUpperCase().trim() === diaSemanaItem.toUpperCase().trim()
                         )

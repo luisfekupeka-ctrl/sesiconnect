@@ -6,6 +6,9 @@ import { generateOccurrencesPDF, generateOccurrencesExcel, generateSingleOccurre
 import { useEscola } from '../context/ContextoEscola';
 import { useAuth } from '../context/AuthContext';
 import type { DailyOccurrenceRecord } from '../types';
+import { generateWordOccurrence } from '../lib/wordGenerator';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 const TIPOS_OCORRENCIA = [
   'Atraso',
@@ -82,6 +85,7 @@ export function Occurrences() {
 
   // Report Export Filter
   const [reportFilterYear, setReportFilterYear] = useState('');
+  const [reportFilterPeriod, setReportFilterPeriod] = useState('Todos');
 
   const filteredStudents = useMemo(() => {
     if (!studentName) return alunos.slice(0, 5);
@@ -157,10 +161,12 @@ export function Occurrences() {
             school_year: filterYear || undefined,
             occurrence_type: filterType || undefined,
             date: (() => {
-              // Get today's date in local time (YYYY-MM-DD)
+              // Obter a data local (YYYY-MM-DD) sem bug de fuso horário pulando o dia
               const today = new Date();
-              today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
-              return today.toISOString().split('T')[0];
+              const y = today.getFullYear();
+              const m = String(today.getMonth() + 1).padStart(2, '0');
+              const d = String(today.getDate()).padStart(2, '0');
+              return `${y}-${m}-${d}`;
             })()
           };
 
@@ -181,11 +187,32 @@ export function Occurrences() {
 
   const normalizeYear = (y: string) => (y || '').toLowerCase().replace(/[^0-9a-z]/gi, '');
 
+  const getFilteredReportRecords = () => {
+    let dataToExport = records;
+
+    if (reportFilterYear) {
+      dataToExport = dataToExport.filter(r => normalizeYear(r.school_year || '') === normalizeYear(reportFilterYear));
+    }
+
+    if (reportFilterPeriod !== 'Todos') {
+      const now = new Date();
+      let limitDate = new Date();
+      if (reportFilterPeriod === 'Hoje') limitDate.setDate(now.getDate() - 1);
+      else if (reportFilterPeriod === '7 Dias') limitDate.setDate(now.getDate() - 7);
+      else if (reportFilterPeriod === '15 Dias') limitDate.setDate(now.getDate() - 15);
+      else if (reportFilterPeriod === '30 Dias') limitDate.setDate(now.getDate() - 30);
+
+      dataToExport = dataToExport.filter(r => {
+        const created = new Date(r.created_at || '');
+        return created >= limitDate;
+      });
+    }
+
+    return dataToExport;
+  };
+
   const handleGeneratePDF = async () => {
-    const dataToExport = reportFilterYear 
-      ? records.filter(r => normalizeYear(r.school_year || '') === normalizeYear(reportFilterYear))
-      : records;
-    await generateOccurrencesPDF(dataToExport);
+    await generateOccurrencesPDF(getFilteredReportRecords());
   };
 
   const getUniformMessage = () => {
@@ -222,10 +249,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
   };
 
   const handleGenerateExcel = () => {
-    const dataToExport = reportFilterYear 
-      ? records.filter(r => normalizeYear(r.school_year || '') === normalizeYear(reportFilterYear))
-      : records;
-    generateOccurrencesExcel(dataToExport);
+    generateOccurrencesExcel(getFilteredReportRecords());
   };
 
   return (
@@ -252,7 +276,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 sm:py-2.5 px-2 sm:px-4 rounded-lg text-[10px] sm:text-sm font-medium transition-all duration-200 ${
+            className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-2.5 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
               activeTab === tab.id
                 ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50'
@@ -539,16 +563,16 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
               </div>
 
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm text-slate-600 dark:text-slate-400">
+                <div className="overflow-x-auto pb-2">
+                  <table className="w-full text-left text-xs md:text-sm text-slate-600 dark:text-slate-400">
                     <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
                       <tr>
-                        <th className="px-6 py-4 font-medium">Data</th>
-                        <th className="px-6 py-4 font-medium">Aluno</th>
-                        <th className="px-6 py-4 font-medium">Ano Letivo</th>
-                        <th className="px-6 py-4 font-medium">Tipo</th>
-                        <th className="px-6 py-4 font-medium">Relato</th>
-                        {isAdmin && <th className="px-6 py-4 font-medium text-right">Ações</th>}
+                        <th className="px-4 py-3 md:px-6 md:py-4 font-medium whitespace-nowrap">Data</th>
+                        <th className="px-4 py-3 md:px-6 md:py-4 font-medium min-w-[150px]">Aluno</th>
+                        <th className="px-4 py-3 md:px-6 md:py-4 font-medium whitespace-nowrap">Ano Letivo</th>
+                        <th className="px-4 py-3 md:px-6 md:py-4 font-medium min-w-[120px]">Tipo</th>
+                        <th className="px-4 py-3 md:px-6 md:py-4 font-medium min-w-[200px]">Relato</th>
+                        {isAdmin && <th className="px-4 py-3 md:px-6 md:py-4 font-medium text-right">Ações</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
@@ -568,27 +592,27 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                       ) : (
                         records.map((record) => (
                           <tr key={record.id} onClick={() => setSelectedRecord(record)} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-colors cursor-pointer">
-                            <td className="px-6 py-4 whitespace-nowrap text-slate-900 dark:text-slate-200">
+                            <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-slate-900 dark:text-slate-200">
                               {new Date(record.created_at || '').toLocaleDateString('pt-BR')}
                             </td>
-                            <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">
+                            <td className="px-4 py-3 md:px-6 md:py-4 font-medium text-slate-900 dark:text-slate-100">
                               {record.student_name}
                             </td>
-                            <td className="px-6 py-4">
-                              <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-700 rounded-md text-xs font-medium">
+                            <td className="px-4 py-3 md:px-6 md:py-4">
+                              <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-700 rounded-md text-[10px] md:text-xs font-medium whitespace-nowrap">
                                 {record.school_year}
                               </span>
                             </td>
-                            <td className="px-6 py-4">
-                              <span className="px-2.5 py-1 bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded-md text-xs font-medium border border-amber-200 dark:border-amber-500/20">
+                            <td className="px-4 py-3 md:px-6 md:py-4">
+                              <span className="px-2.5 py-1 bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded-md text-[10px] md:text-xs font-medium border border-amber-200 dark:border-amber-500/20 whitespace-nowrap inline-block">
                                 {record.occurrence_type}
                               </span>
                             </td>
-                            <td className="px-6 py-4 max-w-xs truncate" title={record.report}>
+                            <td className="px-4 py-3 md:px-6 md:py-4 max-w-[150px] md:max-w-xs truncate" title={record.report}>
                               {record.report}
                             </td>
                             {isAdmin && (
-                              <td className="px-6 py-4 text-right">
+                              <td className="px-4 py-3 md:px-6 md:py-4 text-right">
                                 <button
                                   onClick={async (e) => {
                                     e.stopPropagation();
@@ -624,10 +648,9 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
           {/* TAB: RELATÓRIOS */}
           {activeTab === 'relatorios' && (
             <div className="space-y-6">
-              {/* Report Filters */}
               <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row items-center gap-4">
                 <div className="w-full sm:w-64 space-y-2">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Filtrar exportação por Ano</label>
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Filtrar por Ano</label>
                   <select
                     value={reportFilterYear || 'Todos'}
                     onChange={(e) => setReportFilterYear(e.target.value === 'Todos' ? '' : e.target.value)}
@@ -638,10 +661,20 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                     ))}
                   </select>
                 </div>
+                <div className="w-full sm:w-64 space-y-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Filtrar por Período</label>
+                  <select
+                    value={reportFilterPeriod}
+                    onChange={(e) => setReportFilterPeriod(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
+                  >
+                    {['Todos', 'Hoje', '7 Dias', '15 Dias', '30 Dias'].map(p => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="text-sm text-slate-500 dark:text-slate-400 mt-2 sm:mt-6">
-                  {reportFilterYear 
-                    ? `Exportando apenas registros filtrados por "${reportFilterYear}" (${records.filter(r => normalizeYear(r.school_year || '') === normalizeYear(reportFilterYear)).length} encontrados).`
-                    : `Exportando todos os registros da base.`}
+                  {`Exportando ${getFilteredReportRecords().length} registro(s) encontrados.`}
                 </div>
               </div>
 
@@ -656,7 +689,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                   </p>
                   <button
                     onClick={handleGeneratePDF}
-                    disabled={reportFilterYear ? records.filter(r => normalizeYear(r.school_year || '') === normalizeYear(reportFilterYear)).length === 0 : records.length === 0}
+                    disabled={getFilteredReportRecords().length === 0}
                     className="w-full sm:w-auto justify-center bg-white text-blue-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
                   >
                     <FileText className="w-5 h-5" />
@@ -674,7 +707,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                   </p>
                   <button
                     onClick={handleGenerateExcel}
-                    disabled={reportFilterYear ? records.filter(r => normalizeYear(r.school_year || '') === normalizeYear(reportFilterYear)).length === 0 : records.length === 0}
+                    disabled={getFilteredReportRecords().length === 0}
                     className="w-full sm:w-auto justify-center bg-white text-emerald-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
                   >
                     <FileSpreadsheet className="w-5 h-5" />
@@ -714,6 +747,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
               exit={{ opacity: 0, scale: 0.95 }}
               className="relative w-full max-w-3xl bg-white text-slate-900 rounded-[2rem] overflow-hidden shadow-2xl my-8 border border-slate-200"
             >
+              <div id="modal-print-content" className="bg-white">
               {/* Header Oficial do Colégio Sesi */}
               <div className="relative w-full h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-8 select-none">
                 {/* Polígonos Geométricos */}
@@ -763,25 +797,11 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                     >
                       <Trash2 className="w-[18px] h-[18px]" />
                     </button>
-                    <button 
-                      onClick={() => window.print()}
-                      className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-sm cursor-pointer"
-                      title="Imprimir Modelo Atual"
-                    >
-                      <Printer className="w-[18px] h-[18px]" />
-                    </button>
-                    <button 
-                      onClick={() => generateSingleOccurrencePDF(selectedRecord)}
-                      className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-sm cursor-pointer"
-                      title="Baixar Documento PDF"
-                    >
-                      <Download className="w-[18px] h-[18px]" />
-                    </button>
                   </>
                 )}
                 <button 
                   onClick={() => setSelectedRecord(null)}
-                  className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-sm cursor-pointer"
+                  className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors shadow-sm cursor-pointer ml-auto"
                 >
                   <X className="w-[18px] h-[18px]" />
                 </button>
@@ -840,6 +860,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                     <div className="w-full border-b border-slate-300 h-10" />
                     <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Professor / Coordenação</span>
                   </div>
+                </div>
                 </div>
               </div>
             </motion.div>
