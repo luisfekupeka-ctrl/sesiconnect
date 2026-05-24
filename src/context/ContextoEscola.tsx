@@ -171,7 +171,10 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
       r => r.dia === dataAtualString && r.status === 'EFETIVADO'
     );
 
-    return gradeCompleta.map(slot => {
+    const matchedAfterIds = new Set<string>();
+    const matchedLabIds = new Set<string>();
+
+    const slotsProcessados = gradeCompleta.map(slot => {
       let nomeProf = slot.nomeProfessor;
       if (nomeProf && listCanonNames.length > 0) {
         nomeProf = normalizarNomeComum(nomeProf, listCanonNames);
@@ -217,58 +220,75 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
       const salaStr = String(slot.numeroSala || '');
       const nomeSalaStr = slot.nomeSala || '';
 
-      // 1. Cruzamento prioritário de dados com o Language Lab (para qualquer slot)
-      const labMatch = languageLab.find(lab => {
-        return lab.diaSemana === slot.diaSemana &&
-               ((lab.sala || '').includes(salaStr) || (lab.sala || '').includes(nomeSalaStr)) &&
-               lab.horarioInicio <= slotInicio && lab.horarioFim > slotInicio;
-      });
+      // Tenta encontrar por vínculo direto (ID) primeiro
+      let labMatch = null;
+      let afterMatch = null;
+
+      if (slot.vinculado_id) {
+        labMatch = languageLab.find(l => l.id === slot.vinculado_id);
+        afterMatch = atividadesAfter.find(a => a.id === slot.vinculado_id);
+      }
+
+      if (!labMatch && !afterMatch) {
+        // 1. Cruzamento prioritário de dados com o Language Lab (para qualquer slot)
+        labMatch = languageLab.find(lab => {
+          return lab.diaSemana === slot.diaSemana &&
+                 ((lab.sala || '').includes(salaStr) || (lab.sala || '').includes(nomeSalaStr)) &&
+                 lab.horarioInicio <= slotInicio && lab.horarioFim > slotInicio;
+        });
+      }
 
       if (labMatch) {
+        matchedLabIds.add(labMatch.id);
         return { 
           ...slotComProfNormalizado, 
           materia: `Lab: ${labMatch.nivel}`, 
           nomeProfessor: labMatch.professor, 
           listaAlunos: labMatch.listaAlunos || [], 
-          tipo: 'language_lab' 
+          tipo: 'language_lab',
+          vinculado_id: labMatch.id
         };
       }
 
-      // 2. Cruzamento prioritário de dados com o After School (para qualquer slot)
-      const afterMatch = atividadesAfter.find(after => {
-        if (!(after.dias || []).includes(slot.diaSemana)) return false;
+      if (!afterMatch) {
+        // 2. Cruzamento prioritário de dados com o After School (para qualquer slot)
+        afterMatch = atividadesAfter.find(after => {
+          if (!(after.dias || []).includes(slot.diaSemana)) return false;
 
-        let localEspecifico = '';
-        if (after.local) {
-          try {
-            const obj = JSON.parse(after.local);
-            if (obj && typeof obj === 'object') {
-              localEspecifico = obj[slot.diaSemana] || '';
-            } else {
+          let localEspecifico = '';
+          if (after.local) {
+            try {
+              const obj = JSON.parse(after.local);
+              if (obj && typeof obj === 'object') {
+                localEspecifico = obj[slot.diaSemana] || '';
+              } else {
+                localEspecifico = after.local;
+              }
+            } catch (e) {
               localEspecifico = after.local;
             }
-          } catch (e) {
-            localEspecifico = after.local;
           }
-        }
 
-        const localMatch = localEspecifico && (
-          localEspecifico.includes(salaStr) || 
-          localEspecifico.includes(nomeSalaStr) || 
-          salaStr.includes(localEspecifico) || 
-          nomeSalaStr.includes(localEspecifico)
-        );
+          const localMatch = localEspecifico && (
+            localEspecifico.includes(salaStr) || 
+            localEspecifico.includes(nomeSalaStr) || 
+            salaStr.includes(localEspecifico) || 
+            nomeSalaStr.includes(localEspecifico)
+          );
 
-        return localMatch && after.horarioInicio <= slotInicio && after.horarioFim > slotInicio;
-      });
+          return localMatch && after.horarioInicio <= slotInicio && after.horarioFim > slotInicio;
+        });
+      }
 
       if (afterMatch) {
+        matchedAfterIds.add(afterMatch.id);
         return { 
           ...slotComProfNormalizado, 
           materia: `After: ${afterMatch.nome}`, 
           nomeProfessor: afterMatch.nomeProfessor, 
           listaAlunos: afterMatch.listaAlunos || [], 
-          tipo: 'after_school' 
+          tipo: 'after_school',
+          vinculado_id: afterMatch.id
         };
       }
 
@@ -312,7 +332,82 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
 
       return slotComProfNormalizado;
     });
-  }, [gradeCompleta, languageLab, atividadesAfter, alunos, locaisCMS, professoresCMS, realocacoes, horaAtual]);
+
+    const virtualSlots: EntradaGradeSala[] = [];
+
+    // Sintetizar slots virtuais para Language Lab
+    languageLab.forEach(lab => {
+      if (matchedLabIds.has(lab.id)) return;
+      
+      const salaMatch = salas.find(s => {
+        const salaStr = lab.sala || '';
+        return salaStr.includes(String(s.numero)) || salaStr.toLowerCase().includes(s.nome.toLowerCase());
+      });
+
+      if (salaMatch) {
+        virtualSlots.push({
+          id: `lab-virtual-${lab.id}`,
+          numeroSala: salaMatch.numero,
+          nomeSala: salaMatch.nome,
+          anoTurma: lab.turma || 'Language Lab',
+          diaSemana: lab.diaSemana.toUpperCase().trim(),
+          horario: `${lab.horarioInicio} - ${lab.horarioFim}`,
+          nomeProfessor: lab.professor,
+          turma: lab.turma || 'Language Lab',
+          materia: `Lab: ${lab.nivel}`,
+          tipo: 'language_lab',
+          listaAlunos: lab.listaAlunos || [],
+          segmento: 'Language Lab'
+        });
+      }
+    });
+
+    // Sintetizar slots virtuais para After School
+    atividadesAfter.forEach(after => {
+      if (matchedAfterIds.has(after.id)) return;
+
+      (after.dias || []).forEach(dia => {
+        let localEspecifico = '';
+        if (after.local) {
+          try {
+            const obj = JSON.parse(after.local);
+            if (obj && typeof obj === 'object') {
+              localEspecifico = obj[dia] || '';
+            } else {
+              localEspecifico = after.local;
+            }
+          } catch (e) {
+            localEspecifico = after.local;
+          }
+        }
+
+        if (!localEspecifico) return;
+
+        const salaMatch = salas.find(s => {
+          return localEspecifico.includes(String(s.numero)) || localEspecifico.toLowerCase().includes(s.nome.toLowerCase());
+        });
+
+        if (salaMatch) {
+          virtualSlots.push({
+            id: `after-virtual-${after.id}-${dia}`,
+            numeroSala: salaMatch.numero,
+            nomeSala: salaMatch.nome,
+            anoTurma: 'After School',
+            diaSemana: dia.toUpperCase().trim(),
+            horario: `${after.horarioInicio} - ${after.horarioFim}`,
+            nomeProfessor: after.nomeProfessor,
+            turma: 'After School',
+            materia: `After: ${after.nome}`,
+            tipo: 'after_school',
+            listaAlunos: after.listaAlunos || [],
+            segmento: 'After School'
+          });
+        }
+      });
+    });
+
+    return [...slotsProcessados, ...virtualSlots];
+  }, [gradeCompleta, languageLab, atividadesAfter, alunos, locaisCMS, professoresCMS, realocacoes, horaAtual, salas]);
 
   let estadoEscola: EstadoEscola;
   try {

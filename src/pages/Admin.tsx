@@ -520,7 +520,7 @@ export default function Admin() {
           )}
         </AnimatePresence>
 
-        <div className="flex gap-1.5 p-2 bg-surface-container-low rounded-2xl overflow-x-auto scrollbar-hide">
+        <div className="flex gap-1.5 p-2 bg-surface-container-low rounded-2xl overflow-x-auto no-scrollbar">
           {abas.map(a => (
             <button key={a.id} onClick={() => { setAbaAtiva(a.id); setBusca(''); setAnoFiltro('Todos'); }}
               className={cn("flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0",
@@ -2192,25 +2192,25 @@ function ModalForm({ aberto, onClose, titulo, onSalvar, carregando, children, la
 }) {
   if (!aberto) return null;
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-4 md:p-6 bg-black/60 backdrop-blur-md" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md" onClick={onClose}>
       <motion.div 
         initial={{ scale: 0.95, opacity: 0, y: 20 }} 
         animate={{ scale: 1, opacity: 1, y: 0 }}
         className={cn(
-          "bg-[#0a0a0a] border border-white/10 p-4 md:p-6 md:p-4 md:p-10 rounded-[2.5rem] shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] w-full space-y-6 relative overflow-hidden", 
+          "bg-[#0a0a0a] border border-white/10 p-5 sm:p-8 lg:p-10 rounded-2xl md:rounded-[2.5rem] shadow-premium w-full max-h-[92vh] flex flex-col relative overflow-hidden", 
           largo ? "max-w-5xl" : "max-w-xl"
         )} 
         onClick={e => e.stopPropagation()}
       >
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#42a0f5] to-transparent opacity-20" />
-        <h3 className="text-2xl md:text-3xl font-black tracking-tighter text-white italic">{titulo}</h3>
-        <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-4 custom-scrollbar">
+        <h3 className="text-xl sm:text-3xl font-black tracking-tighter text-white italic mb-4 shrink-0">{titulo}</h3>
+        <div className="flex-1 overflow-y-auto pr-2 sm:pr-4 custom-scrollbar min-h-0 space-y-4 md:space-y-6">
           {children}
         </div>
-        <div className="flex gap-4 pt-8 border-t border-white/5">
-          <button type="button" onClick={onClose} className="flex-1 py-4 text-white/40 font-black text-xs uppercase tracking-widest hover:text-white transition-all">Cancelar</button>
+        <div className="flex gap-3 sm:gap-4 pt-4 sm:pt-6 mt-4 border-t border-white/5 shrink-0">
+          <button type="button" onClick={onClose} className="flex-1 py-3 sm:py-4 text-white/40 font-black text-[10px] sm:text-xs uppercase tracking-widest hover:text-white transition-all">Cancelar</button>
           <button type="button" onClick={onSalvar} disabled={carregando}
-            className="flex-[2] py-4 bg-[#42a0f5] text-black rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-xl shadow-[#42a0f5]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
+            className="flex-[2] py-3 sm:py-4 bg-[#42a0f5] text-black rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] shadow-xl shadow-[#42a0f5]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
             {carregando ? 'Processando...' : 'Salvar Alterações'}
           </button>
         </div>
@@ -2277,23 +2277,38 @@ function CampoSelectLocal({
 function CampoAutocompleteProfessores({ label, value, onChange, professores }: { label: string; value: string; onChange: (v: string) => void; professores: any[] }) {
   const [busca, setBusca] = React.useState(value);
   const [aberto, setAberto] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => { setBusca(value); }, [value]);
+
+  React.useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setAberto(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, []);
 
   const filtrados = professores.filter(p => p.nome.toLowerCase().includes(busca.toLowerCase()));
 
   return (
-    <div className="space-y-1.5 relative">
+    <div ref={containerRef} className="space-y-1.5 relative w-full">
       <label className="text-xs font-black text-white/40 uppercase tracking-widest block ml-2">{label}</label>
       <input type="text" value={busca} onChange={e => { setBusca(e.target.value); onChange(e.target.value); setAberto(true); }}
-        onFocus={() => setAberto(true)} onBlur={() => setTimeout(() => setAberto(false), 200)}
-        className="campo-input" placeholder="Buscar professor..." />
+        onFocus={() => setAberto(true)}
+        className="campo-input w-full" placeholder="Buscar professor..." />
       
       {aberto && filtrados.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 max-h-48 overflow-y-auto bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl">
+        <div className="absolute z-50 w-full mt-1 max-h-56 overflow-y-auto bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl custom-scrollbar">
           {filtrados.map(p => (
-            <button key={p.id} type="button" onMouseDown={(e) => { e.preventDefault(); onChange(p.nome); setBusca(p.nome); setAberto(false); }}
-              className="w-full text-left px-4 py-3 text-xs font-bold text-white hover:bg-[#42a0f5]/20 hover:text-[#42a0f5] transition-all">
+            <button key={p.id} type="button" onClick={() => { onChange(p.nome); setBusca(p.nome); setAberto(false); }}
+              className="w-full text-left px-5 py-4 text-xs font-bold text-white hover:bg-[#42a0f5]/20 hover:text-[#42a0f5] border-b border-white/[0.03] transition-all active:bg-[#42a0f5]/10">
               {p.nome}
             </button>
           ))}

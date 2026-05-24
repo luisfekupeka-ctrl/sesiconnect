@@ -109,28 +109,45 @@ export default function RoomsPage() {  const { salas, estadoEscola, gradeComplet
   }, [salaSelecionada]);
 
   const blocosDaSala = useMemo(() => {
-    if (!salaSelecionada || !periodos) return [];
+    if (!salaSelecionada) return [];
     
-    // Filtra os períodos padrão do segmento detectado
-    const pAlvo = periodos.filter(p => p.segmento === segDetectado);
+    // 1. Períodos padrão
+    const pAlvo = periodos ? periodos.filter(p => p.segmento === segDetectado) : [];
     
-    // Deduplica por horário
-    const unique = new Map<string, any>();
+    const unique = new Map<string, { inicio: string; fim: string }>();
     for (const p of pAlvo) {
       const key = `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`;
       if (!unique.has(key)) {
-        unique.set(key, p);
+        unique.set(key, { inicio: p.horarioInicio.slice(0, 5), fim: p.horarioFim.slice(0, 5) });
       }
     }
+
+    // 2. Adiciona horários de After School ou Language Lab que estão associados a esta sala na gradeCompleta
+    const slotsDestaSala = (gradeCompleta || []).filter(e => 
+      e.numeroSala === salaSelecionada.numero && 
+      (e.tipo === 'after_school' || e.tipo === 'language_lab')
+    );
+
+    slotsDestaSala.forEach(slot => {
+      if (slot.horario && slot.horario.includes('-')) {
+        const [inicio, fim] = slot.horario.split('-').map(s => s.trim().slice(0, 5));
+        if (inicio && fim) {
+          const key = `${inicio} - ${fim}`;
+          if (!unique.has(key)) {
+            unique.set(key, { inicio, fim });
+          }
+        }
+      }
+    });
     
     return Array.from(unique.values())
-      .sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio))
+      .sort((a, b) => a.inicio.localeCompare(b.inicio))
       .map((p, idx) => ({
         indice: idx,
-        inicio: p.horarioInicio.slice(0, 5),
-        fim: p.horarioFim.slice(0, 5)
+        inicio: p.inicio,
+        fim: p.fim
       }));
-  }, [salaSelecionada, segDetectado, periodos]);
+  }, [salaSelecionada, segDetectado, periodos, gradeCompleta]);
 
   if (salaSelecionada) {
     return (

@@ -112,6 +112,17 @@
   .sub-page-container {
     @apply pt-2 pb-16 px-2;
   }
+
+  /* Scale extremely small text up slightly on mobile for legibility */
+  [class*="text-[7px]"], .text-\[7px\] {
+    font-size: 9px !important;
+  }
+  [class*="text-[8px]"], .text-\[8px\] {
+    font-size: 10px !important;
+  }
+  [class*="text-[9px]"], .text-\[9px\] {
+    font-size: 11px !important;
+  }
 }
 
 /* === CLASSES REUTILIZÁVEIS (Admin) === */

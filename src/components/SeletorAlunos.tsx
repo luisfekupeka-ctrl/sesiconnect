@@ -122,8 +122,8 @@ export default function SeletorAlunos({ alunos, selecionados, onChange, turmaAlv
   };
 
   return (
-    <div className="border-2 border-white/5 rounded-[2.5rem] overflow-hidden bg-[#050505] shadow-2xl">
-      <div className="p-8 border-b border-white/5 bg-[#42a0f5]/5">
+    <div className="border-2 border-white/5 rounded-2xl md:rounded-[2.5rem] overflow-hidden bg-[#050505] shadow-2xl">
+      <div className="p-4 sm:p-8 border-b border-white/5 bg-[#42a0f5]/5">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
             <label className="text-[10px] font-black text-[#42a0f5] uppercase tracking-[0.4em] flex items-center gap-2 mb-1">
@@ -162,13 +162,13 @@ export default function SeletorAlunos({ alunos, selecionados, onChange, turmaAlv
 
         {!modoPaste && (
           <div className="relative group">
-            <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-[#42a0f5] transition-all" />
+            <Search size={18} className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-[#42a0f5] transition-all" />
             <input 
               type="text" 
               placeholder="Pesquisar por nome..." 
               value={busca} 
               onChange={e => setBusca(e.target.value)}
-              className="w-full bg-surface-container-high/40 p-5 pl-14 rounded-[1.5rem] text-sm font-black outline-none border border-transparent focus:border-[#42a0f5]/30 transition-all shadow-inner" 
+              className="w-full bg-surface-container-high/40 p-3.5 sm:p-5 pl-11 sm:pl-14 rounded-xl sm:rounded-[1.5rem] text-sm font-black outline-none border border-transparent focus:border-[#42a0f5]/30 transition-all shadow-inner" 
             />
           </div>
         )}
@@ -306,7 +306,7 @@ export default function SeletorAlunos({ alunos, selecionados, onChange, turmaAlv
                     type="button"
                     onClick={() => toggleAluno(a.nome)}
                     className={cn(
-                      "w-full flex items-center justify-between p-4 rounded-2xl transition-all text-left group",
+                      "w-full flex items-center justify-between p-3 sm:p-4 rounded-xl sm:rounded-2xl transition-all text-left group",
                       isSelected 
                         ? "bg-primary/10 border border-primary/30" 
                         : "hover:bg-white/5"
