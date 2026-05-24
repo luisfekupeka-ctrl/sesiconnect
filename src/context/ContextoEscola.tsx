@@ -234,7 +234,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
         labMatch = languageLab.find(lab => {
           return lab.diaSemana === slot.diaSemana &&
                  ((lab.sala || '').includes(salaStr) || (lab.sala || '').includes(nomeSalaStr)) &&
-                 lab.horarioInicio <= slotInicio && lab.horarioFim > slotInicio;
+                 (lab.horarioInicio?.slice(0, 5) || '') <= slotInicio && (lab.horarioFim?.slice(0, 5) || '') > slotInicio;
         });
       }
 
@@ -276,7 +276,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
             nomeSalaStr.includes(localEspecifico)
           );
 
-          return localMatch && after.horarioInicio <= slotInicio && after.horarioFim > slotInicio;
+          return localMatch && (after.horarioInicio?.slice(0, 5) || '') <= slotInicio && (after.horarioFim?.slice(0, 5) || '') > slotInicio;
         });
       }
 

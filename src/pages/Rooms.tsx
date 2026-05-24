@@ -294,8 +294,8 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
       (nomeStr && (l.sala || '').includes(nomeStr))
     ) && 
     l.diaSemana === diaGrade && 
-    l.horarioInicio <= bloco.inicio && 
-    l.horarioFim >= bloco.fim;
+    (l.horarioInicio?.slice(0, 5) || '') <= (bloco.inicio?.slice(0, 5) || '') && 
+    (l.horarioFim?.slice(0, 5) || '') >= (bloco.fim?.slice(0, 5) || '');
   });
 
   const after = (atividadesAfter || []).find((a: any) => {
@@ -326,8 +326,8 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
 
     return (
       localMatch && 
-      a.horarioInicio <= bloco.inicio && 
-      a.horarioFim >= bloco.fim
+      (a.horarioInicio?.slice(0, 5) || '') <= (bloco.inicio?.slice(0, 5) || '') && 
+      (a.horarioFim?.slice(0, 5) || '') >= (bloco.fim?.slice(0, 5) || '')
     );
   });
 
