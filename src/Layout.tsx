@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar, BottomNav } from './components/Navigation';
 import { Search, User, Clock, Menu, X } from 'lucide-react';
 
@@ -8,6 +8,7 @@ export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [buscaGlobal, setBuscaGlobal] = useState('');
   const location = useLocation();
+  const navigate = useNavigate();
   const isLoginPage = location.pathname === '/login';
 
   useEffect(() => {
@@ -37,9 +38,12 @@ export function Layout() {
           <span className="text-xs font-bold text-[#f1d86f]">Connect</span>
         </div>
         
-        <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center">
-          <User size={20} className="text-on-surface-variant" />
-        </div>
+        <button 
+          onClick={() => navigate('/login')}
+          className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center active:scale-95 transition-transform"
+        >
+          <User size={20} className="text-on-surface-variant hover:text-primary transition-colors" />
+        </button>
       </header>
 
       {sidebarOpen && (
