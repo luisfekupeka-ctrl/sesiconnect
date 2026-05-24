@@ -166,7 +166,7 @@ export function Occurrences() {
 
   const handleGeneratePDF = async () => {
     const dataToExport = reportFilterYear 
-      ? records.filter(r => r.school_year?.toLowerCase().includes(reportFilterYear.toLowerCase()))
+      ? records.filter(r => (r.school_year || '').toLowerCase().replace(/[º°ª]/g, '') === reportFilterYear.toLowerCase().replace(/[º°ª]/g, ''))
       : records;
     await generateOccurrencesPDF(dataToExport);
   };
@@ -206,7 +206,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
 
   const handleGenerateExcel = () => {
     const dataToExport = reportFilterYear 
-      ? records.filter(r => r.school_year?.toLowerCase().includes(reportFilterYear.toLowerCase()))
+      ? records.filter(r => (r.school_year || '').toLowerCase().replace(/[º°ª]/g, '') === reportFilterYear.toLowerCase().replace(/[º°ª]/g, ''))
       : records;
     generateOccurrencesExcel(dataToExport);
   };
@@ -598,7 +598,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                 </div>
                 <div className="text-sm text-slate-500 dark:text-slate-400 mt-2 sm:mt-6">
                   {reportFilterYear 
-                    ? `Exportando apenas registros filtrados por "${reportFilterYear}" (${records.filter(r => r.school_year?.toLowerCase().includes(reportFilterYear.toLowerCase())).length} encontrados).`
+                    ? `Exportando apenas registros filtrados por "${reportFilterYear}" (${records.filter(r => (r.school_year || '').toLowerCase().replace(/[º°ª]/g, '') === reportFilterYear.toLowerCase().replace(/[º°ª]/g, '')).length} encontrados).`
                     : `Exportando todos os registros da base.`}
                 </div>
               </div>
@@ -614,7 +614,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                   </p>
                   <button
                     onClick={handleGeneratePDF}
-                    disabled={reportFilterYear ? records.filter(r => r.school_year?.toLowerCase().includes(reportFilterYear.toLowerCase())).length === 0 : records.length === 0}
+                    disabled={reportFilterYear ? records.filter(r => (r.school_year || '').toLowerCase().replace(/[º°ª]/g, '') === reportFilterYear.toLowerCase().replace(/[º°ª]/g, '')).length === 0 : records.length === 0}
                     className="w-full sm:w-auto justify-center bg-white text-blue-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
                   >
                     <FileText className="w-5 h-5" />
@@ -632,7 +632,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                   </p>
                   <button
                     onClick={handleGenerateExcel}
-                    disabled={reportFilterYear ? records.filter(r => r.school_year?.toLowerCase().includes(reportFilterYear.toLowerCase())).length === 0 : records.length === 0}
+                    disabled={reportFilterYear ? records.filter(r => (r.school_year || '').toLowerCase().replace(/[º°ª]/g, '') === reportFilterYear.toLowerCase().replace(/[º°ª]/g, '')).length === 0 : records.length === 0}
                     className="w-full sm:w-auto justify-center bg-white text-emerald-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
                   >
                     <FileSpreadsheet className="w-5 h-5" />

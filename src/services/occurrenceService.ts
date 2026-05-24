@@ -32,7 +32,9 @@ export const occurrenceService = {
         query = query.ilike('student_name', `%${filters.student_name}%`);
       }
       if (filters.school_year) {
-        query = query.ilike('school_year', `%${filters.school_year}%`);
+        // Replace º, °, and ª with _ (SQL single character wildcard) to match both
+        const safeYear = filters.school_year.replace(/[º°ª]/g, '_');
+        query = query.ilike('school_year', `%${safeYear}%`);
       }
       if (filters.occurrence_type) {
         query = query.eq('occurrence_type', filters.occurrence_type);
