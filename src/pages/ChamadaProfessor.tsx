@@ -13,7 +13,11 @@ export default function ChamadaProfessor() {
   const { professores, horaAtual, gradeCompleta, salas } = useEscola();
   const [professorSelecionado, setProfessorSelecionado] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
-  const [diaFiltro, setDiaFiltro] = useState(obterDiaSemana(horaAtual));
+  
+  // Default to today, but if it's weekend, fallback to Monday
+  const today = obterDiaSemana(horaAtual);
+  const initialDiaFiltro = ['SÁBADO', 'DOMINGO'].includes(today) ? 'SEGUNDA' : today;
+  const [diaFiltro, setDiaFiltro] = useState(initialDiaFiltro);
   const [aulaParaChamada, setAulaParaChamada] = useState<EntradaGradeSala | null>(null);
   const [substituicoes, setSubstituicoes] = useState<ResultadoRealocacao[]>([]);
   const [chamadasConcluidas, setChamadasConcluidas] = useState<Set<string>>(new Set());
@@ -115,7 +119,7 @@ export default function ChamadaProfessor() {
 
       <div className="bg-surface-container-lowest p-8 rounded-[3rem] editorial-shadow border border-outline-variant/10">
         {/* Resumo de Chamadas do Dia */}
-        {diaFiltro === obterDiaSemana(horaAtual) && (
+        {diaFiltro === today && (
           <div className="mb-8 p-4 bg-primary/5 rounded-2xl border border-primary/10">
             <div className="flex justify-between items-center mb-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
@@ -176,7 +180,7 @@ export default function ChamadaProfessor() {
             );
 
             const aula = aulaRegular || null;
-            const isAgora = estaNoHorario(horaAtual, range) && diaFiltro === obterDiaSemana(horaAtual);
+            const isAgora = estaNoHorario(horaAtual, range) && diaFiltro === today;
             const temAtividade = aulaRegular || subAqui;
 
             const salaKey = subAqui ? subAqui.turma : (aulaRegular?.nomeSala || `SALA ${aulaRegular?.numeroSala}`);

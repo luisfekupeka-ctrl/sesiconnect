@@ -35,12 +35,22 @@ export default function ModalChamada({ aula, onClose }: ModalChamadaProps) {
     }
 
     // 3. Fallback secundário: filtrar por turma
-    return alunos.filter(a => {
+    const porTurma = alunos.filter(a => {
       if (aula.turma && aula.turma !== 'A DEFINIR' && aula.turma !== '—') {
-        return a.turma === aula.turma;
+        // Tolerância para match parcial entre '1º Ano EM' e '1 EM A LCH'
+        const t1 = String(a.turma).toLowerCase().replace(/[^a-z0-9]/g, '');
+        const t2 = String(aula.turma).toLowerCase().replace(/[^a-z0-9]/g, '');
+        return t1.includes(t2) || t2.includes(t1);
       }
       return false;
-    }).sort((a, b) => a.nome.localeCompare(b.nome));
+    });
+
+    if (porTurma.length > 0) {
+      return porTurma.sort((a, b) => a.nome.localeCompare(b.nome));
+    }
+
+    // 4. Último fallback: Retorna todos para o professor pesquisar
+    return alunos.sort((a, b) => a.nome.localeCompare(b.nome));
   }, [alunos, aula]);
 
   useEffect(() => {

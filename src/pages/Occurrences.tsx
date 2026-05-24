@@ -21,13 +21,23 @@ const TIPOS_OCORRENCIA = [
 
 const SERIES_OPCOES = [
   'Todos',
-  '6º ano',
-  '7º ano',
-  '8º ano',
-  '9º ano',
-  '1º ano ensino médio',
-  '2º ano ensino médio',
-  '3º ano ensino médio'
+  '6º Ano',
+  '7º Ano',
+  '8º Ano',
+  '9º Ano',
+  '1º Ano EM',
+  '2º Ano EM',
+  '3º Ano EM'
+];
+
+const SERIES_CADASTRO = [
+  '6º Ano',
+  '7º Ano',
+  '8º Ano',
+  '9º Ano',
+  '1º Ano EM',
+  '2º Ano EM',
+  '3º Ano EM'
 ];
 
 export function Occurrences() {
@@ -275,14 +285,17 @@ export function Occurrences() {
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <Calendar className="h-5 w-5 text-slate-400" />
                       </div>
-                      <input
-                        type="text"
+                      <select
                         required
                         value={schoolYear}
                         onChange={(e) => setSchoolYear(e.target.value)}
-                        className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
-                        placeholder="Ex: 2º ano ensino médio"
-                      />
+                        className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
+                      >
+                        <option value="" disabled>Selecione o ano</option>
+                        {SERIES_CADASTRO.map(serie => (
+                          <option key={serie} value={serie}>{serie}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -368,13 +381,15 @@ export function Occurrences() {
                 </div>
                 <div className="w-full md:w-32 space-y-2">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Ano</label>
-                  <input
-                    type="text"
-                    value={filterYear}
-                    onChange={(e) => setFilterYear(e.target.value)}
-                    placeholder="Ex: 6º ano"
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
-                  />
+                  <select
+                    value={filterYear || 'Todos'}
+                    onChange={(e) => setFilterYear(e.target.value === 'Todos' ? '' : e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
+                  >
+                    {SERIES_OPCOES.map(serie => (
+                      <option key={serie} value={serie}>{serie}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="w-full md:w-48 space-y-2">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Tipo</label>
