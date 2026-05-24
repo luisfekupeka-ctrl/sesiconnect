@@ -47,41 +47,6 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
 
   const content = (
     <>
-      {/* Custom media queries to force perfect print */}
-      <style dangerouslySetInnerHTML={{__html: `
-        @media print {
-          body {
-            background: white !important;
-            color: black !important;
-          }
-          /* Hide main app elements */
-          header, nav, aside, footer, button, .print\\:hidden, #root > div:not(.print-modal-container) {
-            display: none !important;
-          }
-          .print-modal-container {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            height: auto !important;
-            background: white !important;
-            padding: 0 !important;
-          }
-          .print-card-content {
-            box-shadow: none !important;
-            border: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            border-radius: 0 !important;
-          }
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-        }
-      `}} />
       <div className={cn(
           "bg-white w-full max-w-5xl flex flex-col md:flex-row print:shadow-none print:max-h-none print:rounded-none print-modal-container",
           !isPrintOnly ? "max-h-[95vh] overflow-hidden rounded-[2.5rem] shadow-2xl" : "rounded-none"

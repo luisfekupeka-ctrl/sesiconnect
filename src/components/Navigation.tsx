@@ -11,22 +11,25 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean; setIsOpen?: (
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
 
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+  const role = profile?.role || 'visitante';
+  const isAdmin = role === 'admin' || role === 'super_admin';
+  const isProfessor = role === 'professor';
+  const isMonitor = role === 'monitor';
 
   const allNavItems = [
-    { to: '/', icon: LayoutGrid, label: 'Agora' },
-    { to: '/rooms', icon: DoorOpen, label: 'Salas' },
-    { to: '/teachers', icon: Users, label: 'Professores' },
-    { to: '/monitores', icon: BookOpen, label: 'Monitores' },
-    { to: '/language-lab', icon: Languages, label: 'Idioma' },
-    { to: '/after', icon: Sparkles, label: 'After School' },
-    { to: '/forms', icon: FileText, label: 'Ocorrências', protected: true },
-    { to: '/ocorrencias', icon: ClipboardCheck, label: 'Reg. Diário', protected: true },
-    { to: '/controle-faltas', icon: ClipboardCheck, label: 'Chamadas', protected: true },
-    { to: '/realocacao', icon: RefreshCw, label: 'Realocação', protected: true },
+    { to: '/', icon: LayoutGrid, label: 'Agora', visible: true },
+    { to: '/rooms', icon: DoorOpen, label: 'Salas', visible: true },
+    { to: '/teachers', icon: Users, label: 'Professores', visible: true },
+    { to: '/monitores', icon: BookOpen, label: 'Monitores', visible: true },
+    { to: '/language-lab', icon: Languages, label: 'Idioma', visible: true },
+    { to: '/after', icon: Sparkles, label: 'After School', visible: true },
+    { to: '/forms', icon: FileText, label: 'Ocorrências', visible: isAdmin },
+    { to: '/ocorrencias', icon: ClipboardCheck, label: 'Reg. Diário', visible: isAdmin || isProfessor || isMonitor },
+    { to: '/controle-faltas', icon: ClipboardCheck, label: 'Chamadas', visible: isAdmin || isProfessor },
+    { to: '/realocacao', icon: RefreshCw, label: 'Realocação', visible: isAdmin },
   ];
 
-  const visibleItems = allNavItems.filter(item => !item.protected || isAdmin);
+  const visibleItems = allNavItems.filter(item => item.visible);
 
   const handleSignOut = async () => {
     await signOut();
@@ -70,14 +73,20 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean; setIsOpen?: (
       </nav>
 
       <div className="p-4 space-y-3">
-        {isAdmin && (
           <NavLink
-            to="/admin"
-            onClick={() => setIsOpen?.(false)}
+            to={isAdmin ? "/admin" : "#"}
+            onClick={(e) => {
+              if (!isAdmin) {
+                e.preventDefault();
+                alert('Acesso negado: Somente administradores podem acessar o Painel ADM.');
+              } else {
+                setIsOpen?.(false);
+              }
+            }}
             className={({ isActive }) =>
               cn(
                 "flex items-center gap-4 px-5 py-5 rounded-2xl text-base font-bold transition-all border",
-                isActive
+                isActive && isAdmin
                   ? "bg-emerald-500 text-black border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
                   : "bg-surface-container-low text-on-surface-variant border-[#30363d] hover:border-emerald-500 hover:text-emerald-500"
               )
@@ -86,7 +95,6 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean; setIsOpen?: (
             <Shield size={22} />
             Painel Admin
           </NavLink>
-        )}
 
         <div className="bg-surface-container-low p-4 rounded-2xl border border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -115,17 +123,20 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean; setIsOpen?: (
 
 export function BottomNav() {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+  const role = profile?.role || 'visitante';
+  const isAdmin = role === 'admin' || role === 'super_admin';
+  const isProfessor = role === 'professor';
+  const isMonitor = role === 'monitor';
 
   const navItems = [
-    { to: '/', icon: LayoutGrid, label: 'Agora' },
-    { to: '/rooms', icon: DoorOpen, label: 'Salas' },
-    { to: '/teachers', icon: Users, label: 'Profs' },
-    { to: '/forms', icon: FileText, label: 'Ocor.', protected: true },
-    { to: '/admin', icon: Shield, label: 'Admin', protected: true },
+    { to: '/', icon: LayoutGrid, label: 'Agora', visible: true },
+    { to: '/rooms', icon: DoorOpen, label: 'Salas', visible: true },
+    { to: '/teachers', icon: Users, label: 'Profs', visible: true },
+    { to: '/ocorrencias', icon: ClipboardCheck, label: 'Reg. Diário', visible: isAdmin || isProfessor || isMonitor },
+    { to: '/admin', icon: Shield, label: 'Admin', visible: true },
   ];
 
-  const visibleItems = navItems.filter(item => !item.protected || isAdmin).slice(0, 5);
+  const visibleItems = navItems.filter(item => item.visible).slice(0, 5);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-sm border-t border-[#30363d] px-2 pt-2 pb-6 md:hidden">
@@ -133,11 +144,17 @@ export function BottomNav() {
         {visibleItems.map((item) => (
           <NavLink
             key={item.to}
-            to={item.to}
+            to={item.to === '/admin' && !isAdmin ? "#" : item.to}
+            onClick={(e) => {
+              if (item.to === '/admin' && !isAdmin) {
+                e.preventDefault();
+                alert('Acesso negado: Somente administradores podem acessar o Painel ADM.');
+              }
+            }}
             className={({ isActive }) =>
               cn(
                 "flex flex-col items-center justify-center transition-all duration-200 gap-1 px-4 py-2 rounded-2xl",
-                isActive 
+                isActive && (item.to !== '/admin' || isAdmin)
                   ? "text-primary bg-primary/10" 
                   : "text-on-surface-variant"
               )

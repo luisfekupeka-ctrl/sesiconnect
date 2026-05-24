@@ -102,9 +102,9 @@ export default function GestaoRealocacao() {
     const salasDoAno = salas
       .filter(s => {
         if (anoPrefixo === 'Médio') {
-          return (s.ano || '').toLowerCase().includes('médio') || (s.ano || '').toLowerCase().includes('série');
+          return (s.ano || '').toLowerCase().includes('médio') || (s.ano || '').toLowerCase().includes('série') || (s.nome || '').toLowerCase().includes('médio') || (s.nome || '').toLowerCase().includes('série');
         }
-        return (s.ano || '').includes(anoPrefixo);
+        return (s.ano || '').includes(anoPrefixo) || (s.nome || '').includes(anoPrefixo);
       })
       .map(s => s.numero);
     
@@ -436,9 +436,29 @@ export default function GestaoRealocacao() {
                       <option value="Médio">Ensino Médio (1ª a 3ª Série)</option>
                     </select>
 
-                    {salasSelecionadas.length > 0 && (
+                    {salasSelecionadas.length > 0 ? (
                       <div className="text-[10px] text-amber-500 font-bold ml-2">
                         {salasSelecionadas.length} salas vinculadas automaticamente.
+                      </div>
+                    ) : anoSelecionadoProva && (
+                      <div className="text-[10px] text-red-400 font-bold ml-2">
+                        Nenhuma sala vinculada automaticamente. Selecione manualmente:
+                      </div>
+                    )}
+
+                    {anoSelecionadoProva && (
+                      <div className="mt-2 grid grid-cols-4 sm:grid-cols-6 gap-2">
+                        {salas.map(s => (
+                           <button 
+                             key={s.numero}
+                             onClick={() => alternarSala(s.numero)}
+                             className={cn("px-3 py-2 rounded-xl text-[10px] font-black uppercase transition-all border",
+                               salasSelecionadas.includes(s.numero) ? "bg-amber-600 border-amber-500 text-white" : "bg-surface-container-high border-white/10 text-on-surface-variant hover:border-white/30"
+                             )}
+                           >
+                             {s.numero}
+                           </button>
+                        ))}
                       </div>
                     )}
 
@@ -510,7 +530,12 @@ export default function GestaoRealocacao() {
                             if (a.includes('médio') || a.includes('medio') || a.includes('série') || a.includes('serie') || a.includes('1ª') || a.includes('2ª') || a.includes('3ª')) return 'medio';
                             return '6e7';
                           });
-                          const segsUnicos = Array.from(new Set(segmentos));
+                          let segsUnicos = Array.from(new Set(segmentos));
+                          if (segsUnicos.length === 0 && anoSelecionadoProva) {
+                            if (anoSelecionadoProva === 'Médio') segsUnicos = ['medio'];
+                            else if (anoSelecionadoProva.includes('8') || anoSelecionadoProva.includes('9')) segsUnicos = ['8e9'];
+                            else segsUnicos = ['6e7'];
+                          }
                           const pAlvo = periodos.filter(p => segsUnicos.includes(p.segmento));
                           return pAlvo.map(p => `${p.horarioInicio.slice(0, 5)} - ${p.horarioFim.slice(0, 5)}`);
                         })()

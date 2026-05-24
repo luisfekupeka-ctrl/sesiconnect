@@ -700,13 +700,15 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
 
               {/* Botão Fechar / Ações no Topo (Oculto na Impressão) */}
               <div className="absolute top-4 right-4 z-20 flex gap-2">
-                <button 
-                  onClick={() => generateSingleOccurrencePDF(selectedRecord)}
-                  className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-sm cursor-pointer"
-                  title="Baixar Documento PDF"
-                >
-                  <Download className="w-[18px] h-[18px]" />
-                </button>
+                {isAdmin && (
+                  <button 
+                    onClick={() => generateSingleOccurrencePDF(selectedRecord)}
+                    className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-sm cursor-pointer"
+                    title="Baixar Documento PDF"
+                  >
+                    <Download className="w-[18px] h-[18px]" />
+                  </button>
+                )}
                 <button 
                   onClick={() => setSelectedRecord(null)}
                   className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-sm cursor-pointer"
