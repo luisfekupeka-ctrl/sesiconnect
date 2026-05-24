@@ -232,10 +232,17 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
           {/* Área de Impressão (Direita) */}
           <div id="printable-occurrence" className="flex-1 overflow-y-auto bg-white custom-scrollbar relative flex flex-col">
             
-            {/* Header Oficial (Simples para visualização, o PDF real terá o papel timbrado) */}
-            <div className="relative w-full py-8 bg-white border-b-4 border-[#0c2340] flex items-center justify-between px-8 select-none">
+            {/* Header Oficial do Colégio Sesi */}
+            <div className="relative w-full h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-8 select-none">
+              {/* Polígonos Geométricos */}
+              <div className="absolute top-0 left-0 w-[300px] h-full pointer-events-none">
+                <div className="absolute top-0 left-0 w-[200px] h-[120px] bg-[#e2e8f0]" style={{ clipPath: 'polygon(0 0, 100% 0, 70% 100%, 0 80%)' }} />
+                <div className="absolute top-0 left-0 w-[160px] h-[100px] bg-[#cbd5e1] opacity-40" style={{ clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0 60%)' }} />
+                <div className="absolute top-[20px] left-0 w-[40px] h-[100px] bg-[#fbbf24]" style={{ clipPath: 'polygon(0 0, 100% 30%, 80% 90%, 0 100%)' }} />
+              </div>
               <div className="flex-1" />
-              <div className="relative z-10 select-none scale-105">
+              {/* Logo Sesi */}
+              <div className="relative z-10">
                 <div className="flex flex-col items-end mr-4">
                   <div className="flex items-center gap-2 mr-1">
                     <span className="text-[11px] font-extrabold text-[#0c2340] lowercase tracking-normal">colégio</span>
@@ -257,11 +264,12 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
             <div className="flex-1 px-12 md:px-20 pt-12 pb-20 space-y-10">
                {/* Cabeçalho do Documento - Alocado de maneira inteligente */}
                <div className="space-y-1.5 text-sm text-[#0c2340] font-medium border-b border-gray-200 pb-6">
-                 <p><span className="font-bold mr-2">Nome do Aluno:</span> {ocorrencia.nomeAluno}</p>
+                 <p><span className="font-bold mr-2">Nome do Aluno:</span> {configAssinaturas.nomeAluno || ocorrencia.nomeAluno}</p>
                  <p><span className="font-bold mr-2">Ano:</span> {ocorrencia.anoAluno || ocorrencia.turmaAluno}</p>
                  <p><span className="font-bold mr-2">Professor/Responsável:</span> {(() => {
                    const profs = [];
                    if (configAssinaturas.nomeEmissor) profs.push(configAssinaturas.nomeEmissor);
+                   if (configAssinaturas.nomeResponsavel) profs.push(configAssinaturas.nomeResponsavel);
                    const extraProfs = assinaturasExtras.filter(e => e.papel.toLowerCase().includes('professor')).map(e => e.nome);
                    const profsText = [...profs, ...extraProfs].join(', ');
                    return profsText || 'Administração';
@@ -298,10 +306,10 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                  </p>
                </div>
 
-               {/* Descrição - Campos Restantes */}
+               {/* Descrição Dinâmica - Ignorando campos que já estão no cabeçalho */}
                <div className="space-y-6 text-sm text-gray-800 leading-relaxed text-justify pt-4">
                   {Object.entries(ocorrencia.dados || {})
-                    .filter(([key]) => !['responsável', 'responsavel', 'professor', 'data', 'tipo de ocorrência', 'tipo de ocorrencia'].includes(key.toLowerCase()))
+                    .filter(([key]) => !['responsável', 'responsavel', 'professor', 'data', 'tipo de ocorrência', 'tipo de ocorrencia', 'número da ata', 'numero da ata', 'ata'].includes(key.toLowerCase()))
                     .map(([key, value]) => (
                     <div key={key}>
                       <p className="font-bold mb-1 uppercase text-xs text-[#0c2340]">{key}</p>

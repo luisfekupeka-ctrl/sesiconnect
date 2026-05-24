@@ -1,7 +1,9 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import type { DailyOccurrenceRecord } from '../types';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
+import type { DailyOccurrenceRecord, RegistroOcorrencia } from '../types';
 
 import papelTimbradoImg from '../assets/papel_timbrado.png';
 
@@ -110,27 +112,36 @@ export const generateOccurrencesExcel = (records: DailyOccurrenceRecord[]) => {
   XLSX.writeFile(workbook, 'relatorio_ocorrencias.xlsx');
 };
 
-export const generateFichaOcorrenciaPDF = async (
+export const buildFichaOcorrenciaDoc = async (
   ocorrencia: any,
   configAssinaturas: any,
-  assinaturasExtras: any[]
+  assinaturasExtras: any[],
+  bgBase64?: string
 ) => {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
 
-  try {
-    const bgBase64 = await loadImageAsBase64(papelTimbradoImg);
-    doc.addImage(bgBase64, 'PNG', 0, 0, pageWidth, pageHeight);
+  if (!bgBase64) {
+    try {
+      bgBase64 = await loadImageAsBase64(papelTimbradoImg);
+    } catch (e) {
+      console.error(e);
+    }
+  }
 
-    const marginX = 25;
-    let currentY = 55;
+  if (bgBase64) {
+    doc.addImage(bgBase64, 'PNG', 0, 0, pageWidth, pageHeight);
+  }
+
+  const marginX = 25;
+  let currentY = 55;
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.text('Nome do Aluno:', marginX, currentY);
     doc.setFont('helvetica', 'normal');
-    doc.text(ocorrencia.nomeAluno, marginX + 35, currentY);
+    doc.text(configAssinaturas.nomeAluno || ocorrencia.nomeAluno, marginX + 35, currentY);
     
     currentY += 8;
     doc.setFont('helvetica', 'bold');
@@ -140,6 +151,7 @@ export const generateFichaOcorrenciaPDF = async (
 
     const profs = [];
     if (configAssinaturas.nomeEmissor) profs.push(configAssinaturas.nomeEmissor);
+    if (configAssinaturas.nomeResponsavel) profs.push(configAssinaturas.nomeResponsavel);
     const extraProfs = assinaturasExtras.filter(e => e.papel.toLowerCase().includes('professor')).map(e => e.nome);
     const profsText = [...profs, ...extraProfs].join(', ');
 
@@ -233,10 +245,58 @@ export const generateFichaOcorrenciaPDF = async (
       doc.setTextColor(0, 0, 0);
     });
 
+  return doc;
+};
+
+export const generateFichaOcorrenciaPDF = async (
+  ocorrencia: any,
+  configAssinaturas: any,
+  assinaturasExtras: any[]
+) => {
+  try {
+    const doc = await buildFichaOcorrenciaDoc(ocorrencia, configAssinaturas, assinaturasExtras);
     doc.save(`Ata_${ocorrencia.nomeAluno.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`);
   } catch (error) {
     console.error('Error generating PDF:', error);
     alert('Erro ao gerar PDF.');
+  }
+};
+
+export const generateBackupZip = async (ocorrencias: RegistroOcorrencia[], mes: string) => {
+  try {
+    const zip = new JSZip();
+    const bgBase64 = await loadImageAsBase64(papelTimbradoImg).catch(() => undefined);
+    
+    // Default configs for backup where specific signatures aren't provided
+    const defaultConfig = {
+      mostrarAluno: true,
+      mostrarResponsavel: true,
+      mostrarEmissor: true,
+      nomeEmissor: 'Administração',
+      nomeAluno: '',
+      nomeResponsavel: ''
+    };
+
+    for (const oc of ocorrencias) {
+      // Group by Ano/Turma -> Aluno
+      const anoFold = oc.anoAluno || oc.turmaAluno || 'Sem_Turma';
+      const alunoFold = oc.nomeAluno || 'Desconhecido';
+      
+      const doc = await buildFichaOcorrenciaDoc(oc, { ...defaultConfig, nomeAluno: oc.nomeAluno }, [], bgBase64);
+      const pdfBuffer = doc.output('arraybuffer');
+      
+      const dateStr = new Date(oc.criadoEm).toLocaleDateString('pt-BR').replace(/\//g, '-');
+      const filename = `Ata_${oc.nomeModelo.replace(/\s+/g, '_')}_${dateStr}.pdf`;
+      
+      zip.folder(anoFold)?.folder(alunoFold)?.file(filename, pdfBuffer);
+    }
+
+    const content = await zip.generateAsync({ type: 'blob' });
+    saveAs(content, `Backup_Ocorrencias_${mes.replace(/\s+/g, '_')}.zip`);
+    return true;
+  } catch (error) {
+    console.error('Error generating ZIP backup:', error);
+    return false;
   }
 };
 

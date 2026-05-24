@@ -8,6 +8,7 @@ import {
 import { Aluno, RegistroOcorrencia } from '../types';
 import { cn } from '../lib/utils';
 import { arquivarELimparMes } from '../services/dataService';
+import { generateBackupZip } from '../lib/reportGenerator';
 import FichaOcorrencia from './FichaOcorrencia';
 import ProntuarioPDF from './ProntuarioPDF';
 
@@ -103,13 +104,38 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
     const ano = new Date().getFullYear();
     const nomeMes = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date());
 
-    if (confirm(`DESEJA FECHAR O MÊS DE ${nomeMes.toUpperCase()}?\n\nIsso irá:\n1. Gerar os PDFs de backup\n2. APAGAR todos os registros deste mês.\n\nESTA AÇÃO É IRREVERSÍVEL.`)) {
+    if (confirm(`DESEJA FECHAR O MÊS DE ${nomeMes.toUpperCase()}?\n\nIsso irá:\n1. Gerar um arquivo ZIP com todos os PDFs de backup divididos por pastas\n2. APAGAR todos os registros deste mês do sistema.\n\nESTA AÇÃO É IRREVERSÍVEL.`)) {
         setCarregando(true);
-        const ok = await arquivarELimparMes(mes, ano);
-        if (ok) {
-            alert('Mês arquivado com sucesso!');
-            atualizar();
+        
+        try {
+          // Filtrar as ocorrências do mês atual da lista carregada em memória
+          const ocorrenciasDoMes = ocorrencias.filter(o => {
+            const data = new Date(o.criadoEm);
+            return data.getMonth() === mes && data.getFullYear() === ano;
+          });
+
+          if (ocorrenciasDoMes.length > 0) {
+            alert(`Gerando backup de ${ocorrenciasDoMes.length} registros... Por favor, aguarde.`);
+            const zipGerado = await generateBackupZip(ocorrenciasDoMes, nomeMes);
+            if (!zipGerado) {
+              alert('Falha ao gerar arquivo ZIP de backup. A exclusão foi cancelada por segurança.');
+              setCarregando(false);
+              return;
+            }
+          } else {
+            alert(`Nenhuma ocorrência encontrada em ${nomeMes} para gerar backup. Continuando para a exclusão.`);
+          }
+
+          const ok = await arquivarELimparMes(mes, ano);
+          if (ok) {
+              alert('Mês arquivado com sucesso!');
+              atualizar();
+          }
+        } catch (e) {
+          console.error('Erro no processo de arquivamento:', e);
+          alert('Ocorreu um erro no arquivamento. Tente novamente.');
         }
+
         setCarregando(false);
     }
   };
