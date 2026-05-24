@@ -771,34 +771,55 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                 </div>
               </div>
 
-              {/* Botão Fechar / Ações no Topo (Oculto na Impressão) */}
-              <div className="absolute top-4 right-4 z-20 flex gap-2 print:hidden">
+              {/* Botão Fechar / Ações no Topo */}
+              <div className="absolute top-4 right-4 z-20 flex flex-wrap justify-end gap-2 pr-2">
+                <button
+                  onClick={() => window.print()}
+                  className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors shadow-sm cursor-pointer print:hidden"
+                  title="Imprimir"
+                >
+                  <Printer className="w-[18px] h-[18px]" />
+                </button>
+                <button
+                  onClick={() => generateSingleOccurrencePDF(selectedRecord)}
+                  className="p-3 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors shadow-sm cursor-pointer print:hidden"
+                  title="Baixar PDF"
+                >
+                  <FileText className="w-[18px] h-[18px]" />
+                </button>
+                <button
+                  onClick={() => generateWordOccurrence(selectedRecord)}
+                  className="p-3 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors shadow-sm cursor-pointer print:hidden"
+                  title="Baixar Word"
+                >
+                  <FileText className="w-[18px] h-[18px]" />
+                </button>
+
                 {isAdmin && (
-                  <>
-                    <button 
-                      onClick={async () => {
-                        if (window.confirm('Tem certeza que deseja apagar este registro?')) {
-                          try {
-                            if (selectedRecord.id) {
-                              await occurrenceService.deleteRecord(selectedRecord.id);
-                              setRecords(prev => prev.filter(r => r.id !== selectedRecord.id));
-                              setSelectedRecord(null);
-                            }
-                          } catch(e) {
-                            alert('Erro ao apagar registro.');
+                  <button 
+                    onClick={async () => {
+                      if (window.confirm('Tem certeza que deseja apagar este registro?')) {
+                        try {
+                          if (selectedRecord.id) {
+                            await occurrenceService.deleteRecord(selectedRecord.id);
+                            setRecords(prev => prev.filter(r => r.id !== selectedRecord.id));
+                            setSelectedRecord(null);
                           }
+                        } catch(e) {
+                          alert('Erro ao apagar registro.');
                         }
-                      }}
-                      className="p-3 rounded-full bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-sm cursor-pointer"
-                      title="Apagar Registro"
-                    >
-                      <Trash2 className="w-[18px] h-[18px]" />
-                    </button>
-                  </>
+                      }
+                    }}
+                    className="p-3 rounded-full bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-sm cursor-pointer print:hidden"
+                    title="Apagar Registro"
+                  >
+                    <Trash2 className="w-[18px] h-[18px]" />
+                  </button>
                 )}
                 <button 
                   onClick={() => setSelectedRecord(null)}
-                  className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors shadow-sm cursor-pointer ml-auto"
+                  className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors shadow-sm cursor-pointer ml-auto print:hidden"
+                  title="Fechar"
                 >
                   <X className="w-[18px] h-[18px]" />
                 </button>

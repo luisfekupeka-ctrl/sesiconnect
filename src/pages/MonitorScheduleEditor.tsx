@@ -212,7 +212,8 @@ export default function MonitorScheduleEditor() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="overflow-x-auto pb-4 custom-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
+                  <div className="space-y-3 min-w-[900px]">
                   {linhas.map((linha, idx) => {
                     const ehAlmoco = linha.tipo === 'almoco';
                     return (
@@ -275,6 +276,7 @@ export default function MonitorScheduleEditor() {
                       <Plus size={20} className="group-hover:rotate-90 transition-transform" /> Adicionar Horário na Escala
                     </button>
                   </div>
+                </div>
                 </div>
               </div>
             )}
