@@ -128,7 +128,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
               { id: 'f-aluno', rotulo: 'Aluno', tipo: 'autocomplete_aluno', obrigatorio: true },
               { id: 'f-tipo', rotulo: 'Tipo de Ocorrência', tipo: 'selecao', obrigatorio: true, opcoes: ['Atraso', 'Indisciplina', 'Falta', 'Elogio', 'Outro'] },
               { id: 'f-desc', rotulo: 'Descrição', tipo: 'area_texto', obrigatorio: true },
-              { id: 'f-prof', rotulo: 'Professor Responsável', tipo: 'texto', obrigatorio: false },
+              { id: 'f-prof', rotulo: 'Responsável', tipo: 'texto', obrigatorio: false },
             ],
             criadoEm: new Date().toISOString(),
           },

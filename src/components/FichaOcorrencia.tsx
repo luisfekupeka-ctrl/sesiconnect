@@ -133,14 +133,21 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                 <div className="space-y-2 bg-white border border-gray-100 p-3 rounded-2xl shadow-sm">
                   <div>
                     <label className="text-[9px] font-bold text-gray-400 uppercase">Tipo</label>
-                    <select
+                    <input
+                      type="text"
+                      list="cargos-list"
                       value={novoTipoExtra}
                       onChange={e => setNovoTipoExtra(e.target.value)}
+                      placeholder="Ex: Monitor, Professor..."
                       className="w-full bg-gray-50 border border-gray-150 p-2 rounded-xl text-xs font-bold focus:border-primary outline-none transition-all mt-1"
-                    >
-                      <option value="Aluno">Aluno</option>
-                      <option value="Colaborador">Colaborador</option>
-                    </select>
+                    />
+                    <datalist id="cargos-list">
+                      <option value="Monitor" />
+                      <option value="Professor" />
+                      <option value="Pedagogo" />
+                      <option value="Colaborador" />
+                      <option value="Aluno" />
+                    </datalist>
                   </div>
                   <div>
                     <label className="text-[9px] font-bold text-gray-400 uppercase">Nome</label>
@@ -175,17 +182,16 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                     {assinaturasExtras.map((extra, index) => (
                       <div key={index} className="space-y-1.5 bg-white border border-gray-100 p-2.5 rounded-xl text-xs shadow-sm">
                         <div className="flex items-center justify-between gap-2">
-                          <select
+                          <input
+                            type="text"
+                            list="cargos-list"
                             value={extra.papel}
                             onChange={e => {
                               const val = e.target.value;
                               setAssinaturasExtras(prev => prev.map((item, i) => i === index ? { ...item, papel: val } : item));
                             }}
-                            className="bg-transparent border-0 outline-none font-bold text-primary text-[10px] uppercase tracking-wider cursor-pointer"
-                          >
-                            <option value="Aluno">Aluno</option>
-                            <option value="Colaborador">Colaborador</option>
-                          </select>
+                            className="bg-transparent border-0 outline-none font-bold text-primary text-[10px] uppercase tracking-wider w-24"
+                          />
                           <button 
                             onClick={() => removerAssinaturaExtra(index)}
                             className="text-gray-400 hover:text-red-500 transition-all p-1 shrink-0"
@@ -258,7 +264,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                  <p><span className="font-bold mr-2">Nome do Aluno:</span> {ocorrencia.nomeAluno}</p>
                  <p><span className="font-bold mr-2">Ano:</span> {ocorrencia.anoAluno || ocorrencia.turmaAluno}</p>
                  <p><span className="font-bold mr-2">Professor/Responsável:</span> {(() => {
-                   const key = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase() === 'professor responsável' || k.toLowerCase() === 'professor');
+                   const key = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase() === 'responsável' || k.toLowerCase() === 'professor');
                    return key ? String(ocorrencia.dados[key]) : (ocorrencia.professorAtual || 'Administração');
                  })()}</p>
                  <p><span className="font-bold mr-2">Data:</span> {(() => {
@@ -289,7 +295,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                {/* Descrição - Campos Restantes */}
                <div className="space-y-6 text-sm text-gray-800 leading-relaxed text-justify pt-4">
                   {Object.entries(ocorrencia.dados || {})
-                    .filter(([key]) => !['professor responsável', 'professor responsavel', 'professor', 'data', 'tipo de ocorrência', 'tipo de ocorrencia'].includes(key.toLowerCase()))
+                    .filter(([key]) => !['responsável', 'responsavel', 'professor', 'data', 'tipo de ocorrência', 'tipo de ocorrencia'].includes(key.toLowerCase()))
                     .map(([key, value]) => (
                     <div key={key}>
                       <p className="font-bold mb-1 uppercase text-xs text-[#0c2340]">{key}</p>

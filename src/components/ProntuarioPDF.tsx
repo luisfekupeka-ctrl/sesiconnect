@@ -62,7 +62,7 @@ export default function ProntuarioPDF({ ocorrencias, onClose, alunoNome }: Props
               return key ? ocorrencia.dados[key] : null;
             };
 
-            const profResp = getDado('Professor Responsável') || getDado('Professor Responsavel') || getDado('Professor') || ocorrencia.professorAtual || 'Administração';
+            const profResp = getDado('responsável') || getDado('responsavel') || getDado('Professor') || ocorrencia.professorAtual || 'Administração';
             const rawDate = getDado('Data') || ocorrencia.criadoEm;
             let dataFormatada = rawDate;
             if (rawDate && rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
@@ -121,7 +121,7 @@ export default function ProntuarioPDF({ ocorrencias, onClose, alunoNome }: Props
                   {/* Descrição */}
                   <div className="flex-1 space-y-6 text-sm text-gray-800 leading-relaxed text-justify pt-4">
                     {Object.entries(ocorrencia.dados || {})
-                      .filter(([key]) => !['professor responsável', 'professor responsavel', 'professor', 'data', 'tipo de ocorrência', 'tipo de ocorrencia'].includes(key.toLowerCase()))
+                      .filter(([key]) => !['responsável', 'responsavel', 'professor', 'data', 'tipo de ocorrência', 'tipo de ocorrencia'].includes(key.toLowerCase()))
                       .map(([key, value]) => (
                       <div key={key}>
                         <p className="font-bold mb-1 uppercase text-xs text-[#0c2340]">{key}</p>
