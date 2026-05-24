@@ -278,7 +278,7 @@ export interface ResultadoRealocacao {
 export interface DailyOccurrenceRecord {
   id?: string;
   student_name: string;
-  school_year: number;
+  school_year: string;
   occurrence_type: string;
   report: string;
   created_at?: string;

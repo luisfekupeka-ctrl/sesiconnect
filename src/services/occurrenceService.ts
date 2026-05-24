@@ -19,7 +19,7 @@ export const occurrenceService = {
 
   async fetchRecords(filters?: {
     student_name?: string;
-    school_year?: number;
+    school_year?: string;
     occurrence_type?: string;
   }): Promise<DailyOccurrenceRecord[]> {
     let query = supabase
@@ -32,7 +32,7 @@ export const occurrenceService = {
         query = query.ilike('student_name', `%${filters.student_name}%`);
       }
       if (filters.school_year) {
-        query = query.eq('school_year', filters.school_year);
+        query = query.ilike('school_year', `%${filters.school_year}%`);
       }
       if (filters.occurrence_type) {
         query = query.eq('occurrence_type', filters.occurrence_type);

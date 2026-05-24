@@ -25,21 +25,14 @@ export function Occurrences() {
   // Registration Form State
   const [studentName, setStudentName] = useState('');
   const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const [schoolYear, setSchoolYear] = useState<number | ''>('');
+  const [schoolYear, setSchoolYear] = useState('');
   const [occurrenceType, setOccurrenceType] = useState(TIPOS_OCORRENCIA[0]);
   const [report, setReport] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
   // Report Export Filter
-  const [reportFilterYear, setReportFilterYear] = useState<number | ''>('');
-
-  // Extract year function
-  const extractYear = (anoStr: string) => {
-    if (!anoStr) return '';
-    const match = anoStr.match(/\d+/);
-    return match ? Number(match[0]) : '';
-  };
+  const [reportFilterYear, setReportFilterYear] = useState('');
 
   const filteredStudents = useMemo(() => {
     if (!studentName) return alunos.slice(0, 5);
@@ -49,8 +42,7 @@ export function Occurrences() {
 
   const handleSelectStudent = (aluno: any) => {
     setStudentName(aluno.nome);
-    const anoNum = extractYear(aluno.ano);
-    if (anoNum) setSchoolYear(anoNum);
+    setSchoolYear(aluno.ano || '');
     setShowAutocomplete(false);
   };
 
@@ -58,7 +50,7 @@ export function Occurrences() {
   const [records, setRecords] = useState<DailyOccurrenceRecord[]>([]);
   const [isLoadingRecords, setIsLoadingRecords] = useState(false);
   const [searchName, setSearchName] = useState('');
-  const [filterYear, setFilterYear] = useState<number | ''>('');
+  const [filterYear, setFilterYear] = useState('');
   const [filterType, setFilterType] = useState('');
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -69,7 +61,7 @@ export function Occurrences() {
     try {
       await occurrenceService.createRecord({
         student_name: studentName,
-        school_year: Number(schoolYear),
+        school_year: schoolYear,
         occurrence_type: occurrenceType,
         report
       });
@@ -95,7 +87,7 @@ export function Occurrences() {
     try {
       const data = await occurrenceService.fetchRecords({
         student_name: searchName || undefined,
-        school_year: filterYear ? Number(filterYear) : undefined,
+        school_year: filterYear || undefined,
         occurrence_type: filterType || undefined
       });
       setRecords(data);
@@ -114,14 +106,14 @@ export function Occurrences() {
 
   const handleGeneratePDF = async () => {
     const dataToExport = reportFilterYear 
-      ? records.filter(r => r.school_year === Number(reportFilterYear))
+      ? records.filter(r => r.school_year?.toLowerCase().includes(reportFilterYear.toLowerCase()))
       : records;
     await generateOccurrencesPDF(dataToExport);
   };
 
   const handleGenerateExcel = () => {
     const dataToExport = reportFilterYear 
-      ? records.filter(r => r.school_year === Number(reportFilterYear))
+      ? records.filter(r => r.school_year?.toLowerCase().includes(reportFilterYear.toLowerCase()))
       : records;
     generateOccurrencesExcel(dataToExport);
   };
@@ -246,12 +238,12 @@ export function Occurrences() {
                         <Calendar className="h-5 w-5 text-slate-400" />
                       </div>
                       <input
-                        type="number"
+                        type="text"
                         required
                         value={schoolYear}
-                        onChange={(e) => setSchoolYear(e.target.value === '' ? '' : Number(e.target.value))}
+                        onChange={(e) => setSchoolYear(e.target.value)}
                         className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
-                        placeholder="Ex: 6 (Para 6º Ano)"
+                        placeholder="Ex: 2º ano ensino médio"
                       />
                     </div>
                   </div>
@@ -318,10 +310,10 @@ export function Occurrences() {
                 <div className="w-full md:w-32 space-y-2">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Ano</label>
                   <input
-                    type="number"
+                    type="text"
                     value={filterYear}
-                    onChange={(e) => setFilterYear(e.target.value === '' ? '' : Number(e.target.value))}
-                    placeholder="Ex: 6"
+                    onChange={(e) => setFilterYear(e.target.value)}
+                    placeholder="Ex: 6º ano"
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
                   />
                 </div>
@@ -413,16 +405,16 @@ export function Occurrences() {
                 <div className="w-full sm:w-64 space-y-2">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Filtrar exportação por Ano</label>
                   <input
-                    type="number"
+                    type="text"
                     value={reportFilterYear}
-                    onChange={(e) => setReportFilterYear(e.target.value === '' ? '' : Number(e.target.value))}
-                    placeholder="Ex: 6 (Para 6º Ano)"
+                    onChange={(e) => setReportFilterYear(e.target.value)}
+                    placeholder="Ex: 6º ano"
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
                   />
                 </div>
                 <div className="text-sm text-slate-500 dark:text-slate-400 mt-2 sm:mt-6">
                   {reportFilterYear 
-                    ? `Exportando apenas registros do ${reportFilterYear}º Ano (${records.filter(r => r.school_year === Number(reportFilterYear)).length} encontrados).`
+                    ? `Exportando apenas registros filtrados por "${reportFilterYear}" (${records.filter(r => r.school_year?.toLowerCase().includes(reportFilterYear.toLowerCase())).length} encontrados).`
                     : `Exportando todos os registros da base.`}
                 </div>
               </div>
@@ -438,7 +430,7 @@ export function Occurrences() {
                   </p>
                   <button
                     onClick={handleGeneratePDF}
-                    disabled={reportFilterYear ? records.filter(r => r.school_year === Number(reportFilterYear)).length === 0 : records.length === 0}
+                    disabled={reportFilterYear ? records.filter(r => r.school_year?.toLowerCase().includes(reportFilterYear.toLowerCase())).length === 0 : records.length === 0}
                     className="w-full sm:w-auto justify-center bg-white text-blue-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
                   >
                     <FileText className="w-5 h-5" />
@@ -456,7 +448,7 @@ export function Occurrences() {
                   </p>
                   <button
                     onClick={handleGenerateExcel}
-                    disabled={reportFilterYear ? records.filter(r => r.school_year === Number(reportFilterYear)).length === 0 : records.length === 0}
+                    disabled={reportFilterYear ? records.filter(r => r.school_year?.toLowerCase().includes(reportFilterYear.toLowerCase())).length === 0 : records.length === 0}
                     className="w-full sm:w-auto justify-center bg-white text-emerald-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
                   >
                     <FileSpreadsheet className="w-5 h-5" />
