@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2, Copy, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { occurrenceService } from '../services/occurrenceService';
-import { generateOccurrencesPDF, generateOccurrencesExcel } from '../lib/reportGenerator';
+import { generateOccurrencesPDF, generateOccurrencesExcel, generateSingleOccurrencePDF } from '../lib/reportGenerator';
 import { useEscola } from '../context/ContextoEscola';
 import { useAuth } from '../context/AuthContext';
 import type { DailyOccurrenceRecord } from '../types';
@@ -665,48 +665,12 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
       {/* Modal de Detalhe da Ocorrência estilo Documento Oficial */}
       <AnimatePresence>
         {selectedRecord && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto print-modal-container">
-            {/* Custom media queries to force perfect print */}
-            <style dangerouslySetInnerHTML={{__html: `
-              @media print {
-                body {
-                  background: white !important;
-                  color: black !important;
-                }
-                /* Hide main app elements */
-                header, nav, aside, footer, button, .print\\:hidden, #root > div:not(.print-modal-container) {
-                  display: none !important;
-                }
-                .print-modal-container {
-                  position: absolute !important;
-                  left: 0 !important;
-                  top: 0 !important;
-                  width: 100% !important;
-                  height: auto !important;
-                  background: white !important;
-                  padding: 0 !important;
-                }
-                .print-card-content {
-                  box-shadow: none !important;
-                  border: none !important;
-                  margin: 0 !important;
-                  padding: 0 !important;
-                  width: 100% !important;
-                  max-width: 100% !important;
-                  border-radius: 0 !important;
-                }
-                * {
-                  -webkit-print-color-adjust: exact !important;
-                  print-color-adjust: exact !important;
-                }
-              }
-            `}} />
-
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-3xl bg-white text-slate-900 rounded-[2rem] overflow-hidden shadow-2xl my-8 print:my-0 print:rounded-none print-card-content border border-slate-200"
+              className="relative w-full max-w-3xl bg-white text-slate-900 rounded-[2rem] overflow-hidden shadow-2xl my-8 border border-slate-200"
             >
               {/* Header Oficial do Colégio Sesi */}
               <div className="relative w-full h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-8 select-none">
@@ -735,11 +699,11 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
               </div>
 
               {/* Botão Fechar / Ações no Topo (Oculto na Impressão) */}
-              <div className="absolute top-4 right-4 z-20 flex gap-2 print:hidden">
+              <div className="absolute top-4 right-4 z-20 flex gap-2">
                 <button 
-                  onClick={() => window.print()}
+                  onClick={() => generateSingleOccurrencePDF(selectedRecord)}
                   className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-sm cursor-pointer"
-                  title="Imprimir Documento"
+                  title="Baixar Documento PDF"
                 >
                   <Download className="w-[18px] h-[18px]" />
                 </button>

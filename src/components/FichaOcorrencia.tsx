@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { RegistroOcorrencia } from '../types';
 import { Printer, X, User, ClipboardList, MapPin, CheckSquare, Square, Plus, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { generateFichaOcorrenciaPDF } from '../lib/reportGenerator';
 
 interface Props {
   ocorrencia: RegistroOcorrencia;
@@ -40,8 +41,8 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
     setAssinaturasExtras(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    await generateFichaOcorrenciaPDF(ocorrencia, configAssinaturas, assinaturasExtras);
   };
 
   const content = (
@@ -229,15 +230,10 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
           </div>
 
           {/* Área de Impressão (Direita) */}
-          <div id="printable-occurrence" className="flex-1 overflow-y-auto bg-white print:overflow-visible custom-scrollbar relative flex flex-col">
+          <div id="printable-occurrence" className="flex-1 overflow-y-auto bg-white custom-scrollbar relative flex flex-col">
             
-            {/* Header Oficial do Sesi */}
-            <div className="relative w-full h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-8 select-none print:flex">
-              <div className="absolute top-0 left-0 w-[300px] h-full pointer-events-none">
-                <div className="absolute top-0 left-0 w-[200px] h-[120px] bg-[#e2e8f0]" style={{ clipPath: 'polygon(0 0, 100% 0, 70% 100%, 0 80%)' }} />
-                <div className="absolute top-0 left-0 w-[160px] h-[100px] bg-[#cbd5e1] opacity-40" style={{ clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0 60%)' }} />
-                <div className="absolute top-[20px] left-0 w-[40px] h-[100px] bg-[#fbbf24]" style={{ clipPath: 'polygon(0 0, 100% 30%, 80% 90%, 0 100%)' }} />
-              </div>
+            {/* Header Oficial (Simples para visualização, o PDF real terá o papel timbrado) */}
+            <div className="relative w-full py-8 bg-white border-b-4 border-[#0c2340] flex items-center justify-between px-8 select-none">
               <div className="flex-1" />
               <div className="relative z-10 select-none scale-105">
                 <div className="flex flex-col items-end mr-4">
@@ -258,7 +254,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
               </div>
             </div>
 
-            <div className="flex-1 px-12 md:px-20 pt-12 pb-20 print:pt-12 print:px-16 space-y-10">
+            <div className="flex-1 px-12 md:px-20 pt-12 pb-20 space-y-10">
                {/* Cabeçalho do Documento - Alocado de maneira inteligente */}
                <div className="space-y-1.5 text-sm text-[#0c2340] font-medium border-b border-gray-200 pb-6">
                  <p><span className="font-bold mr-2">Nome do Aluno:</span> {ocorrencia.nomeAluno}</p>
