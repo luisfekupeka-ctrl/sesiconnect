@@ -1,6 +1,5 @@
-// Modulo de Registro de Ocorrencias Diárias
 import React, { useState, useEffect, useMemo } from 'react';
-import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2 } from 'lucide-react';
+import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { occurrenceService } from '../services/occurrenceService';
 import { generateOccurrencesPDF, generateOccurrencesExcel } from '../lib/reportGenerator';
@@ -57,6 +56,13 @@ export function Occurrences() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedRecord, setSelectedRecord] = useState<DailyOccurrenceRecord | null>(null);
+  const [emissorName, setEmissorName] = useState('');
+
+  useEffect(() => {
+    if (profile?.nome) {
+      setEmissorName(profile.nome);
+    }
+  }, [profile]);
 
   // Dynamic field config
   const getDynamicField = (type: string) => {
@@ -158,6 +164,39 @@ export function Occurrences() {
       ? records.filter(r => r.school_year?.toLowerCase().includes(reportFilterYear.toLowerCase()))
       : records;
     await generateOccurrencesPDF(dataToExport);
+  };
+
+  const getUniformMessage = () => {
+    if (dynamicValue) {
+      return `Prezados responsáveis pelo(a) aluno(a) ${studentName || '[NOME DO ALUNO]'}, do ${schoolYear || '[ANO/TURMA]'},
+
+Informamos que o(a) estudante compareceu à unidade escolar sem o uso completo do uniforme.
+
+Item não utilizado: ${dynamicValue}
+
+Solicitamos a colaboração da família para regularização da situação nos próximos dias, conforme as orientações e normas institucionais da escola.
+
+Permanecemos à disposição em caso de dúvidas.
+
+Atenciosamente,
+${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
+    } else {
+      return `Prezados responsáveis pelo(a) aluno(a) ${studentName || '[NOME DO ALUNO]'}, do ${schoolYear || '[ANO/TURMA]'},
+
+Informamos que o(a) estudante compareceu à unidade escolar sem o uso completo do uniforme, em desacordo com as orientações e normas institucionais do colégio.
+
+Solicitamos a colaboração da família para que o uniforme seja utilizado de forma completa e adequada nos próximos dias, contribuindo para a organização, identificação e segurança no ambiente escolar.
+
+Em caso de dúvidas, permanecemos à disposição.
+
+Atenciosamente,
+${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
+    }
+  };
+
+  const copyUniformMessage = () => {
+    navigator.clipboard.writeText(getUniformMessage());
+    alert('Mensagem copiada para a área de transferência!');
   };
 
   const handleGenerateExcel = () => {
@@ -301,24 +340,43 @@ export function Occurrences() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Tipo de Ocorrência</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Tag className="h-5 w-5 text-slate-400" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Tipo de Ocorrência</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Tag className="h-5 w-5 text-slate-400" />
+                      </div>
+                      <select
+                        value={occurrenceType}
+                        onChange={(e) => {
+                          setOccurrenceType(e.target.value);
+                          setDynamicValue('');
+                        }}
+                        className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
+                      >
+                        {TIPOS_OCORRENCIA.map(tipo => (
+                          <option key={tipo} value={tipo}>{tipo}</option>
+                        ))}
+                      </select>
                     </div>
-                    <select
-                      value={occurrenceType}
-                      onChange={(e) => {
-                        setOccurrenceType(e.target.value);
-                        setDynamicValue('');
-                      }}
-                      className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
-                    >
-                      {TIPOS_OCORRENCIA.map(tipo => (
-                        <option key={tipo} value={tipo}>{tipo}</option>
-                      ))}
-                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Seu Nome (Responsável pelo Registro)</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <User className="h-5 w-5 text-slate-400" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={emissorName}
+                        onChange={(e) => setEmissorName(e.target.value)}
+                        placeholder="Ex: Prof. João"
+                        className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -362,6 +420,32 @@ export function Occurrences() {
                     Registrar Ocorrência
                   </button>
                 </div>
+
+                {occurrenceType === 'Sem uniforme' && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }} 
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-6 p-4 md:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                      <h3 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-blue-500" />
+                        Mensagem para os Responsáveis
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={copyUniformMessage}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors shadow-sm"
+                      >
+                        <Copy className="w-4 h-4" />
+                        Copiar Mensagem
+                      </button>
+                    </div>
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm text-slate-600 dark:text-slate-400 whitespace-pre-line font-medium leading-relaxed">
+                      {getUniformMessage()}
+                    </div>
+                  </motion.div>
+                )}
               </form>
             </div>
           )}
