@@ -1,3 +1,4 @@
+// Modulo de Registro de Ocorrencias Diárias
 import React, { useState, useEffect, useMemo } from 'react';
 import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -479,6 +480,7 @@ export function Occurrences() {
                   </div>
                 </div>
               </div>
+            </div>
             </div>
           )}
         </motion.div>
