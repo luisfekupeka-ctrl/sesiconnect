@@ -9,6 +9,7 @@ import {
   salvarModeloFormulario, 
   excluirModeloFormulario 
 } from '../services/dataService';
+import { generateOccurrencesPDF, generateOccurrencesExcel } from '../lib/reportGenerator';
 
 // === Componente de Autopreenchimento de Aluno ===
 function AutocompleteAluno({
@@ -182,6 +183,28 @@ export default function FormsPage() {
   const alunosOrdenados: [string, number][] = Object.entries(alunosRecorrentes)
     .sort((a, b) => (Number(b[1]) || 0) - (Number(a[1]) || 0))
     .slice(0, 5);
+
+  const handleGeneratePDF = async () => {
+    const dataToExport = ocorrenciasFiltradas.map(oc => ({
+      student_name: oc.nomeAluno || 'Desconhecido',
+      school_year: oc.anoAluno || 'Não informado',
+      occurrence_type: oc.nomeModelo || 'Ata',
+      report: Object.entries(oc.dados || {}).map(([k, v]) => `[${k}]: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n'),
+      created_at: oc.criadoEm
+    }));
+    await generateOccurrencesPDF(dataToExport);
+  };
+
+  const handleGenerateExcel = () => {
+    const dataToExport = ocorrenciasFiltradas.map(oc => ({
+      student_name: oc.nomeAluno || 'Desconhecido',
+      school_year: oc.anoAluno || 'Não informado',
+      occurrence_type: oc.nomeModelo || 'Ata',
+      report: Object.entries(oc.dados || {}).map(([k, v]) => `[${k}]: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n'),
+      created_at: oc.criadoEm
+    }));
+    generateOccurrencesExcel(dataToExport);
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-5xl mx-auto space-y-10">
@@ -439,11 +462,49 @@ export default function FormsPage() {
               <CardResumoMini titulo="Top Evento" valor={Object.entries(contagemPorTipo).sort((a,b)=>b[1]-a[1])[0]?.[1] || 0} subtitulo={Object.entries(contagemPorTipo).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—'} cor="indigo" icone={BarChart3} />
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-8 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">
+                  <Download className="w-32 h-32" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2">Exportar em PDF</h3>
+                <p className="text-blue-100 mb-8 max-w-sm">
+                  Gere um documento formatado com o layout oficial para arquivamento ou envio. O arquivo é gerado dinamicamente e descartado após o download.
+                </p>
+                <button
+                  onClick={handleGeneratePDF}
+                  disabled={ocorrenciasFiltradas.length === 0}
+                  className="w-full sm:w-auto justify-center bg-white text-blue-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <FileText className="w-5 h-5" />
+                  Gerar Relatório PDF
+                </button>
+              </div>
+
+              <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-8 text-white shadow-lg shadow-emerald-500/20 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-500">
+                  <FileSpreadsheet className="w-32 h-32" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2">Exportar Planilha</h3>
+                <p className="text-emerald-100 mb-8 max-w-sm">
+                  Exporte os dados em formato tabular (Excel/CSV) para análises avançadas, criação de gráficos ou integração com outros sistemas.
+                </p>
+                <button
+                  onClick={handleGenerateExcel}
+                  disabled={ocorrenciasFiltradas.length === 0}
+                  className="w-full sm:w-auto justify-center bg-white text-emerald-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <FileSpreadsheet className="w-5 h-5" />
+                  Gerar Planilha (XLSX)
+                </button>
+              </div>
+            </div>
+
             <div className="bg-surface-container-lowest rounded-[2.5rem] editorial-shadow overflow-hidden">
                 <div className="p-4 md:p-6 border-b flex items-center justify-between">
                     <h3 className="font-black">Eventos Recentes</h3>
                     <div className="flex gap-2">
-                      {ocorrenciasFiltradas.length > 0 && <button className="btn-mini"><Download size={12}/> XLS</button>}
+                      {ocorrenciasFiltradas.length > 0 && <button onClick={handleGenerateExcel} className="btn-mini"><Download size={12}/> XLS</button>}
                     </div>
                 </div>
                 <div className="max-h-96 overflow-y-auto">
