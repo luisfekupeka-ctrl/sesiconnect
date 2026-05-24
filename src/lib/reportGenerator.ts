@@ -320,26 +320,66 @@ export const generateBackupZip = async (ocorrencias: RegistroOcorrencia[], mes: 
 };
 
 export const generateSingleOccurrencePDF = async (record: DailyOccurrenceRecord) => {
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
   try {
-    const ocorrencia = {
-      nomeAluno: record.student_name,
-      anoAluno: record.school_year,
-      dataOcorrencia: record.created_at || new Date().toISOString(),
-      nomeModelo: record.occurrence_type,
-      relato: record.report,
-      dados: {}
-    };
+    const bgBase64 = await loadImageAsBase64(papelTimbradoImg);
 
-    const configAssinaturas = {
-      mostrarAluno: true,
-      mostrarResponsavel: true,
-      mostrarEmissor: true,
-      nomeEmissor: 'Administração',
-      nomeAluno: record.student_name,
-      nomeResponsavel: ''
-    };
+    // Add background to the first page
+    doc.addImage(bgBase64, 'PNG', 0, 0, pageWidth, pageHeight);
+    
+    let currentY = 50;
 
-    const doc = await buildFichaOcorrenciaDoc(ocorrencia, configAssinaturas, []);
+    doc.setFontSize(16);
+    doc.text('Relatório Diário de Ocorrências', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 10;
+
+    // Robust date parsing to avoid timezone bugs
+    const rawDate = record.created_at || new Date().toISOString();
+    let dateStr = rawDate;
+    try {
+      const dt = new Date(rawDate);
+      if (!isNaN(dt.getTime())) {
+        const useUTC = !rawDate.includes('T') && !rawDate.includes(' ');
+        dateStr = dt.toLocaleDateString('pt-BR', useUTC ? { timeZone: 'UTC' } : undefined);
+      }
+    } catch (e) {
+      dateStr = rawDate;
+    }
+
+    const tableData = [
+      [
+        dateStr,
+        record.student_name,
+        record.school_year.toString(),
+        record.occurrence_type,
+        record.report
+      ]
+    ];
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Data', 'Aluno', 'Ano', 'Tipo', 'Relato']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [59, 130, 246] }, // Tailwind blue-500 approx
+      styles: { fontSize: 10 },
+      columnStyles: {
+        0: { cellWidth: 25 },
+        1: { cellWidth: 40 },
+        2: { cellWidth: 15 },
+        3: { cellWidth: 35 },
+        4: { cellWidth: 'auto' }
+      },
+      didDrawPage: (data) => {
+        if (data.pageNumber > 1) {
+          doc.addImage(bgBase64, 'PNG', 0, 0, pageWidth, pageHeight);
+        }
+      }
+    });
+
     doc.save(`Ocorrencia_${record.student_name.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`);
   } catch (error) {
     console.error('Error generating PDF:', error);
