@@ -19,6 +19,7 @@ import ChamadaProfessor from './pages/ChamadaProfessor';
 import ControleFaltas from './pages/ControleFaltas';
 import GestaoRealocacao from './pages/GestaoRealocacao';
 import RelatorioDiario from './pages/RelatorioDiario';
+import { Occurrences } from './pages/Occurrences';
 
 // Componente de Proteção de Rota
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode; requiredRole?: string }) {
@@ -71,6 +72,7 @@ export default function App() {
               <Route path="/after" element={<AfterSchool />} />
               <Route path="/monitores" element={<Monitores />} />
               <Route path="/relatorio-diario" element={<RelatorioDiario />} />
+              <Route path="/ocorrencias" element={<Occurrences />} />
               
               {/* Áreas que exigem Login/Role ADMIN */}
               <Route path="/forms" element={<ProtectedRoute requiredRole="admin"><FormsPage /></ProtectedRoute>} />

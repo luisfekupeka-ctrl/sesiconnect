@@ -1,0 +1,409 @@
+import React, { useState, useEffect } from 'react';
+import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { occurrenceService } from '../services/occurrenceService';
+import { generateOccurrencesPDF, generateOccurrencesExcel } from '../lib/reportGenerator';
+import type { DailyOccurrenceRecord } from '../types';
+
+const TIPOS_OCORRENCIA = [
+  'Atraso',
+  'Sem uniforme',
+  'Indisciplina em sala',
+  'Uso indevido de celular',
+  'Falta de material',
+  'Agressão verbal',
+  'Agressão física',
+  'Outros'
+];
+
+export function Occurrences() {
+  const [activeTab, setActiveTab] = useState<'registro' | 'consulta' | 'relatorios'>('registro');
+  
+  // Registration Form State
+  const [studentName, setStudentName] = useState('');
+  const [schoolYear, setSchoolYear] = useState<number | ''>('');
+  const [occurrenceType, setOccurrenceType] = useState(TIPOS_OCORRENCIA[0]);
+  const [report, setReport] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // Consultation State
+  const [records, setRecords] = useState<DailyOccurrenceRecord[]>([]);
+  const [isLoadingRecords, setIsLoadingRecords] = useState(false);
+  const [searchName, setSearchName] = useState('');
+  const [filterYear, setFilterYear] = useState<number | ''>('');
+  const [filterType, setFilterType] = useState('');
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!studentName || !schoolYear || !occurrenceType || !report) return;
+
+    setIsSubmitting(true);
+    try {
+      await occurrenceService.createRecord({
+        student_name: studentName,
+        school_year: Number(schoolYear),
+        occurrence_type: occurrenceType,
+        report
+      });
+      setSuccessMessage('Ocorrência registrada com sucesso!');
+      setStudentName('');
+      setSchoolYear('');
+      setOccurrenceType(TIPOS_OCORRENCIA[0]);
+      setReport('');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      
+      // Auto-refresh records if we go to consultation tab
+      fetchRecords();
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao registrar ocorrência.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const fetchRecords = async () => {
+    setIsLoadingRecords(true);
+    try {
+      const data = await occurrenceService.fetchRecords({
+        student_name: searchName || undefined,
+        school_year: filterYear ? Number(filterYear) : undefined,
+        occurrence_type: filterType || undefined
+      });
+      setRecords(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoadingRecords(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'consulta' || activeTab === 'relatorios') {
+      fetchRecords();
+    }
+  }, [activeTab]);
+
+  const handleGeneratePDF = async () => {
+    // Busca dados com os filtros atuais (ou pega todos se não houver filtro)
+    await generateOccurrencesPDF(records);
+  };
+
+  const handleGenerateExcel = () => {
+    generateOccurrencesExcel(records);
+  };
+
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto pb-12">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
+            <FileText className="w-8 h-8 text-blue-600 dark:text-blue-500" />
+            Registro Diário de Ocorrências
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">
+            Módulo operacional leve para controle diário de alunos.
+          </p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex space-x-1 p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl w-full max-w-md backdrop-blur-sm border border-slate-200 dark:border-slate-700/50">
+        {[
+          { id: 'registro', label: 'Registro', icon: PlusCircle },
+          { id: 'consulta', label: 'Consulta', icon: Search },
+          { id: 'relatorios', label: 'Relatórios', icon: FileSpreadsheet }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === tab.id
+                ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50'
+            }`}
+          >
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+        >
+          {/* TAB: REGISTRO */}
+          {activeTab === 'registro' && (
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+              
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                <PlusCircle className="w-5 h-5 text-blue-500" />
+                Nova Ocorrência
+              </h2>
+
+              {successMessage && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="mb-6 p-4 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 rounded-xl flex items-center gap-3 border border-emerald-200 dark:border-emerald-500/20"
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  {successMessage}
+                </motion.div>
+              )}
+
+              <form onSubmit={handleRegister} className="space-y-6 relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Nome do Aluno</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <User className="h-5 w-5 text-slate-400" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={studentName}
+                        onChange={(e) => setStudentName(e.target.value)}
+                        className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                        placeholder="Ex: João Silva"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Ano Letivo</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Calendar className="h-5 w-5 text-slate-400" />
+                      </div>
+                      <input
+                        type="number"
+                        required
+                        value={schoolYear}
+                        onChange={(e) => setSchoolYear(e.target.value === '' ? '' : Number(e.target.value))}
+                        className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                        placeholder="Ex: 2026"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Tipo de Ocorrência</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Tag className="h-5 w-5 text-slate-400" />
+                    </div>
+                    <select
+                      value={occurrenceType}
+                      onChange={(e) => setOccurrenceType(e.target.value)}
+                      className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
+                    >
+                      {TIPOS_OCORRENCIA.map(tipo => (
+                        <option key={tipo} value={tipo}>{tipo}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Relato Completo</label>
+                  <textarea
+                    required
+                    value={report}
+                    onChange={(e) => setReport(e.target.value)}
+                    rows={4}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white resize-none"
+                    placeholder="Descreva o que aconteceu em detalhes..."
+                  />
+                </div>
+
+                <div className="pt-4">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <PlusCircle className="w-5 h-5" />}
+                    Registrar Ocorrência
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* TAB: CONSULTA */}
+          {activeTab === 'consulta' && (
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row gap-4 items-end">
+                <div className="flex-1 space-y-2 w-full">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Buscar Aluno</label>
+                  <input
+                    type="text"
+                    value={searchName}
+                    onChange={(e) => setSearchName(e.target.value)}
+                    placeholder="Nome do aluno..."
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                  />
+                </div>
+                <div className="w-full md:w-32 space-y-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Ano</label>
+                  <input
+                    type="number"
+                    value={filterYear}
+                    onChange={(e) => setFilterYear(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="Ex: 2026"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                  />
+                </div>
+                <div className="w-full md:w-48 space-y-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Tipo</label>
+                  <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                  >
+                    <option value="">Todos</option>
+                    {TIPOS_OCORRENCIA.map(tipo => (
+                      <option key={tipo} value={tipo}>{tipo}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  onClick={fetchRecords}
+                  className="w-full md:w-auto px-6 py-2.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-medium hover:bg-slate-800 dark:hover:bg-white transition-all shadow-md flex items-center justify-center gap-2"
+                >
+                  <Search className="w-4 h-4" />
+                  Filtrar
+                </button>
+              </div>
+
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm text-slate-600 dark:text-slate-400">
+                    <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
+                      <tr>
+                        <th className="px-6 py-4 font-medium">Data</th>
+                        <th className="px-6 py-4 font-medium">Aluno</th>
+                        <th className="px-6 py-4 font-medium">Ano Letivo</th>
+                        <th className="px-6 py-4 font-medium">Tipo</th>
+                        <th className="px-6 py-4 font-medium">Relato</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                      {isLoadingRecords ? (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-500" />
+                            Carregando registros...
+                          </td>
+                        </tr>
+                      ) : records.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                            Nenhum registro encontrado.
+                          </td>
+                        </tr>
+                      ) : (
+                        records.map((record) => (
+                          <tr key={record.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap text-slate-900 dark:text-slate-200">
+                              {new Date(record.created_at || '').toLocaleDateString('pt-BR')}
+                            </td>
+                            <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">
+                              {record.student_name}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-700 rounded-md text-xs font-medium">
+                                {record.school_year}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="px-2.5 py-1 bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded-md text-xs font-medium border border-amber-200 dark:border-amber-500/20">
+                                {record.occurrence_type}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 max-w-xs truncate" title={record.report}>
+                              {record.report}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: RELATÓRIOS */}
+          {activeTab === 'relatorios' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-8 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">
+                  <Download className="w-32 h-32" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2">Exportar em PDF</h3>
+                <p className="text-blue-100 mb-8 max-w-sm">
+                  Gere um documento formatado com o layout oficial para arquivamento ou envio. O arquivo é gerado dinamicamente e descartado após o download.
+                </p>
+                <button
+                  onClick={handleGeneratePDF}
+                  disabled={records.length === 0}
+                  className="bg-white text-blue-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <FileText className="w-5 h-5" />
+                  Gerar Relatório PDF
+                </button>
+              </div>
+
+              <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-8 text-white shadow-lg shadow-emerald-500/20 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-500">
+                  <FileSpreadsheet className="w-32 h-32" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2">Exportar Planilha</h3>
+                <p className="text-emerald-100 mb-8 max-w-sm">
+                  Exporte os dados em formato tabular (Excel/CSV) para análises avançadas, criação de gráficos ou integração com outros sistemas.
+                </p>
+                <button
+                  onClick={handleGenerateExcel}
+                  disabled={records.length === 0}
+                  className="bg-white text-emerald-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <FileSpreadsheet className="w-5 h-5" />
+                  Gerar Planilha (XLSX)
+                </button>
+              </div>
+              
+              <div className="col-span-1 md:col-span-2 bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm mt-4">
+                <h3 className="text-lg font-semibold mb-4 text-slate-800 dark:text-slate-200">Panorama Geral</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Total de Registros</p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-white">{records.length}</p>
+                  </div>
+                  {/* You can add more stats here, like occurrences today, etc. */}
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Registros Hoje</p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                      {records.filter(r => new Date(r.created_at || '').toLocaleDateString() === new Date().toLocaleDateString()).length}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+}

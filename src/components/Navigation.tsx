@@ -21,6 +21,7 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean; setIsOpen?: (
     { to: '/language-lab', icon: Languages, label: 'Idioma' },
     { to: '/after', icon: Sparkles, label: 'After School' },
     { to: '/forms', icon: FileText, label: 'Ocorrências', protected: true },
+    { to: '/ocorrencias', icon: ClipboardCheck, label: 'Reg. Diário', protected: true },
     { to: '/controle-faltas', icon: ClipboardCheck, label: 'Chamadas', protected: true },
     { to: '/realocacao', icon: RefreshCw, label: 'Realocação', protected: true },
   ];

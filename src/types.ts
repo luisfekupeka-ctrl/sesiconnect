@@ -45,7 +45,7 @@ export interface EstadoSalaAoVivo {
 
 // --- Grade de Salas (base do sistema) ---
 
-export type TipoBloco = 'regular' | 'laboratorio_idiomas' | 'after' | 'almoco' | 'permanencia';
+export type TipoBloco = 'regular' | 'laboratorio_idiomas' | 'after' | 'almoco' | 'permanencia' | 'language_lab' | 'after_school';
 
 export interface EntradaGradeSala {
   id: string;
@@ -272,3 +272,15 @@ export interface ResultadoRealocacao {
   status?: StatusEvento;
   dia?: string;
 }
+
+// --- Registro Diário de Ocorrências ---
+
+export interface DailyOccurrenceRecord {
+  id?: string;
+  student_name: string;
+  school_year: number;
+  occurrence_type: string;
+  report: string;
+  created_at?: string;
+}
+
