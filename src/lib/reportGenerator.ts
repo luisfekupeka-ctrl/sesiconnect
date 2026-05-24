@@ -301,91 +301,26 @@ export const generateBackupZip = async (ocorrencias: RegistroOcorrencia[], mes: 
 };
 
 export const generateSingleOccurrencePDF = async (record: DailyOccurrenceRecord) => {
-  const doc = new jsPDF('p', 'mm', 'a4');
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-
   try {
-    const bgBase64 = await loadImageAsBase64(papelTimbradoImg);
-    doc.addImage(bgBase64, 'PNG', 0, 0, pageWidth, pageHeight);
+    const ocorrencia = {
+      nomeAluno: record.student_name,
+      anoAluno: record.school_year,
+      dataOcorrencia: record.created_at || new Date().toISOString(),
+      nomeModelo: record.occurrence_type,
+      relato: record.report,
+      dados: {}
+    };
 
-    const marginX = 25;
-    let currentY = 55;
+    const configAssinaturas = {
+      mostrarAluno: true,
+      mostrarResponsavel: true,
+      mostrarEmissor: true,
+      nomeEmissor: 'Administração',
+      nomeAluno: record.student_name,
+      nomeResponsavel: ''
+    };
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text('Nome do Aluno:', marginX, currentY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(record.student_name, marginX + 35, currentY);
-    
-    currentY += 8;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Ano Letivo:', marginX, currentY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(record.school_year.toString(), marginX + 25, currentY);
-
-    currentY += 8;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Data:', marginX, currentY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(new Date(record.created_at || '').toLocaleDateString('pt-BR'), marginX + 12, currentY);
-
-    currentY += 15;
-    doc.setDrawColor(220, 220, 220);
-    doc.line(marginX, currentY, pageWidth - marginX, currentY);
-    
-    currentY += 15;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.setTextColor(12, 35, 64); // #0c2340
-    doc.text('REGISTRO DE OCORRÊNCIA', marginX, currentY);
-    
-    currentY += 8;
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    doc.text(record.occurrence_type.toUpperCase(), marginX, currentY);
-    
-    currentY += 15;
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    doc.setFont('helvetica', 'bold');
-    doc.text('DESCRIÇÃO', marginX, currentY);
-    
-    currentY += 6;
-    doc.setFont('helvetica', 'normal');
-    const splitText = doc.splitTextToSize(record.report, pageWidth - marginX * 2);
-    doc.text(splitText, marginX, currentY);
-    
-    // Signatures
-    const sigY = pageHeight - 50;
-    doc.setDrawColor(0, 0, 0);
-    
-    // Aluno
-    doc.line(marginX, sigY, marginX + 60, sigY);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text('ASSINATURA DO ALUNO', marginX + 30, sigY + 5, { align: 'center' });
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(150, 150, 150);
-    doc.text(record.student_name.toUpperCase(), marginX + 30, sigY + 10, { align: 'center' });
-
-    // Responsavel
-    doc.setDrawColor(0, 0, 0);
-    doc.setTextColor(0, 0, 0);
-    doc.line(pageWidth - marginX - 60, sigY, pageWidth - marginX, sigY);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text('ASSINATURA DO RESPONSÁVEL', pageWidth - marginX - 30, sigY + 5, { align: 'center' });
-
-    // Professor/Coordenacao
-    const sigY2 = pageHeight - 25;
-    const centerLineX = pageWidth / 2;
-    doc.line(centerLineX - 45, sigY2, centerLineX + 45, sigY2);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text('PROFESSOR / COORDENAÇÃO', centerLineX, sigY2 + 5, { align: 'center' });
-
+    const doc = await buildFichaOcorrenciaDoc(ocorrencia, configAssinaturas, []);
     doc.save(`Ocorrencia_${record.student_name.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`);
   } catch (error) {
     console.error('Error generating PDF:', error);
