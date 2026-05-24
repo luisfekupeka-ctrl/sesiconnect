@@ -155,7 +155,13 @@ export function Occurrences() {
         : {
             student_name: searchName || undefined,
             school_year: filterYear || undefined,
-            occurrence_type: filterType || undefined
+            occurrence_type: filterType || undefined,
+            date: (() => {
+              // Get today's date in local time (YYYY-MM-DD)
+              const today = new Date();
+              today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+              return today.toISOString().split('T')[0];
+            })()
           };
 
       const data = await occurrenceService.fetchRecords(params);
@@ -166,12 +172,6 @@ export function Occurrences() {
       setIsLoadingRecords(false);
     }
   };
-
-  useEffect(() => {
-    if (activeTab === 'consulta' && !searchName && !filterYear && !filterType) {
-      setRecords([]);
-    }
-  }, [searchName, filterYear, filterType, activeTab]);
 
   useEffect(() => {
     if (activeTab === 'consulta' || activeTab === 'relatorios') {
@@ -548,6 +548,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                         <th className="px-6 py-4 font-medium">Ano Letivo</th>
                         <th className="px-6 py-4 font-medium">Tipo</th>
                         <th className="px-6 py-4 font-medium">Relato</th>
+                        {isAdmin && <th className="px-6 py-4 font-medium text-right">Ações</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
@@ -560,7 +561,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                         </tr>
                       ) : records.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                          <td colSpan={isAdmin ? 6 : 5} className="px-6 py-8 text-center text-slate-500">
                             Nenhum registro encontrado.
                           </td>
                         </tr>
@@ -586,6 +587,30 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                             <td className="px-6 py-4 max-w-xs truncate" title={record.report}>
                               {record.report}
                             </td>
+                            {isAdmin && (
+                              <td className="px-6 py-4 text-right">
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (window.confirm('Tem certeza que deseja apagar este registro?')) {
+                                      try {
+                                        if (record.id) {
+                                          await occurrenceService.deleteRecord(record.id);
+                                          setRecords(prev => prev.filter(r => r.id !== record.id));
+                                          if (selectedRecord?.id === record.id) setSelectedRecord(null);
+                                        }
+                                      } catch(error) {
+                                        alert('Erro ao apagar registro.');
+                                      }
+                                    }
+                                  }}
+                                  className="p-2 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                  title="Apagar Registro"
+                                >
+                                  <Trash2 className="w-4 h-4 inline" />
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         ))
                       )}

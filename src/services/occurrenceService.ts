@@ -33,6 +33,7 @@ export const occurrenceService = {
     student_name?: string;
     school_year?: string;
     occurrence_type?: string;
+    date?: string; // YYYY-MM-DD
   }): Promise<DailyOccurrenceRecord[]> {
     let query = supabase
       .from('daily_occurrence_records')
@@ -50,6 +51,13 @@ export const occurrenceService = {
       }
       if (filters.occurrence_type) {
         query = query.eq('occurrence_type', filters.occurrence_type);
+      }
+      if (filters.date) {
+        // Filter records from the start of the day to the end of the day in local time (UTC-3)
+        const startOfDay = new Date(`${filters.date}T00:00:00-03:00`);
+        const endOfDay = new Date(`${filters.date}T23:59:59-03:00`);
+        query = query.gte('created_at', startOfDay.toISOString());
+        query = query.lte('created_at', endOfDay.toISOString());
       }
     }
 
