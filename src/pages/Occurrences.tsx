@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { occurrenceService } from '../services/occurrenceService';
 import { generateOccurrencesPDF, generateOccurrencesExcel } from '../lib/reportGenerator';
 import { useEscola } from '../context/ContextoEscola';
+import { useAuth } from '../context/AuthContext';
 import type { DailyOccurrenceRecord } from '../types';
 
 const TIPOS_OCORRENCIA = [
@@ -18,8 +19,22 @@ const TIPOS_OCORRENCIA = [
   'Outros'
 ];
 
+const SERIES_OPCOES = [
+  'Todos',
+  '6º ano',
+  '7º ano',
+  '8º ano',
+  '9º ano',
+  '1º ano ensino médio',
+  '2º ano ensino médio',
+  '3º ano ensino médio'
+];
+
 export function Occurrences() {
   const { alunos } = useEscola();
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+
   const [activeTab, setActiveTab] = useState<'registro' | 'consulta' | 'relatorios'>('registro');
   
   // Registration Form State
@@ -160,7 +175,7 @@ export function Occurrences() {
         {[
           { id: 'registro', label: 'Registro', icon: PlusCircle },
           { id: 'consulta', label: 'Consulta', icon: Search },
-          { id: 'relatorios', label: 'Relatórios', icon: FileSpreadsheet }
+          ...(isAdmin ? [{ id: 'relatorios', label: 'Relatórios', icon: FileSpreadsheet }] : [])
         ].map((tab) => (
           <button
             key={tab.id}
@@ -448,13 +463,15 @@ export function Occurrences() {
               <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row items-center gap-4">
                 <div className="w-full sm:w-64 space-y-2">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Filtrar exportação por Ano</label>
-                  <input
-                    type="text"
-                    value={reportFilterYear}
-                    onChange={(e) => setReportFilterYear(e.target.value)}
-                    placeholder="Ex: 6º ano"
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
-                  />
+                  <select
+                    value={reportFilterYear || 'Todos'}
+                    onChange={(e) => setReportFilterYear(e.target.value === 'Todos' ? '' : e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
+                  >
+                    {SERIES_OPCOES.map(serie => (
+                      <option key={serie} value={serie}>{serie}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="text-sm text-slate-500 dark:text-slate-400 mt-2 sm:mt-6">
                   {reportFilterYear 
