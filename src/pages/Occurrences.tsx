@@ -27,9 +27,25 @@ export function Occurrences() {
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [schoolYear, setSchoolYear] = useState('');
   const [occurrenceType, setOccurrenceType] = useState(TIPOS_OCORRENCIA[0]);
+  const [dynamicValue, setDynamicValue] = useState('');
   const [report, setReport] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Dynamic field config
+  const getDynamicField = (type: string) => {
+    switch (type) {
+      case 'Atraso': return { label: 'Horário de Chegada', type: 'time', placeholder: 'Ex: 07:30' };
+      case 'Sem uniforme': return { label: 'Peça Faltando (Opcional)', type: 'text', placeholder: 'Ex: Camiseta padrão' };
+      case 'Indisciplina em sala': return { label: 'Aula / Matéria', type: 'text', placeholder: 'Ex: Matemática' };
+      case 'Uso indevido de celular': return { label: 'Local do Ocorrido', type: 'text', placeholder: 'Ex: Pátio, Sala 3...' };
+      case 'Falta de material': return { label: 'Qual Material', type: 'text', placeholder: 'Ex: Apostila de História' };
+      case 'Agressão verbal': return { label: 'Envolvidos / Vítima', type: 'text', placeholder: 'Ex: Colega de classe' };
+      case 'Agressão física': return { label: 'Envolvidos / Vítima', type: 'text', placeholder: 'Ex: Colega de classe' };
+      default: return null;
+    }
+  };
+  const currentDynamicField = getDynamicField(occurrenceType);
 
   // Report Export Filter
   const [reportFilterYear, setReportFilterYear] = useState('');
@@ -59,16 +75,23 @@ export function Occurrences() {
 
     setIsSubmitting(true);
     try {
+      const dynField = getDynamicField(occurrenceType);
+      let finalReport = report;
+      if (dynField && dynamicValue) {
+        finalReport = `[${dynField.label}: ${dynamicValue}]\n${report}`;
+      }
+
       await occurrenceService.createRecord({
         student_name: studentName,
         school_year: schoolYear,
         occurrence_type: occurrenceType,
-        report
+        report: finalReport
       });
       setSuccessMessage('Ocorrência registrada com sucesso!');
       setStudentName('');
       setSchoolYear('');
       setOccurrenceType(TIPOS_OCORRENCIA[0]);
+      setDynamicValue('');
       setReport('');
       setTimeout(() => setSuccessMessage(''), 3000);
       
@@ -257,7 +280,10 @@ export function Occurrences() {
                     </div>
                     <select
                       value={occurrenceType}
-                      onChange={(e) => setOccurrenceType(e.target.value)}
+                      onChange={(e) => {
+                        setOccurrenceType(e.target.value);
+                        setDynamicValue('');
+                      }}
                       className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
                     >
                       {TIPOS_OCORRENCIA.map(tipo => (
@@ -266,6 +292,24 @@ export function Occurrences() {
                     </select>
                   </div>
                 </div>
+
+                {currentDynamicField && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="space-y-2"
+                  >
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{currentDynamicField.label}</label>
+                    <input
+                      type={currentDynamicField.type}
+                      required={currentDynamicField.type === 'time'}
+                      value={dynamicValue}
+                      onChange={(e) => setDynamicValue(e.target.value)}
+                      placeholder={currentDynamicField.placeholder}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                    />
+                  </motion.div>
+                )}
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Relato Completo</label>
