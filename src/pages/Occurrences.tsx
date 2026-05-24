@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { occurrenceService } from '../services/occurrenceService';
 import { generateOccurrencesPDF, generateOccurrencesExcel } from '../lib/reportGenerator';
+import { useEscola } from '../context/ContextoEscola';
 import type { DailyOccurrenceRecord } from '../types';
 
 const TIPOS_OCORRENCIA = [
@@ -17,15 +18,40 @@ const TIPOS_OCORRENCIA = [
 ];
 
 export function Occurrences() {
+  const { alunos } = useEscola();
   const [activeTab, setActiveTab] = useState<'registro' | 'consulta' | 'relatorios'>('registro');
   
   // Registration Form State
   const [studentName, setStudentName] = useState('');
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [schoolYear, setSchoolYear] = useState<number | ''>('');
   const [occurrenceType, setOccurrenceType] = useState(TIPOS_OCORRENCIA[0]);
   const [report, setReport] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Report Export Filter
+  const [reportFilterYear, setReportFilterYear] = useState<number | ''>('');
+
+  // Extract year function
+  const extractYear = (anoStr: string) => {
+    if (!anoStr) return '';
+    const match = anoStr.match(/\d+/);
+    return match ? Number(match[0]) : '';
+  };
+
+  const filteredStudents = useMemo(() => {
+    if (!studentName) return [];
+    const query = studentName.toLowerCase();
+    return alunos.filter(a => a.nome.toLowerCase().includes(query)).slice(0, 5);
+  }, [studentName, alunos]);
+
+  const handleSelectStudent = (aluno: any) => {
+    setStudentName(aluno.nome);
+    const anoNum = extractYear(aluno.ano);
+    if (anoNum) setSchoolYear(anoNum);
+    setShowAutocomplete(false);
+  };
 
   // Consultation State
   const [records, setRecords] = useState<DailyOccurrenceRecord[]>([]);
@@ -86,12 +112,17 @@ export function Occurrences() {
   }, [activeTab]);
 
   const handleGeneratePDF = async () => {
-    // Busca dados com os filtros atuais (ou pega todos se não houver filtro)
-    await generateOccurrencesPDF(records);
+    const dataToExport = reportFilterYear 
+      ? records.filter(r => r.school_year === Number(reportFilterYear))
+      : records;
+    await generateOccurrencesPDF(dataToExport);
   };
 
   const handleGenerateExcel = () => {
-    generateOccurrencesExcel(records);
+    const dataToExport = reportFilterYear 
+      ? records.filter(r => r.school_year === Number(reportFilterYear))
+      : records;
+    generateOccurrencesExcel(dataToExport);
   };
 
   return (
@@ -162,7 +193,7 @@ export function Occurrences() {
 
               <form onSubmit={handleRegister} className="space-y-6 relative z-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
+                  <div className="space-y-2 relative">
                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Nome do Aluno</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -172,11 +203,39 @@ export function Occurrences() {
                         type="text"
                         required
                         value={studentName}
-                        onChange={(e) => setStudentName(e.target.value)}
+                        onChange={(e) => {
+                          setStudentName(e.target.value);
+                          setShowAutocomplete(true);
+                        }}
+                        onFocus={() => setShowAutocomplete(true)}
+                        onBlur={() => setTimeout(() => setShowAutocomplete(false), 200)}
                         className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
                         placeholder="Ex: João Silva"
+                        autoComplete="off"
                       />
                     </div>
+                    {/* Autocomplete Dropdown */}
+                    <AnimatePresence>
+                      {showAutocomplete && filteredStudents.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden"
+                        >
+                          {filteredStudents.map((aluno, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => handleSelectStudent(aluno)}
+                              className="px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 flex flex-col transition-colors border-b border-slate-100 dark:border-slate-700/50 last:border-0"
+                            >
+                              <span className="text-sm font-semibold text-slate-900 dark:text-white">{aluno.nome}</span>
+                              <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{aluno.ano || 'Série indefinida'} {aluno.turma ? `• ${aluno.turma}` : ''}</span>
+                            </div>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   <div className="space-y-2">
@@ -191,7 +250,7 @@ export function Occurrences() {
                         value={schoolYear}
                         onChange={(e) => setSchoolYear(e.target.value === '' ? '' : Number(e.target.value))}
                         className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
-                        placeholder="Ex: 2026"
+                        placeholder="Ex: 6 (Para 6º Ano)"
                       />
                     </div>
                   </div>
@@ -261,7 +320,7 @@ export function Occurrences() {
                     type="number"
                     value={filterYear}
                     onChange={(e) => setFilterYear(e.target.value === '' ? '' : Number(e.target.value))}
-                    placeholder="Ex: 2026"
+                    placeholder="Ex: 6"
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
                   />
                 </div>
@@ -347,42 +406,62 @@ export function Occurrences() {
 
           {/* TAB: RELATÓRIOS */}
           {activeTab === 'relatorios' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-8 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">
-                  <Download className="w-32 h-32" />
+            <div className="space-y-6">
+              {/* Report Filters */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row items-center gap-4">
+                <div className="w-full sm:w-64 space-y-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Filtrar exportação por Ano</label>
+                  <input
+                    type="number"
+                    value={reportFilterYear}
+                    onChange={(e) => setReportFilterYear(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="Ex: 6 (Para 6º Ano)"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                  />
                 </div>
-                <h3 className="text-2xl font-bold mb-2">Exportar em PDF</h3>
-                <p className="text-blue-100 mb-8 max-w-sm">
-                  Gere um documento formatado com o layout oficial para arquivamento ou envio. O arquivo é gerado dinamicamente e descartado após o download.
-                </p>
-                <button
-                  onClick={handleGeneratePDF}
-                  disabled={records.length === 0}
-                  className="w-full sm:w-auto justify-center bg-white text-blue-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
-                >
-                  <FileText className="w-5 h-5" />
-                  Gerar Relatório PDF
-                </button>
+                <div className="text-sm text-slate-500 dark:text-slate-400 mt-2 sm:mt-6">
+                  {reportFilterYear 
+                    ? `Exportando apenas registros do ${reportFilterYear}º Ano (${records.filter(r => r.school_year === Number(reportFilterYear)).length} encontrados).`
+                    : `Exportando todos os registros da base.`}
+                </div>
               </div>
 
-              <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-8 text-white shadow-lg shadow-emerald-500/20 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-500">
-                  <FileSpreadsheet className="w-32 h-32" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-8 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">
+                    <Download className="w-32 h-32" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2">Exportar em PDF</h3>
+                  <p className="text-blue-100 mb-8 max-w-sm">
+                    Gere um documento formatado com o layout oficial para arquivamento ou envio. O arquivo é gerado dinamicamente e descartado após o download.
+                  </p>
+                  <button
+                    onClick={handleGeneratePDF}
+                    disabled={reportFilterYear ? records.filter(r => r.school_year === Number(reportFilterYear)).length === 0 : records.length === 0}
+                    className="w-full sm:w-auto justify-center bg-white text-blue-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    <FileText className="w-5 h-5" />
+                    Gerar Relatório PDF
+                  </button>
                 </div>
-                <h3 className="text-2xl font-bold mb-2">Exportar Planilha</h3>
-                <p className="text-emerald-100 mb-8 max-w-sm">
-                  Exporte os dados em formato tabular (Excel/CSV) para análises avançadas, criação de gráficos ou integração com outros sistemas.
-                </p>
-                <button
-                  onClick={handleGenerateExcel}
-                  disabled={records.length === 0}
-                  className="w-full sm:w-auto justify-center bg-white text-emerald-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
-                >
-                  <FileSpreadsheet className="w-5 h-5" />
-                  Gerar Planilha (XLSX)
-                </button>
-              </div>
+
+                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-8 text-white shadow-lg shadow-emerald-500/20 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-500">
+                    <FileSpreadsheet className="w-32 h-32" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2">Exportar Planilha</h3>
+                  <p className="text-emerald-100 mb-8 max-w-sm">
+                    Exporte os dados em formato tabular (Excel/CSV) para análises avançadas, criação de gráficos ou integração com outros sistemas.
+                  </p>
+                  <button
+                    onClick={handleGenerateExcel}
+                    disabled={reportFilterYear ? records.filter(r => r.school_year === Number(reportFilterYear)).length === 0 : records.length === 0}
+                    className="w-full sm:w-auto justify-center bg-white text-emerald-600 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    <FileSpreadsheet className="w-5 h-5" />
+                    Gerar Planilha (XLSX)
+                  </button>
+                </div>
               
               <div className="col-span-1 md:col-span-2 bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm mt-4">
                 <h3 className="text-lg font-semibold mb-4 text-slate-800 dark:text-slate-200">Panorama Geral</h3>
