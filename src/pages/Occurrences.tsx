@@ -147,27 +147,24 @@ export function Occurrences() {
   };
 
   const fetchRecords = async () => {
-    if (activeTab === 'consulta' && !searchName && !filterYear && !filterType) {
-      setRecords([]);
-      return;
-    }
-
     setIsLoadingRecords(true);
     try {
+      const isConsultaWithoutFilters = activeTab === 'consulta' && !searchName && !filterYear && !filterType;
+      
       const params = activeTab === 'relatorios' 
         ? {} // No relatórios busca tudo para depois filtrar localmente
         : {
             student_name: searchName || undefined,
             school_year: filterYear || undefined,
             occurrence_type: filterType || undefined,
-            date: (() => {
-              // Obter a data local (YYYY-MM-DD) sem bug de fuso horário pulando o dia
+            date: isConsultaWithoutFilters ? (() => {
+              // Obter a data local (YYYY-MM-DD) sem bug de fuso horário
               const today = new Date();
               const y = today.getFullYear();
               const m = String(today.getMonth() + 1).padStart(2, '0');
               const d = String(today.getDate()).padStart(2, '0');
               return `${y}-${m}-${d}`;
-            })()
+            })() : undefined
           };
 
       const data = await occurrenceService.fetchRecords(params);
@@ -198,9 +195,9 @@ export function Occurrences() {
       const now = new Date();
       let limitDate = new Date();
       if (reportFilterPeriod === 'Hoje') limitDate.setDate(now.getDate() - 1);
-      else if (reportFilterPeriod === '7 Dias') limitDate.setDate(now.getDate() - 7);
-      else if (reportFilterPeriod === '15 Dias') limitDate.setDate(now.getDate() - 15);
-      else if (reportFilterPeriod === '30 Dias') limitDate.setDate(now.getDate() - 30);
+      else if (reportFilterPeriod === 'Semanal') limitDate.setDate(now.getDate() - 7);
+      else if (reportFilterPeriod === 'Quinzenal') limitDate.setDate(now.getDate() - 15);
+      else if (reportFilterPeriod === 'Mensal') limitDate.setDate(now.getDate() - 30);
 
       dataToExport = dataToExport.filter(r => {
         const created = new Date(r.created_at || '');
@@ -668,7 +665,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                     onChange={(e) => setReportFilterPeriod(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
                   >
-                    {['Todos', 'Hoje', '7 Dias', '15 Dias', '30 Dias'].map(p => (
+                    {['Todos', 'Hoje', 'Semanal', 'Quinzenal', 'Mensal'].map(p => (
                       <option key={p} value={p}>{p}</option>
                     ))}
                   </select>
