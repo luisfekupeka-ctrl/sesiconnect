@@ -50,6 +50,8 @@ export default function GestaoRealocacao() {
   const [carregando, setCarregando] = useState(false);
   const [filtroHistorico, setFiltroHistorico] = useState<'TODOS' | 'RASCUNHOS'>('TODOS');
   
+  const [anoSelecionadoProva, setAnoSelecionadoProva] = useState('');
+  
   // Visualização de PDF/Impressão
   const [mostrarPdfEnsalamento, setMostrarPdfEnsalamento] = useState(false);
 
@@ -92,17 +94,21 @@ export default function GestaoRealocacao() {
 
   // Seleção rápida de salas por ano
   const selecionarTodasDoAno = (anoPrefixo: string) => {
+    setAnoSelecionadoProva(anoPrefixo);
+    if (!anoPrefixo) {
+      setSalasSelecionadas([]);
+      return;
+    }
     const salasDoAno = salas
-      .filter(s => s.ano && s.ano.includes(anoPrefixo))
+      .filter(s => {
+        if (anoPrefixo === 'Médio') {
+          return (s.ano || '').toLowerCase().includes('médio') || (s.ano || '').toLowerCase().includes('série');
+        }
+        return (s.ano || '').includes(anoPrefixo);
+      })
       .map(s => s.numero);
     
-    // Se todas já estiverem selecionadas, desmarque. Caso contrário, selecione todas.
-    const todasMarcadas = salasDoAno.every(num => salasSelecionadas.includes(num));
-    if (todasMarcadas) {
-      setSalasSelecionadas(prev => prev.filter(num => !salasDoAno.includes(num)));
-    } else {
-      setSalasSelecionadas(prev => Array.from(new Set([...prev, ...salasDoAno])));
-    }
+    setSalasSelecionadas(salasDoAno);
   };
 
   // Seleção rápida de todas as salas do Ensino Médio
@@ -415,37 +421,26 @@ export default function GestaoRealocacao() {
                 {tipoFluxo === 'SALA' ? (
                   /* MODO PROVA: SELECIONAR VÁRIAS SALAS SIMULTANEAMENTE */
                   <div className="space-y-4">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant ml-2">Selecione as Salas de Aula</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant ml-2">Selecione o Ano / Série</label>
                     
-                    {/* Botões de Seleção Rápida */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-surface-container-low p-4 rounded-2xl border border-blue-800/10">
-                      <button type="button" onClick={() => selecionarTodasDoAno('6º')} className="px-3 py-2 bg-white/5 hover:bg-white/10 text-[9px] font-bold uppercase rounded-lg text-white transition-colors cursor-pointer">Todas do 6º Ano</button>
-                      <button type="button" onClick={() => selecionarTodasDoAno('7º')} className="px-3 py-2 bg-white/5 hover:bg-white/10 text-[9px] font-bold uppercase rounded-lg text-white transition-colors cursor-pointer">Todas do 7º Ano</button>
-                      <button type="button" onClick={() => selecionarTodasDoAno('8º')} className="px-3 py-2 bg-white/5 hover:bg-white/10 text-[9px] font-bold uppercase rounded-lg text-white transition-colors cursor-pointer">Todas do 8º Ano</button>
-                      <button type="button" onClick={() => selecionarTodasDoAno('9º')} className="px-3 py-2 bg-white/5 hover:bg-white/10 text-[9px] font-bold uppercase rounded-lg text-white transition-colors cursor-pointer">Todas do 9º Ano</button>
-                      <button type="button" onClick={selecionarTodasEnsinoMedio} className="px-3 py-2 bg-white/5 hover:bg-white/10 text-[9px] font-bold uppercase rounded-lg text-white transition-colors cursor-pointer">Ensino Médio</button>
-                      <button type="button" onClick={() => setSalasSelecionadas([])} className="px-3 py-2 bg-red-900/20 hover:bg-red-900/30 text-[9px] font-bold uppercase rounded-lg text-red-400 transition-colors cursor-pointer">Limpar Seleção</button>
-                    </div>
+                    <select 
+                      value={anoSelecionadoProva} 
+                      onChange={e => selecionarTodasDoAno(e.target.value)} 
+                      className="w-full p-5 rounded-2xl bg-surface-container-low border-2 border-blue-800 text-on-surface font-black text-xl outline-none focus:border-accent-amber transition-all shadow-xl"
+                    >
+                      <option value="">Selecione o Ano...</option>
+                      <option value="6º">6º Ano</option>
+                      <option value="7º">7º Ano</option>
+                      <option value="8º">8º Ano</option>
+                      <option value="9º">9º Ano</option>
+                      <option value="Médio">Ensino Médio (1ª a 3ª Série)</option>
+                    </select>
 
-                    {/* Checkboxes das salas */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
-                      {salas.map(s => {
-                        const estaMarcada = salasSelecionadas.includes(s.numero);
-                        return (
-                          <button
-                            key={s.id}
-                            onClick={() => alternarSala(s.numero)}
-                            className={cn(
-                              "px-3 py-4 rounded-xl border text-xs font-black uppercase text-left transition-all flex items-center justify-between",
-                              estaMarcada ? "bg-amber-700/25 border-amber-600 text-white" : "bg-white/5 border-transparent text-on-surface-variant hover:border-white/15"
-                            )}
-                          >
-                            <span>Sala {s.numero} · {s.ano || 'Comum'}</span>
-                            <div className={cn("w-3 h-3 rounded-full border", estaMarcada ? "bg-amber-500 border-amber-400" : "border-white/20")} />
-                          </button>
-                        );
-                      })}
-                    </div>
+                    {salasSelecionadas.length > 0 && (
+                      <div className="text-[10px] text-amber-500 font-bold ml-2">
+                        {salasSelecionadas.length} salas vinculadas automaticamente.
+                      </div>
+                    )}
 
                     {/* Seleção do Fiscal */}
                     <div className="space-y-2 pt-4 border-t border-white/5">
@@ -532,16 +527,42 @@ export default function GestaoRealocacao() {
                           .map(g => g.horario)
                   ))
                   .sort()
-                  .map(horario => (
-                    <button key={horario} onClick={() => setHorariosSel(prev => prev.includes(horario) ? prev.filter(h => h !== horario) : [...prev, horario])}
-                      className={cn("p-6 rounded-2xl text-left transition-all border-2 flex flex-col gap-2 shadow-lg", 
-                        horariosSel.includes(horario) ? "bg-amber-700 text-white border-amber-600 scale-95 shadow-inner" : "bg-surface-container-high border-blue-800/50 text-on-surface hover:border-blue-500")}
-                    >
-                      <div className="text-[10px] font-black uppercase opacity-60 tracking-widest">{horario}</div>
-                      <div className="text-xl font-black italic">Horário de Aula</div>
-                      <div className="text-[9px] font-black uppercase text-blue-400">Clique para Selecionar</div>
-                    </button>
-                  ))}
+                  .map(horario => {
+                    const dataItem = datasSelecionadas[0] || new Date().toISOString().split('T')[0];
+                    const dataObj = new Date(dataItem + 'T00:00:00');
+                    const diasSemanaMap = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO'];
+                    const diaSemanaItem = diasSemanaMap[dataObj.getDay()];
+                    
+                    const aulasNoHorario = tipoFluxo === 'SALA' 
+                      ? gradeBase.filter(g => 
+                          salasSelecionadas.includes(g.numeroSala) && 
+                          g.horario === horario && 
+                          String(g.diaSemana || '').toUpperCase().trim() === diaSemanaItem.toUpperCase().trim()
+                        )
+                      : [];
+
+                    return (
+                      <button key={horario} onClick={() => setHorariosSel(prev => prev.includes(horario) ? prev.filter(h => h !== horario) : [...prev, horario])}
+                        className={cn("p-6 rounded-2xl text-left transition-all border-2 flex flex-col gap-2 shadow-lg", 
+                          horariosSel.includes(horario) ? "bg-amber-700 text-white border-amber-600 scale-95 shadow-inner" : "bg-surface-container-high border-blue-800/50 text-on-surface hover:border-blue-500")}
+                      >
+                        <div className="text-[10px] font-black uppercase opacity-60 tracking-widest">{horario}</div>
+                        {tipoFluxo === 'SALA' && aulasNoHorario.length > 0 ? (
+                          <div className="text-xs font-medium space-y-1 mt-1 opacity-90">
+                            {aulasNoHorario.map((aula, idx) => (
+                              <div key={idx} className="flex justify-between items-center gap-2 border-b border-white/10 pb-1 mb-1 last:border-0">
+                                <span className="truncate">S.{aula.numeroSala}: {aula.materia}</span>
+                                <span className="text-[9px] uppercase font-bold truncate max-w-[80px]">({aula.nomeProfessor})</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-xl font-black italic">Horário de Aula</div>
+                        )}
+                        <div className="text-[9px] font-black uppercase text-blue-400 mt-auto pt-2">Clique para Selecionar</div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>

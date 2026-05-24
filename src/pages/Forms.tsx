@@ -536,151 +536,16 @@ export default function FormsPage() {
       {/* Modal de Detalhe da Ocorrência estilo Documento Oficial */}
       <AnimatePresence>
         {ocorrenciaSelecionada && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto print-modal-container">
-            {/* Custom media queries to force perfect print */}
-            <style dangerouslySetInnerHTML={{__html: `
-              @media print {
-                body {
-                  background: white !important;
-                  color: black !important;
-                }
-                /* Hide main app elements */
-                header, nav, aside, footer, button, .print\\:hidden, #root > div:not(.print-modal-container) {
-                  display: none !important;
-                }
-                .print-modal-container {
-                  position: absolute !important;
-                  left: 0 !important;
-                  top: 0 !important;
-                  width: 100% !important;
-                  height: auto !important;
-                  background: white !important;
-                  padding: 0 !important;
-                }
-                .print-card-content {
-                  box-shadow: none !important;
-                  border: none !important;
-                  margin: 0 !important;
-                  padding: 0 !important;
-                  width: 100% !important;
-                  max-width: 100% !important;
-                  border-radius: 0 !important;
-                }
-                * {
-                  -webkit-print-color-adjust: exact !important;
-                  print-color-adjust: exact !important;
-                }
-              }
-            `}} />
-
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-3xl bg-white text-slate-900 rounded-[2rem] overflow-hidden shadow-2xl my-8 print:my-0 print:rounded-none print-card-content border border-slate-200"
             >
-              {/* Header Oficial do Colégio Sesi */}
-              <div className="relative w-full h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-8 select-none">
-                {/* Polígonos Geométricos */}
-                <div className="absolute top-0 left-0 w-[300px] h-full pointer-events-none">
-                  <div className="absolute top-0 left-0 w-[200px] h-[120px] bg-[#e2e8f0]" style={{ clipPath: 'polygon(0 0, 100% 0, 70% 100%, 0 80%)' }} />
-                  <div className="absolute top-0 left-0 w-[160px] h-[100px] bg-[#cbd5e1] opacity-40" style={{ clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0 60%)' }} />
-                  <div className="absolute top-[20px] left-0 w-[40px] h-[100px] bg-[#fbbf24]" style={{ clipPath: 'polygon(0 0, 100% 30%, 80% 90%, 0 100%)' }} />
-                </div>
-                <div className="flex-1" />
-                {/* Logo Sesi */}
-                <div className="relative z-10">
-                  <div className="flex flex-col items-end">
-                    <div className="flex items-center gap-1 leading-none">
-                      <span className="text-[10px] font-extrabold text-[#0c2340] lowercase tracking-normal">colégio</span>
-                      <div className="w-2 h-2 rounded-full bg-[#0c2340] mt-0.5" />
-                    </div>
-                    <div className="text-[40px] font-black text-[#0c2340] leading-none tracking-tighter -mt-1 font-serif italic">
-                      Sesi
-                    </div>
-                    <div className="bg-[#fbbf24] text-[#0c2340] text-[9px] font-black uppercase tracking-[0.2em] px-3.5 py-1.5 mt-1 rounded-sm transform -skew-x-6 origin-right leading-none">
-                      internacional
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Botão Fechar / Ações no Topo (Oculto na Impressão) */}
-              <div className="absolute top-4 right-4 z-20 flex gap-2 print:hidden">
-                <button 
-                  onClick={() => window.print()}
-                  className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-sm cursor-pointer"
-                  title="Imprimir Documento"
-                >
-                  <Download size={18} />
-                </button>
-                <button 
-                  onClick={() => setOcorrenciaSelecionada(null)}
-                  className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shadow-sm cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Corpo da Ocorrência */}
-              <div className="p-4 md:p-8 md:p-12 space-y-8 print:p-4 md:p-8 font-sans">
-                <div className="text-center border-b border-slate-200 pb-6">
-                  <h2 className="text-2xl font-extrabold uppercase tracking-widest text-[#0c2340]">Registro de Ocorrência</h2>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">{ocorrenciaSelecionada.nomeModelo}</p>
-                </div>
-
-                {/* Info do Aluno */}
-                <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-4 md:p-6 rounded-2xl border border-slate-100">
-                  <div>
-                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Aluno</span>
-                    <span className="text-sm font-bold text-slate-800">{ocorrenciaSelecionada.nomeAluno}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Série / Ano</span>
-                    <span className="text-sm font-bold text-slate-800">{ocorrenciaSelecionada.anoAluno}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Turma</span>
-                    <span className="text-sm font-bold text-slate-800">{ocorrenciaSelecionada.turmaAluno}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Data do Registro</span>
-                    <span className="text-sm font-bold text-slate-800">{new Date(ocorrenciaSelecionada.criadoEm).toLocaleDateString('pt-BR')}</span>
-                  </div>
-                </div>
-
-                {/* Conteúdo Dinâmico */}
-                <div className="bg-slate-50/50 p-4 md:p-10 rounded-[2rem] border border-slate-100 space-y-10">
-                  <div className="flex items-center gap-2 mb-6 border-b border-slate-200/60 pb-4">
-                    <FileText size={18} className="text-[#0c2340]" />
-                    <span className="text-xs font-black text-[#0c2340] uppercase tracking-widest">{ocorrenciaSelecionada.nomeModelo}</span>
-                  </div>
-                  <div className="space-y-10">
-                    {Object.entries(ocorrenciaSelecionada.dados).map(([campo, valor]) => {
-                      const stringValor = Array.isArray(valor) ? valor.join(', ') : String(valor);
-                      if (!stringValor) return null;
-                      return (
-                        <div key={campo} className="border-b border-slate-100 pb-8 last:border-none last:pb-0">
-                          <span className="text-[10px] font-black text-[#0c2340] uppercase tracking-widest block mb-3">{campo}</span>
-                          <div className="text-sm text-slate-700 leading-relaxed font-medium whitespace-pre-line pl-4 border-l-2 border-slate-200">{stringValor}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Assinaturas */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 pt-12 mt-12 border-t border-slate-200">
-                  <div className="text-center space-y-1">
-                    <div className="w-full border-b border-slate-300 h-10" />
-                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Assinatura do Responsável</span>
-                  </div>
-                  <div className="text-center space-y-1">
-                    <div className="w-full border-b border-slate-300 h-10" />
-                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Assinatura da Coordenação</span>
-                  </div>
-                </div>
-              </div>
+              <FichaOcorrencia 
+                ocorrencia={ocorrenciaSelecionada} 
+                onClose={() => setOcorrenciaSelecionada(null)} 
+              />
             </motion.div>
           </div>
         )}

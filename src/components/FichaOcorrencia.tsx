@@ -41,14 +41,49 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
     setAssinaturasExtras(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handlePrint = async () => {
-    await generateFichaOcorrenciaPDF(ocorrencia, configAssinaturas, assinaturasExtras);
+  const handlePrint = () => {
+    window.print();
   };
 
   const content = (
     <>
+      {/* Custom media queries to force perfect print */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          body {
+            background: white !important;
+            color: black !important;
+          }
+          /* Hide main app elements */
+          header, nav, aside, footer, button, .print\\:hidden, #root > div:not(.print-modal-container) {
+            display: none !important;
+          }
+          .print-modal-container {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            background: white !important;
+            padding: 0 !important;
+          }
+          .print-card-content {
+            box-shadow: none !important;
+            border: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            border-radius: 0 !important;
+          }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+        }
+      `}} />
       <div className={cn(
-          "bg-white w-full max-w-5xl flex flex-col md:flex-row print:shadow-none print:max-h-none print:rounded-none",
+          "bg-white w-full max-w-5xl flex flex-col md:flex-row print:shadow-none print:max-h-none print:rounded-none print-modal-container",
           !isPrintOnly ? "max-h-[95vh] overflow-hidden rounded-[2.5rem] shadow-2xl" : "rounded-none"
       )}>
           
@@ -230,7 +265,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
           </div>
 
           {/* Área de Impressão (Direita) */}
-          <div id="printable-occurrence" className="flex-1 overflow-y-auto bg-white custom-scrollbar relative flex flex-col">
+          <div id="printable-occurrence" className="flex-1 overflow-y-auto bg-white custom-scrollbar relative flex flex-col print-card-content">
             
             {/* Header Oficial do Colégio Sesi */}
             <div className="relative w-full h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-8 select-none">
@@ -268,21 +303,33 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                  <p><span className="font-bold mr-2">Ano:</span> {ocorrencia.anoAluno || ocorrencia.turmaAluno}</p>
                  <p><span className="font-bold mr-2">Professor/Responsável:</span> {(() => {
                    const profs = [];
-                   if (configAssinaturas.nomeEmissor) profs.push(configAssinaturas.nomeEmissor);
-                   if (configAssinaturas.nomeResponsavel) profs.push(configAssinaturas.nomeResponsavel);
-                   const extraProfs = assinaturasExtras.filter(e => e.papel.toLowerCase().includes('professor')).map(e => e.nome);
+                   if (configAssinaturas.nomeEmissor && configAssinaturas.nomeEmissor.toUpperCase() !== 'A DEFINIR') {
+                     profs.push(configAssinaturas.nomeEmissor);
+                   }
+                   if (configAssinaturas.nomeResponsavel && configAssinaturas.nomeResponsavel.toUpperCase() !== 'A DEFINIR') {
+                     profs.push(configAssinaturas.nomeResponsavel);
+                   }
+                   const extraProfs = assinaturasExtras.map(e => e.nome);
                    const profsText = [...profs, ...extraProfs].join(', ');
+                   
+                   // Se estiver vazio e não houver configurações, volta o default
                    return profsText || 'Administração';
                  })()}</p>
                  <p><span className="font-bold mr-2">Data:</span> {(() => {
                    const key = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase() === 'data');
-                   const rawDate = key ? String(ocorrencia.dados[key]) : ocorrencia.criadoEm;
+                   const rawDate = key ? String(ocorrencia.dados[key]) : (ocorrencia.criadoEm || new Date().toISOString());
                    if (!rawDate) return '';
                    if (rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
                      const [y, m, d] = rawDate.split('-');
                      return `${d}/${m}/${y}`;
                    }
-                   return new Date(rawDate).toLocaleDateString('pt-BR');
+                   try {
+                     const dt = new Date(rawDate);
+                     if (isNaN(dt.getTime())) return rawDate;
+                     return dt.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+                   } catch (e) {
+                     return rawDate;
+                   }
                  })()}</p>
                  {(() => {
                    const numAtaKey = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase().includes('número da ata') || k.toLowerCase().includes('numero da ata') || k.toLowerCase() === 'ata');
