@@ -222,7 +222,7 @@ export function Occurrences() {
           r.occurrence_type.trim().toLowerCase() === registeredType.trim().toLowerCase()
         );
 
-        if (studentOccurrences.length >= 3) {
+        if (studentOccurrences.length >= 4) {
           setReoffenderAlert({
             visible: true,
             studentName: registeredStudent,
@@ -747,7 +747,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                             <td className="px-4 py-3 md:px-6 md:py-4 font-medium">
                               {(() => {
                                 const count = getRecurrenceCount(record.student_name, record.occurrence_type);
-                                if (count >= 3) {
+                                if (count >= 4) {
                                   return (
                                     <span className="text-red-500 font-extrabold flex items-center gap-1.5" title={`${count} ocorrências deste tipo nos últimos 30 dias`}>
                                       {record.student_name}
@@ -781,6 +781,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                                         if (record.id) {
                                           await occurrenceService.deleteRecord(record.id);
                                           setRecords(prev => prev.filter(r => r.id !== record.id));
+                                          setThirtyDaysRecords(prev => prev.filter(r => r.id !== record.id));
                                           if (selectedRecord?.id === record.id) setSelectedRecord(null);
                                         }
                                       } catch(error) {
@@ -916,6 +917,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                         if (selectedRecord.id) {
                           await occurrenceService.deleteRecord(selectedRecord.id);
                           setRecords(prev => prev.filter(r => r.id !== selectedRecord.id));
+                          setThirtyDaysRecords(prev => prev.filter(r => r.id !== selectedRecord.id));
                           setSelectedRecord(null);
                         }
                       } catch(e) {

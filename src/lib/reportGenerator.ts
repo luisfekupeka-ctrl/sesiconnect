@@ -100,7 +100,7 @@ export const generateOccurrencesPDF = async (
           const occurrenceType = data.row.cells[3].raw as string;
           
           const count = getRecurrenceCount(studentName, occurrenceType);
-          if (count >= 3) {
+          if (count >= 4) {
             data.cell.styles.textColor = [239, 68, 68]; // Red color
             data.cell.styles.fontStyle = 'bold';
             data.cell.text = [`${studentName} (${count}x)`];
@@ -169,7 +169,7 @@ export const generateOccurrencesExcel = (
 
   const formattedData = records.map(record => {
     const count = getRecurrenceCount(record.student_name, record.occurrence_type);
-    const studentLabel = count >= 3 ? `${record.student_name} (${count}x REINCIDENTE)` : record.student_name;
+    const studentLabel = count >= 4 ? `${record.student_name} (${count}x REINCIDENTE)` : record.student_name;
     return {
       'Data': new Date(record.created_at || '').toLocaleDateString('pt-BR'),
       'Aluno': studentLabel,
