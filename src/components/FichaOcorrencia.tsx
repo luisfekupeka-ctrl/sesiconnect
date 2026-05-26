@@ -308,10 +308,16 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                <div className="space-y-1.5 text-sm text-[#0c2340] font-medium border-b border-gray-200 pb-6">
                  <p><span className="font-bold mr-2">Nome do Aluno:</span> {configAssinaturas.nomeAluno || ocorrencia.nomeAluno}</p>
                  <p><span className="font-bold mr-2">Ano:</span> {ocorrencia.anoAluno || ocorrencia.turmaAluno || 'Não informado'}</p>
-                 <p><span className="font-bold mr-2">Professor / Emissor:</span> {configAssinaturas.nomeEmissor || 'Administração'}</p>
+                 <p><span className="font-bold mr-2">Responsável pelo Registro:</span> {configAssinaturas.nomeEmissor || 'Administração'}</p>
+                 
+                 {/* Quaisquer outros campos adicionados vêm abaixo do responsável pelo registro */}
                  {configAssinaturas.nomeResponsavel && (
                    <p><span className="font-bold mr-2">Responsável Legal:</span> {configAssinaturas.nomeResponsavel}</p>
                  )}
+                 {assinaturasExtras.map((extra, index) => (
+                   <p key={index}><span className="font-bold mr-2">{extra.papel}:</span> {extra.nome}</p>
+                 ))}
+                 
                  <p><span className="font-bold mr-2">Data:</span> {(() => {
                    const key = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase() === 'data');
                    const rawDate = key ? String(ocorrencia.dados[key]) : (ocorrencia.criadoEm || new Date().toISOString());

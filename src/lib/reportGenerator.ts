@@ -258,9 +258,9 @@ export const buildFichaOcorrenciaDoc = async (
 
     currentY += 8;
     doc.setFont('helvetica', 'bold');
-    doc.text('Professor / Emissor:', marginX, currentY);
+    doc.text('Responsável pelo Registro:', marginX, currentY);
     doc.setFont('helvetica', 'normal');
-    doc.text(configAssinaturas.nomeEmissor || ocorrencia.professorAtual || 'Administração', marginX + 40, currentY);
+    doc.text(configAssinaturas.nomeEmissor || ocorrencia.professorAtual || 'Administração', marginX + 50, currentY);
 
     if (configAssinaturas.nomeResponsavel) {
       currentY += 8;
@@ -269,6 +269,16 @@ export const buildFichaOcorrenciaDoc = async (
       doc.setFont('helvetica', 'normal');
       doc.text(configAssinaturas.nomeResponsavel, marginX + 40, currentY);
     }
+
+    // Quaisquer outros campos adicionados vêm abaixo do responsável pelo registro
+    assinaturasExtras.forEach(e => {
+      currentY += 8;
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${e.papel}:`, marginX, currentY);
+      doc.setFont('helvetica', 'normal');
+      const labelWidth = doc.getTextWidth(`${e.papel}:`) + 3;
+      doc.text(e.nome, marginX + labelWidth, currentY);
+    });
 
     currentY += 8;
     doc.setFont('helvetica', 'bold');
