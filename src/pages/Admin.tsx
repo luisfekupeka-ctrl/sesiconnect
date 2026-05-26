@@ -525,7 +525,7 @@ export default function Admin() {
             <button key={a.id} onClick={() => { setAbaAtiva(a.id); setBusca(''); setAnoFiltro('Todos'); }}
               className={cn("flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0",
                 abaAtiva === a.id 
-                  ? "bg-primary text-on-primary shadow-xl shadow-primary/30 border-2 border-secondary/50 scale-105" 
+                  ? "bg-primary text-on-primary shadow-xl shadow-primary/30 border-2 border-secondary/50" 
                   : "text-on-surface-variant hover:bg-hover hover:text-on-surface")}>
               <a.icone size={13} />
               {a.rotulo}
@@ -754,7 +754,7 @@ export default function Admin() {
                     A escala dos professores é integrada diretamente com a grade escolar. Você pode gerenciar as aulas de cada docente de forma bidirecional ou fazer agendamentos em slots livres.
                   </p>
                 </div>
-                <div className="flex gap-4 w-full md:w-auto">
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                   <button onClick={() => navigate('/schedule-editor')} className="bg-emerald-500 text-white px-8 py-4 rounded-2xl font-black text-sm whitespace-nowrap hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-xl shadow-emerald-500/20 flex-1 md:flex-initial justify-center">
                     <Calendar size={18} /> Montar Grade por Salas
                   </button>

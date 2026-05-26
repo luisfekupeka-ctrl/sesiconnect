@@ -144,24 +144,24 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
     <div className="bg-[#050505] text-white rounded-[3.5rem] overflow-hidden shadow-3xl flex flex-col h-[750px] border border-white/5 font-sans">
       
       {/* Top Header Toolbar */}
-      <div className="bg-white/5 p-4 md:p-6 flex items-center gap-4 md:gap-6 border-b border-white/5">
-        <div className="flex gap-2">
+      <div className="bg-white/5 p-4 md:p-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 md:gap-6 border-b border-white/5">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           <button onClick={voltar} disabled={viewMode === 'UNIDADES'} 
-            className="p-3 hover:bg-white/10 rounded-2xl disabled:opacity-10 transition-all text-primary">
+            className="p-3 hover:bg-white/10 rounded-2xl disabled:opacity-10 transition-all text-primary shrink-0">
             <ArrowLeft size={20} />
           </button>
+          
+          <div className="flex-1 bg-black/40 border border-white/5 rounded-2xl px-4 py-2.5 flex items-center flex-wrap gap-1.5 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-on-surface-variant overflow-hidden">
+            {caminho.map((p, i) => (
+              <React.Fragment key={p}>
+                <span className={cn("hover:text-primary cursor-pointer transition-colors truncate max-w-[80px] sm:max-w-none", i === caminho.length - 1 && "text-white")}>{p}</span>
+                {i < caminho.length - 1 && <ChevronRight size={10} className="text-white/10 shrink-0" />}
+              </React.Fragment>
+            ))}
+          </div>
         </div>
         
-        <div className="flex-1 bg-black/40 border border-white/5 rounded-2xl px-5 py-3 flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
-          {caminho.map((p, i) => (
-            <React.Fragment key={p}>
-              <span className={cn("hover:text-primary cursor-pointer transition-colors", i === caminho.length - 1 && "text-white")}>{p}</span>
-              {i < caminho.length - 1 && <ChevronRight size={12} className="text-white/10" />}
-            </React.Fragment>
-          ))}
-        </div>
-
-        <div className="relative w-72">
+        <div className="relative w-full sm:w-72 shrink-0">
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" />
           <input 
             type="text" 
@@ -173,27 +173,25 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col sm:flex-row flex-1 overflow-hidden">
         
         {/* Sidebar Simplificada */}
-        <aside className="w-64 bg-black/20 border-r border-white/5 p-4 md:p-8 flex flex-col justify-between">
-          <div className="space-y-8">
-            <div>
-              <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] mb-6 ml-2">Acesso Direto</p>
-              <div className="space-y-2">
-                  <button className="w-full flex items-center gap-3 p-4 text-[10px] font-black uppercase tracking-widest bg-primary text-black rounded-2xl transition-all text-left">
-                      <Folder size={18} /> Prontuário
-                  </button>
-                  <button className="w-full flex items-center gap-3 p-4 text-[10px] font-black uppercase tracking-widest text-white/40 hover:bg-white/5 hover:text-white rounded-2xl transition-all text-left">
-                      <FileSearch size={18} /> Relatórios
-                  </button>
-              </div>
+        <aside className="w-full sm:w-64 bg-black/20 border-b sm:border-b-0 sm:border-r border-white/5 p-4 sm:p-6 md:p-8 flex flex-row sm:flex-col justify-between items-center sm:items-stretch gap-4 shrink-0">
+          <div className="flex sm:flex-col gap-2 items-center sm:items-stretch">
+            <span className="hidden sm:block text-[9px] font-black text-white/20 uppercase tracking-[0.3em] mb-4 ml-2">Acesso Direto</span>
+            <div className="flex sm:flex-col gap-2">
+                <button className="flex items-center gap-2.5 p-3 sm:p-4 text-[9px] sm:text-[10px] font-black uppercase tracking-widest bg-primary text-black rounded-xl sm:rounded-2xl transition-all text-left">
+                    <Folder size={16} className="shrink-0" /> <span className="truncate">Prontuário</span>
+                </button>
+                <button className="flex items-center gap-2.5 p-3 sm:p-4 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-white/40 hover:bg-white/5 hover:text-white rounded-xl sm:rounded-2xl transition-all text-left">
+                    <FileSearch size={16} className="shrink-0" /> <span className="truncate">Relatórios</span>
+                </button>
             </div>
           </div>
 
-          <div className="pt-8 border-t border-white/5">
-             <button onClick={handleArquivar} className="w-full flex items-center gap-3 p-5 text-[10px] font-black uppercase tracking-widest bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-black rounded-2xl transition-all group">
-                <Trash2 size={18} className="group-hover:scale-110 transition-transform" /> {carregando ? '...' : 'Fechar Mês'}
+          <div className="pt-0 sm:pt-6 border-t-0 sm:border-t border-white/5 shrink-0">
+             <button onClick={handleArquivar} className="flex items-center gap-2 p-3 sm:p-5 text-[9px] sm:text-[10px] font-black uppercase tracking-widest bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-black rounded-xl sm:rounded-2xl transition-all group">
+                <Trash2 size={16} className="group-hover:scale-110 transition-transform shrink-0" /> <span className="truncate">{carregando ? '...' : 'Fechar Mês'}</span>
              </button>
           </div>
         </aside>
@@ -219,7 +217,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-8"
+              className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-8"
             >
               {viewMode === 'UNIDADES' && ANOS.map(ano => (
                 <button key={ano} onClick={() => entrarUnidade(ano)} className="flex flex-col items-center gap-4 group">

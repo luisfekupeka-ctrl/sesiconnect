@@ -218,26 +218,26 @@ export default function RoomsPage() {  const { salas, estadoEscola, gradeComplet
           const aulaAtual = estadoSala?.aulaAtual;
           return (
             <motion.div key={sala.numero} whileHover={{ x: 5 }} onClick={() => setSalaSelecionada(sala)}
-              className={cn("bg-[#0d0d0d] rounded-2xl shadow-premium p-4 cursor-pointer group border-2 transition-all flex items-center justify-between",
+              className={cn("bg-[#0d0d0d] rounded-2xl shadow-premium p-3 md:p-4 cursor-pointer group border-2 transition-all flex items-center justify-between gap-3 md:gap-6",
                 ocupada ? "border-[#fbbf24]/40" : "border-white/5 hover:border-[#fbbf24]/30")}>
-               <div className="flex items-center gap-6">
-                  <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center text-xl font-black transition-all",
+               <div className="flex items-center gap-3 md:gap-6 min-w-0 flex-1">
+                  <div className={cn("w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-lg md:text-xl font-black transition-all shrink-0",
                     ocupada ? "bg-[#fbbf24] text-black" : "bg-black text-[#fbbf24] group-hover:bg-[#fbbf24] group-hover:text-black")}>{sala.numero}</div>
-                  <div>
-                    <h3 className="text-lg font-black text-white tracking-tighter leading-tight italic group-hover:text-[#fbbf24]">{sala.nome}</h3>
-                    <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">{sala.segmento}</p>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-base md:text-lg font-black text-white tracking-tighter leading-tight italic group-hover:text-[#fbbf24] truncate">{sala.nome}</h3>
+                    <p className="text-[9px] font-black text-white/30 uppercase tracking-widest truncate">{sala.segmento}</p>
                   </div>
                </div>
-               <div className="flex items-center gap-6">
+               <div className="flex items-center gap-3 md:gap-6 shrink-0">
                   {ocupada && aulaAtual && (
                      <div className="hidden md:flex flex-col items-end">
                         <p className="text-[10px] font-black text-[#fbbf24] uppercase tracking-widest italic">{aulaAtual.materia}</p>
                         <p className="text-[9px] font-bold text-white/40 italic">{aulaAtual.professor}</p>
                      </div>
                   )}
-                  <div className={cn("px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest",
+                  <div className={cn("px-2.5 md:px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest text-center whitespace-nowrap",
                     ocupada ? "bg-[#fbbf24]/10 text-[#fbbf24]" : "bg-white/5 text-white/20")}>{ocupada ? '● EM AULA' : 'LIVRE'}</div>
-                  <ChevronRight size={18} className="text-[#fbbf24] opacity-20 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                  <ChevronRight size={16} className="text-[#fbbf24] opacity-20 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                </div>
             </motion.div>
           );
@@ -403,18 +403,18 @@ function BlocoHorarioSala({ bloco, salaSelecionada, diaGrade, gradeCompleta, lan
         )}
         <div 
           onClick={() => isActive && setExpandido(!expandido)} 
-          className={cn("flex justify-between items-center relative z-10", isActive && "cursor-pointer select-none")}
+          className={cn("flex flex-col xs:flex-row justify-between items-start xs:items-center gap-2 relative z-10", isActive && "cursor-pointer select-none")}
         >
-           <div className="flex items-center gap-4">
-              <span className={cn("text-[9px] font-black uppercase tracking-[0.2em] italic", estaNoBlocoAtual ? "text-[#fbbf24]" : "opacity-40")}>
+           <div className="flex items-center flex-wrap gap-2 md:gap-4">
+              <span className={cn("text-[9px] font-black uppercase tracking-[0.2em] italic whitespace-nowrap", estaNoBlocoAtual ? "text-[#fbbf24]" : "opacity-40")}>
                 {bloco.inicio} — {bloco.fim}
                 {estaNoBlocoAtual && " • AGORA"}
               </span>
               {isActive && <span className="text-[8px] font-black px-2 py-0.5 rounded-md bg-[#fbbf24]/10 text-[#fbbf24]">{tipo.toUpperCase()}</span>}
            </div>
            {isActive && (
-             <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-[#fbbf24]">
-                <Users size={12} /> {alunosNoBloco.length} Alunos <ChevronDown size={14} className={cn("transition-transform", expandido && "rotate-180")} />
+             <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-[#fbbf24] whitespace-nowrap">
+                <Users size={12} /> {alunosNoBloco.length} Alunos <ChevronDown size={14} className={cn("transition-transform shrink-0", expandido && "rotate-180")} />
              </div>
            )}
         </div>
