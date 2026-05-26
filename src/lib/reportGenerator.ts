@@ -30,7 +30,12 @@ const loadImageAsBase64 = async (url: string): Promise<string> => {
   });
 };
 
-export const generateOccurrencesPDF = async (records: DailyOccurrenceRecord[], prefixoPeriodo: string = 'geral') => {
+export const generateOccurrencesPDF = async (
+  records: DailyOccurrenceRecord[], 
+  prefixoPeriodo: string = 'geral', 
+  anoFiltro: string = '',
+  thirtyDaysRecords: DailyOccurrenceRecord[] = []
+) => {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -47,6 +52,14 @@ export const generateOccurrencesPDF = async (records: DailyOccurrenceRecord[], p
     doc.setFontSize(16);
     doc.text('Relatório Diário de Ocorrências', pageWidth / 2, currentY, { align: 'center' });
     currentY += 10;
+
+    const getRecurrenceCount = (studentName: string, type: string) => {
+      if (!studentName || !type || thirtyDaysRecords.length === 0) return 0;
+      return thirtyDaysRecords.filter(r => 
+        r.student_name.trim().toLowerCase() === studentName.trim().toLowerCase() &&
+        r.occurrence_type.trim().toLowerCase() === type.trim().toLowerCase()
+      ).length;
+    };
 
     const tableData = records.map(record => [
       new Date(record.created_at || '').toLocaleDateString('pt-BR'),
@@ -71,6 +84,19 @@ export const generateOccurrencesPDF = async (records: DailyOccurrenceRecord[], p
         3: { cellWidth: 35 },
         4: { cellWidth: 'auto' }
       },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.column.index === 1) { // Aluno column
+          const studentName = data.cell.raw as string;
+          const occurrenceType = data.row.cells[3].raw as string;
+          
+          const count = getRecurrenceCount(studentName, occurrenceType);
+          if (count >= 3) {
+            data.cell.styles.textColor = [239, 68, 68]; // Red color
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.text = [`${studentName} (${count}x)`];
+          }
+        }
+      },
       willDrawPage: (data) => {
         // Add background to every new page created by autoTable before drawing the table
         if (data.pageNumber > 1) {
@@ -85,6 +111,11 @@ export const generateOccurrencesPDF = async (records: DailyOccurrenceRecord[], p
     const ano = String(now.getFullYear()).slice(-2);
     const dataFormatada = `${dia}_${mes}_${ano}`;
 
+    let anoClean = String(anoFiltro).trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '_')
+      .replace(/[º°ª]/g, '');
+
     let periodoClean = String(prefixoPeriodo).toLowerCase().trim()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     
@@ -92,7 +123,11 @@ export const generateOccurrencesPDF = async (records: DailyOccurrenceRecord[], p
       periodoClean = 'hoje';
     }
 
-    const filename = `relatorio_ocorrencias_${periodoClean}_dia_${dataFormatada}.pdf`;
+    let filename = 'relatorio_ocorrencias';
+    if (periodoClean) filename += `_${periodoClean}`;
+    if (anoClean) filename += `_${anoClean}`;
+    filename += `_dia_${dataFormatada}.pdf`;
+
     doc.save(filename);
 
   } catch (error) {
@@ -101,14 +136,31 @@ export const generateOccurrencesPDF = async (records: DailyOccurrenceRecord[], p
   }
 };
 
-export const generateOccurrencesExcel = (records: DailyOccurrenceRecord[]) => {
-  const formattedData = records.map(record => ({
-    'Data': new Date(record.created_at || '').toLocaleDateString('pt-BR'),
-    'Aluno': record.student_name,
-    'Ano Letivo': record.school_year,
-    'Tipo': record.occurrence_type,
-    'Relato': record.report
-  }));
+export const generateOccurrencesExcel = (
+  records: DailyOccurrenceRecord[], 
+  prefixoPeriodo: string = 'geral', 
+  anoFiltro: string = '',
+  thirtyDaysRecords: DailyOccurrenceRecord[] = []
+) => {
+  const getRecurrenceCount = (studentName: string, type: string) => {
+    if (!studentName || !type || thirtyDaysRecords.length === 0) return 0;
+    return thirtyDaysRecords.filter(r => 
+      r.student_name.trim().toLowerCase() === studentName.trim().toLowerCase() &&
+      r.occurrence_type.trim().toLowerCase() === type.trim().toLowerCase()
+    ).length;
+  };
+
+  const formattedData = records.map(record => {
+    const count = getRecurrenceCount(record.student_name, record.occurrence_type);
+    const studentLabel = count >= 3 ? `${record.student_name} (${count}x REINCIDENTE)` : record.student_name;
+    return {
+      'Data': new Date(record.created_at || '').toLocaleDateString('pt-BR'),
+      'Aluno': studentLabel,
+      'Ano Letivo': record.school_year,
+      'Tipo': record.occurrence_type,
+      'Relato': record.report
+    };
+  });
 
   const worksheet = XLSX.utils.json_to_sheet(formattedData);
   const workbook = XLSX.utils.book_new();
@@ -124,7 +176,30 @@ export const generateOccurrencesExcel = (records: DailyOccurrenceRecord[]) => {
   ];
   worksheet['!cols'] = colWidths;
 
-  XLSX.writeFile(workbook, 'relatorio_ocorrencias.xlsx');
+  const now = new Date();
+  const dia = String(now.getDate()).padStart(2, '0');
+  const mes = String(now.getMonth() + 1).padStart(2, '0');
+  const ano = String(now.getFullYear()).slice(-2);
+  const dataFormatada = `${dia}_${mes}_${ano}`;
+
+  let anoClean = String(anoFiltro).trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/[º°ª]/g, '');
+
+  let periodoClean = String(prefixoPeriodo).toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  if (periodoClean === 'diario' || periodoClean === 'hoje') {
+    periodoClean = 'hoje';
+  }
+
+  let filename = 'relatorio_ocorrencias';
+  if (periodoClean) filename += `_${periodoClean}`;
+  if (anoClean) filename += `_${anoClean}`;
+  filename += `_dia_${dataFormatada}.xlsx`;
+
+  XLSX.writeFile(workbook, filename);
 };
 
 export const buildFichaOcorrenciaDoc = async (

@@ -201,7 +201,14 @@ export default function FormsPage() {
       report: Object.entries(oc.dados || {}).map(([k, v]) => `[${k}]: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n'),
       created_at: oc.criadoEm
     }));
-    await generateOccurrencesPDF(dataToExport, filtroRelatorio);
+    const master30Days = ocorrenciasBase.map(oc => ({
+      student_name: oc.nomeAluno || 'Desconhecido',
+      school_year: oc.anoAluno || 'Não informado',
+      occurrence_type: oc.nomeModelo || 'Ata',
+      report: '',
+      created_at: oc.criadoEm
+    }));
+    await generateOccurrencesPDF(dataToExport, filtroRelatorio, '', master30Days);
   };
 
   const handleGenerateExcel = () => {
@@ -212,7 +219,14 @@ export default function FormsPage() {
       report: Object.entries(oc.dados || {}).map(([k, v]) => `[${k}]: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n'),
       created_at: oc.criadoEm
     }));
-    generateOccurrencesExcel(dataToExport);
+    const master30Days = ocorrenciasBase.map(oc => ({
+      student_name: oc.nomeAluno || 'Desconhecido',
+      school_year: oc.anoAluno || 'Não informado',
+      occurrence_type: oc.nomeModelo || 'Ata',
+      report: '',
+      created_at: oc.criadoEm
+    }));
+    generateOccurrencesExcel(dataToExport, filtroRelatorio, '', master30Days);
   };
 
   return (

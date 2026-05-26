@@ -151,12 +151,21 @@ export function Occurrences() {
 
   // Consultation State
   const [records, setRecords] = useState<DailyOccurrenceRecord[]>([]);
+  const [thirtyDaysRecords, setThirtyDaysRecords] = useState<DailyOccurrenceRecord[]>([]);
   const [isLoadingRecords, setIsLoadingRecords] = useState(false);
   const [searchName, setSearchName] = useState('');
   const [filterYear, setFilterYear] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterPeriod, setFilterPeriod] = useState('Hoje');
   const [filterDate, setFilterDate] = useState('');
+
+  const getRecurrenceCount = (studentName: string, type: string) => {
+    if (!studentName || !type) return 0;
+    return thirtyDaysRecords.filter(r => 
+      r.student_name.trim().toLowerCase() === studentName.trim().toLowerCase() &&
+      r.occurrence_type.trim().toLowerCase() === type.trim().toLowerCase()
+    ).length;
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -224,6 +233,14 @@ export function Occurrences() {
 
       const data = await occurrenceService.fetchRecords(params);
       setRecords(data);
+
+      // Load 30 days master records for recurrence counting
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const data30 = await occurrenceService.fetchRecords({
+        start_date: thirtyDaysAgo.toISOString()
+      });
+      setThirtyDaysRecords(data30);
     } catch (error) {
       console.error(error);
     } finally {
@@ -272,7 +289,7 @@ export function Occurrences() {
   };
 
   const handleGeneratePDF = async () => {
-    await generateOccurrencesPDF(getFilteredReportRecords(), reportFilterPeriod);
+    await generateOccurrencesPDF(getFilteredReportRecords(), reportFilterPeriod, reportFilterYear, thirtyDaysRecords);
   };
 
   const getUniformMessage = () => {
@@ -309,7 +326,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
   };
 
   const handleGenerateExcel = () => {
-    generateOccurrencesExcel(getFilteredReportRecords());
+    generateOccurrencesExcel(getFilteredReportRecords(), reportFilterPeriod, reportFilterYear, thirtyDaysRecords);
   };
 
   return (
@@ -686,8 +703,19 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                             <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-slate-900 dark:text-slate-200">
                               {new Date(record.created_at || '').toLocaleDateString('pt-BR')}
                             </td>
-                            <td className="px-4 py-3 md:px-6 md:py-4 font-medium text-slate-900 dark:text-slate-100">
-                              {record.student_name}
+                            <td className="px-4 py-3 md:px-6 md:py-4 font-medium">
+                              {(() => {
+                                const count = getRecurrenceCount(record.student_name, record.occurrence_type);
+                                if (count >= 3) {
+                                  return (
+                                    <span className="text-red-500 font-extrabold flex items-center gap-1.5" title={`${count} ocorrências deste tipo nos últimos 30 dias`}>
+                                      {record.student_name}
+                                      <span className="px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-500 text-[8px] font-black uppercase tracking-widest">{count}x Reincidente</span>
+                                    </span>
+                                  );
+                                }
+                                return <span className="text-slate-900 dark:text-slate-100">{record.student_name}</span>;
+                              })()}
                             </td>
                             <td className="px-4 py-3 md:px-6 md:py-4">
                               <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-700 rounded-md text-[10px] md:text-xs font-medium whitespace-nowrap">
