@@ -30,7 +30,7 @@ const loadImageAsBase64 = async (url: string): Promise<string> => {
   });
 };
 
-export const generateOccurrencesPDF = async (records: DailyOccurrenceRecord[]) => {
+export const generateOccurrencesPDF = async (records: DailyOccurrenceRecord[], prefixoPeriodo: string = 'geral') => {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -79,7 +79,21 @@ export const generateOccurrencesPDF = async (records: DailyOccurrenceRecord[]) =
       }
     });
 
-    doc.save('relatorio_ocorrencias.pdf');
+    const now = new Date();
+    const dia = String(now.getDate()).padStart(2, '0');
+    const mes = String(now.getMonth() + 1).padStart(2, '0');
+    const ano = String(now.getFullYear()).slice(-2);
+    const dataFormatada = `${dia}_${mes}_${ano}`;
+
+    let periodoClean = String(prefixoPeriodo).toLowerCase().trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    
+    if (periodoClean === 'diario' || periodoClean === 'hoje') {
+      periodoClean = 'hoje';
+    }
+
+    const filename = `relatorio_ocorrencias_${periodoClean}_dia_${dataFormatada}.pdf`;
+    doc.save(filename);
 
   } catch (error) {
     console.error('Error generating PDF:', error);

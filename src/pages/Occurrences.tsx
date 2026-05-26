@@ -272,7 +272,7 @@ export function Occurrences() {
   };
 
   const handleGeneratePDF = async () => {
-    await generateOccurrencesPDF(getFilteredReportRecords());
+    await generateOccurrencesPDF(getFilteredReportRecords(), reportFilterPeriod);
   };
 
   const getUniformMessage = () => {

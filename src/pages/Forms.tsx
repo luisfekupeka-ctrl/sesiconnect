@@ -201,7 +201,7 @@ export default function FormsPage() {
       report: Object.entries(oc.dados || {}).map(([k, v]) => `[${k}]: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n'),
       created_at: oc.criadoEm
     }));
-    await generateOccurrencesPDF(dataToExport);
+    await generateOccurrencesPDF(dataToExport, filtroRelatorio);
   };
 
   const handleGenerateExcel = () => {

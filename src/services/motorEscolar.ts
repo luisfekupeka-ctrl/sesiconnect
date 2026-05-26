@@ -121,8 +121,21 @@ export function obterBlocosDeHorario(gradeCompleta: EntradaGradeSala[]): { indic
 
 export function extrairProfessores(gradeCompleta: EntradaGradeSala[]): string[] {
   const nomes = new Set<string>();
+  const invalidNames = ['a definir', 'almoço', 'almoco', 'lanche', 'lanche after', 'intervalo', '—', '-', ''];
   gradeCompleta.forEach(e => {
-    if (e.nomeProfessor) nomes.add(e.nomeProfessor);
+    if (e.nomeProfessor) {
+      const trimmed = e.nomeProfessor.trim();
+      const lower = trimmed.toLowerCase();
+      const isInvalid = invalidNames.includes(lower) || 
+                        lower.startsWith('lanche') || 
+                        lower.startsWith('almoço') || 
+                        lower.startsWith('almoco') || 
+                        trimmed === '—' || 
+                        trimmed === '-';
+      if (!isInvalid) {
+        nomes.add(trimmed);
+      }
+    }
   });
   return Array.from(nomes).sort();
 }
