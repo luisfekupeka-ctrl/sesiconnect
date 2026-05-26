@@ -5,8 +5,9 @@ import { occurrenceService } from '../services/occurrenceService';
 import { generateOccurrencesPDF, generateOccurrencesExcel, generateSingleOccurrencePDF } from '../lib/reportGenerator';
 import { useEscola } from '../context/ContextoEscola';
 import { useAuth } from '../context/AuthContext';
-import type { DailyOccurrenceRecord } from '../types';
+import type { DailyOccurrenceRecord, RegistroOcorrencia } from '../types';
 import { generateWordOccurrence } from '../lib/wordGenerator';
+import FichaOcorrencia from '../components/FichaOcorrencia';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -896,7 +897,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
         </motion.div>
       </AnimatePresence>
 
-      {/* Modal de Detalhe da Ocorrência estilo Documento Oficial */}
+      {/* Modal de Detalhe da Ocorrência usando o novo componente FichaOcorrencia */}
       <AnimatePresence>
         {selectedRecord && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
@@ -904,145 +905,52 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-3xl bg-white text-slate-900 rounded-[2rem] overflow-hidden shadow-2xl my-8 border border-slate-200"
+              className="relative w-full max-w-5xl my-8"
             >
-              <div id="modal-print-content" className="bg-white">
-              {/* Header Oficial do Colégio Sesi */}
-              <div className="relative w-full h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-8 select-none">
-                {/* Polígonos Geométricos */}
-                <div className="absolute top-0 left-0 w-[300px] h-full pointer-events-none">
-                  <div className="absolute top-0 left-0 w-[200px] h-[120px] bg-[#e2e8f0]" style={{ clipPath: 'polygon(0 0, 100% 0, 70% 100%, 0 80%)' }} />
-                  <div className="absolute top-0 left-0 w-[160px] h-[100px] bg-[#cbd5e1] opacity-40" style={{ clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0 60%)' }} />
-                  <div className="absolute top-[20px] left-0 w-[40px] h-[100px] bg-[#fbbf24]" style={{ clipPath: 'polygon(0 0, 100% 30%, 80% 90%, 0 100%)' }} />
-                </div>
-                <div className="flex-1" />
-                {/* Logo Sesi */}
-                <div className="relative z-10">
-                  <div className="flex flex-col items-end">
-                    <div className="flex items-center gap-1 leading-none">
-                      <span className="text-[10px] font-extrabold text-[#0c2340] lowercase tracking-normal">colégio</span>
-                      <div className="w-2 h-2 rounded-full bg-[#0c2340] mt-0.5" />
-                    </div>
-                    <div className="text-[40px] font-black text-[#0c2340] leading-none tracking-tighter -mt-1 font-serif italic">
-                      Sesi
-                    </div>
-                    <div className="bg-[#fbbf24] text-[#0c2340] text-[9px] font-black uppercase tracking-[0.2em] px-3.5 py-1.5 mt-1 rounded-sm transform -skew-x-6 origin-right leading-none">
-                      internacional
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Botão Fechar / Ações no Topo */}
-              <div className="absolute top-4 right-4 z-20 flex flex-wrap justify-end gap-2 pr-2">
-                <button
-                  onClick={() => window.print()}
-                  className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors shadow-sm cursor-pointer print:hidden"
-                  title="Imprimir"
-                >
-                  <Printer className="w-[18px] h-[18px]" />
-                </button>
-                <button
-                  onClick={() => generateSingleOccurrencePDF(selectedRecord)}
-                  className="p-3 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors shadow-sm cursor-pointer print:hidden"
-                  title="Baixar PDF"
-                >
-                  <FileText className="w-[18px] h-[18px]" />
-                </button>
-                <button
-                  onClick={() => generateWordOccurrence(selectedRecord, emissorName)}
-                  className="p-3 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors shadow-sm cursor-pointer print:hidden"
-                  title="Baixar Word"
-                >
-                  <FileText className="w-[18px] h-[18px]" />
-                </button>
-
-                {isAdmin && (
-                  <button 
-                    onClick={async () => {
-                      if (window.confirm('Tem certeza que deseja apagar este registro?')) {
-                        try {
-                          if (selectedRecord.id) {
-                            await occurrenceService.deleteRecord(selectedRecord.id);
-                            setRecords(prev => prev.filter(r => r.id !== selectedRecord.id));
-                            setSelectedRecord(null);
-                          }
-                        } catch(e) {
-                          alert('Erro ao apagar registro.');
-                        }
-                      }
-                    }}
-                    className="p-3 rounded-full bg-red-50 hover:bg-red-100 text-red-600 transition-colors shadow-sm cursor-pointer print:hidden"
-                    title="Apagar Registro"
-                  >
-                    <Trash2 className="w-[18px] h-[18px]" />
-                  </button>
-                )}
+              {isAdmin && (
                 <button 
-                  onClick={() => setSelectedRecord(null)}
-                  className="p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors shadow-sm cursor-pointer ml-auto print:hidden"
-                  title="Fechar"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (window.confirm('Tem certeza que deseja apagar este registro?')) {
+                      try {
+                        if (selectedRecord.id) {
+                          await occurrenceService.deleteRecord(selectedRecord.id);
+                          setRecords(prev => prev.filter(r => r.id !== selectedRecord.id));
+                          setSelectedRecord(null);
+                        }
+                      } catch(e) {
+                        alert('Erro ao apagar registro.');
+                      }
+                    }
+                  }}
+                  className="absolute top-4 left-4 z-[120] p-3 rounded-full bg-red-600 hover:bg-red-700 text-white transition-all shadow-xl cursor-pointer print:hidden flex items-center justify-center hover:-translate-y-0.5 active:translate-y-0"
+                  title="Apagar Registro"
                 >
-                  <X className="w-[18px] h-[18px]" />
+                  <Trash2 className="w-5 h-5" />
                 </button>
-              </div>
-
-              {/* Corpo da Ocorrência */}
-              <div className="p-4 md:p-8 md:p-12 space-y-8 print:p-4 md:p-8 font-sans">
-                <div className="text-center border-b border-slate-200 pb-6">
-                  <h2 className="text-2xl font-extrabold uppercase tracking-widest text-[#0c2340]">Registro de Ocorrência</h2>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">{selectedRecord.occurrence_type}</p>
-                </div>
-
-                {/* Info do Aluno */}
-                <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-4 md:p-6 rounded-2xl border border-slate-100">
-                  <div>
-                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Aluno</span>
-                    <span className="text-sm font-bold text-slate-800">{selectedRecord.student_name}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Série / Ano</span>
-                    <span className="text-sm font-bold text-slate-800">{selectedRecord.school_year}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Turma</span>
-                    <span className="text-sm font-bold text-slate-800">A DEFINIR</span>
-                  </div>
-                  <div>
-                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Data do Registro</span>
-                    <span className="text-sm font-bold text-slate-800">{new Date(selectedRecord.created_at || '').toLocaleDateString('pt-BR')}</span>
-                  </div>
-                </div>
-
-                {/* Conteúdo Dinâmico */}
-                <div className="bg-slate-50/50 p-4 md:p-10 rounded-[2rem] border border-slate-100 space-y-10">
-                  <div className="flex items-center gap-2 mb-6 border-b border-slate-200/60 pb-4">
-                    <FileText className="w-[18px] h-[18px] text-[#0c2340]" />
-                    <span className="text-xs font-black text-[#0c2340] uppercase tracking-widest">{selectedRecord.occurrence_type}</span>
-                  </div>
-                  <div className="space-y-10">
-                    <div className="border-b border-slate-100 pb-8 last:border-none last:pb-0">
-                      <span className="text-[10px] font-black text-[#0c2340] uppercase tracking-widest block mb-3">Descrição / Relato</span>
-                      <div className="text-sm text-slate-700 leading-relaxed font-medium whitespace-pre-line pl-4 border-l-2 border-slate-200">
-                        {selectedRecord.report}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Assinaturas */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 pt-12 mt-12 border-t border-slate-200">
-                  <div className="text-center space-y-1">
-                    <div className="w-full border-b border-slate-300 h-10" />
-                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Assinatura do Aluno/Responsável</span>
-                  </div>
-                  <div className="text-center space-y-1">
-                    <div className="w-full border-b border-slate-300 h-10" />
-                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Professor / Coordenação</span>
-                  </div>
-                </div>
-                </div>
-              </div>
+              )}
+              {(() => {
+                const mappedRecord: RegistroOcorrencia = {
+                  id: selectedRecord.id || '',
+                  modeloFormularioId: 'diario',
+                  nomeModelo: selectedRecord.occurrence_type,
+                  nomeAluno: selectedRecord.student_name,
+                  turmaAluno: selectedRecord.school_year,
+                  anoAluno: selectedRecord.school_year,
+                  professorAtual: emissorName || 'Administração',
+                  criadoEm: selectedRecord.created_at || new Date().toISOString(),
+                  dados: {
+                    'Tipo de Ocorrência': selectedRecord.occurrence_type,
+                    'Descrição': selectedRecord.report
+                  }
+                };
+                return (
+                  <FichaOcorrencia 
+                    ocorrencia={mappedRecord} 
+                    onClose={() => setSelectedRecord(null)} 
+                  />
+                );
+              })()}
             </motion.div>
           </div>
         )}

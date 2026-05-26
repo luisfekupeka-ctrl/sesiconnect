@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RegistroOcorrencia } from '../types';
-import { Printer, X, User, ClipboardList, MapPin, CheckSquare, Square, Plus, Trash2 } from 'lucide-react';
+import { Printer, X, User, ClipboardList, MapPin, CheckSquare, Square, Plus, Trash2, Download } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { generateFichaOcorrenciaPDF } from '../lib/reportGenerator';
 
@@ -11,6 +11,8 @@ interface Props {
 }
 
 export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Props) {
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
+
   // Configurações dinâmicas de assinatura
   const [configAssinaturas, setConfigAssinaturas] = useState({
     mostrarAluno: true,
@@ -20,6 +22,21 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
     mostrarEmissor: true,
     nomeEmissor: ocorrencia.professorAtual || 'Administração'
   });
+
+  // Sync state with ocorrencia changes to prevent layout and names caching
+  useEffect(() => {
+    setConfigAssinaturas({
+      mostrarAluno: true,
+      nomeAluno: ocorrencia.nomeAluno || '',
+      mostrarResponsavel: true,
+      nomeResponsavel: '',
+      mostrarEmissor: true,
+      nomeEmissor: ocorrencia.professorAtual || 'Administração'
+    });
+    setNovoNomeExtra('');
+    setNovoTipoExtra('Aluno');
+    setAssinaturasExtras([]);
+  }, [ocorrencia]);
 
   interface AssinaturaExtra {
     papel: string;
@@ -47,13 +64,30 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
 
   const content = (
     <>
+      {!isPrintOnly && (
+        <button 
+          type="button"
+          onClick={() => setIsConfigOpen(!isConfigOpen)} 
+          className="md:hidden w-full flex items-center justify-between p-4 bg-gray-100 text-gray-800 font-extrabold text-xs uppercase tracking-wider border-b border-gray-200 print:hidden shrink-0 rounded-t-[2.5rem]"
+        >
+          <span className="flex items-center gap-2">
+            <ClipboardList className="w-4 h-4 text-blue-500" />
+            Configurar Assinaturas
+          </span>
+          <span className="text-[10px] font-bold text-gray-500">{isConfigOpen ? '▲ Recolher' : '▼ Expandir'}</span>
+        </button>
+      )}
+
       <div className={cn(
           "bg-white w-full max-w-5xl flex flex-col md:flex-row print:shadow-none print:max-h-none print:rounded-none print-modal-container",
-          !isPrintOnly ? "max-h-[95vh] overflow-hidden rounded-[2.5rem] shadow-2xl" : "rounded-none"
+          !isPrintOnly ? "max-h-[95vh] overflow-hidden rounded-b-[2.5rem] md:rounded-[2.5rem] shadow-2xl" : "rounded-none"
       )}>
           
           {/* Configurações (Esquerda) - Oculta na impressão */}
-          <div className="w-full md:w-80 bg-gray-50 border-r border-gray-100 p-4 md:p-8 flex flex-col gap-4 md:gap-6 print:hidden overflow-y-auto">
+          <div className={cn(
+            "w-full md:w-80 bg-gray-50 border-r border-gray-100 p-4 md:p-8 flex flex-col gap-4 md:gap-6 print:hidden overflow-y-auto shrink-0 transition-all duration-200",
+            !isConfigOpen ? "hidden md:flex" : "flex"
+          )}>
             <div>
               <h3 className="font-black text-lg mb-1">Configurar Documento</h3>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Personalize as assinaturas</p>
@@ -220,10 +254,18 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
             </div>
 
             <div className="mt-auto pt-6 border-t border-gray-200 space-y-3">
-              <button onClick={handlePrint} className="w-full flex items-center justify-center gap-2 px-5 py-4 bg-gray-900 text-white rounded-2xl text-xs font-black uppercase hover:bg-gray-800 transition-all shadow-lg">
-                <Printer size={16} /> Imprimir / PDF
-              </button>
-              <button onClick={onClose} className="w-full py-4 bg-gray-200 text-gray-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-500 transition-all">
+                <button onClick={handlePrint} className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-gray-900 text-white rounded-2xl text-xs font-black uppercase hover:bg-gray-800 transition-all shadow-md cursor-pointer">
+                  <Printer size={16} /> Imprimir
+                </button>
+                <button 
+                  onClick={async () => {
+                    await generateFichaOcorrenciaPDF(ocorrencia, configAssinaturas, assinaturasExtras);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-blue-600 text-white rounded-2xl text-xs font-black uppercase hover:bg-blue-700 transition-all shadow-md cursor-pointer"
+                >
+                  <Download size={16} /> Baixar PDF
+                </button>
+                <button onClick={onClose} className="w-full py-3.5 bg-gray-200 text-gray-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-500 transition-all cursor-pointer">
                 Fechar Visualização
               </button>
             </div>
@@ -233,9 +275,9 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
           <div id="printable-occurrence" className="flex-1 overflow-y-auto bg-white custom-scrollbar relative flex flex-col print-card-content">
             
             {/* Header Oficial do Colégio Sesi */}
-            <div className="relative w-full h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-8 select-none">
+            <div className="relative w-full h-[100px] md:h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-4 md:px-8 select-none">
               {/* Polígonos Geométricos */}
-              <div className="absolute top-0 left-0 w-[300px] h-full pointer-events-none">
+              <div className="absolute top-0 left-0 w-[180px] md:w-[300px] h-full pointer-events-none">
                 <div className="absolute top-0 left-0 w-[200px] h-[120px] bg-[#e2e8f0]" style={{ clipPath: 'polygon(0 0, 100% 0, 70% 100%, 0 80%)' }} />
                 <div className="absolute top-0 left-0 w-[160px] h-[100px] bg-[#cbd5e1] opacity-40" style={{ clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0 60%)' }} />
                 <div className="absolute top-[20px] left-0 w-[40px] h-[100px] bg-[#fbbf24]" style={{ clipPath: 'polygon(0 0, 100% 30%, 80% 90%, 0 100%)' }} />
@@ -243,43 +285,33 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
               <div className="flex-1" />
               {/* Logo Sesi */}
               <div className="relative z-10">
-                <div className="flex flex-col items-end mr-4">
-                  <div className="flex items-center gap-2 mr-1">
-                    <span className="text-[11px] font-extrabold text-[#0c2340] lowercase tracking-normal">colégio</span>
+                <div className="flex flex-col items-end mr-2 md:mr-4">
+                  <div className="flex items-center gap-1 md:gap-2 mr-1">
+                    <span className="text-[9px] md:text-[11px] font-extrabold text-[#0c2340] lowercase tracking-normal">colégio</span>
                     <div className="flex flex-col items-center gap-0.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-[#0c2340]" />
-                      <div className="w-2 h-3.5 rounded-full bg-[#0c2340]" />
+                      <div className="w-1.5 md:w-2.5 h-1.5 md:h-2.5 rounded-full bg-[#0c2340]" />
+                      <div className="w-1 md:w-2 h-2.5 md:h-3.5 rounded-full bg-[#0c2340]" />
                     </div>
                   </div>
-                  <div className="text-[42px] font-bold text-[#0c2340] leading-none tracking-tight -mt-1 font-serif italic mr-6 relative">
+                  <div className="text-[28px] md:text-[42px] font-bold text-[#0c2340] leading-none tracking-tight -mt-0.5 md:-mt-1 font-serif italic mr-2 md:mr-6 relative">
                     Ses<span className="relative">ı</span>
                   </div>
-                  <div className="bg-[#fbbf24] text-[#0c2340] text-[9px] font-black uppercase tracking-[0.2em] px-4 py-2 mt-1.5 rounded-[8px] transform -skew-x-12 leading-none">
+                  <div className="bg-[#fbbf24] text-[#0c2340] text-[7px] md:text-[9px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] px-2.5 md:px-4 py-1 md:py-2 mt-1 rounded-[6px] md:rounded-[8px] transform -skew-x-12 leading-none">
                     internacional
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex-1 px-12 md:px-20 pt-12 pb-20 space-y-10">
+            <div className="flex-1 px-4 sm:px-12 md:px-20 pt-6 md:pt-12 pb-10 md:pb-20 space-y-6 md:space-y-10">
                {/* Cabeçalho do Documento - Alocado de maneira inteligente */}
                <div className="space-y-1.5 text-sm text-[#0c2340] font-medium border-b border-gray-200 pb-6">
                  <p><span className="font-bold mr-2">Nome do Aluno:</span> {configAssinaturas.nomeAluno || ocorrencia.nomeAluno}</p>
-                 <p><span className="font-bold mr-2">Ano:</span> {ocorrencia.anoAluno || ocorrencia.turmaAluno}</p>
-                 <p><span className="font-bold mr-2">Responsável:</span> {(() => {
-                   const profs = [];
-                   if (configAssinaturas.nomeEmissor && configAssinaturas.nomeEmissor.toUpperCase() !== 'A DEFINIR') {
-                     profs.push(configAssinaturas.nomeEmissor);
-                   }
-                   if (configAssinaturas.nomeResponsavel && configAssinaturas.nomeResponsavel.toUpperCase() !== 'A DEFINIR') {
-                     profs.push(configAssinaturas.nomeResponsavel);
-                   }
-                   const extraProfs = assinaturasExtras.map(e => e.nome);
-                   const profsText = [...profs, ...extraProfs].join(', ');
-                   
-                   // Se estiver vazio e não houver configurações, volta o default
-                   return profsText || 'Administração';
-                 })()}</p>
+                 <p><span className="font-bold mr-2">Ano:</span> {ocorrencia.anoAluno || ocorrencia.turmaAluno || 'Não informado'}</p>
+                 <p><span className="font-bold mr-2">Professor / Emissor:</span> {configAssinaturas.nomeEmissor || 'Administração'}</p>
+                 {configAssinaturas.nomeResponsavel && (
+                   <p><span className="font-bold mr-2">Responsável Legal:</span> {configAssinaturas.nomeResponsavel}</p>
+                 )}
                  <p><span className="font-bold mr-2">Data:</span> {(() => {
                    const key = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase() === 'data');
                    const rawDate = key ? String(ocorrencia.dados[key]) : (ocorrencia.criadoEm || new Date().toISOString());

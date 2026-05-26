@@ -256,17 +256,19 @@ export const buildFichaOcorrenciaDoc = async (
     doc.setFont('helvetica', 'normal');
     doc.text(ocorrencia.anoAluno || ocorrencia.turmaAluno || 'Não informado', marginX + 10, currentY);
 
-    const profs = [];
-    if (configAssinaturas.nomeEmissor) profs.push(configAssinaturas.nomeEmissor);
-    if (configAssinaturas.nomeResponsavel) profs.push(configAssinaturas.nomeResponsavel);
-    const extraProfs = assinaturasExtras.filter(e => e.papel.toLowerCase().includes('professor')).map(e => e.nome);
-    const profsText = [...profs, ...extraProfs].join(', ');
-
     currentY += 8;
     doc.setFont('helvetica', 'bold');
-    doc.text('Responsável:', marginX, currentY);
+    doc.text('Professor / Emissor:', marginX, currentY);
     doc.setFont('helvetica', 'normal');
-    doc.text(profsText || 'Administração', marginX + 35, currentY);
+    doc.text(configAssinaturas.nomeEmissor || ocorrencia.professorAtual || 'Administração', marginX + 40, currentY);
+
+    if (configAssinaturas.nomeResponsavel) {
+      currentY += 8;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Responsável Legal:', marginX, currentY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(configAssinaturas.nomeResponsavel, marginX + 40, currentY);
+    }
 
     currentY += 8;
     doc.setFont('helvetica', 'bold');
@@ -274,7 +276,8 @@ export const buildFichaOcorrenciaDoc = async (
     doc.setFont('helvetica', 'normal');
     
     // Robust date parsing to avoid timezone bugs
-    const rawDate = ocorrencia.dataOcorrencia || ocorrencia.criadoEm || new Date().toISOString();
+    const dateKey = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase() === 'data');
+    const rawDate = ocorrencia.dataOcorrencia || (dateKey ? String(ocorrencia.dados[dateKey]) : ocorrencia.criadoEm) || new Date().toISOString();
     let dateStr = rawDate;
     if (rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
       const [y, m, d] = rawDate.split('-');
@@ -393,7 +396,33 @@ export const generateFichaOcorrenciaPDF = async (
 ) => {
   try {
     const doc = await buildFichaOcorrenciaDoc(ocorrencia, configAssinaturas, assinaturasExtras);
-    doc.save(`Ata_${ocorrencia.nomeAluno.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`);
+    
+    const dateKey = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase() === 'data');
+    const rawDate = ocorrencia.dataOcorrencia || (dateKey ? String(ocorrencia.dados[dateKey]) : ocorrencia.criadoEm) || new Date().toISOString();
+    let dateStr = rawDate;
+    if (rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [y, m, d] = rawDate.split('-');
+      dateStr = `${d}_${m}_${y}`;
+    } else {
+      try {
+        const dt = new Date(rawDate);
+        if (!isNaN(dt.getTime())) {
+          const useUTC = !rawDate.includes('T') && !rawDate.includes(' ');
+          const dia = String(dt.getUTCDate()).padStart(2, '0');
+          const mes = String(dt.getUTCMonth() + 1).padStart(2, '0');
+          const ano = String(dt.getUTCFullYear()).slice(-2);
+          dateStr = `${dia}_${mes}_${ano}`;
+        }
+      } catch (e) {
+        dateStr = rawDate.replace(/[^a-zA-Z0-9]/g, '_');
+      }
+    }
+
+    const studentClean = String(ocorrencia.nomeAluno).trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '_');
+    const filename = `ata_${studentClean}_dia_${dateStr}.pdf`;
+    doc.save(filename);
   } catch (error) {
     console.error('Error generating PDF:', error);
     alert('Erro ao gerar PDF.');
