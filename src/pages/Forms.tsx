@@ -301,29 +301,28 @@ export default function FormsPage() {
             {modeloSelecionado && !enviado && (
               <div className="bg-surface-container-lowest rounded-[2.5rem] overflow-hidden editorial-shadow border border-outline-variant/10">
                 {/* Official Sesi Document Header Accent */}
-                <div className="relative w-full h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-8 select-none">
+                <div className="relative w-full h-[100px] md:h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-4 md:px-8 select-none">
                   {/* Polígonos Geométricos */}
-                  <div className="absolute top-0 left-0 w-[300px] h-full pointer-events-none">
+                  <div className="absolute top-0 left-0 w-[180px] md:w-[300px] h-full pointer-events-none">
                     <div className="absolute top-0 left-0 w-[200px] h-[120px] bg-[#e2e8f0]" style={{ clipPath: 'polygon(0 0, 100% 0, 70% 100%, 0 80%)' }} />
                     <div className="absolute top-0 left-0 w-[160px] h-[100px] bg-[#cbd5e1] opacity-40" style={{ clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0 60%)' }} />
                     <div className="absolute top-[20px] left-0 w-[40px] h-[100px] bg-[#fbbf24]" style={{ clipPath: 'polygon(0 0, 100% 30%, 80% 90%, 0 100%)' }} />
                   </div>
                   <div className="flex-1" />
                   {/* Logo Sesi */}
-                  <div className="relative z-10 select-none scale-105">
-                    <div className="flex flex-col items-end mr-4">
-                      <div className="flex items-center gap-2 mr-1">
-                        <span className="text-[11px] font-extrabold text-[#0c2340] lowercase tracking-normal">colégio</span>
-                        {/* Ponto ícone estilizado do Sesi Internacional */}
+                  <div className="relative z-10">
+                    <div className="flex flex-col items-end mr-2 md:mr-4">
+                      <div className="flex items-center gap-1 md:gap-2 mr-1">
+                        <span className="text-[9px] md:text-[11px] font-extrabold text-[#0c2340] lowercase tracking-normal">colégio</span>
                         <div className="flex flex-col items-center gap-0.5">
-                          <div className="w-2.5 h-2.5 rounded-full bg-[#0c2340]" />
-                          <div className="w-2 h-3.5 rounded-full bg-[#0c2340]" />
+                          <div className="w-1.5 md:w-2.5 h-1.5 md:h-2.5 rounded-full bg-[#0c2340]" />
+                          <div className="w-1 md:w-2 h-2.5 md:h-3.5 rounded-full bg-[#0c2340]" />
                         </div>
                       </div>
-                      <div className="text-[42px] font-bold text-[#0c2340] leading-none tracking-tight -mt-1 font-serif italic mr-6 relative">
+                      <div className="text-[28px] md:text-[42px] font-bold text-[#0c2340] leading-none tracking-tight -mt-0.5 md:-mt-1 font-serif italic mr-2 md:mr-6 relative">
                         Ses<span className="relative">ı</span>
                       </div>
-                      <div className="bg-[#fbbf24] text-[#0c2340] text-[9px] font-black uppercase tracking-[0.2em] px-4 py-2 mt-1.5 rounded-[8px] transform -skew-x-12 leading-none">
+                      <div className="bg-[#fbbf24] text-[#0c2340] text-[7px] md:text-[9px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] px-2.5 md:px-4 py-1 md:py-2 mt-1 rounded-[6px] md:rounded-[8px] transform -skew-x-12 leading-none">
                         internacional
                       </div>
                     </div>

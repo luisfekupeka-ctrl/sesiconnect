@@ -64,30 +64,13 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
 
   const content = (
     <>
-      {!isPrintOnly && (
-        <button 
-          type="button"
-          onClick={() => setIsConfigOpen(!isConfigOpen)} 
-          className="md:hidden w-full flex items-center justify-between p-4 bg-gray-100 text-gray-800 font-extrabold text-xs uppercase tracking-wider border-b border-gray-200 print:hidden shrink-0 rounded-t-[2.5rem]"
-        >
-          <span className="flex items-center gap-2">
-            <ClipboardList className="w-4 h-4 text-blue-500" />
-            Configurar Assinaturas
-          </span>
-          <span className="text-[10px] font-bold text-gray-500">{isConfigOpen ? '▲ Recolher' : '▼ Expandir'}</span>
-        </button>
-      )}
-
       <div className={cn(
           "bg-white w-full max-w-5xl flex flex-col md:flex-row print:shadow-none print:max-h-none print:rounded-none print-modal-container",
-          !isPrintOnly ? "max-h-[95vh] overflow-hidden rounded-b-[2.5rem] md:rounded-[2.5rem] shadow-2xl" : "rounded-none"
+          !isPrintOnly ? "max-h-none md:max-h-[95vh] overflow-y-visible md:overflow-hidden rounded-[2.5rem] shadow-2xl" : "rounded-none"
       )}>
           
           {/* Configurações (Esquerda) - Oculta na impressão */}
-          <div className={cn(
-            "w-full md:w-80 bg-gray-50 border-r border-gray-100 p-4 md:p-8 flex flex-col gap-4 md:gap-6 print:hidden overflow-y-auto shrink-0 transition-all duration-200",
-            !isConfigOpen ? "hidden md:flex" : "flex"
-          )}>
+          <div className="w-full md:w-80 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-100 p-5 md:p-8 flex flex-col gap-5 md:gap-6 print:hidden overflow-y-visible md:overflow-y-auto shrink-0">
             <div>
               <h3 className="font-black text-lg mb-1">Configurar Documento</h3>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Personalize as assinaturas</p>
@@ -121,14 +104,14 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                   className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-900"
                 >
                   {configAssinaturas.mostrarResponsavel ? <CheckSquare size={16} className="text-primary" /> : <Square size={16} />}
-                  Assinatura do Responsável
+                  Assinatura do Responsável Legal (Pai/Mãe)
                 </button>
                 {configAssinaturas.mostrarResponsavel && (
                   <input 
                     type="text" 
                     value={configAssinaturas.nomeResponsavel} 
                     onChange={e => setConfigAssinaturas(prev => ({ ...prev, nomeResponsavel: e.target.value }))}
-                    placeholder="Nome do Responsável (Opcional)"
+                    placeholder="Nome do Responsável Legal (Pai/Mãe)"
                     className="w-full bg-white border border-gray-200 p-3 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all"
                   />
                 )}
@@ -141,14 +124,14 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                   className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-900"
                 >
                   {configAssinaturas.mostrarEmissor ? <CheckSquare size={16} className="text-primary" /> : <Square size={16} />}
-                  Assinatura Emissor/Coord.
+                  Responsável pelo Registro
                 </button>
                 {configAssinaturas.mostrarEmissor && (
                   <input 
                     type="text" 
                     value={configAssinaturas.nomeEmissor} 
                     onChange={e => setConfigAssinaturas(prev => ({ ...prev, nomeEmissor: e.target.value }))}
-                    placeholder="Nome do Coordenador"
+                    placeholder="Nome de quem fez o registro"
                     className="w-full bg-white border border-gray-200 p-3 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all"
                   />
                 )}
@@ -272,7 +255,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
           </div>
 
           {/* Área de Impressão (Direita) */}
-          <div id="printable-occurrence" className="flex-1 overflow-y-auto bg-white custom-scrollbar relative flex flex-col print-card-content">
+          <div id="printable-occurrence" className="flex-1 overflow-y-visible md:overflow-y-auto bg-white custom-scrollbar relative flex flex-col print-card-content">
             
             {/* Header Oficial do Colégio Sesi */}
             <div className="relative w-full h-[100px] md:h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-4 md:px-8 select-none">
@@ -395,7 +378,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                   {configAssinaturas.mostrarEmissor && (
                     <div className="text-center col-span-2 max-w-sm mx-auto w-full">
                       <div className="w-full border-b border-gray-900 mb-2"></div>
-                      <p className="text-xs font-bold text-gray-900 uppercase">Professor / Coordenação</p>
+                      <p className="text-xs font-bold text-gray-900 uppercase">Responsável pelo Registro</p>
                       <p className="text-[10px] text-gray-500 uppercase mt-1">{configAssinaturas.nomeEmissor}</p>
                     </div>
                   )}
@@ -435,7 +418,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
   if (isPrintOnly) return content;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:p-0 print:bg-white overflow-y-auto">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm print:p-0 print:bg-white overflow-y-auto">
       {content}
     </div>
   );

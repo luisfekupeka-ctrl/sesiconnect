@@ -365,7 +365,7 @@ export const buildFichaOcorrenciaDoc = async (
     const allSigs = [];
     if (configAssinaturas.mostrarAluno) allSigs.push({ label: 'ASSINATURA DO ALUNO', name: configAssinaturas.nomeAluno || ocorrencia.nomeAluno });
     if (configAssinaturas.mostrarResponsavel) allSigs.push({ label: 'ASSINATURA DO RESPONSÁVEL', name: configAssinaturas.nomeResponsavel || '' });
-    if (configAssinaturas.mostrarEmissor) allSigs.push({ label: 'PROFESSOR / COORDENAÇÃO', name: configAssinaturas.nomeEmissor || '' });
+    if (configAssinaturas.mostrarEmissor) allSigs.push({ label: 'RESPONSÁVEL PELO REGISTRO', name: configAssinaturas.nomeEmissor || '' });
     assinaturasExtras.forEach(e => allSigs.push({ label: e.papel.toUpperCase(), name: e.nome }));
 
     let sigX = marginX;
