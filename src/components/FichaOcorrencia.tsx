@@ -419,7 +419,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
   if (isPrintOnly) return content;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm print:p-0 print:bg-white overflow-y-auto">
+    <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm print:p-0 print:bg-white overflow-y-auto">
       {content}
     </div>
   );
