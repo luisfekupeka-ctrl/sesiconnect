@@ -444,26 +444,28 @@ export default function ScheduleEditor() {
                       <div className="text-[8px] font-black uppercase text-white/20 mb-1 ml-1">
                         {linha.tipo === 'laboratorio_idiomas' ? 'Nível / Módulo' : linha.tipo === 'after' ? 'Atividade After' : linha.tipo === 'intervalo' || linha.tipo === 'almoco' ? 'Intervalo' : 'Matéria'}
                       </div>
-                      <input 
-                        type="text" 
-                        value={linha.materia} 
-                        placeholder={linha.tipo === 'laboratorio_idiomas' ? 'EX: LEVEL 3...' : linha.tipo === 'after' ? 'EX: ROBÓTICA...' : 'EX: MATEMÁTICA...'}
-                        onChange={e => updateLinha(linha.id, 'materia', e.target.value)} 
-                        disabled={linha.tipo === 'intervalo' || linha.tipo === 'almoco'}
-                        className={cn("w-full bg-transparent border-none text-sm font-black outline-none uppercase", 
-                          linha.tipo === 'intervalo' || linha.tipo === 'almoco' ? 'text-amber-500/60' : 
-                          linha.tipo === 'laboratorio_idiomas' ? 'text-blue-400' :
-                          linha.tipo === 'after' ? 'text-purple-400' : 'text-primary',
-                          'placeholder:text-white/5'
-                        )}
-                      />
+                      <div className="bg-black/20 lg:bg-transparent border border-white/5 lg:border-none p-3.5 lg:p-0 rounded-2xl lg:rounded-none">
+                        <input 
+                          type="text" 
+                          value={linha.materia} 
+                          placeholder={linha.tipo === 'laboratorio_idiomas' ? 'EX: LEVEL 3...' : linha.tipo === 'after' ? 'EX: ROBÓTICA...' : 'EX: MATEMÁTICA...'}
+                          onChange={e => updateLinha(linha.id, 'materia', e.target.value)} 
+                          disabled={linha.tipo === 'intervalo' || linha.tipo === 'almoco'}
+                          className={cn("w-full bg-transparent border-none text-xs lg:text-sm font-black outline-none uppercase", 
+                            linha.tipo === 'intervalo' || linha.tipo === 'almoco' ? 'text-amber-500/60' : 
+                            linha.tipo === 'laboratorio_idiomas' ? 'text-blue-400' :
+                            linha.tipo === 'after' ? 'text-purple-400' : 'text-primary',
+                            'placeholder:text-white/5'
+                          )}
+                        />
+                      </div>
                     </div>
 
                     {/* Professor Dinâmico */}
                     <div className="flex-1">
                       <div className="text-[8px] font-black uppercase text-white/20 mb-1 ml-1">Professor Responsável</div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full shadow-lg" style={{ backgroundColor: corProf }} />
+                      <div className="bg-black/20 lg:bg-transparent border border-white/5 lg:border-none p-3.5 lg:p-0 rounded-2xl lg:rounded-none flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full shadow-lg shrink-0" style={{ backgroundColor: corProf }} />
                         <input 
                           type="text" 
                           value={linha.professor} 
@@ -478,7 +480,7 @@ export default function ScheduleEditor() {
                               updateLinha(linha.id, 'professor', normal);
                             }
                           }}
-                          className="w-full bg-transparent border-none text-sm font-black text-white outline-none placeholder:text-white/5 uppercase" 
+                          className="w-full bg-transparent border-none text-xs lg:text-sm font-black text-white outline-none placeholder:text-white/5 uppercase" 
                         />
                       </div>
                     </div>

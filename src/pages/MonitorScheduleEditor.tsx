@@ -194,20 +194,18 @@ export default function MonitorScheduleEditor() {
                 <p className="text-2xl font-black italic tracking-tighter">Selecione um monitor para configurar a escala fixa</p>
               </div>
             ) : (
-              <div className="p-10">
-                <div className="flex items-center justify-between mb-10 pb-8 border-b border-white/5">
-                  <div className="flex items-center gap-8">
-                    <div className="w-20 h-20 rounded-[2rem] flex items-center justify-center text-4xl font-black italic shadow-2xl" 
-                      style={{ backgroundColor: monitorSelecionado.cor, color: '#000' }}>
-                      {monitorSelecionado.nome.charAt(0)}
-                    </div>
-                    <div>
-                      <h2 className="text-4xl font-black italic leading-none tracking-tighter text-white">{monitorSelecionado.nome}</h2>
-                      <div className="flex items-center gap-3 mt-3">
-                        <span className="text-xs text-primary font-black uppercase tracking-[0.3em]">Escala Semanal Fixa</span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
-                        <span className="text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-lg bg-white/5 text-on-surface-variant border border-white/5">{monitorSelecionado.tipo}</span>
-                      </div>
+              <div className="p-4 sm:p-10">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 md:gap-8 mb-8 pb-6 border-b border-white/5 text-center sm:text-left">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center text-3xl sm:text-4xl font-black italic shadow-2xl shrink-0" 
+                    style={{ backgroundColor: monitorSelecionado.cor, color: '#000' }}>
+                    {monitorSelecionado.nome.charAt(0)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-2xl sm:text-4xl font-black italic leading-tight tracking-tighter text-white break-words">{monitorSelecionado.nome}</h2>
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-3">
+                      <span className="text-[10px] text-primary font-black uppercase tracking-[0.3em]">Escala Semanal Fixa</span>
+                      <span className="hidden sm:inline w-1.5 h-1.5 rounded-full bg-white/20" />
+                      <span className="text-[9px] font-black uppercase tracking-widest py-1 px-3 rounded-lg bg-white/5 text-on-surface-variant border border-white/5">{monitorSelecionado.tipo}</span>
                     </div>
                   </div>
                 </div>
@@ -216,52 +214,66 @@ export default function MonitorScheduleEditor() {
                   <div className="space-y-3 w-full">
                   {linhas.map((linha, idx) => {
                     const ehAlmoco = linha.tipo === 'almoco';
+                    const corBorda = ehAlmoco ? '#fbbf24' : (monitorSelecionado.cor || '#10b981');
                     return (
                       <motion.div key={linha.id}
                         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.03 }}
-                        className={cn("rounded-[2rem] transition-all border-2 group/row",
-                          ehAlmoco ? "bg-primary/5 border-primary/10" : "bg-black/40 border-white/5 hover:border-primary/20")}
+                        className={cn("rounded-[2rem] transition-all border-2 group/row relative overflow-hidden shadow-premium",
+                          ehAlmoco ? "bg-amber-500/5 border-amber-500/10 hover:border-amber-500/30" : "bg-[#0d0d0d] border-white/5 hover:border-primary/20")}
+                        style={{ borderLeft: `8px solid ${corBorda}` }}
                       >
                         <div className="grid grid-cols-1 md:grid-cols-[60px_160px_1fr_1fr_100px] items-stretch md:items-center gap-4 md:gap-6 p-4 md:p-5">
                           {/* Índice / Ícone */}
                           <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-xs font-black shrink-0 shadow-inner mx-auto md:mx-0",
-                            ehAlmoco ? "bg-primary/20 text-primary" : "bg-surface-container-high text-on-surface-variant")}>
+                            ehAlmoco ? "bg-amber-500/20 text-amber-500" : "bg-surface-container-high text-on-surface-variant")}>
                             {ehAlmoco ? <Coffee size={20} /> : idx + 1}
                           </div>
 
                           {/* Horário */}
-                          <div className="flex items-center gap-3 bg-black/40 p-3 rounded-2xl border border-white/5">
-                            <input type="time" value={linha.horarioInicio} onChange={e => atualizarLinha(linha.id, 'horarioInicio', e.target.value)}
-                              className="bg-transparent border-none text-xs font-black text-center outline-none w-full text-primary" />
-                            <span className="text-xs opacity-20">/</span>
-                            <input type="time" value={linha.horarioFim} onChange={e => atualizarLinha(linha.id, 'horarioFim', e.target.value)}
-                              className="bg-transparent border-none text-xs font-black text-center outline-none w-full text-primary" />
+                          <div className="flex flex-col justify-center">
+                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest block mb-1 ml-1 md:hidden">Horário de Turno</span>
+                            <div className="flex items-center gap-3 bg-black/40 p-3 rounded-2xl border border-white/5">
+                              <input type="time" value={linha.horarioInicio} onChange={e => atualizarLinha(linha.id, 'horarioInicio', e.target.value)}
+                                className="bg-transparent border-none text-xs font-black text-center outline-none w-full text-primary" />
+                              <span className="text-xs opacity-20">/</span>
+                              <input type="time" value={linha.horarioFim} onChange={e => atualizarLinha(linha.id, 'horarioFim', e.target.value)}
+                                className="bg-transparent border-none text-xs font-black text-center outline-none w-full text-primary" />
+                            </div>
                           </div>
 
                           {/* Função */}
                           <div className="relative">
-                            <Briefcase size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
-                            <input type="text" value={linha.funcao} placeholder="Função..."
-                              onChange={e => atualizarLinha(linha.id, 'funcao', e.target.value)}
-                              className="w-full bg-black/40 border border-white/5 rounded-2xl py-4 pl-12 pr-5 text-sm font-bold outline-none italic placeholder:opacity-20 focus:border-primary/30 transition-all" />
+                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest block mb-1 ml-1 md:hidden">Função / Atividade</span>
+                            <div className="relative">
+                              <Briefcase size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#10b981]" />
+                              <input type="text" value={linha.funcao} placeholder="Ex: Monitoria Geral..."
+                                onChange={e => atualizarLinha(linha.id, 'funcao', e.target.value)}
+                                className="w-full bg-black/40 border border-white/5 rounded-2xl py-3.5 pl-11 pr-5 text-xs font-bold outline-none placeholder:opacity-20 focus:border-primary/30 transition-all uppercase text-white" />
+                            </div>
                           </div>
 
                           {/* Local / Posto */}
                           <div className="relative">
-                            <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
-                            <input type="text" value={linha.posto} placeholder="Local / Posto..."
-                              onChange={e => atualizarLinha(linha.id, 'posto', e.target.value)}
-                              className="w-full bg-black/40 border border-white/5 rounded-2xl py-4 pl-12 pr-5 text-sm font-bold outline-none italic placeholder:opacity-20 focus:border-primary/30 transition-all" />
+                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest block mb-1 ml-1 md:hidden">Local de Trabalho</span>
+                            <div className="relative">
+                              <MapPin size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#fbbf24]" />
+                              <input type="text" value={linha.posto} placeholder="Ex: Pátio Principal..."
+                                onChange={e => atualizarLinha(linha.id, 'posto', e.target.value)}
+                                className="w-full bg-black/40 border border-white/5 rounded-2xl py-3.5 pl-11 pr-5 text-xs font-bold outline-none placeholder:opacity-20 focus:border-primary/30 transition-all uppercase text-white" />
+                            </div>
                           </div>
 
                           {/* Botões de Ação */}
                           <div className="flex justify-center md:justify-end gap-2 pt-4 md:pt-0 border-t border-white/5 md:border-t-0">
                             <button onClick={() => toggleAlmoco(linha.id)} 
+                              title="Marcar como Almoço / Pausa"
                               className={cn("p-3 rounded-xl transition-all",
-                                ehAlmoco ? "text-primary bg-primary/10 shadow-lg" : "text-white/10 hover:text-primary hover:bg-primary/5")}>
+                                ehAlmoco ? "text-amber-500 bg-amber-500/10 shadow-lg" : "text-white/10 hover:text-amber-500 hover:bg-amber-500/5")}>
                               <Coffee size={20} />
                             </button>
-                            <button onClick={() => setLinhas(prev => prev.filter(p => p.id !== linha.id))} className="p-3 text-white/10 hover:text-red-500 hover:bg-red-500/5 rounded-xl transition-all">
+                            <button onClick={() => setLinhas(prev => prev.filter(p => p.id !== linha.id))} 
+                              title="Remover Horário"
+                              className="p-3 text-white/10 hover:text-red-500 hover:bg-red-500/5 rounded-xl transition-all">
                               <Trash2 size={20} />
                             </button>
                           </div>
