@@ -3,6 +3,7 @@ import { RegistroOcorrencia } from '../types';
 import { Printer, X, User, ClipboardList, MapPin, CheckSquare, Square, Plus, Trash2, Download } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { generateFichaOcorrenciaPDF } from '../lib/reportGenerator';
+import papelTimbradoImg from '../assets/papel_timbrado.png';
 
 interface Props {
   ocorrencia: RegistroOcorrencia;
@@ -65,12 +66,12 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
   const content = (
     <>
       <div className={cn(
-          "bg-white w-full max-w-5xl flex flex-col md:flex-row print:shadow-none print:max-h-none print:rounded-none print-modal-container",
-          !isPrintOnly ? "max-h-none md:max-h-[95vh] overflow-y-visible md:overflow-hidden rounded-[2.5rem] shadow-2xl" : "rounded-none"
+          "bg-transparent md:bg-white w-full max-w-5xl flex flex-col md:flex-row gap-4 md:gap-0 print:shadow-none print:max-h-none print:rounded-none print-modal-container",
+          !isPrintOnly ? "max-h-none md:max-h-[95vh] md:overflow-hidden md:rounded-[2.5rem] md:shadow-2xl" : "rounded-none"
       )}>
           
           {/* Configurações (Esquerda) - Oculta na impressão */}
-          <div className="w-full md:w-80 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-100 p-5 md:p-8 flex flex-col gap-5 md:gap-6 print:hidden overflow-y-visible md:overflow-y-auto shrink-0">
+          <div className="w-full md:w-80 bg-white md:bg-gray-50 border border-gray-100 md:border-0 md:border-r border-gray-100 p-6 md:p-8 flex flex-col gap-6 print:hidden rounded-3xl md:rounded-none md:rounded-l-[2.5rem] shadow-xl md:shadow-none overflow-y-visible md:overflow-y-auto shrink-0">
             <div>
               <h3 className="font-black text-lg mb-1">Configurar Documento</h3>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Personalize as assinaturas</p>
@@ -255,10 +256,10 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
           </div>
 
           {/* Área de Impressão (Direita) */}
-          <div id="printable-occurrence" className="flex-1 overflow-y-visible md:overflow-y-auto bg-white custom-scrollbar relative flex flex-col print-card-content">
+          <div id="printable-occurrence" className="flex-1 bg-white rounded-3xl md:rounded-none md:rounded-r-[2.5rem] shadow-xl md:shadow-none border border-gray-100 md:border-0 overflow-y-visible md:overflow-y-auto custom-scrollbar relative flex flex-col print-card-content">
             
             {/* Header Oficial do Colégio Sesi */}
-            <div className="relative w-full h-[100px] md:h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-4 md:px-8 select-none">
+            <div className="relative w-full h-[100px] md:h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-4 md:px-8 select-none print:hidden">
               {/* Polígonos Geométricos */}
               <div className="absolute top-0 left-0 w-[180px] md:w-[300px] h-full pointer-events-none">
                 <div className="absolute top-0 left-0 w-[200px] h-[120px] bg-[#e2e8f0]" style={{ clipPath: 'polygon(0 0, 100% 0, 70% 100%, 0 80%)' }} />
@@ -286,7 +287,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
               </div>
             </div>
 
-            <div className="flex-1 px-4 sm:px-12 md:px-20 pt-6 md:pt-12 pb-10 md:pb-20 space-y-6 md:space-y-10">
+            <div className="flex-1 px-4 sm:px-12 md:px-20 pt-6 md:pt-12 pb-10 md:pb-20 space-y-6 md:space-y-10 print:pt-[55mm] print:px-[25mm] print:pb-[20mm]">
                {/* Cabeçalho do Documento - Alocado de maneira inteligente */}
                <div className="space-y-1.5 text-sm text-[#0c2340] font-medium border-b border-gray-200 pb-6">
                  <p><span className="font-bold mr-2">Nome do Aluno:</span> {configAssinaturas.nomeAluno || ocorrencia.nomeAluno}</p>
@@ -352,8 +353,8 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
                   ))}
                </div>
 
-               {/* Assinaturas - Margem superior grande para empurrar para o fundo ou separar bem */}
-               <div className="pt-24 print:pt-32 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-20">
+                {/* Assinaturas - Margem superior grande para empurrar para o fundo ou separar bem */}
+                <div className="pt-24 print:pt-32 grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-x-12 gap-y-20 print:gap-y-12">
                   {configAssinaturas.mostrarAluno && (
                     <div className="text-center">
                       <div className="w-full border-b border-gray-900 mb-2"></div>
@@ -401,7 +402,7 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
             min-height: 297mm;
             padding: 0 !important;
             background: white !important;
-            background-image: url("/src/assets/papel_timbrado.png") !important;
+            background-image: url("${papelTimbradoImg}") !important;
             background-size: 100% 100% !important;
             background-repeat: no-repeat !important;
             -webkit-print-color-adjust: exact;
