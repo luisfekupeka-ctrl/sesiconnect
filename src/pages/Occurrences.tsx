@@ -115,12 +115,48 @@ export function Occurrences() {
     setShowAutocomplete(false);
   };
 
+  const getPeriodDateRange = (period: string, customDate?: string) => {
+    const now = new Date();
+    const start = new Date();
+    const end = new Date();
+    
+    end.setHours(23, 59, 59, 999);
+    
+    if (period === 'Hoje') {
+      start.setHours(0, 0, 0, 0);
+    } else if (period === 'Semanal') {
+      start.setDate(now.getDate() - 7);
+      start.setHours(0, 0, 0, 0);
+    } else if (period === 'Quinzenal') {
+      start.setDate(now.getDate() - 15);
+      start.setHours(0, 0, 0, 0);
+    } else if (period === 'Mensal') {
+      start.setDate(now.getDate() - 30);
+      start.setHours(0, 0, 0, 0);
+    } else if (period === 'Personalizado' && customDate) {
+      const [y, m, d] = customDate.split('-').map(Number);
+      start.setFullYear(y, m - 1, d);
+      start.setHours(0, 0, 0, 0);
+      end.setFullYear(y, m - 1, d);
+      end.setHours(23, 59, 59, 999);
+    } else {
+      return { start_date: undefined, end_date: undefined };
+    }
+    
+    return {
+      start_date: start.toISOString(),
+      end_date: end.toISOString()
+    };
+  };
+
   // Consultation State
   const [records, setRecords] = useState<DailyOccurrenceRecord[]>([]);
   const [isLoadingRecords, setIsLoadingRecords] = useState(false);
   const [searchName, setSearchName] = useState('');
   const [filterYear, setFilterYear] = useState('');
   const [filterType, setFilterType] = useState('');
+  const [filterPeriod, setFilterPeriod] = useState('Hoje');
+  const [filterDate, setFilterDate] = useState('');
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,23 +201,26 @@ export function Occurrences() {
   const fetchRecords = async () => {
     setIsLoadingRecords(true);
     try {
-      const isConsultaWithoutFilters = activeTab === 'consulta' && !searchName && !filterYear && !filterType;
+      let start_date: string | undefined;
+      let end_date: string | undefined;
+
+      if (activeTab === 'relatorios') {
+        const range = getPeriodDateRange(reportFilterPeriod);
+        start_date = range.start_date;
+        end_date = range.end_date;
+      } else {
+        const range = getPeriodDateRange(filterPeriod, filterDate);
+        start_date = range.start_date;
+        end_date = range.end_date;
+      }
       
-      const params = activeTab === 'relatorios' 
-        ? {} // No relatórios busca tudo para depois filtrar localmente
-        : {
-            student_name: searchName || undefined,
-            school_year: filterYear || undefined,
-            occurrence_type: filterType || undefined,
-            date: isConsultaWithoutFilters ? (() => {
-              // Obter a data local (YYYY-MM-DD) sem bug de fuso horário
-              const today = new Date();
-              const y = today.getFullYear();
-              const m = String(today.getMonth() + 1).padStart(2, '0');
-              const d = String(today.getDate()).padStart(2, '0');
-              return `${y}-${m}-${d}`;
-            })() : undefined
-          };
+      const params = {
+        student_name: activeTab === 'consulta' ? (searchName || undefined) : undefined,
+        school_year: activeTab === 'consulta' ? (filterYear || undefined) : undefined,
+        occurrence_type: activeTab === 'consulta' ? (filterType || undefined) : undefined,
+        start_date,
+        end_date
+      };
 
       const data = await occurrenceService.fetchRecords(params);
       setRecords(data);
@@ -196,7 +235,7 @@ export function Occurrences() {
     if (activeTab === 'consulta' || activeTab === 'relatorios') {
       fetchRecords();
     }
-  }, [activeTab]);
+  }, [activeTab, filterPeriod, filterDate, reportFilterPeriod]);
 
   const normalizeYear = (y: string) => (y || '').toLowerCase().replace(/[^0-9a-z]/gi, '');
 
@@ -537,8 +576,8 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
           {/* TAB: CONSULTA */}
           {activeTab === 'consulta' && (
             <div className="space-y-6">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row gap-4 items-stretch md:items-end">
-                <div className="flex-1 space-y-2 w-full">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row flex-wrap gap-4 items-stretch md:items-end">
+                <div className="flex-1 min-w-[200px] space-y-2">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Buscar Aluno</label>
                   <input
                     type="text"
@@ -560,7 +599,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                     ))}
                   </select>
                 </div>
-                <div className="w-full md:w-48 space-y-2">
+                <div className="w-full md:w-44 space-y-2">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Tipo</label>
                   <select
                     value={filterType}
@@ -573,6 +612,38 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                     ))}
                   </select>
                 </div>
+                <div className="w-full md:w-44 space-y-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Período</label>
+                  <select
+                    value={filterPeriod}
+                    onChange={(e) => {
+                      setFilterPeriod(e.target.value);
+                      if (e.target.value !== 'Personalizado') setFilterDate('');
+                    }}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
+                  >
+                    {['Hoje', 'Semanal', 'Quinzenal', 'Mensal', 'Todos', 'Personalizado'].map(p => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                {filterPeriod === 'Personalizado' && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="w-full md:w-44 space-y-2"
+                  >
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Escolher Dia</label>
+                    <input
+                      type="date"
+                      value={filterDate}
+                      onChange={(e) => setFilterDate(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                    />
+                  </motion.div>
+                )}
+
                 <button
                   onClick={fetchRecords}
                   className="w-full md:w-auto px-6 py-2.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-medium hover:bg-slate-800 dark:hover:bg-white transition-all shadow-md flex items-center justify-center gap-2"

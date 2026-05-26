@@ -71,8 +71,8 @@ export const generateOccurrencesPDF = async (records: DailyOccurrenceRecord[]) =
         3: { cellWidth: 35 },
         4: { cellWidth: 'auto' }
       },
-      didDrawPage: (data) => {
-        // Add background to every new page created by autoTable
+      willDrawPage: (data) => {
+        // Add background to every new page created by autoTable before drawing the table
         if (data.pageNumber > 1) {
           doc.addImage(bgBase64, 'PNG', 0, 0, pageWidth, pageHeight);
         }
@@ -387,7 +387,7 @@ export const generateSingleOccurrencePDF = async (record: DailyOccurrenceRecord)
         3: { cellWidth: 35 },
         4: { cellWidth: 'auto' }
       },
-      didDrawPage: (data) => {
+      willDrawPage: (data) => {
         if (data.pageNumber > 1) {
           doc.addImage(bgBase64, 'PNG', 0, 0, pageWidth, pageHeight);
         }
