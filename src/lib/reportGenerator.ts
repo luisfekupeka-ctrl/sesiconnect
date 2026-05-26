@@ -49,9 +49,19 @@ export const generateOccurrencesPDF = async (
     // Configs for where to start drawing the table
     let currentY = 50;
 
-    doc.setFontSize(16);
-    doc.text('Relatório Diário de Ocorrências', pageWidth / 2, currentY, { align: 'center' });
-    currentY += 10;
+    if (prefixoPeriodo === 'dossie_urgente') {
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DOSSIÊ DE ENCAMINHAMENTO URGENTE À COORDENAÇÃO', pageWidth / 2, currentY, { align: 'center' });
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Estudante: ${anoFiltro} | Tipo: Reincidência de Ocorrências (30 dias)`, pageWidth / 2, currentY + 6, { align: 'center' });
+      currentY += 14;
+    } else {
+      doc.setFontSize(16);
+      doc.text('Relatório Diário de Ocorrências', pageWidth / 2, currentY, { align: 'center' });
+      currentY += 10;
+    }
 
     const getRecurrenceCount = (studentName: string, type: string) => {
       if (!studentName || !type || thirtyDaysRecords.length === 0) return 0;
@@ -124,9 +134,16 @@ export const generateOccurrencesPDF = async (
     }
 
     let filename = 'relatorio_ocorrencias';
-    if (periodoClean) filename += `_${periodoClean}`;
-    if (anoClean) filename += `_${anoClean}`;
-    filename += `_dia_${dataFormatada}.pdf`;
+    if (prefixoPeriodo === 'dossie_urgente') {
+      const studentClean = String(anoFiltro).trim().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, '_');
+      filename = `encaminhamento_urgente_${studentClean}_dia_${dataFormatada}.pdf`;
+    } else {
+      if (periodoClean) filename += `_${periodoClean}`;
+      if (anoClean) filename += `_${anoClean}`;
+      filename += `_dia_${dataFormatada}.pdf`;
+    }
 
     doc.save(filename);
 

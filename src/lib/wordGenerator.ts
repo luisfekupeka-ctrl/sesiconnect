@@ -48,8 +48,9 @@ export const generateWordOccurrence = async (record: DailyOccurrenceRecord, emis
             spacing: { after: 400 },
           }),
           new Paragraph({
-            text: "Relato:",
-            bold: true,
+            children: [
+              new TextRun({ text: "Relato:", bold: true })
+            ],
             spacing: { after: 200 },
           }),
           new Paragraph({

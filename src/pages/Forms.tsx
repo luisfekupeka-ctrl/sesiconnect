@@ -8,8 +8,9 @@ import {
   salvarOcorrencia, 
   salvarModeloFormulario, 
   excluirModeloFormulario 
-} from '../services/dataService';
+ } from '../services/dataService';
 import { generateOccurrencesPDF, generateOccurrencesExcel } from '../lib/reportGenerator';
+import FichaOcorrencia from '../components/FichaOcorrencia';
 
 // === Componente de Autopreenchimento de Aluno ===
 function AutocompleteAluno({

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2, Copy, X, Printer, Trash2 } from 'lucide-react';
+import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2, Copy, X, Printer, Trash2, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { occurrenceService } from '../services/occurrenceService';
 import { generateOccurrencesPDF, generateOccurrencesExcel, generateSingleOccurrencePDF } from '../lib/reportGenerator';
@@ -77,6 +77,13 @@ export function Occurrences() {
   const [selectedRecord, setSelectedRecord] = useState<DailyOccurrenceRecord | null>(null);
   const [emissorName, setEmissorName] = useState('');
   const [generatedMessageAfterSubmit, setGeneratedMessageAfterSubmit] = useState('');
+  const [reoffenderAlert, setReoffenderAlert] = useState<{
+    visible: boolean;
+    studentName: string;
+    occurrenceType: string;
+    count: number;
+    occurrences: DailyOccurrenceRecord[];
+  } | null>(null);
 
   useEffect(() => {
     if (profile?.nome) {
@@ -185,6 +192,9 @@ export function Occurrences() {
         occurrence_type: occurrenceType,
         report: finalReport
       });
+      const registeredStudent = studentName;
+      const registeredType = occurrenceType;
+
       if (occurrenceType === 'Sem uniforme') {
         setGeneratedMessageAfterSubmit(getUniformMessage());
       }
@@ -196,6 +206,36 @@ export function Occurrences() {
       setDynamicValue('');
       setReport('');
       setTimeout(() => setSuccessMessage(''), 3000);
+
+      // Check for reoffending (recurrence) in the last 30 days
+      try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const studentPastRecords = await occurrenceService.fetchRecords({
+          student_name: registeredStudent,
+          start_date: thirtyDaysAgo.toISOString()
+        });
+
+        const studentOccurrences = studentPastRecords.filter(r => 
+          r.student_name.trim().toLowerCase() === registeredStudent.trim().toLowerCase() &&
+          r.occurrence_type.trim().toLowerCase() === registeredType.trim().toLowerCase()
+        );
+
+        if (studentOccurrences.length >= 3) {
+          setReoffenderAlert({
+            visible: true,
+            studentName: registeredStudent,
+            occurrenceType: registeredType,
+            count: studentOccurrences.length,
+            occurrences: studentOccurrences
+          });
+
+          // Auto trigger download
+          await generateOccurrencesPDF(studentOccurrences, 'dossie_urgente', registeredStudent, studentOccurrences);
+        }
+      } catch (err) {
+        console.error('Erro ao verificar reincidência:', err);
+      }
       
       // Auto-refresh records if we go to consultation tab
       fetchRecords();
@@ -910,7 +950,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                   <FileText className="w-[18px] h-[18px]" />
                 </button>
                 <button
-                  onClick={() => generateWordOccurrence(selectedRecord)}
+                  onClick={() => generateWordOccurrence(selectedRecord, emissorName)}
                   className="p-3 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors shadow-sm cursor-pointer print:hidden"
                   title="Baixar Word"
                 >
@@ -1002,6 +1042,84 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                   </div>
                 </div>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Alerta de Reincidência Crítica */}
+      <AnimatePresence>
+        {reoffenderAlert?.visible && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-md bg-slate-950 text-white rounded-[2rem] p-6 md:p-8 overflow-hidden shadow-2xl border border-red-500/30 flex flex-col items-center text-center animate-fade-in"
+            >
+              {/* Glow background effects */}
+              <div className="absolute -top-24 -left-24 w-48 h-48 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Warning Icon Banner */}
+              <div className="relative mb-5 z-10">
+                <div className="absolute inset-0 rounded-full bg-red-500/25 blur-md animate-pulse" />
+                <div className="relative p-4 rounded-full bg-red-500/10 border border-red-500/40 text-red-500">
+                  <ShieldAlert className="w-10 h-10 animate-bounce" />
+                </div>
+              </div>
+
+              {/* Header Title */}
+              <h2 className="text-xl md:text-2xl font-black uppercase tracking-wider text-red-500 mb-3 z-10">
+                Atenção! Reincidência
+              </h2>
+
+              {/* Message Requested */}
+              <p className="text-sm md:text-base font-bold text-slate-100 leading-relaxed max-w-sm mb-5 z-10">
+                Este aluno tem mais de três ocorrências em <span className="text-red-400 underline">{reoffenderAlert.occurrenceType}</span> e precisa ser encaminhado à coordenação para a tratativa.
+              </p>
+
+              {/* Occurrences compilation title */}
+              <div className="w-full flex items-center gap-1.5 justify-start text-left mb-2 z-10">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Histórico (Últimos 30 dias):</span>
+              </div>
+
+              {/* Compact feed of occurrences */}
+              <div className="w-full max-h-40 overflow-y-auto mb-6 space-y-2 pr-1 text-left z-10 custom-scrollbar">
+                {reoffenderAlert.occurrences.map((oc, i) => (
+                  <div key={i} className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 text-xs hover:border-slate-850 transition-colors">
+                    <div className="flex justify-between items-center mb-1 text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                      <span>{new Date(oc.created_at || '').toLocaleDateString('pt-BR')}</span>
+                      <span className="text-amber-500">{oc.school_year}</span>
+                    </div>
+                    <p className="text-slate-200 font-extrabold mb-1">{oc.occurrence_type}</p>
+                    <p className="text-slate-400 text-[11px] leading-relaxed italic line-clamp-2">{oc.report}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Subtext info */}
+              <p className="text-[10px] text-slate-400 mb-6 max-w-xs leading-normal z-10">
+                O dossiê completo foi gerado e baixado automaticamente. Imprima o relatório e leve junto com o aluno.
+              </p>
+
+              {/* Actions */}
+              <div className="w-full space-y-2.5 z-10">
+                <button
+                  onClick={() => generateOccurrencesPDF(reoffenderAlert.occurrences, 'dossie_urgente', reoffenderAlert.studentName, reoffenderAlert.occurrences)}
+                  className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-600/10 hover:shadow-red-600/20 cursor-pointer text-sm"
+                >
+                  <Download className="w-4 h-4" />
+                  Baixar PDF
+                </button>
+                <button
+                  onClick={() => setReoffenderAlert(null)}
+                  className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-white rounded-xl font-bold transition-all cursor-pointer text-xs uppercase tracking-wider"
+                >
+                  Entendido e Fechar
+                </button>
               </div>
             </motion.div>
           </div>
