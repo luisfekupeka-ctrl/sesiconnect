@@ -136,6 +136,22 @@ select option {
   @apply bg-surface-container-high text-on-surface;
 }
 
+/* Força a visibilidade dos inputs e previne overrides de tema claro em navegadores móveis */
+input, select, textarea {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  background-color: #262626 !important;
+  color: #ffffff !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #a3a3a3 !important;
+  opacity: 0.6 !important;
+}
+
 .btn-primary {
   @apply inline-flex items-center gap-2 px-6 py-4 bg-primary text-on-primary rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all;
   @apply hover:scale-[1.02] active:scale-95 shadow-xl shadow-primary/20;

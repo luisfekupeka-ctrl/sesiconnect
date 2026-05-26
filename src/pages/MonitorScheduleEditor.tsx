@@ -213,7 +213,7 @@ export default function MonitorScheduleEditor() {
                 </div>
 
                 <div className="overflow-x-auto pb-4 custom-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
-                  <div className="space-y-3 min-w-[900px]">
+                  <div className="space-y-3 w-full">
                   {linhas.map((linha, idx) => {
                     const ehAlmoco = linha.tipo === 'almoco';
                     return (
@@ -222,9 +222,9 @@ export default function MonitorScheduleEditor() {
                         className={cn("rounded-[2rem] transition-all border-2 group/row",
                           ehAlmoco ? "bg-primary/5 border-primary/10" : "bg-black/40 border-white/5 hover:border-primary/20")}
                       >
-                        <div className="grid grid-cols-[60px_160px_1fr_1fr_100px] items-center gap-6 p-5">
+                        <div className="grid grid-cols-1 md:grid-cols-[60px_160px_1fr_1fr_100px] items-stretch md:items-center gap-4 md:gap-6 p-4 md:p-5">
                           {/* Índice / Ícone */}
-                          <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-xs font-black shrink-0 shadow-inner",
+                          <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-xs font-black shrink-0 shadow-inner mx-auto md:mx-0",
                             ehAlmoco ? "bg-primary/20 text-primary" : "bg-surface-container-high text-on-surface-variant")}>
                             {ehAlmoco ? <Coffee size={20} /> : idx + 1}
                           </div>
@@ -255,7 +255,7 @@ export default function MonitorScheduleEditor() {
                           </div>
 
                           {/* Botões de Ação */}
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-center md:justify-end gap-2 pt-4 md:pt-0 border-t border-white/5 md:border-t-0">
                             <button onClick={() => toggleAlmoco(linha.id)} 
                               className={cn("p-3 rounded-xl transition-all",
                                 ehAlmoco ? "text-primary bg-primary/10 shadow-lg" : "text-white/10 hover:text-primary hover:bg-primary/5")}>

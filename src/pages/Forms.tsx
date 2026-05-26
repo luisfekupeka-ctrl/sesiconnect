@@ -34,11 +34,15 @@ function AutocompleteAluno({
   }, [valor]);
 
   useEffect(() => {
-    const fechar = (e: MouseEvent) => {
+    const fechar = (e: Event) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setAberto(false);
     };
     document.addEventListener('mousedown', fechar);
-    return () => document.removeEventListener('mousedown', fechar);
+    document.addEventListener('touchstart', fechar);
+    return () => {
+      document.removeEventListener('mousedown', fechar);
+      document.removeEventListener('touchstart', fechar);
+    };
   }, []);
 
   return (
@@ -148,7 +152,6 @@ export default function FormsPage() {
   };
 
   // Filtrar ocorrências por período (Defensivo)
-  const agora = new Date();
   const ocorrenciasBase = Array.isArray(ocorrencias) ? ocorrencias : [];
   
   const ocorrenciasFiltradas = ocorrenciasBase.filter(oc => {
@@ -156,14 +159,20 @@ export default function FormsPage() {
     const dataOc = new Date(oc.criadoEm);
     if (isNaN(dataOc.getTime())) return false;
     
-    const diff = agora.getTime() - dataOc.getTime();
-    const dias = diff / (1000 * 60 * 60 * 24);
+    const inicioHoje = new Date();
+    inicioHoje.setHours(0, 0, 0, 0);
+
+    const inicioDataOc = new Date(dataOc);
+    inicioDataOc.setHours(0, 0, 0, 0);
+
+    const diffTime = inicioHoje.getTime() - inicioDataOc.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
     switch (filtroRelatorio) {
-      case 'diario': return dias <= 1;
-      case 'semanal': return dias <= 7;
-      case 'quinzenal': return dias <= 15;
-      case 'mensal': return dias <= 30;
+      case 'diario': return diffDays === 0;
+      case 'semanal': return diffDays < 7;
+      case 'quinzenal': return diffDays < 15;
+      case 'mensal': return diffDays < 30;
       default: return true;
     }
   });
@@ -224,7 +233,7 @@ export default function FormsPage() {
                 <span className="text-[10px] font-black text-primary uppercase tracking-[0.4em] bg-primary/10 px-3 py-1 rounded-full">Sistema Ativo</span>
                 <div className="h-px w-12 bg-white/10" />
               </div>
-              <h1 className="text-5xl md:text-6xl font-black text-white italic tracking-tighter leading-none">
+              <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white italic tracking-tighter leading-none">
                 REGISTRO DE <br />
                 <span className="text-primary drop-shadow-[0_0_20px_rgba(251,191,36,0.4)]">OCORRÊNCIA</span>
               </h1>

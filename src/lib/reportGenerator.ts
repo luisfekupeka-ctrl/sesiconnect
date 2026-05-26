@@ -58,6 +58,7 @@ export const generateOccurrencesPDF = async (records: DailyOccurrenceRecord[]) =
 
     autoTable(doc, {
       startY: currentY,
+      margin: { top: 50, bottom: 20, left: 15, right: 15 },
       head: [['Data', 'Aluno', 'Ano', 'Tipo', 'Relato']],
       body: tableData,
       theme: 'grid',
@@ -221,9 +222,21 @@ export const buildFichaOcorrenciaDoc = async (
     // Ensure all checks inside report are correctly formatted
     const relatoRaw = ocorrencia.relato || '';
     const cleanRelato = relatoRaw.replace(/\[ \]/g, '\u25A1').replace(/\[x\]/g, '\u25A3');
-    
     const splitText = doc.splitTextToSize(cleanRelato, pageWidth - marginX * 2);
-    doc.text(splitText, marginX, currentY);
+    const lineHeight = 6;
+    const bottomLimit = pageHeight - 65;
+
+    for (let i = 0; i < splitText.length; i++) {
+      if (currentY + lineHeight > bottomLimit) {
+        doc.addPage();
+        if (bgBase64) {
+          doc.addImage(bgBase64, 'PNG', 0, 0, pageWidth, pageHeight);
+        }
+        currentY = 55;
+      }
+      doc.text(splitText[i], marginX, currentY);
+      currentY += lineHeight;
+    }
     
     // Signatures
     const sigY = pageHeight - 50;
@@ -361,6 +374,7 @@ export const generateSingleOccurrencePDF = async (record: DailyOccurrenceRecord)
 
     autoTable(doc, {
       startY: currentY,
+      margin: { top: 50, bottom: 20, left: 15, right: 15 },
       head: [['Data', 'Aluno', 'Ano', 'Tipo', 'Relato']],
       body: tableData,
       theme: 'grid',

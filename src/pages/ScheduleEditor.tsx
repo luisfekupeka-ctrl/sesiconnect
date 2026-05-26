@@ -414,7 +414,7 @@ export default function ScheduleEditor() {
           </div>
 
           <div className="overflow-x-auto pb-6 custom-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
-            <div className="space-y-4 min-w-[800px] lg:min-w-0">
+            <div className="space-y-4 w-full">
             {linhas.map((linha) => {
               const corProf = getCorProf(linha.professor);
               return (

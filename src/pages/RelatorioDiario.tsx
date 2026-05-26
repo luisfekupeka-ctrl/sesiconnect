@@ -245,6 +245,76 @@ export default function RelatorioDiario() {
                     ))
                 )}
             </div>
+            
+            <style dangerouslySetInnerHTML={{ __html: `
+                @media print {
+                    @page { size: A4; margin: 15mm; }
+                    body {
+                        background: white !important;
+                        color: black !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    
+                    /* Ocultar barra lateral, navegação inferior, botões e campos de busca */
+                    aside, nav, header, button, .btn-secondary, input[type="text"], .relative.flex-1, .flex.gap-1.p-1\\.5 {
+                        display: none !important;
+                    }
+                    
+                    /* Destravar containers para fluxo de páginas ilimitado */
+                    .min-h-screen, .md\\:pl-72, main, .pb-20, .space-y-8 {
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        min-height: auto !important;
+                        height: auto !important;
+                        overflow: visible !important;
+                        position: static !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                    }
+                    
+                    /* Ajustar o grid de resumos para caber em uma folha A4 horizontal/vertical */
+                    .grid {
+                        display: grid !important;
+                        grid-template-cols: repeat(3, 1fr) !important;
+                        gap: 15px !important;
+                        margin-bottom: 20px !important;
+                    }
+                    
+                    .bg-surface-container-lowest, .bg-surface-container-low {
+                        background: #f8fafc !important;
+                        border: 1px solid #cbd5e1 !important;
+                        color: black !important;
+                        box-shadow: none !important;
+                        border-radius: 12px !important;
+                    }
+                    
+                    .text-emerald-600 {
+                        color: #059669 !important;
+                    }
+                    
+                    .bg-primary {
+                        background: #1e3a8a !important;
+                        color: white !important;
+                    }
+                    
+                    table {
+                        width: 100% !important;
+                        border-collapse: collapse !important;
+                        margin-top: 15px !important;
+                    }
+                    
+                    th, td {
+                        border-bottom: 1px solid #e2e8f0 !important;
+                        color: black !important;
+                        padding: 10px !important;
+                    }
+                    
+                    tr {
+                        page-break-inside: avoid !important;
+                    }
+                }
+            `}} />
         </div>
     );
 }

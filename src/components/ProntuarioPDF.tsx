@@ -75,7 +75,7 @@ export default function ProntuarioPDF({ ocorrencias, onClose, alunoNome }: Props
             const tipoOcorrencia = getDado('Tipo de Ocorrência') || getDado('Tipo de Ocorrencia') || ocorrencia.nomeModelo;
 
             return (
-              <div key={ocorrencia.id} className={cn("w-full max-w-[210mm] min-h-[297mm] bg-white shadow-xl print:shadow-none relative flex flex-col print:w-[210mm] print:h-[297mm] shrink-0", idx < ocorrencias.length - 1 ? "page-break" : "")}>
+              <div key={ocorrencia.id} className={cn("w-full max-w-[210mm] min-h-[297mm] bg-white shadow-xl print:shadow-none relative flex flex-col print:w-[210mm] print:min-h-[297mm] shrink-0", idx < ocorrencias.length - 1 ? "page-break" : "")}>
                 {/* Header Sesi */}
                 <div className="relative w-full h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-8 select-none shrink-0">
                   <div className="absolute top-0 left-0 w-[300px] h-full pointer-events-none">

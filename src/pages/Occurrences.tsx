@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2, Copy, X, Printer, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { occurrenceService } from '../services/occurrenceService';
@@ -46,6 +46,22 @@ export function Occurrences() {
   const { alunos } = useEscola();
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+
+  const autocompleteRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClose = (e: Event) => {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(e.target as Node)) {
+        setShowAutocomplete(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClose);
+    document.addEventListener('touchstart', handleClose);
+    return () => {
+      document.removeEventListener('mousedown', handleClose);
+      document.removeEventListener('touchstart', handleClose);
+    };
+  }, []);
 
   const [activeTab, setActiveTab] = useState<'registro' | 'consulta' | 'relatorios'>('registro');
   
@@ -192,16 +208,24 @@ export function Occurrences() {
     }
 
     if (reportFilterPeriod !== 'Todos') {
-      const now = new Date();
-      let limitDate = new Date();
-      if (reportFilterPeriod === 'Hoje') limitDate.setDate(now.getDate() - 1);
-      else if (reportFilterPeriod === 'Semanal') limitDate.setDate(now.getDate() - 7);
-      else if (reportFilterPeriod === 'Quinzenal') limitDate.setDate(now.getDate() - 15);
-      else if (reportFilterPeriod === 'Mensal') limitDate.setDate(now.getDate() - 30);
+      const inicioHoje = new Date();
+      inicioHoje.setHours(0, 0, 0, 0);
 
       dataToExport = dataToExport.filter(r => {
         const created = new Date(r.created_at || '');
-        return created >= limitDate;
+        if (isNaN(created.getTime())) return false;
+
+        const inicioCreated = new Date(created);
+        inicioCreated.setHours(0, 0, 0, 0);
+
+        const diffTime = inicioHoje.getTime() - inicioCreated.getTime();
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+        if (reportFilterPeriod === 'Hoje') return diffDays === 0;
+        if (reportFilterPeriod === 'Semanal') return diffDays < 7;
+        if (reportFilterPeriod === 'Quinzenal') return diffDays < 15;
+        if (reportFilterPeriod === 'Mensal') return diffDays < 30;
+        return true;
       });
     }
 
@@ -355,7 +379,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
 
               <form onSubmit={handleRegister} className="space-y-6 relative z-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2 relative">
+                  <div className="space-y-2 relative" ref={autocompleteRef}>
                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Nome do Aluno</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -370,7 +394,6 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                           setShowAutocomplete(true);
                         }}
                         onFocus={() => setShowAutocomplete(true)}
-                        onBlur={() => setTimeout(() => setShowAutocomplete(false), 200)}
                         className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
                         placeholder="Ex: João Silva"
                         autoComplete="off"

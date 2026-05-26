@@ -373,11 +373,11 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
           body * { visibility: hidden; }
           #printable-occurrence, #printable-occurrence * { visibility: visible; }
           #printable-occurrence {
-            position: absolute;
+            position: relative;
             left: 0;
             top: 0;
             width: 210mm;
-            height: 297mm;
+            min-height: 297mm;
             padding: 0 !important;
             background: white !important;
             background-image: url("/src/assets/papel_timbrado.png") !important;
