@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useLocation } from 'react-router-dom';
 import { FileText, Search, UserCheck, Download, BarChart3, Plus, X, ChevronDown, Calendar, Filter, FileSpreadsheet, AlertTriangle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
@@ -107,6 +108,8 @@ export default function FormsPage() {
     adicionarOcorrencia, atualizar, professoresCMS 
   } = useEscola();
 
+  const location = useLocation();
+
   const [abaAtiva, setAbaAtiva] = useState<'nova' | 'relatorios'>('nova');
   const [modeloSelecionado, setModeloSelecionado] = useState<ModeloFormulario | null>(null);
   const [alunoSelecionado, setAlunoSelecionado] = useState<Aluno | null>(null);
@@ -120,45 +123,7 @@ export default function FormsPage() {
   // Estado do Construtor
   const [editandoModelo, setEditandoModelo] = useState<Partial<ModeloFormulario> | null>(null);
 
-  const [dailyRecords, setDailyRecords] = useState<DailyOccurrenceRecord[]>([]);
 
-  useEffect(() => {
-    async function loadDailyRecords() {
-      try {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const records = await occurrenceService.fetchRecords({
-          start_date: thirtyDaysAgo.toISOString(),
-          tratada: false
-        });
-        setDailyRecords(records);
-      } catch (err) {
-        console.error('Erro ao buscar registros diários em Forms.tsx:', err);
-      }
-    }
-    loadDailyRecords();
-  }, [abaAtiva, ocorrencias]);
-
-  const studentsNeedingTratativa = useMemo(() => {
-    const groups: Record<string, { studentName: string; type: string; count: number; records: DailyOccurrenceRecord[]; schoolYear: string }> = {};
-
-    dailyRecords.forEach(r => {
-      const key = `${r.student_name.trim().toLowerCase()}|${r.occurrence_type.trim().toLowerCase()}`;
-      if (!groups[key]) {
-        groups[key] = {
-          studentName: r.student_name,
-          type: r.occurrence_type,
-          count: 0,
-          records: [],
-          schoolYear: r.school_year
-        };
-      }
-      groups[key].count += 1;
-      groups[key].records.push(r);
-    });
-
-    return Object.values(groups).filter(g => g.count >= 4);
-  }, [dailyRecords]);
 
   const handleSelectTratativaPendente = (studentName: string, schoolYear: string, type: string, count: number) => {
     setTratandoOcorrenciaTipo(type);
@@ -251,6 +216,16 @@ O(A) aluno(a) declarou estar ciente das orientações recebidas, bem como da leg
       setModeloSelecionado(modelosFormulario[0]);
     }
   }, [modelosFormulario, modeloSelecionado]);
+
+  useEffect(() => {
+    if (location.state?.prefill && modelosFormulario.length > 0 && alunos.length > 0) {
+      const { studentName, schoolYear, type, count } = location.state.prefill;
+      setAbaAtiva('nova');
+      handleSelectTratativaPendente(studentName, schoolYear, type, count);
+      // Limpa o estado da rota para não re-preencher ao atualizar a página
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, modelosFormulario, alunos]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -437,44 +412,7 @@ O(A) aluno(a) declarou estar ciente das orientações recebidas, bem como da leg
             )}
 
             {modeloSelecionado && !enviado && (
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-                {/* Sidebar de Atas Pendentes */}
-                <div className="lg:col-span-1 bg-surface-container-lowest rounded-[2.5rem] p-6 border border-outline-variant/10 shadow-sm space-y-4">
-                  <h3 className="text-sm font-black text-primary uppercase tracking-widest flex items-center gap-2">
-                    <AlertTriangle size={16} className="text-red-500 animate-pulse" />
-                    Atas Pendentes
-                  </h3>
-                  <p className="text-[11px] text-on-surface-variant font-medium leading-relaxed">
-                    Alunos com 4+ ocorrências diárias ativas nos últimos 30 dias. Clique para abrir a Ata.
-                  </p>
-                  {studentsNeedingTratativa.length === 0 ? (
-                    <p className="text-xs text-on-surface-variant italic py-4">Nenhuma ata pendente.</p>
-                  ) : (
-                    <div className="space-y-3 max-h-[450px] overflow-y-auto pr-1">
-                      {studentsNeedingTratativa.map((group, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => handleSelectTratativaPendente(group.studentName, group.schoolYear, group.type, group.count)}
-                          className="w-full text-left p-3.5 rounded-2xl bg-red-500/10 hover:bg-red-500/25 border border-red-500/20 hover:border-red-500/40 transition-all flex flex-col gap-1 cursor-pointer group"
-                        >
-                          <span className="text-xs font-black text-red-500 uppercase tracking-wide group-hover:underline">
-                            {group.studentName}
-                          </span>
-                          <span className="text-[10px] font-bold text-slate-300">
-                            {group.schoolYear}
-                          </span>
-                          <span className="text-[9px] font-black uppercase text-red-400 bg-red-950/40 px-2 py-0.5 rounded-full w-fit">
-                            {group.count}x {group.type}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Form oficial */}
-                <div className="lg:col-span-3 bg-surface-container-lowest rounded-[2.5rem] overflow-hidden editorial-shadow border border-outline-variant/10">
+              <div className="max-w-4xl mx-auto w-full bg-surface-container-lowest rounded-[2.5rem] overflow-hidden editorial-shadow border border-outline-variant/10">
                   {/* Official Sesi Document Header Accent */}
                   <div className="relative w-full h-[100px] md:h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-4 md:px-8 select-none">
                     {/* Polígonos Geométricos */}
@@ -628,7 +566,6 @@ O(A) aluno(a) declarou estar ciente das orientações recebidas, bem como da leg
                     </div>
                   </form>
                 </div>
-              </div>
               </div>
             )}
 

@@ -2,7 +2,8 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutGrid, Users, DoorOpen, Languages, Sparkles, 
-  BookOpen, FileText, Shield, ClipboardCheck, RefreshCw, LogOut
+  BookOpen, FileText, Shield, ClipboardCheck, RefreshCw, LogOut,
+  AlertTriangle
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
@@ -23,6 +24,7 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean; setIsOpen?: (
     { to: '/monitores', icon: BookOpen, label: 'Monitores', visible: true },
     { to: '/language-lab', icon: Languages, label: 'Idioma', visible: true },
     { to: '/after', icon: Sparkles, label: 'After School', visible: true },
+    { to: '/atas-pendentes', icon: AlertTriangle, label: 'Atas Pendentes', visible: isAdmin },
     { to: '/forms', icon: FileText, label: 'Ocorrências', visible: isAdmin },
     { to: '/ocorrencias', icon: ClipboardCheck, label: 'Reg. Diário', visible: isAdmin || isProfessor || isMonitor },
     { to: '/controle-faltas', icon: ClipboardCheck, label: 'Chamadas', visible: isAdmin || isProfessor },

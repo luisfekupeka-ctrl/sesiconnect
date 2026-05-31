@@ -20,6 +20,7 @@ import ControleFaltas from './pages/ControleFaltas';
 import GestaoRealocacao from './pages/GestaoRealocacao';
 import RelatorioDiario from './pages/RelatorioDiario';
 import { Occurrences } from './pages/Occurrences';
+import PendingAtas from './pages/PendingAtas';
 
 // Componente de Proteção de Rota
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode; requiredRole?: string }) {
@@ -104,6 +105,7 @@ export default function App() {
               <Route path="/ocorrencias" element={<Occurrences />} />
               
               {/* Áreas que exigem Login/Role ADMIN */}
+              <Route path="/atas-pendentes" element={<ProtectedRoute requiredRole="admin"><PendingAtas /></ProtectedRoute>} />
               <Route path="/forms" element={<ProtectedRoute requiredRole="admin"><FormsPage /></ProtectedRoute>} />
               <Route path="/controle-faltas" element={<ProtectedRoute requiredRole="admin"><ControleFaltas /></ProtectedRoute>} />
               <Route path="/realocacao" element={<ProtectedRoute requiredRole="admin"><GestaoRealocacao /></ProtectedRoute>} />
