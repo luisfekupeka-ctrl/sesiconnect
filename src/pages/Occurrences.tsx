@@ -12,6 +12,18 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
 const TIPOS_OCORRENCIA = [
+  'Uso Indevido de Celular',
+  'Uso Indevido de Aparelhos Eletrônicos',
+  'Indisciplina Escolar',
+  'Conduta Incompatível com o Ambiente Escolar',
+  'Descumprimento das Normas Escolares',
+  'Desrespeito a Membros da Comunidade Escolar',
+  'Conflitos entre Alunos',
+  'Danos ao Patrimônio Escolar',
+  'Descumprimento do Uniforme Escolar',
+  'Atrasos Reincidentes',
+  'Saída sem Autorização',
+  'Não Cumprimento de Atividades ou Orientações Escolares',
   'Atraso',
   'Sem uniforme',
   'Indisciplina em sala',

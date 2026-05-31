@@ -175,25 +175,50 @@ export default function FormsPage() {
       });
     }
 
-    const formModel = modelosFormulario.find(m => m.nome === 'Ocorrência Disciplinar' || m.id === '11111111-1111-1111-1111-111111111111');
+    const formModel = modelosFormulario.find(
+      m => m.id === '11111111-1111-1111-1111-111111111111' || 
+      m.nome.toLowerCase().includes('orientação') ||
+      m.nome.toLowerCase().includes('disciplinar')
+    );
     if (formModel) {
       setModeloSelecionado(formModel);
     }
 
-    let tipoOcorrenciaMapped = 'Outro';
-    const normalizedType = type.toLowerCase();
-    if (normalizedType.includes('atraso')) {
-      tipoOcorrenciaMapped = 'Atraso';
-    } else if (
-      normalizedType.includes('indisciplina') ||
-      normalizedType.includes('celular') ||
-      normalizedType.includes('uniforme') ||
-      normalizedType.includes('material') ||
-      normalizedType.includes('agressão')
-    ) {
-      tipoOcorrenciaMapped = 'Indisciplina';
-    } else if (normalizedType.includes('falta')) {
-      tipoOcorrenciaMapped = 'Falta';
+    let tipoOcorrenciaMapped = 'Outros';
+    const tipoCampo = formModel?.campos.find(c => c.rotulo === 'Tipo de Ocorrência');
+    const opcoesDisponiveis = tipoCampo?.opcoes || [];
+    
+    // Tenta encontrar correspondência exata
+    const matchExato = opcoesDisponiveis.find(
+      opt => opt.trim().toLowerCase() === type.trim().toLowerCase()
+    );
+    
+    if (matchExato) {
+      tipoOcorrenciaMapped = matchExato;
+    } else {
+      // Regras de fallback inteligentes
+      const normalizedType = type.toLowerCase();
+      if (normalizedType.includes('celular')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('celular'));
+        tipoOcorrenciaMapped = found || 'Uso Indevido de Celular';
+      } else if (normalizedType.includes('aparelho') || normalizedType.includes('eletrônico')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('eletrônico') || o.toLowerCase().includes('aparelho'));
+        tipoOcorrenciaMapped = found || 'Uso Indevido de Aparelhos Eletrônicos';
+      } else if (normalizedType.includes('indisciplina') || normalizedType.includes('material') || normalizedType.includes('agressão')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('indisciplina'));
+        tipoOcorrenciaMapped = found || 'Indisciplina Escolar';
+      } else if (normalizedType.includes('uniforme')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('uniforme'));
+        tipoOcorrenciaMapped = found || 'Descumprimento do Uniforme Escolar';
+      } else if (normalizedType.includes('atraso')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('atraso') || o.toLowerCase().includes('atrasos'));
+        tipoOcorrenciaMapped = found || 'Atrasos Reincidentes';
+      } else if (normalizedType.includes('falta')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('falta'));
+        tipoOcorrenciaMapped = found || 'Falta';
+      } else {
+        tipoOcorrenciaMapped = opcoesDisponiveis[opcoesDisponiveis.length - 1] || 'Outros';
+      }
     }
 
     const today = new Date();
@@ -202,7 +227,7 @@ export default function FormsPage() {
 
     let defaultDescription = '';
 
-    if (type === 'Uso indevido de celular') {
+    if (type === 'Uso indevido de celular' || type === 'Uso Indevido de Celular') {
       defaultDescription = `Em ${dateStr}, o(a) aluno(a) ${studentName}, da série ${schoolYear}, foi atendido(a) pela equipe escolar para registro e orientação em razão do uso indevido de aparelho eletrônico (celular) no ambiente escolar.
 
 Durante a tratativa, foram realizadas orientações acerca da importância do cumprimento das normas institucionais, da manutenção de uma postura adequada ao ambiente educacional e da colaboração para o bom desenvolvimento das atividades escolares.
