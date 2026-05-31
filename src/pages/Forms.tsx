@@ -203,7 +203,7 @@ export default function FormsPage() {
     let defaultDescription = '';
 
     if (type === 'Uso indevido de celular') {
-      defaultDescription = `Em ${dateStr}, o(a) aluno(a) ${studentName}, da série ${schoolYear}, foi atendido(a) pela equipe escolar para registro e orientação em razão do uso indevido de aparelho celular no ambiente escolar.
+      defaultDescription = `Em ${dateStr}, o(a) aluno(a) ${studentName}, da série ${schoolYear}, foi atendido(a) pela equipe escolar para registro e orientação em razão do uso indevido de aparelho eletrônico (celular) no ambiente escolar.
 
 Durante a tratativa, foram realizadas orientações acerca da importância do cumprimento das normas institucionais, da manutenção de uma postura adequada ao ambiente educacional e da colaboração para o bom desenvolvimento das atividades escolares.
 
