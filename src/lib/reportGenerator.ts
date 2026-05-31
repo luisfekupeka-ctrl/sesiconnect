@@ -49,6 +49,36 @@ export const generateOccurrencesPDF = async (
     // Configs for where to start drawing the table
     let currentY = 50;
 
+    let targetStudent = '';
+    if (prefixoPeriodo === 'dossie_urgente') {
+      targetStudent = anoFiltro;
+    } else if (records.length > 0 && records.every(r => r.student_name.trim().toLowerCase() === records[0].student_name.trim().toLowerCase())) {
+      targetStudent = records[0].student_name;
+    }
+
+    let totalOccurrencesMonth = 0;
+    let confirmedTratativasMonth = 0;
+
+    if (targetStudent) {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      
+      const allUniqueRecords = Array.from(
+        new Map([...records, ...thirtyDaysRecords].map(item => [item.id, item])).values()
+      );
+      
+      const studentMonthRecords = allUniqueRecords.filter(r => 
+        r.student_name.trim().toLowerCase() === targetStudent.trim().toLowerCase() &&
+        r.created_at &&
+        new Date(r.created_at) >= startOfMonth &&
+        new Date(r.created_at) <= endOfMonth
+      );
+      
+      totalOccurrencesMonth = studentMonthRecords.length;
+      confirmedTratativasMonth = studentMonthRecords.filter(r => r.tratada === true).length;
+    }
+
     if (prefixoPeriodo === 'dossie_urgente') {
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
@@ -61,6 +91,17 @@ export const generateOccurrencesPDF = async (
       doc.setFontSize(16);
       doc.text('Relatório Diário de Ocorrências', pageWidth / 2, currentY, { align: 'center' });
       currentY += 10;
+    }
+
+    if (targetStudent) {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(12, 35, 64);
+      doc.text(`Resumo do Mês Atual (Estudante: ${targetStudent}):`, 15, currentY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Ocorrências no mês: ${totalOccurrencesMonth} | Tratativas confirmadas: ${confirmedTratativasMonth}`, 15, currentY + 5);
+      currentY += 12;
     }
 
     const getRecurrenceCount = (studentName: string, type: string) => {

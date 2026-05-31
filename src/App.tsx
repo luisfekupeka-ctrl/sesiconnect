@@ -23,7 +23,7 @@ import { Occurrences } from './pages/Occurrences';
 
 // Componente de Proteção de Rota
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode; requiredRole?: string }) {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
 
   if (loading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
@@ -35,11 +35,40 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode;
 
   if (profile?.status !== 'approved' && profile?.role !== 'super_admin') {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-8 text-center">
-        <div className="max-w-md space-y-4">
-          <h1 className="text-2xl font-black">Acesso em Análise</h1>
-          <p className="text-on-surface-variant">Seu cadastro foi recebido e está aguardando aprovação do administrador principal.</p>
-          <button onClick={() => window.location.reload()} className="px-6 py-3 bg-primary text-on-primary rounded-xl font-bold">Verificar Novamente</button>
+      <div className="min-h-screen bg-background flex items-center justify-center p-8 text-center relative overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-30">
+          <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-blue-900/50 blur-[120px]" />
+          <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full bg-amber-900/30 blur-[120px]" />
+        </div>
+
+        <div className="max-w-md w-full bg-surface p-8 rounded-[2.5rem] border border-white/5 shadow-2xl relative z-10 backdrop-blur-md space-y-6">
+          <div className="w-20 h-20 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto animate-pulse">
+            <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-on-surface-bright mb-2">Acesso em Análise</h1>
+            <p className="text-on-surface-variant text-sm">Seu cadastro foi recebido e está aguardando aprovação do administrador principal.</p>
+          </div>
+          <div className="flex flex-col gap-3">
+            <button 
+              onClick={() => window.location.reload()} 
+              className="w-full py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-wider hover:opacity-90 active:scale-95 transition-all shadow-glow-yellow"
+            >
+              Verificar Novamente
+            </button>
+            <button 
+              onClick={async () => {
+                await signOut();
+                window.location.href = '/login';
+              }} 
+              className="w-full py-4 bg-surface-container-high text-on-surface hover:text-red-500 rounded-2xl font-bold transition-all hover:bg-surface-container-highest active:scale-95 text-sm"
+            >
+              Sair / Entrar com outra conta
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -62,9 +91,9 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/meu-horario" element={<MonitorPortal />} />
             
-            {/* Rotas com Layout (Públicas e Privadas) */}
-            <Route element={<Layout />}>
-              {/* Públicas (Consulta) */}
+            {/* Rotas com Layout (Agora 100% Protegidas por Login e Aprovação) */}
+            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+              {/* Páginas Internas de Consulta */}
               <Route path="/" element={<Dashboard />} />
               <Route path="/teachers" element={<TeachersPage />} />
               <Route path="/rooms" element={<RoomsPage />} />

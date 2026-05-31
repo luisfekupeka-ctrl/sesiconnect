@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { FileText, Search, UserCheck, Download, BarChart3, Plus, X, ChevronDown, Calendar, Filter, FileSpreadsheet } from 'lucide-react';
+import { FileText, Search, UserCheck, Download, BarChart3, Plus, X, ChevronDown, Calendar, Filter, FileSpreadsheet, AlertTriangle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 import { Aluno, ModeloFormulario, CampoFormulario, RegistroOcorrencia } from '../types';
@@ -11,6 +11,8 @@ import {
  } from '../services/dataService';
 import { generateOccurrencesPDF, generateOccurrencesExcel } from '../lib/reportGenerator';
 import FichaOcorrencia from '../components/FichaOcorrencia';
+import { occurrenceService } from '../services/occurrenceService';
+import { DailyOccurrenceRecord } from '../types';
 
 // === Componente de Autopreenchimento de Aluno ===
 function AutocompleteAluno({
@@ -113,9 +115,111 @@ export default function FormsPage() {
   const [salvando, setSalvando] = useState(false);
   const [filtroRelatorio, setFiltroRelatorio] = useState<'diario' | 'semanal' | 'quinzenal' | 'mensal'>('diario');
   const [ocorrenciaSelecionada, setOcorrenciaSelecionada] = useState<RegistroOcorrencia | null>(null);
+  const [tratandoOcorrenciaTipo, setTratandoOcorrenciaTipo] = useState<string | null>(null);
 
   // Estado do Construtor
   const [editandoModelo, setEditandoModelo] = useState<Partial<ModeloFormulario> | null>(null);
+
+  const [dailyRecords, setDailyRecords] = useState<DailyOccurrenceRecord[]>([]);
+
+  useEffect(() => {
+    async function loadDailyRecords() {
+      try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const records = await occurrenceService.fetchRecords({
+          start_date: thirtyDaysAgo.toISOString(),
+          tratada: false
+        });
+        setDailyRecords(records);
+      } catch (err) {
+        console.error('Erro ao buscar registros diários em Forms.tsx:', err);
+      }
+    }
+    loadDailyRecords();
+  }, [abaAtiva, ocorrencias]);
+
+  const studentsNeedingTratativa = useMemo(() => {
+    const groups: Record<string, { studentName: string; type: string; count: number; records: DailyOccurrenceRecord[]; schoolYear: string }> = {};
+
+    dailyRecords.forEach(r => {
+      const key = `${r.student_name.trim().toLowerCase()}|${r.occurrence_type.trim().toLowerCase()}`;
+      if (!groups[key]) {
+        groups[key] = {
+          studentName: r.student_name,
+          type: r.occurrence_type,
+          count: 0,
+          records: [],
+          schoolYear: r.school_year
+        };
+      }
+      groups[key].count += 1;
+      groups[key].records.push(r);
+    });
+
+    return Object.values(groups).filter(g => g.count >= 4);
+  }, [dailyRecords]);
+
+  const handleSelectTratativaPendente = (studentName: string, schoolYear: string, type: string, count: number) => {
+    setTratandoOcorrenciaTipo(type);
+    const studentObj = alunos.find(a => a.nome.trim().toLowerCase() === studentName.trim().toLowerCase());
+    if (studentObj) {
+      setAlunoSelecionado(studentObj);
+    } else {
+      setAlunoSelecionado({
+        id: 'temp-' + new Date().getTime(),
+        nome: studentName,
+        turma: schoolYear || 'Não especificado',
+        ano: schoolYear || 'Não especificado',
+        numeroSala: 0
+      });
+    }
+
+    const formModel = modelosFormulario.find(m => m.nome === 'Ocorrência Disciplinar' || m.id === '11111111-1111-1111-1111-111111111111');
+    if (formModel) {
+      setModeloSelecionado(formModel);
+    }
+
+    let tipoOcorrenciaMapped = 'Outro';
+    const normalizedType = type.toLowerCase();
+    if (normalizedType.includes('atraso')) {
+      tipoOcorrenciaMapped = 'Atraso';
+    } else if (
+      normalizedType.includes('indisciplina') ||
+      normalizedType.includes('celular') ||
+      normalizedType.includes('uniforme') ||
+      normalizedType.includes('material') ||
+      normalizedType.includes('agressão')
+    ) {
+      tipoOcorrenciaMapped = 'Indisciplina';
+    } else if (normalizedType.includes('falta')) {
+      tipoOcorrenciaMapped = 'Falta';
+    }
+
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('pt-BR');
+    const todayStr = today.toISOString().split('T')[0];
+
+    let defaultDescription = '';
+
+    if (type === 'Uso indevido de celular') {
+      defaultDescription = `Em ${dateStr}, o(a) aluno(a) ${studentName}, da série ${schoolYear}, foi atendido(a) pela equipe escolar para registro e orientação em razão do uso indevido de aparelho celular no ambiente escolar.
+
+Durante a tratativa, foram realizadas orientações acerca da importância do cumprimento das normas institucionais, da manutenção de uma postura adequada ao ambiente educacional e da colaboração para o bom desenvolvimento das atividades escolares.
+
+Foi esclarecido ao(à) estudante que a Lei Federal nº 15.100, de 13 de janeiro de 2025, em seu Art. 2º, restringe a utilização de aparelhos eletrônicos portáteis pessoais, incluindo telefones celulares, pelos estudantes da Educação Básica durante as aulas, recreios e intervalos, ressalvadas as exceções previstas na própria legislação para fins pedagógicos, de acessibilidade, inclusão ou necessidades de saúde.
+
+O(A) aluno(a) declarou estar ciente das orientações recebidas, bem como da legislação vigente e das normas estabelecidas pela instituição, comprometendo-se a adequar sua conduta às regras escolares.`;
+    } else {
+      defaultDescription = `O(a) aluno(a) ${studentName} acumula ${count} ocorrências de "${type}" registradas recentemente. Considerando a reincidência, foi realizada esta ata de tratativa e encaminhamento pedagógico em ${dateStr}.`;
+    }
+
+    setDadosFormulario({
+      'Data': todayStr,
+      'Tipo de Ocorrência': tipoOcorrenciaMapped,
+      'Descrição': defaultDescription
+    });
+  };
 
   useEffect(() => {
     if (modelosFormulario.length > 0 && !modeloSelecionado) {
@@ -140,8 +244,16 @@ export default function FormsPage() {
     });
 
     if (ok) {
+      if (tratandoOcorrenciaTipo) {
+        try {
+          await occurrenceService.markRecordsAsTreated(alunoSelecionado.nome, tratandoOcorrenciaTipo);
+        } catch (err) {
+          console.error('Erro ao marcar registros como tratados:', err);
+        }
+      }
       atualizar();
       setEnviado(true);
+      setTratandoOcorrenciaTipo(null);
     }
     setSalvando(false);
   };
@@ -150,6 +262,7 @@ export default function FormsPage() {
     setAlunoSelecionado(null);
     setDadosFormulario({});
     setEnviado(false);
+    setTratandoOcorrenciaTipo(null);
   };
 
   // Filtrar ocorrências por período (Defensivo)
@@ -299,162 +412,200 @@ export default function FormsPage() {
             )}
 
             {modeloSelecionado && !enviado && (
-              <div className="bg-surface-container-lowest rounded-[2.5rem] overflow-hidden editorial-shadow border border-outline-variant/10">
-                {/* Official Sesi Document Header Accent */}
-                <div className="relative w-full h-[100px] md:h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-4 md:px-8 select-none">
-                  {/* Polígonos Geométricos */}
-                  <div className="absolute top-0 left-0 w-[180px] md:w-[300px] h-full pointer-events-none">
-                    <div className="absolute top-0 left-0 w-[200px] h-[120px] bg-[#e2e8f0]" style={{ clipPath: 'polygon(0 0, 100% 0, 70% 100%, 0 80%)' }} />
-                    <div className="absolute top-0 left-0 w-[160px] h-[100px] bg-[#cbd5e1] opacity-40" style={{ clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0 60%)' }} />
-                    <div className="absolute top-[20px] left-0 w-[40px] h-[100px] bg-[#fbbf24]" style={{ clipPath: 'polygon(0 0, 100% 30%, 80% 90%, 0 100%)' }} />
-                  </div>
-                  <div className="flex-1" />
-                  {/* Logo Sesi */}
-                  <div className="relative z-10">
-                    <div className="flex flex-col items-end mr-2 md:mr-4">
-                      <div className="flex items-center gap-1 md:gap-2 mr-1">
-                        <span className="text-[9px] md:text-[11px] font-extrabold text-[#0c2340] lowercase tracking-normal">colégio</span>
-                        <div className="flex flex-col items-center gap-0.5">
-                          <div className="w-1.5 md:w-2.5 h-1.5 md:h-2.5 rounded-full bg-[#0c2340]" />
-                          <div className="w-1 md:w-2 h-2.5 md:h-3.5 rounded-full bg-[#0c2340]" />
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+                {/* Sidebar de Atas Pendentes */}
+                <div className="lg:col-span-1 bg-surface-container-lowest rounded-[2.5rem] p-6 border border-outline-variant/10 shadow-sm space-y-4">
+                  <h3 className="text-sm font-black text-primary uppercase tracking-widest flex items-center gap-2">
+                    <AlertTriangle size={16} className="text-red-500 animate-pulse" />
+                    Atas Pendentes
+                  </h3>
+                  <p className="text-[11px] text-on-surface-variant font-medium leading-relaxed">
+                    Alunos com 4+ ocorrências diárias ativas nos últimos 30 dias. Clique para abrir a Ata.
+                  </p>
+                  {studentsNeedingTratativa.length === 0 ? (
+                    <p className="text-xs text-on-surface-variant italic py-4">Nenhuma ata pendente.</p>
+                  ) : (
+                    <div className="space-y-3 max-h-[450px] overflow-y-auto pr-1">
+                      {studentsNeedingTratativa.map((group, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleSelectTratativaPendente(group.studentName, group.schoolYear, group.type, group.count)}
+                          className="w-full text-left p-3.5 rounded-2xl bg-red-500/10 hover:bg-red-500/25 border border-red-500/20 hover:border-red-500/40 transition-all flex flex-col gap-1 cursor-pointer group"
+                        >
+                          <span className="text-xs font-black text-red-500 uppercase tracking-wide group-hover:underline">
+                            {group.studentName}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-300">
+                            {group.schoolYear}
+                          </span>
+                          <span className="text-[9px] font-black uppercase text-red-400 bg-red-950/40 px-2 py-0.5 rounded-full w-fit">
+                            {group.count}x {group.type}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Form oficial */}
+                <div className="lg:col-span-3 bg-surface-container-lowest rounded-[2.5rem] overflow-hidden editorial-shadow border border-outline-variant/10">
+                  {/* Official Sesi Document Header Accent */}
+                  <div className="relative w-full h-[100px] md:h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-4 md:px-8 select-none">
+                    {/* Polígonos Geométricos */}
+                    <div className="absolute top-0 left-0 w-[180px] md:w-[300px] h-full pointer-events-none">
+                      <div className="absolute top-0 left-0 w-[200px] h-[120px] bg-[#e2e8f0]" style={{ clipPath: 'polygon(0 0, 100% 0, 70% 100%, 0 80%)' }} />
+                      <div className="absolute top-0 left-0 w-[160px] h-[100px] bg-[#cbd5e1] opacity-40" style={{ clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0 60%)' }} />
+                      <div className="absolute top-[20px] left-0 w-[40px] h-[100px] bg-[#fbbf24]" style={{ clipPath: 'polygon(0 0, 100% 30%, 80% 90%, 0 100%)' }} />
+                    </div>
+                    <div className="flex-1" />
+                    {/* Logo Sesi */}
+                    <div className="relative z-10">
+                      <div className="flex flex-col items-end mr-2 md:mr-4">
+                        <div className="flex items-center gap-1 md:gap-2 mr-1">
+                          <span className="text-[9px] md:text-[11px] font-extrabold text-[#0c2340] lowercase tracking-normal">colégio</span>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <div className="w-1.5 md:w-2.5 h-1.5 md:h-2.5 rounded-full bg-[#0c2340]" />
+                            <div className="w-1 md:w-2 h-2.5 md:h-3.5 rounded-full bg-[#0c2340]" />
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-[28px] md:text-[42px] font-bold text-[#0c2340] leading-none tracking-tight -mt-0.5 md:-mt-1 font-serif italic mr-2 md:mr-6 relative">
-                        Ses<span className="relative">ı</span>
-                      </div>
-                      <div className="bg-[#fbbf24] text-[#0c2340] text-[7px] md:text-[9px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] px-2.5 md:px-4 py-1 md:py-2 mt-1 rounded-[6px] md:rounded-[8px] transform -skew-x-12 leading-none">
-                        internacional
+                        <div className="text-[28px] md:text-[42px] font-bold text-[#0c2340] leading-none tracking-tight -mt-0.5 md:-mt-1 font-serif italic mr-2 md:mr-6 relative">
+                          Ses<span className="relative">ı</span>
+                        </div>
+                        <div className="bg-[#fbbf24] text-[#0c2340] text-[7px] md:text-[9px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] px-2.5 md:px-4 py-1 md:py-2 mt-1 rounded-[6px] md:rounded-[8px] transform -skew-x-12 leading-none">
+                          internacional
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="p-4 md:p-8 md:p-4 md:p-10 space-y-8">
-                  <div className="mb-4">
-                    <h2 className="text-xl font-black text-on-surface mb-1">{modeloSelecionado.nome}</h2>
-                    <p className="text-on-surface-variant font-medium text-sm">{modeloSelecionado.descricao}</p>
-                  </div>
-                  <form onSubmit={handleSubmit} className="space-y-8">
-                  {modeloSelecionado.campos.map(campo => (
-                    <div key={campo.id} className="space-y-4 bg-white/[0.02] p-4 md:p-8 rounded-[2.5rem] border border-white/[0.05] relative group/field">
-                      <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-focus-within/field:bg-primary transition-all" />
-                      
-                      {campo.tipo !== 'sessao' && (
-                        <label className="text-[11px] font-black text-primary uppercase tracking-[0.2em] px-1 flex items-center gap-2 mb-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                          {campo.rotulo} {campo.obrigatorio && <span className="text-red-500">*</span>}
-                        </label>
-                      )}
-                      {campo.tipo === 'sessao' && (
-                        <div className="flex items-center gap-4 py-4">
-                          <div className="h-px flex-1 bg-primary/20" />
-                          <h3 className="text-sm font-black text-primary uppercase tracking-[0.3em] whitespace-nowrap">{campo.rotulo}</h3>
-                          <div className="h-px flex-1 bg-primary/20" />
-                        </div>
-                      )}
-                      {campo.tipo === 'autocomplete_aluno' && (
-                        <div className="space-y-3">
-                          <AutocompleteAluno alunos={alunos} valor={alunoSelecionado?.nome || ''} aoSelecionar={setAlunoSelecionado} />
-                          {alunoSelecionado && (
-                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex flex-wrap gap-3 pt-2">
-                              {[
-                                { rotulo: 'Ano', valor: alunoSelecionado.ano },
-                                { rotulo: 'Turma', valor: alunoSelecionado.turma !== alunoSelecionado.ano ? alunoSelecionado.turma : null },
-                                { rotulo: 'Sala', valor: alunoSelecionado.numeroSala > 0 ? `Sala ${alunoSelecionado.numeroSala.toString().padStart(2, '0')}` : null },
-                              ].filter(i => i.valor).map(info => (
-                                <div key={info.rotulo} className="bg-primary/10 p-4 px-6 rounded-2xl border border-primary/20 min-w-[120px]">
-                                  <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-1">{info.rotulo}</p>
-                                  <p className="text-sm font-black text-on-surface">{info.valor}</p>
-                                </div>
-                              ))}
-                            </motion.div>
-                          )}
-                        </div>
-                      )}
-                      {campo.tipo === 'texto' && <input type="text" required={campo.obrigatorio} value={dadosFormulario[campo.rotulo] || ''} onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} className="campo-input-base" />}
-                      
-                      {campo.tipo === 'selecao' && campo.opcoes && (
-                        <select required={campo.obrigatorio} value={dadosFormulario[campo.rotulo] || ''} onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} className="campo-input-base">
-                          <option value="">Selecione uma opção...</option>
-                          {campo.opcoes.map(opcao => <option key={opcao} value={opcao}>{opcao}</option>)}
-                        </select>
-                      )}
- 
-                      {campo.tipo === 'radio' && campo.opcoes && (
-                        <div className="flex flex-wrap gap-3">
-                          {campo.opcoes.map(opcao => (
-                            <label key={opcao} className="cursor-pointer">
-                              <input type="radio" name={campo.id} required={campo.obrigatorio} className="sr-only peer" onChange={() => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: opcao }))} checked={dadosFormulario[campo.rotulo] === opcao} />
-                              <div className="px-6 py-4 rounded-2xl bg-surface-container-high text-on-surface-variant peer-checked:bg-primary/20 peer-checked:text-primary peer-checked:ring-2 peer-checked:ring-primary font-black text-sm transition-all hover:bg-surface-container-highest">
-                                {opcao}
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-                      )}
- 
-                      {campo.tipo === 'checkbox' && campo.opcoes && (
-                        <div className="flex flex-wrap gap-3">
-                          {campo.opcoes.map(opcao => {
-                            const valores = dadosFormulario[campo.rotulo] || [];
-                            const estaSelecionado = valores.includes(opcao);
-                            return (
+                  <div className="p-4 md:p-8 md:p-10 space-y-8">
+                    <div className="mb-4">
+                      <h2 className="text-xl font-black text-on-surface mb-1">{modeloSelecionado.nome}</h2>
+                      <p className="text-on-surface-variant font-medium text-sm">{modeloSelecionado.descricao}</p>
+                    </div>
+                    <form onSubmit={handleSubmit} className="space-y-8">
+                    {modeloSelecionado.campos.map(campo => (
+                      <div key={campo.id} className="space-y-4 bg-white/[0.02] p-4 md:p-8 rounded-[2.5rem] border border-white/[0.05] relative group/field">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-focus-within/field:bg-primary transition-all" />
+                        
+                        {campo.tipo !== 'sessao' && (
+                          <label className="text-[11px] font-black text-primary uppercase tracking-[0.2em] px-1 flex items-center gap-2 mb-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            {campo.rotulo} {campo.obrigatorio && <span className="text-red-500">*</span>}
+                          </label>
+                        )}
+                        {campo.tipo === 'sessao' && (
+                          <div className="flex items-center gap-4 py-4">
+                            <div className="h-px flex-1 bg-primary/20" />
+                            <h3 className="text-sm font-black text-primary uppercase tracking-[0.3em] whitespace-nowrap">{campo.rotulo}</h3>
+                            <div className="h-px flex-1 bg-primary/20" />
+                          </div>
+                        )}
+                        {campo.tipo === 'autocomplete_aluno' && (
+                          <div className="space-y-3">
+                            <AutocompleteAluno alunos={alunos} valor={alunoSelecionado?.nome || ''} aoSelecionar={setAlunoSelecionado} />
+                            {alunoSelecionado && (
+                              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex flex-wrap gap-3 pt-2">
+                                {[
+                                  { rotulo: 'Ano', valor: alunoSelecionado.ano },
+                                  { rotulo: 'Turma', valor: alunoSelecionado.turma !== alunoSelecionado.ano ? alunoSelecionado.turma : null },
+                                  { rotulo: 'Sala', valor: alunoSelecionado.numeroSala > 0 ? `Sala ${alunoSelecionado.numeroSala.toString().padStart(2, '0')}` : null },
+                                ].filter(i => i.valor).map(info => (
+                                  <div key={info.rotulo} className="bg-primary/10 p-4 px-6 rounded-2xl border border-primary/20 min-w-[120px]">
+                                    <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-1">{info.rotulo}</p>
+                                    <p className="text-sm font-black text-on-surface">{info.valor}</p>
+                                  </div>
+                                ))}
+                              </motion.div>
+                            )}
+                          </div>
+                        )}
+                        {campo.tipo === 'texto' && <input type="text" required={campo.obrigatorio} value={dadosFormulario[campo.rotulo] || ''} onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} className="campo-input-base" />}
+                        
+                        {campo.tipo === 'selecao' && campo.opcoes && (
+                          <select required={campo.obrigatorio} value={dadosFormulario[campo.rotulo] || ''} onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} className="campo-input-base">
+                            <option value="">Selecione uma opção...</option>
+                            {campo.opcoes.map(opcao => <option key={opcao} value={opcao}>{opcao}</option>)}
+                          </select>
+                        )}
+    
+                        {campo.tipo === 'radio' && campo.opcoes && (
+                          <div className="flex flex-wrap gap-3">
+                            {campo.opcoes.map(opcao => (
                               <label key={opcao} className="cursor-pointer">
-                                <input type="checkbox" className="sr-only peer" 
-                                  onChange={e => {
-                                    const novosValores = e.target.checked 
-                                      ? [...valores, opcao]
-                                      : valores.filter((v: string) => v !== opcao);
-                                    setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: novosValores }));
-                                  }} checked={estaSelecionado} />
+                                <input type="radio" name={campo.id} required={campo.obrigatorio} className="sr-only peer" onChange={() => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: opcao }))} checked={dadosFormulario[campo.rotulo] === opcao} />
                                 <div className="px-6 py-4 rounded-2xl bg-surface-container-high text-on-surface-variant peer-checked:bg-primary/20 peer-checked:text-primary peer-checked:ring-2 peer-checked:ring-primary font-black text-sm transition-all hover:bg-surface-container-highest">
                                   {opcao}
                                 </div>
                               </label>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {campo.tipo === 'serie_escolar' && (
-                        <select required={campo.obrigatorio} value={dadosFormulario[campo.rotulo] || ''} onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} className="campo-input-base">
-                          <option value="">Selecione a série...</option>
-                          {SERIES.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      )}
-
-                      {campo.tipo === 'data' && (
-                        <input 
-                          type="date" 
-                          required={campo.obrigatorio} 
-                          value={dadosFormulario[campo.rotulo] || ''} 
-                          onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} 
-                          className="campo-input-base" 
-                        />
-                      )}
-
-                      {campo.tipo === 'area_texto' && (
-                        <textarea 
-                          required={campo.obrigatorio} 
-                          value={dadosFormulario[campo.rotulo] || ''} 
-                          onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} 
-                          className="w-full bg-surface-container-high/50 border-2 border-white/5 rounded-[1.5rem] p-4 md:p-6 text-lg font-medium focus:ring-8 focus:ring-primary/5 focus:border-primary/40 focus:bg-surface-container-high transition-all min-h-[300px] shadow-inner editorial-leading text-white placeholder:text-on-surface-variant/20 outline-none" 
-                          style={{ color: '#ffffff', caretColor: '#fbbf24' }}
-                          placeholder="Descreva detalhadamente o ocorrido..." 
-                        />
-                      )}
+                            ))}
+                          </div>
+                        )}
+    
+                        {campo.tipo === 'checkbox' && campo.opcoes && (
+                          <div className="flex flex-wrap gap-3">
+                            {campo.opcoes.map(opcao => {
+                              const valores = dadosFormulario[campo.rotulo] || [];
+                              const estaSelecionado = valores.includes(opcao);
+                              return (
+                                <label key={opcao} className="cursor-pointer">
+                                  <input type="checkbox" className="sr-only peer" 
+                                    onChange={e => {
+                                      const novosValores = e.target.checked 
+                                        ? [...valores, opcao]
+                                        : valores.filter((v: string) => v !== opcao);
+                                      setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: novosValores }));
+                                    }} checked={estaSelecionado} />
+                                  <div className="px-6 py-4 rounded-2xl bg-surface-container-high text-on-surface-variant peer-checked:bg-primary/20 peer-checked:text-primary peer-checked:ring-2 peer-checked:ring-primary font-black text-sm transition-all hover:bg-surface-container-highest">
+                                    {opcao}
+                                  </div>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+  
+                        {campo.tipo === 'serie_escolar' && (
+                          <select required={campo.obrigatorio} value={dadosFormulario[campo.rotulo] || ''} onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} className="campo-input-base">
+                            <option value="">Selecione a série...</option>
+                            {SERIES.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        )}
+  
+                        {campo.tipo === 'data' && (
+                          <input 
+                            type="date" 
+                            required={campo.obrigatorio} 
+                            value={dadosFormulario[campo.rotulo] || ''} 
+                            onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} 
+                            className="campo-input-base" 
+                          />
+                        )}
+  
+                        {campo.tipo === 'area_texto' && (
+                          <textarea 
+                            required={campo.obrigatorio} 
+                            value={dadosFormulario[campo.rotulo] || ''} 
+                            onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} 
+                            className="w-full bg-surface-container-high/50 border-2 border-white/5 rounded-[1.5rem] p-4 md:p-6 text-lg font-medium focus:ring-8 focus:ring-primary/5 focus:border-primary/40 focus:bg-surface-container-high transition-all min-h-[300px] shadow-inner editorial-leading text-white placeholder:text-on-surface-variant/20 outline-none" 
+                            style={{ color: '#ffffff', caretColor: '#fbbf24' }}
+                            placeholder="Descreva detalhadamente o ocorrido..." 
+                          />
+                        )}
+                      </div>
+                    ))}
+                    <div className="flex justify-end gap-4 pt-4">
+                      <button type="button" onClick={limparFormulario} className="px-8 py-4 text-on-surface-variant font-bold text-sm">Limpar</button>
+                      <button type="submit" disabled={!alunoSelecionado || salvando} className="btn-primary !px-12 !py-4">
+                        {salvando ? 'Salvando...' : 'Registrar'}
+                      </button>
                     </div>
-                  ))}
-                  <div className="flex justify-end gap-4 pt-4">
-                    <button type="button" onClick={limparFormulario} className="px-8 py-4 text-on-surface-variant font-bold text-sm">Limpar</button>
-                    <button type="submit" disabled={!alunoSelecionado || salvando} className="btn-primary !px-12 !py-4">
-                      {salvando ? 'Salvando...' : 'Registrar'}
-                    </button>
-                  </div>
-                </form>
+                  </form>
+                </div>
               </div>
-            </div>
-          )}
+              </div>
+            )}
 
             {enviado && (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}

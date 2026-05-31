@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar, BottomNav } from './components/Navigation';
 import { Search, User, Clock, Menu, X } from 'lucide-react';
+import { useAuth } from './context/AuthContext';
+
+const roleLabels: Record<string, string> = {
+  super_admin: 'Super Admin',
+  admin: 'Administrador',
+  professor: 'Professor',
+  monitor: 'Monitor',
+  user: 'Usuário',
+};
 
 export function Layout() {
   const [time, setTime] = useState(new Date());
@@ -10,6 +19,7 @@ export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const isLoginPage = location.pathname === '/login';
+  const { profile } = useAuth();
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -21,6 +31,9 @@ export function Layout() {
   }, [location.pathname]);
 
   if (isLoginPage) return <Outlet />;
+
+  const userRoleLabel = profile?.role ? roleLabels[profile.role] || profile.role : 'Visitante';
+  const userInitial = profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : '';
 
   return (
     <div className="min-h-screen bg-background">
@@ -78,11 +91,11 @@ export function Layout() {
             
             <div className="flex items-center gap-3 pl-5 border-l border-[#30363d]">
               <div className="text-right">
-                <p className="text-xs font-black text-white leading-none">Coordenador</p>
-                <p className="text-[10px] font-bold text-[#0aeb7a] uppercase tracking-widest mt-0.5">Online</p>
+                <p className="text-xs font-black text-white leading-none">{profile?.full_name || 'Usuário'}</p>
+                <p className="text-[10px] font-bold text-[#0aeb7a] uppercase tracking-widest mt-0.5">{userRoleLabel}</p>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-surface-container-low border border-[#30363d] flex items-center justify-center text-on-surface-variant overflow-hidden">
-                <User size={24} />
+              <div className="w-12 h-12 rounded-2xl bg-surface-container-low border border-[#30363d] flex items-center justify-center text-primary font-black overflow-hidden select-none">
+                {userInitial || <User size={24} />}
               </div>
             </div>
           </div>

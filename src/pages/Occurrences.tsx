@@ -166,13 +166,30 @@ export function Occurrences() {
   const [filterType, setFilterType] = useState('');
   const [filterPeriod, setFilterPeriod] = useState('Hoje');
   const [filterDate, setFilterDate] = useState('');
+  const [isResettingTratativa, setIsResettingTratativa] = useState(false);
 
   const getRecurrenceCount = (studentName: string, type: string) => {
     if (!studentName || !type) return 0;
     return thirtyDaysRecords.filter(r => 
       r.student_name.trim().toLowerCase() === studentName.trim().toLowerCase() &&
-      r.occurrence_type.trim().toLowerCase() === type.trim().toLowerCase()
+      r.occurrence_type.trim().toLowerCase() === type.trim().toLowerCase() &&
+      !r.tratada
     ).length;
+  };
+
+  const handleConfirmTratativa = async (studentName: string, type: string) => {
+    setIsResettingTratativa(true);
+    try {
+      await occurrenceService.markRecordsAsTreated(studentName, type);
+      alert('Tratativa confirmada com sucesso! A contagem de ocorrências ativas foi reiniciada.');
+      setReoffenderAlert(null);
+      fetchRecords();
+    } catch (err) {
+      console.error('Erro ao confirmar tratativa:', err);
+      alert('Erro ao confirmar tratativa.');
+    } finally {
+      setIsResettingTratativa(false);
+    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -219,7 +236,8 @@ export function Occurrences() {
 
         const studentOccurrences = studentPastRecords.filter(r => 
           r.student_name.trim().toLowerCase() === registeredStudent.trim().toLowerCase() &&
-          r.occurrence_type.trim().toLowerCase() === registeredType.trim().toLowerCase()
+          r.occurrence_type.trim().toLowerCase() === registeredType.trim().toLowerCase() &&
+          !r.tratada
         );
 
         if (studentOccurrences.length >= 4) {
@@ -231,8 +249,10 @@ export function Occurrences() {
             occurrences: studentOccurrences
           });
 
-          // Auto trigger download
-          await generateOccurrencesPDF(studentOccurrences, 'dossie_urgente', registeredStudent, studentOccurrences);
+          // Auto trigger download if it is the 4th occurrence
+          if (studentOccurrences.length === 4) {
+            await generateOccurrencesPDF(studentOccurrences, 'dossie_urgente', registeredStudent, studentOccurrences);
+          }
         }
       } catch (err) {
         console.error('Erro ao verificar reincidência:', err);
@@ -892,6 +912,65 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                   </div>
                 </div>
               </div>
+
+              {/* Bloco de Limpeza do Banco (Apenas Admin) */}
+              {isAdmin && (
+                <div className="col-span-1 md:col-span-2 bg-red-500/5 dark:bg-red-500/5 rounded-2xl p-6 border border-red-500/20 dark:border-red-500/20 shadow-sm mt-4 relative overflow-hidden">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                    <div className="space-y-1">
+                      <h4 className="text-base font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5" />
+                        Limpeza do Banco de Dados
+                      </h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xl">
+                        Apague os registros do período filtrado para liberar espaço no banco de dados. 
+                        <strong> Certifique-se de baixar os relatórios em PDF ou Excel antes de prosseguir!</strong>
+                      </p>
+                      <div className="bg-white/40 dark:bg-slate-900/40 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 inline-block mt-2">
+                        <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">Filtro Ativo:</span>{' '}
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase">
+                          {reportFilterPeriod} {reportFilterYear ? `(${reportFilterYear})` : ''}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        const targetRecords = getFilteredReportRecords();
+                        if (targetRecords.length === 0) {
+                          alert('Nenhum registro encontrado para o filtro selecionado.');
+                          return;
+                        }
+
+                        const confirmPhrase = 'EXCLUIR';
+                        const input = window.prompt(
+                          `ATENÇÃO: Você está prestes a excluir permanentemente ${targetRecords.length} registro(s) do banco de dados.\n\n` +
+                          `Esta ação não pode ser desfeita!\n\n` +
+                          `Para confirmar, digite a palavra "${confirmPhrase}" no campo abaixo:`
+                        );
+
+                        if (input === confirmPhrase) {
+                          try {
+                            const idsToDelete = targetRecords.map(r => r.id).filter(Boolean) as string[];
+                            await occurrenceService.deleteRecords(idsToDelete);
+                            alert(`${idsToDelete.length} registros foram excluídos com sucesso!`);
+                            fetchRecords();
+                          } catch (error) {
+                            console.error(error);
+                            alert('Erro ao excluir registros. Tente novamente.');
+                          }
+                        } else if (input !== null) {
+                          alert('Confirmação incorreta. A exclusão foi cancelada.');
+                        }
+                      }}
+                      disabled={getFilteredReportRecords().length === 0}
+                      className="px-6 py-3 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0 cursor-pointer text-xs uppercase"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Excluir {getFilteredReportRecords().length} Registro(s)
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             </div>
           )}
@@ -971,7 +1050,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
               {/* Glow background effects */}
               <div className="absolute -top-24 -left-24 w-48 h-48 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
               <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
-
+ 
               {/* Warning Icon Banner */}
               <div className="relative mb-5 z-10">
                 <div className="absolute inset-0 rounded-full bg-red-500/25 blur-md animate-pulse" />
@@ -979,23 +1058,29 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                   <ShieldAlert className="w-10 h-10 animate-bounce" />
                 </div>
               </div>
-
+ 
               {/* Header Title */}
               <h2 className="text-xl md:text-2xl font-black uppercase tracking-wider text-red-500 mb-3 z-10">
                 Atenção! Reincidência
               </h2>
-
+ 
               {/* Message Requested */}
               <p className="text-sm md:text-base font-bold text-slate-100 leading-relaxed max-w-sm mb-5 z-10">
-                Este aluno tem mais de três ocorrências em <span className="text-red-400 underline">{reoffenderAlert.occurrenceType}</span> e precisa ser encaminhado à coordenação para a tratativa.
+                {reoffenderAlert.count >= 5 ? (
+                  `O(a) aluno(a) ${reoffenderAlert.studentName} acumula ${reoffenderAlert.count} ocorrências relacionadas a esta conduta. Considerando a reincidência, faz-se necessário o encaminhamento à Coordenação para atendimento e adoção das medidas educativas e disciplinares pertinentes.`
+                ) : (
+                  <>
+                    Este aluno tem mais de três ocorrências em <span className="text-red-400 underline">{reoffenderAlert.occurrenceType}</span> e precisa ser encaminhado à coordenação para a tratativa.
+                  </>
+                )}
               </p>
-
+ 
               {/* Occurrences compilation title */}
               <div className="w-full flex items-center gap-1.5 justify-start text-left mb-2 z-10">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Histórico (Últimos 30 dias):</span>
               </div>
-
+ 
               {/* Compact feed of occurrences */}
               <div className="w-full max-h-40 overflow-y-auto mb-6 space-y-2 pr-1 text-left z-10 custom-scrollbar">
                 {reoffenderAlert.occurrences.map((oc, i) => (
@@ -1009,26 +1094,41 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                   </div>
                 ))}
               </div>
-
+ 
               {/* Subtext info */}
               <p className="text-[10px] text-slate-400 mb-6 max-w-xs leading-normal z-10">
-                O dossiê completo foi gerado e baixado automaticamente. Imprima o relatório e leve junto com o aluno.
+                {reoffenderAlert.count === 4 ? (
+                  "O dossiê completo foi gerado e baixado automaticamente. Imprima o relatório e leve junto com o aluno."
+                ) : (
+                  "Consulte a coordenação para a tomada de decisões pedagógicas baseadas no histórico."
+                )}
               </p>
-
+ 
               {/* Actions */}
               <div className="w-full space-y-2.5 z-10">
                 <button
                   onClick={() => generateOccurrencesPDF(reoffenderAlert.occurrences, 'dossie_urgente', reoffenderAlert.studentName, reoffenderAlert.occurrences)}
-                  className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-600/10 hover:shadow-red-600/20 cursor-pointer text-sm"
+                  className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 cursor-pointer text-sm"
                 >
                   <Download className="w-4 h-4" />
-                  Baixar PDF
+                  Baixar Ocorrências
+                </button>
+                <button
+                  onClick={() => handleConfirmTratativa(reoffenderAlert.studentName, reoffenderAlert.occurrenceType)}
+                  disabled={isResettingTratativa}
+                  className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-600/10 hover:shadow-red-600/20 cursor-pointer text-sm disabled:opacity-50"
+                >
+                  {isResettingTratativa ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    'O aluno já fez tratativa'
+                  )}
                 </button>
                 <button
                   onClick={() => setReoffenderAlert(null)}
-                  className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-white rounded-xl font-bold transition-all cursor-pointer text-xs uppercase tracking-wider"
+                  className="w-full py-2.5 px-4 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-400 hover:text-white rounded-xl font-bold transition-all cursor-pointer text-xs uppercase tracking-wider"
                 >
-                  Entendido e Fechar
+                  Fechar
                 </button>
               </div>
             </motion.div>

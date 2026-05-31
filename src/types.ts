@@ -282,5 +282,6 @@ export interface DailyOccurrenceRecord {
   occurrence_type: string;
   report: string;
   created_at?: string;
+  tratada?: boolean;
 }
 

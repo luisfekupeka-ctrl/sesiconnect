@@ -921,6 +921,15 @@ export async function salvarChamadas(registros: Partial<RegistroChamada>[]): Pro
   return true;
 }
 
+export async function excluirChamadas(ids: string[]): Promise<boolean> {
+  if (!ids?.length) return true;
+  const { error } = await supabase
+    .from('chamadas')
+    .delete()
+    .in('id', ids);
+  return !error;
+}
+
 // ============================================================
 // PROFESSORES CONFIG (realocação)
 // ============================================================
