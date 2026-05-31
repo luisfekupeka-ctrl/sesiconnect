@@ -258,36 +258,14 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
           {/* Área de Impressão (Direita) */}
           <div id="printable-occurrence" className="flex-1 bg-white rounded-3xl md:rounded-none md:rounded-r-[2.5rem] shadow-xl md:shadow-none border border-gray-100 md:border-0 overflow-y-visible md:overflow-y-auto custom-scrollbar relative flex flex-col print-card-content">
             
-            {/* Header Oficial do Colégio Sesi */}
-            <div className="relative w-full h-[100px] md:h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-4 md:px-8 select-none print:hidden">
-              {/* Polígonos Geométricos */}
-              <div className="absolute top-0 left-0 w-[180px] md:w-[300px] h-full pointer-events-none">
-                <div className="absolute top-0 left-0 w-[200px] h-[120px] bg-[#e2e8f0]" style={{ clipPath: 'polygon(0 0, 100% 0, 70% 100%, 0 80%)' }} />
-                <div className="absolute top-0 left-0 w-[160px] h-[100px] bg-[#cbd5e1] opacity-40" style={{ clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0 60%)' }} />
-                <div className="absolute top-[20px] left-0 w-[40px] h-[100px] bg-[#fbbf24]" style={{ clipPath: 'polygon(0 0, 100% 30%, 80% 90%, 0 100%)' }} />
-              </div>
-              <div className="flex-1" />
-              {/* Logo Sesi */}
-              <div className="relative z-10">
-                <div className="flex flex-col items-end mr-2 md:mr-4">
-                  <div className="flex items-center gap-1 md:gap-2 mr-1">
-                    <span className="text-[9px] md:text-[11px] font-extrabold text-[#0c2340] lowercase tracking-normal">colégio</span>
-                    <div className="flex flex-col items-center gap-0.5">
-                      <div className="w-1.5 md:w-2.5 h-1.5 md:h-2.5 rounded-full bg-[#0c2340]" />
-                      <div className="w-1 md:w-2 h-2.5 md:h-3.5 rounded-full bg-[#0c2340]" />
-                    </div>
-                  </div>
-                  <div className="text-[28px] md:text-[42px] font-bold text-[#0c2340] leading-none tracking-tight -mt-0.5 md:-mt-1 font-serif italic mr-2 md:mr-6 relative">
-                    Ses<span className="relative">ı</span>
-                  </div>
-                  <div className="bg-[#fbbf24] text-[#0c2340] text-[7px] md:text-[9px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] px-2.5 md:px-4 py-1 md:py-2 mt-1 rounded-[6px] md:rounded-[8px] transform -skew-x-12 leading-none">
-                    internacional
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Papel Timbrado Oficial em Altíssima Definição (Fundo Real) */}
+            <img 
+              src={papelTimbradoImg} 
+              alt="Papel Timbrado Oficial" 
+              className="absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-[1]" 
+            />
 
-            <div className="flex-1 px-4 sm:px-12 md:px-20 pt-6 md:pt-12 pb-10 md:pb-20 space-y-6 md:space-y-10 print:pt-[55mm] print:px-[25mm] print:pb-[20mm]">
+            <div className="flex-1 px-4 sm:px-12 md:px-20 pt-[35mm] md:pt-[45mm] pb-10 md:pb-20 space-y-6 md:space-y-10 print:pt-[55mm] print:px-[25mm] print:pb-[20mm] relative z-10">
                {/* Cabeçalho do Documento - Alocado de maneira inteligente */}
                <div className="space-y-1.5 text-sm text-[#0c2340] font-medium border-b border-gray-200 pb-6">
                  <p><span className="font-bold mr-2">Nome do Aluno:</span> {configAssinaturas.nomeAluno || ocorrencia.nomeAluno}</p>
@@ -402,11 +380,6 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly }: Pr
             min-height: 297mm;
             padding: 0 !important;
             background: white !important;
-            background-image: url("${papelTimbradoImg}") !important;
-            background-size: 100% 100% !important;
-            background-repeat: no-repeat !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
           }
           .print\\:hidden { display: none !important; }
           .print\\:block { display: block !important; }
