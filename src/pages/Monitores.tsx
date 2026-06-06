@@ -639,6 +639,46 @@ export default function Monitores() {
                     {postosNoMacro.map(posto => {
                       const alocacoesNoPosto = (gradeMonitores || []).filter(g => g.diaSemana === diaFiltro && g.posto.trim() === posto);
 
+                      // Algoritmo de Distribuição em Raias (Lanes) para evitar sobreposição
+                      const sortedAlocs = [...alocacoesNoPosto].sort((a, b) => {
+                        return horaParaMinutos(a.horarioInicio) - horaParaMinutos(b.horarioInicio);
+                      });
+
+                      const lanes: any[][] = [];
+                      const alocWithLane = sortedAlocs.map(aloc => {
+                        const start = horaParaMinutos(aloc.horarioInicio);
+                        const end = horaParaMinutos(aloc.horarioFim);
+                        
+                        let laneIndex = 0;
+                        let placed = false;
+                        
+                        for (let i = 0; i < lanes.length; i++) {
+                          const lane = lanes[i];
+                          const hasOverlap = lane.some(item => {
+                            const itemStart = horaParaMinutos(item.horarioInicio);
+                            const itemEnd = horaParaMinutos(item.horarioFim);
+                            return (start < itemEnd && end > itemStart);
+                          });
+                          
+                          if (!hasOverlap) {
+                            lane.push(aloc);
+                            laneIndex = i;
+                            placed = true;
+                            break;
+                          }
+                        }
+                        
+                        if (!placed) {
+                          lanes.push([aloc]);
+                          laneIndex = lanes.length - 1;
+                        }
+                        
+                        return { ...aloc, laneIndex };
+                      });
+
+                      const laneCount = lanes.length || 1;
+                      const rowHeight = laneCount * 56 + 12; // 56px por raia + padding
+
                       return (
                         <div key={posto} className="flex border-b border-white/[0.02] hover:bg-white/[0.01] transition-all">
                           {/* Nome do Posto */}
@@ -649,20 +689,21 @@ export default function Monitores() {
                           </div>
 
                           {/* Barras de tempo dos Monitores */}
-                          <div className="flex-1 relative py-4 h-20">
-                            {alocacoesNoPosto.map(slot => {
+                          <div className="flex-1 relative py-2" style={{ height: `${rowHeight}px` }}>
+                            {alocWithLane.map(slot => {
                               const minInicio = horaParaMinutos(slot.horarioInicio);
                               const minFim = horaParaMinutos(slot.horarioFim);
                               const leftPct = Math.max(0, ((minInicio - ESCALA_INICIO) / ESCALA_TOTAL) * 100);
                               const widthPct = Math.min(100 - leftPct, ((minFim - minInicio) / ESCALA_TOTAL) * 100);
                               const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
                               const cor = mapaCorMonitor[slot.monitorNome] || '#3B82F6';
+                              const topPos = slot.laneIndex * 52 + 8; // 52px de altura por item + margem
 
                               return (
                                 <div
                                   key={slot.id}
                                   className={cn(
-                                    "absolute h-12 rounded-xl flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all",
+                                    "absolute h-11 rounded-xl flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all",
                                     estaAtivo ? "shadow-lg scale-105 z-10" : "opacity-90"
                                   )}
                                   style={{
@@ -670,8 +711,7 @@ export default function Monitores() {
                                     width: `${widthPct}%`,
                                     backgroundColor: estaAtivo ? cor : `${cor}25`,
                                     color: estaAtivo ? '#000' : '#fff',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
+                                    top: `${topPos}px`,
                                     boxShadow: estaAtivo ? `0 0 15px ${cor}50` : 'none',
                                     border: `1px solid ${cor}40`
                                   }}
