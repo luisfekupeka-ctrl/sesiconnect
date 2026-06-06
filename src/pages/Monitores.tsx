@@ -593,16 +593,26 @@ export default function Monitores() {
             </div>
           ) : (
             /* ================ RENDER DA LINHA DO TEMPO POR SETOR ================ */
-            <div className="bg-[#0a0a0a] rounded-[1.5rem] border border-white/5 overflow-hidden shadow-premium">
-              {/* Timeline header */}
-              <div className="flex border-b border-white/5">
-                <div className="w-48 shrink-0 p-4 border-r border-white/5">
-                  <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Setor / Posto</p>
+            <div className="bg-[#0a0a0a] rounded-[1.5rem] border border-white/5 overflow-hidden shadow-premium relative">
+              {/* Linhas de Grade Verticais */}
+              <div className="absolute inset-0 pointer-events-none flex z-0">
+                <div className="w-48 shrink-0 border-r border-white/10" />
+                <div className="flex-1 flex h-full">
+                  {HORAS_ESCALA.map(hora => (
+                    <div key={hora} className="flex-1 border-l border-white/10 h-full border-dashed" />
+                  ))}
+                </div>
+              </div>
+
+              {/* Cabeçalho de Horários */}
+              <div className="flex border-b border-white/10 bg-white/[0.02] relative z-10">
+                <div className="w-48 shrink-0 p-4 border-r border-white/10">
+                  <p className="text-[10px] font-black text-white/50 uppercase tracking-widest">Setor / Posto</p>
                 </div>
                 <div className="flex-1 relative">
                   <div className="flex">
                     {HORAS_ESCALA.map(hora => (
-                      <div key={hora} className="flex-1 text-center py-4 text-[8px] font-mono font-black text-white/20 uppercase tracking-widest border-l border-white/5">
+                      <div key={hora} className="flex-1 text-center py-4 text-[10px] font-mono font-bold text-white/70 uppercase tracking-widest border-l border-white/10">
                         {hora}
                       </div>
                     ))}
@@ -680,9 +690,9 @@ export default function Monitores() {
                       const rowHeight = laneCount * 56 + 12; // 56px por raia + padding
 
                       return (
-                        <div key={posto} className="flex border-b border-white/[0.02] hover:bg-white/[0.01] transition-all">
+                        <div key={posto} className="flex border-b border-white/[0.02] hover:bg-white/[0.01] transition-all relative z-10">
                           {/* Nome do Posto */}
-                          <div className="w-48 shrink-0 p-3 border-r border-white/5 flex items-center min-w-0">
+                          <div className="w-48 shrink-0 p-3 border-r border-white/10 flex items-center min-w-0 bg-[#0a0a0a]/40">
                             <p className="text-[10px] font-black text-white truncate" title={posto}>
                               {posto}
                             </p>
@@ -703,12 +713,12 @@ export default function Monitores() {
                                 <div
                                   key={slot.id}
                                   className={cn(
-                                    "absolute h-11 rounded-xl flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all",
+                                    "absolute h-11 rounded-xl flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border-2 border-[#0a0a0a]",
                                     estaAtivo ? "shadow-lg scale-105 z-10" : "opacity-90"
                                   )}
                                   style={{
-                                    left: `${leftPct}%`,
-                                    width: `${widthPct}%`,
+                                    left: `calc(${leftPct}% + 2px)`,
+                                    width: `calc(${widthPct}% - 4px)`,
                                     backgroundColor: estaAtivo ? cor : `${cor}25`,
                                     color: estaAtivo ? '#000' : '#fff',
                                     top: `${topPos}px`,
