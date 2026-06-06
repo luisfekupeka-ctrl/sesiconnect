@@ -176,7 +176,7 @@ export function Occurrences() {
   const [searchName, setSearchName] = useState('');
   const [filterYear, setFilterYear] = useState('');
   const [filterType, setFilterType] = useState('');
-  const [filterPeriod, setFilterPeriod] = useState('Hoje');
+  const [filterPeriod, setFilterPeriod] = useState('Todos');
   const [filterDate, setFilterDate] = useState('');
   const [isResettingTratativa, setIsResettingTratativa] = useState(false);
 
@@ -325,7 +325,7 @@ export function Occurrences() {
     if (activeTab === 'consulta' || activeTab === 'relatorios') {
       fetchRecords();
     }
-  }, [activeTab, filterPeriod, filterDate, reportFilterPeriod]);
+  }, [activeTab, filterPeriod, filterDate, reportFilterPeriod, filterYear, filterType, searchName]);
 
   const normalizeYear = (y: string) => (y || '').toLowerCase().replace(/[^0-9a-z]/gi, '');
 
@@ -925,64 +925,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                 </div>
               </div>
 
-              {/* Bloco de Limpeza do Banco (Apenas Admin) */}
-              {isAdmin && (
-                <div className="col-span-1 md:col-span-2 bg-red-500/5 dark:bg-red-500/5 rounded-2xl p-6 border border-red-500/20 dark:border-red-500/20 shadow-sm mt-4 relative overflow-hidden">
-                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                    <div className="space-y-1">
-                      <h4 className="text-base font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
-                        <AlertTriangle className="w-5 h-5" />
-                        Limpeza do Banco de Dados
-                      </h4>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xl">
-                        Apague os registros do período filtrado para liberar espaço no banco de dados. 
-                        <strong> Certifique-se de baixar os relatórios em PDF ou Excel antes de prosseguir!</strong>
-                      </p>
-                      <div className="bg-white/40 dark:bg-slate-900/40 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 inline-block mt-2">
-                        <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">Filtro Ativo:</span>{' '}
-                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase">
-                          {reportFilterPeriod} {reportFilterYear ? `(${reportFilterYear})` : ''}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={async () => {
-                        const targetRecords = getFilteredReportRecords();
-                        if (targetRecords.length === 0) {
-                          alert('Nenhum registro encontrado para o filtro selecionado.');
-                          return;
-                        }
 
-                        const confirmPhrase = 'EXCLUIR';
-                        const input = window.prompt(
-                          `ATENÇÃO: Você está prestes a excluir permanentemente ${targetRecords.length} registro(s) do banco de dados.\n\n` +
-                          `Esta ação não pode ser desfeita!\n\n` +
-                          `Para confirmar, digite a palavra "${confirmPhrase}" no campo abaixo:`
-                        );
-
-                        if (input === confirmPhrase) {
-                          try {
-                            const idsToDelete = targetRecords.map(r => r.id).filter(Boolean) as string[];
-                            await occurrenceService.deleteRecords(idsToDelete);
-                            alert(`${idsToDelete.length} registros foram excluídos com sucesso!`);
-                            fetchRecords();
-                          } catch (error) {
-                            console.error(error);
-                            alert('Erro ao excluir registros. Tente novamente.');
-                          }
-                        } else if (input !== null) {
-                          alert('Confirmação incorreta. A exclusão foi cancelada.');
-                        }
-                      }}
-                      disabled={getFilteredReportRecords().length === 0}
-                      className="px-6 py-3 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0 cursor-pointer text-xs uppercase"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Excluir {getFilteredReportRecords().length} Registro(s)
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
             </div>
           )}

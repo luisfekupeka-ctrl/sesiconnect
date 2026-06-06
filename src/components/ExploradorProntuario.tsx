@@ -1,14 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Folder, FileText, ChevronRight, Search, ArrowLeft, 
   Trash2, Download, X, LayoutGrid, ShieldAlert, FileSearch,
   HardDrive
 } from 'lucide-react';
-import { Aluno, RegistroOcorrencia } from '../types';
+import { Aluno, RegistroOcorrencia, DailyOccurrenceRecord } from '../types';
 import { cn } from '../lib/utils';
 import { arquivarELimparMes } from '../services/dataService';
 import { generateBackupZip } from '../lib/reportGenerator';
+import { occurrenceService } from '../services/occurrenceService';
 import FichaOcorrencia from './FichaOcorrencia';
 import ProntuarioPDF from './ProntuarioPDF';
 
@@ -29,43 +30,192 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
   const [dossieAberto, setDossieAberto] = useState(false);
   const [carregando, setCarregando] = useState(false);
 
+  // Estado para armazenar as ocorrências diárias trazidas do Supabase
+  const [registrosDiarios, setRegistrosDiarios] = useState<DailyOccurrenceRecord[]>([]);
+
+  useEffect(() => {
+    async function carregarRegistrosDiarios() {
+      try {
+        // Traz todas as ocorrências diárias (tratadas e não tratadas) para o prontuário permanente do aluno
+        const records = await occurrenceService.fetchRecords();
+        setRegistrosDiarios(records);
+      } catch (e) {
+        console.error('Erro ao buscar registros diários no Prontuário:', e);
+      }
+    }
+    carregarRegistrosDiarios();
+  }, [ocorrencias]); // Recarrega quando a lista de ocorrências formais sofrer atualização
+
   const ANOS_ORIGINAL = ['6º Ano', '7º Ano', '8º Ano', '9º Ano', '1º EM', '2º EM', '3º EM'];
   
+  // Mapeia anos baseados tanto em atas quanto em ocorrências diárias
   const ANOS = useMemo(() => {
-    return ANOS_ORIGINAL.filter(ano => 
-      ocorrencias.some(o => (o.anoAluno || '').includes(ano.split(' ')[0]))
-    );
-  }, [ocorrencias]);
+    const anosAtivos = new Set<string>();
+    
+    ocorrencias.forEach(o => {
+      const match = ANOS_ORIGINAL.find(ano => (o.anoAluno || '').includes(ano.split(' ')[0]));
+      if (match) anosAtivos.add(match);
+    });
+    
+    registrosDiarios.forEach(r => {
+      const match = ANOS_ORIGINAL.find(ano => (r.school_year || '').includes(ano.split(' ')[0]));
+      if (match) anosAtivos.add(match);
+    });
 
+    return ANOS_ORIGINAL.filter(ano => anosAtivos.has(ano));
+  }, [ocorrencias, registrosDiarios]);
+
+  // Mapeia as turmas da unidade (ex: "1º Ano EM", "9º Ano A") unificando as duas fontes
   const turmasDaUnidade = useMemo(() => {
     if (!selecao.unidade) return [];
-    const prefix = selecao.unidade.split(' ')[0];
-    const turmasValidas = Array.from(new Set(
-      ocorrencias
-        .filter(o => (o.anoAluno || '').includes(prefix))
-        .map(o => o.turmaAluno)
-        .filter(Boolean)
-    )) as string[];
-    return turmasValidas.sort();
-  }, [ocorrencias, selecao.unidade]);
+    const prefix = selecao.unidade.split(' ')[0]; // pega "6º" ou "1º", por exemplo
+    const turmasValidas = new Set<string>();
+    
+    ocorrencias
+      .filter(o => (o.anoAluno || '').includes(prefix))
+      .forEach(o => {
+        if (o.turmaAluno) turmasValidas.add(o.turmaAluno);
+      });
+      
+    registrosDiarios
+      .filter(r => (r.school_year || '').includes(prefix))
+      .forEach(r => {
+        if (r.school_year) turmasValidas.add(r.school_year);
+      });
 
+    return Array.from(turmasValidas).sort();
+  }, [ocorrencias, registrosDiarios, selecao.unidade]);
+
+  // Filtra e junta os alunos daquela turma que possuem atas ou ocorrências diárias registradas
   const alunosDaTurma = useMemo(() => {
     if (!selecao.turma) return [];
-    const nomesValidos = Array.from(new Set(
-      ocorrencias
-        .filter(o => o.turmaAluno === selecao.turma)
-        .map(o => o.nomeAluno)
-        .filter(Boolean)
-    ));
-    return alunos
-      .filter(a => nomesValidos.includes(a.nome) && a.turma === selecao.turma)
-      .sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [alunos, ocorrencias, selecao.turma]);
+    const nomesValidos = new Set<string>();
+    
+    ocorrencias
+      .filter(o => o.turmaAluno === selecao.turma)
+      .forEach(o => {
+        if (o.nomeAluno) nomesValidos.add(o.nomeAluno.trim().toLowerCase());
+      });
+      
+    registrosDiarios
+      .filter(r => r.school_year === selecao.turma)
+      .forEach(r => {
+        if (r.student_name) nomesValidos.add(r.student_name.trim().toLowerCase());
+      });
 
+    const list = alunos.filter(a => nomesValidos.has(a.nome.trim().toLowerCase()) && a.turma === selecao.turma);
+
+    // Adiciona alunos virtuais / temporários que não estão na lista de alunos estáticos do CMS mas possuem registros ativados
+    nomesValidos.forEach(nome => {
+      const exists = list.some(a => a.nome.trim().toLowerCase() === nome);
+      if (!exists) {
+        const matchOco = ocorrencias.find(o => o.nomeAluno?.trim().toLowerCase() === nome);
+        const matchDia = registrosDiarios.find(r => r.student_name?.trim().toLowerCase() === nome);
+        const displayName = matchOco?.nomeAluno || matchDia?.student_name || nome;
+        
+        list.push({
+          id: 'virtual-' + nome,
+          nome: displayName,
+          turma: selecao.turma!,
+          ano: selecao.unidade!,
+          numeroSala: 0
+        });
+      }
+    });
+
+    return list.sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [alunos, ocorrencias, registrosDiarios, selecao.turma, selecao.unidade]);
+
+  // Unifica Atas e Registros Diários do aluno selecionado em uma lista de documentos ordenada
   const documentosDoAluno = useMemo(() => {
     if (!selecao.aluno) return [];
-    return ocorrencias.filter(o => o.nomeAluno === selecao.aluno?.nome).sort((a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime());
-  }, [ocorrencias, selecao.aluno]);
+    const studentNameLower = selecao.aluno.nome.trim().toLowerCase();
+    
+    const docs: {
+      id: string;
+      tipo: 'ata' | 'diario';
+      titulo: string;
+      data: Date;
+      dadosOriginais: any;
+    }[] = [];
+
+    // Adiciona as atas formais
+    ocorrencias
+      .filter(o => o.nomeAluno?.trim().toLowerCase() === studentNameLower)
+      .forEach(o => {
+        docs.push({
+          id: o.id || '',
+          tipo: 'ata',
+          titulo: o.nomeModelo || 'Ata de Orientação',
+          data: o.criadoEm ? new Date(o.criadoEm) : new Date(),
+          dadosOriginais: o
+        });
+      });
+
+    // Adiciona as ocorrências diárias do registro diário
+    registrosDiarios
+      .filter(r => r.student_name?.trim().toLowerCase() === studentNameLower)
+      .forEach(r => {
+        docs.push({
+          id: r.id || '',
+          tipo: 'diario',
+          titulo: r.occurrence_type || 'Ocorrência Diária',
+          data: r.created_at ? new Date(r.created_at) : new Date(),
+          dadosOriginais: r
+        });
+      });
+
+    return docs.sort((a, b) => b.data.getTime() - a.data.getTime());
+  }, [ocorrencias, registrosDiarios, selecao.aluno]);
+
+  // Mapeia a lista combinada de documentos para o formato RegistroOcorrencia oficial para o ProntuarioPDF
+  const mappedDossieOcorrencias = useMemo(() => {
+    return documentosDoAluno.map(doc => {
+      if (doc.tipo === 'ata') {
+        return doc.dadosOriginais as RegistroOcorrencia;
+      } else {
+        const rec = doc.dadosOriginais as DailyOccurrenceRecord;
+        return {
+          id: rec.id || '',
+          modeloFormularioId: 'diario',
+          nomeModelo: rec.occurrence_type,
+          nomeAluno: rec.student_name,
+          turmaAluno: rec.school_year,
+          anoAluno: rec.school_year,
+          professorAtual: 'Administração',
+          criadoEm: rec.created_at || new Date().toISOString(),
+          dados: {
+            'Tipo de Ocorrência': rec.occurrence_type,
+            'Descrição': rec.report
+          }
+        };
+      }
+    });
+  }, [documentosDoAluno]);
+
+  // Abre visualização de documento formatando ocorrência diária para ficha de atas se necessário
+  const handleVerDocumento = (doc: any) => {
+    if (doc.tipo === 'ata') {
+      setVisualizandoDoc(doc.dadosOriginais);
+    } else {
+      const rec = doc.dadosOriginais as DailyOccurrenceRecord;
+      const mapped: RegistroOcorrencia = {
+        id: rec.id || '',
+        modeloFormularioId: 'diario',
+        nomeModelo: rec.occurrence_type,
+        nomeAluno: rec.student_name,
+        turmaAluno: rec.school_year,
+        anoAluno: rec.school_year,
+        professorAtual: 'Administração',
+        criadoEm: rec.created_at || new Date().toISOString(),
+        dados: {
+          'Tipo de Ocorrência': rec.occurrence_type,
+          'Descrição': rec.report
+        }
+      };
+      setVisualizandoDoc(mapped);
+    }
+  };
 
   // Navegação
   const entrarUnidade = (ano: string) => {
@@ -104,26 +254,51 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
     const ano = new Date().getFullYear();
     const nomeMes = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date());
 
-    if (confirm(`DESEJA FECHAR O MÊS DE ${nomeMes.toUpperCase()}?\n\nIsso irá:\n1. Gerar um arquivo ZIP com todos os PDFs de backup divididos por pastas\n2. APAGAR todos os registros deste mês do sistema.\n\nESTA AÇÃO É IRREVERSÍVEL.`)) {
+    if (confirm(`DESEJA FECHAR O MÊS DE ${nomeMes.toUpperCase()}?\n\nIsso irá:\n1. Gerar um arquivo ZIP com todos os PDFs de backup divididos por pastas (Aluno > Tipo de Ocorrência)\n2. APAGAR todas as atas e ocorrências diárias deste mês do sistema.\n\nESTA AÇÃO É IRREVERSÍVEL.`)) {
         setCarregando(true);
         
         try {
-          // Filtrar as ocorrências do mês atual da lista carregada em memória
+          // Filtra as atas do mês atual em memória
           const ocorrenciasDoMes = ocorrencias.filter(o => {
             const data = new Date(o.criadoEm);
             return data.getMonth() === mes && data.getFullYear() === ano;
           });
 
-          if (ocorrenciasDoMes.length > 0) {
-            alert(`Gerando backup de ${ocorrenciasDoMes.length} registros... Por favor, aguarde.`);
-            const zipGerado = await generateBackupZip(ocorrenciasDoMes, nomeMes);
+          // Filtra as ocorrências diárias do mês atual
+          const diariasDoMes = registrosDiarios.filter(r => {
+            if (!r.created_at) return false;
+            const data = new Date(r.created_at);
+            return data.getMonth() === mes && data.getFullYear() === ano;
+          });
+
+          // Mapeia todas as ocorrências diárias para formato RegistroOcorrencia para gerar os PDFs no backup
+          const mappedDiarias: RegistroOcorrencia[] = diariasDoMes.map(rec => ({
+            id: rec.id || '',
+            modeloFormularioId: 'diario',
+            nomeModelo: rec.occurrence_type,
+            nomeAluno: rec.student_name,
+            turmaAluno: rec.school_year,
+            anoAluno: rec.school_year,
+            professorAtual: 'Administração',
+            criadoEm: rec.created_at || new Date().toISOString(),
+            dados: {
+              'Tipo de Ocorrência': rec.occurrence_type,
+              'Descrição': rec.report
+            }
+          }));
+
+          const todasDoMes = [...ocorrenciasDoMes, ...mappedDiarias];
+
+          if (todasDoMes.length > 0) {
+            alert(`Gerando backup de ${todasDoMes.length} registros (Atas + Ocorrências Diárias)... Por favor, aguarde.`);
+            const zipGerado = await generateBackupZip(todasDoMes, nomeMes);
             if (!zipGerado) {
               alert('Falha ao gerar arquivo ZIP de backup. A exclusão foi cancelada por segurança.');
               setCarregando(false);
               return;
             }
           } else {
-            alert(`Nenhuma ocorrência encontrada em ${nomeMes} para gerar backup. Continuando para a exclusão.`);
+            alert(`Nenhum registro encontrado em ${nomeMes} para gerar backup. Continuando para a exclusão.`);
           }
 
           const ok = await arquivarELimparMes(mes, ano);
@@ -147,7 +322,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
       <div className="bg-white/5 p-4 md:p-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 md:gap-6 border-b border-white/5">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <button onClick={voltar} disabled={viewMode === 'UNIDADES'} 
-            className="p-3 hover:bg-white/10 rounded-2xl disabled:opacity-10 transition-all text-primary shrink-0">
+            className="p-3 hover:bg-white/10 rounded-2xl disabled:opacity-10 transition-all text-primary shrink-0 cursor-pointer">
             <ArrowLeft size={20} />
           </button>
           
@@ -190,7 +365,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
           </div>
 
           <div className="pt-0 sm:pt-6 border-t-0 sm:border-t border-white/5 shrink-0">
-             <button onClick={handleArquivar} className="flex items-center gap-2 p-3 sm:p-5 text-[9px] sm:text-[10px] font-black uppercase tracking-widest bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-black rounded-xl sm:rounded-2xl transition-all group">
+             <button onClick={handleArquivar} className="flex items-center gap-2 p-3 sm:p-5 text-[9px] sm:text-[10px] font-black uppercase tracking-widest bg-red-500/10 text-red-500 hover:bg-red-50 hover:text-black rounded-xl sm:rounded-2xl transition-all group cursor-pointer">
                 <Trash2 size={16} className="group-hover:scale-110 transition-transform shrink-0" /> <span className="truncate">{carregando ? '...' : 'Fechar Mês'}</span>
              </button>
           </div>
@@ -203,9 +378,11 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
             <div className="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/5 p-4 md:p-6 rounded-[2rem] border border-white/5">
               <div>
                 <h3 className="text-xl font-black text-white">{selecao.aluno?.nome}</h3>
-                <p className="text-[10px] text-primary uppercase tracking-widest font-bold mt-1">{documentosDoAluno.length} Ocorrências Registradas</p>
+                <p className="text-[10px] text-primary uppercase tracking-widest font-bold mt-1">
+                  {documentosDoAluno.length} Registros no Histórico (Atas + Diários)
+                </p>
               </div>
-              <button onClick={() => setDossieAberto(true)} className="flex items-center gap-2 px-6 py-4 bg-primary text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white hover:scale-105 transition-all shadow-xl shadow-primary/20">
+              <button onClick={() => setDossieAberto(true)} className="flex items-center gap-2 px-6 py-4 bg-primary text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white hover:scale-105 transition-all shadow-xl shadow-primary/20 cursor-pointer">
                 <Download size={16} /> Dossiê Completo (PDF)
               </button>
             </div>
@@ -220,7 +397,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
               className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-8"
             >
               {viewMode === 'UNIDADES' && ANOS.map(ano => (
-                <button key={ano} onClick={() => entrarUnidade(ano)} className="flex flex-col items-center gap-4 group">
+                <button key={ano} onClick={() => entrarUnidade(ano)} className="flex flex-col items-center gap-4 group cursor-pointer">
                     <div className="w-24 h-24 flex items-center justify-center relative">
                         <Folder size={80} className="text-primary fill-primary/10 group-hover:scale-110 group-hover:fill-primary transition-all duration-300" />
                         <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white mt-2">{ano.split(' ')[0]}</span>
@@ -230,7 +407,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
               ))}
 
               {viewMode === 'TURMAS' && turmasDaUnidade.map(turma => (
-                <button key={turma} onClick={() => entrarTurma(turma)} className="flex flex-col items-center gap-4 group">
+                <button key={turma} onClick={() => entrarTurma(turma)} className="flex flex-col items-center gap-4 group cursor-pointer">
                     <div className="w-24 h-24 flex items-center justify-center">
                         <Folder size={80} className="text-primary fill-primary/10 group-hover:scale-110 group-hover:fill-primary transition-all" />
                     </div>
@@ -239,7 +416,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
               ))}
 
               {viewMode === 'ALUNOS' && alunosDaTurma.map(aluno => (
-                <button key={aluno.id} onClick={() => entrarAluno(aluno)} className="flex flex-col items-center gap-4 group">
+                <button key={aluno.id} onClick={() => entrarAluno(aluno)} className="flex flex-col items-center gap-4 group cursor-pointer">
                     <div className="w-24 h-24 bg-white/5 rounded-[2rem] flex items-center justify-center border border-white/5 group-hover:border-primary/50 group-hover:bg-primary/5 transition-all">
                         <Folder size={48} className="text-primary fill-primary/10 group-hover:fill-primary transition-all" />
                     </div>
@@ -248,15 +425,27 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
               ))}
 
               {viewMode === 'DOCUMENTOS' && documentosDoAluno.map(doc => (
-                <button key={doc.id} onClick={() => setVisualizandoDoc(doc)} className="flex flex-col items-center gap-4 group">
-                    <div className="w-24 h-24 bg-black border border-white/10 rounded-[2rem] flex flex-col items-center justify-center group-hover:border-red-500/50 transition-all relative overflow-hidden">
-                        <FileText size={40} className="text-red-500" />
-                        <div className="absolute bottom-0 left-0 right-0 bg-red-500/10 py-1.5 text-[7px] font-black text-red-500 uppercase">OFFICIAL PDF</div>
+                <button key={doc.id} onClick={() => handleVerDocumento(doc)} className="flex flex-col items-center gap-4 group cursor-pointer">
+                    <div className={cn(
+                      "w-24 h-24 border rounded-[2rem] flex flex-col items-center justify-center transition-all relative overflow-hidden",
+                      doc.tipo === 'ata' 
+                        ? "bg-black border-red-500/20 group-hover:border-red-500/60" 
+                        : "bg-black border-blue-500/20 group-hover:border-blue-500/60"
+                    )}>
+                        <FileText size={40} className={doc.tipo === 'ata' ? "text-red-500" : "text-blue-500"} />
+                        <div className={cn(
+                          "absolute bottom-0 left-0 right-0 py-1 text-[7px] font-black uppercase text-center",
+                          doc.tipo === 'ata' ? "bg-red-500/10 text-red-500" : "bg-blue-500/10 text-blue-500"
+                        )}>
+                          {doc.tipo === 'ata' ? 'ATA OFICIAL' : 'REG. DIÁRIO'}
+                        </div>
                     </div>
-                    <div className="text-center">
-                        <span className="text-[10px] font-black text-white block uppercase tracking-widest">Ocorrência</span>
+                    <div className="text-center w-full">
+                        <span className="text-[9px] font-black text-white block uppercase tracking-wide truncate px-1">
+                          {doc.titulo}
+                        </span>
                         <span className="text-[8px] font-bold text-white/20 uppercase tracking-tighter">
-                          {new Date(doc.criadoEm).toLocaleDateString('pt-BR')}
+                          {doc.data.toLocaleDateString('pt-BR')}
                         </span>
                     </div>
                 </button>
@@ -277,7 +466,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
       <div className="bg-white/5 px-10 py-4 border-t border-white/5 flex items-center justify-between text-[8px] font-black uppercase tracking-[0.2em] text-white/20">
         <div className="flex gap-4 md:gap-8">
             <span>{alunosDaTurma.length} Itens na Turma</span>
-            <span>{ocorrencias.length} Registros Totais</span>
+            <span>{ocorrencias.length + registrosDiarios.length} Registros Totais</span>
         </div>
         <div className="flex items-center gap-3 text-primary">
             <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
@@ -289,8 +478,8 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
         {visualizandoDoc && (
           <FichaOcorrencia ocorrencia={visualizandoDoc} onClose={() => setVisualizandoDoc(null)} />
         )}
-        {dossieAberto && documentosDoAluno.length > 0 && (
-          <ProntuarioPDF ocorrencias={documentosDoAluno} onClose={() => setDossieAberto(false)} alunoNome={selecao.aluno?.nome || ''} />
+        {dossieAberto && mappedDossieOcorrencias.length > 0 && (
+          <ProntuarioPDF ocorrencias={mappedDossieOcorrencias} onClose={() => setDossieAberto(false)} alunoNome={selecao.aluno?.nome || ''} />
         )}
       </AnimatePresence>
     </div>

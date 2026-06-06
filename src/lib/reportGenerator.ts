@@ -506,9 +506,9 @@ export const generateBackupZip = async (ocorrencias: RegistroOcorrencia[], mes: 
     };
 
     for (const oc of ocorrencias) {
-      // Group by Ano/Turma -> Aluno
-      const anoFold = oc.anoAluno || oc.turmaAluno || 'Sem_Turma';
+      // Group by Aluno -> Tipo de Ocorrência
       const alunoFold = oc.nomeAluno || 'Desconhecido';
+      const tipoFold = oc.nomeModelo || 'Outros';
       
       const doc = await buildFichaOcorrenciaDoc(oc, { ...defaultConfig, nomeAluno: oc.nomeAluno }, [], bgBase64);
       const pdfBuffer = doc.output('arraybuffer');
@@ -516,7 +516,13 @@ export const generateBackupZip = async (ocorrencias: RegistroOcorrencia[], mes: 
       const dateStr = new Date(oc.criadoEm).toLocaleDateString('pt-BR').replace(/\//g, '-');
       const filename = `Ata_${oc.nomeModelo.replace(/\s+/g, '_')}_${dateStr}.pdf`;
       
-      zip.folder(anoFold)?.folder(alunoFold)?.file(filename, pdfBuffer);
+      const studentFolder = zip.folder(alunoFold);
+      if (studentFolder) {
+        const typeFolder = studentFolder.folder(tipoFold);
+        if (typeFolder) {
+          typeFolder.file(filename, pdfBuffer);
+        }
+      }
     }
 
     const content = await zip.generateAsync({ type: 'blob' });

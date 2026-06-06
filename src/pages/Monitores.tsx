@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { UserCircle, Search, Clock, MapPin, ChevronLeft, ChevronRight, Users, Calendar, Shield } from 'lucide-react';
+import { UserCircle, Search, Clock, MapPin, ChevronLeft, ChevronRight, Users, Calendar, Shield, AlertTriangle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 
@@ -9,6 +9,19 @@ const HORAS_ESCALA = ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','1
 const ESCALA_INICIO = 7 * 60;
 const ESCALA_FIM = 18 * 60;
 const ESCALA_TOTAL = ESCALA_FIM - ESCALA_INICIO;
+
+const MACRO_SETORES = [
+  '🏫 Térreo',
+  '🏢 1º Andar',
+  '🏢 2º Andar',
+  '🏢 3º Andar',
+  '📚 Biblioteca',
+  '🏥 Enfermaria',
+  '🚗 Estacionamento',
+  '🌳 Gramado & Pátios',
+  '🛡️ Apoio / Volante',
+  '🍽️ Almoço'
+];
 
 // Paleta de cores vibrantes para cada monitor
 const CORES_MONITOR = [
@@ -21,6 +34,20 @@ function horaParaMinutos(hora: string): number {
   if (!hora || typeof hora !== 'string' || !hora.includes(':')) return 0;
   const parts = hora.split(':');
   return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+}
+
+function obterMacroSetor(posto: string): string {
+  const p = (posto || '').toLowerCase();
+  if (p.includes('almoça') || p.includes('almoço')) return '🍽️ Almoço';
+  if (p.includes('estacionamento') || p.includes('apoio s1') || p.includes('saída s1')) return '🚗 Estacionamento';
+  if (p.includes('1º andar') || p.includes('1 andar')) return '🏢 1º Andar';
+  if (p.includes('2º andar') || p.includes('2 andar')) return '🏢 2º Andar';
+  if (p.includes('3º andar') || p.includes('3 andar')) return '🏢 3º Andar';
+  if (p.includes('biblioteca')) return '📚 Biblioteca';
+  if (p.includes('enfermaria')) return '🏥 Enfermaria';
+  if (p.includes('gramado') || p.includes('botânico') || p.includes('patio') || p.includes('pátio')) return '🌳 Gramado & Pátios';
+  if (p.includes('térreo') || p.includes('terreo')) return '🏫 Térreo';
+  return '🛡️ Apoio / Volante';
 }
 
 export default function Monitores() {
@@ -70,6 +97,39 @@ export default function Monitores() {
       .filter(g => g.diaSemana === diaFiltro)
       .sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
   }, [gradeMonitores, diaFiltro]);
+
+  const [viewMode, setViewMode] = useState<'monitor' | 'setor'>('monitor');
+  const [subViewMode, setSubViewMode] = useState<'quadro' | 'timeline'>('quadro');
+  const [blocoSelecionado, setBlocoSelecionado] = useState<string>('');
+
+  // Lista de blocos de horário do dia
+  const blocosHorarios = useMemo(() => {
+    const blocos = new Set<string>();
+    (gradeMonitores || []).forEach(g => {
+      if (g.diaSemana === diaFiltro) {
+        blocos.add(`${g.horarioInicio} - ${g.horarioFim}`);
+      }
+    });
+    return Array.from(blocos).sort((a, b) => a.localeCompare(b));
+  }, [gradeMonitores, diaFiltro]);
+
+  // Bloco selecionado atual (se não definido, pega o bloco atual do horário do colégio ou o primeiro)
+  const blocoAtivo = useMemo(() => {
+    if (blocoSelecionado && blocosHorarios.includes(blocoSelecionado)) {
+      return blocoSelecionado;
+    }
+    
+    // Tenta encontrar o bloco atual com base em horaAtual
+    const minutosAgora = horaAtual.getHours() * 60 + horaAtual.getMinutes();
+    const blocoAtual = blocosHorarios.find(bloco => {
+      const [inicio, fim] = bloco.split(' - ');
+      const minInicio = horaParaMinutos(inicio);
+      const minFim = horaParaMinutos(fim);
+      return minutosAgora >= minInicio && minutosAgora < minFim;
+    });
+
+    return blocoAtual || blocosHorarios[0] || '';
+  }, [blocoSelecionado, blocosHorarios, horaAtual]);
 
   // ========== SUB-PÁGINA: Grade individual do monitor ==========
   if (monitorAtivo) {
@@ -196,159 +256,447 @@ export default function Monitores() {
         </div>
       </header>
 
-      {/* ====== SEÇÃO 1: LISTA DE MONITORES ====== */}
-      <section className="space-y-4">
-        <h2 className="text-xl font-black italic tracking-tighter text-white flex items-center gap-2">
-          <Users size={18} className="text-[#42a0f5]" /> Equipe
-        </h2>
-        <div className="flex flex-col gap-3">
-          {monitoresFiltrados.map((monitor) => {
-            const cor = mapaCorMonitor[monitor.nome] || '#3B82F6';
-            const postosHoje = (gradeMonitores || []).filter(g => g.monitorNome === monitor.nome && g.diaSemana === diaFiltro).length;
-            const ativo = monitor.status === 'ativo';
+      {/* Seletor de Modo de Visualização */}
+      <div className="flex bg-[#0a0a0a] p-1 rounded-2xl border border-white/5 self-start gap-1 w-fit">
+        <button
+          onClick={() => setViewMode('monitor')}
+          className={cn(
+            "flex items-center gap-2 px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all",
+            viewMode === 'monitor'
+              ? "bg-[#42a0f5] text-black shadow-md"
+              : "text-white/45 hover:bg-white/5 hover:text-white"
+          )}
+        >
+          <Users size={12} />
+          Por Monitor
+        </button>
+        <button
+          onClick={() => setViewMode('setor')}
+          className={cn(
+            "flex items-center gap-2 px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all",
+            viewMode === 'setor'
+              ? "bg-[#fbbf24] text-black shadow-md"
+              : "text-white/45 hover:bg-white/5 hover:text-white"
+          )}
+        >
+          <MapPin size={12} />
+          Por Setor / Local
+        </button>
+      </div>
 
-            return (
-              <motion.div key={monitor.id} whileHover={{ x: 5 }} onClick={() => setMonitorSelecionadoId(monitor.id)}
-                className={cn("bg-[#0d0d0d] rounded-2xl shadow-premium p-4 cursor-pointer group border-2 transition-all flex items-center justify-between",
-                  ativo ? "border-white/5 hover:border-white/20" : "border-white/5 opacity-40")}
-                style={{ borderLeftWidth: '5px', borderLeftColor: cor }}>
-
-                <div className="flex items-center gap-5">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black transition-all"
-                    style={{ backgroundColor: `${cor}20`, color: cor }}>
-                    {(monitor.nome || 'M')[0]}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-black text-white tracking-tighter leading-tight italic group-hover:text-[#42a0f5]">{monitor.nome}</h3>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md"
-                        style={{ backgroundColor: `${cor}15`, color: cor }}>
-                        {monitor.tipo === 'volante' ? 'VOLANTE' : monitor.tipo === 'hibrido' ? 'HÍBRIDO' : 'FIXO'}
-                      </span>
-                      <span className="text-[8px] font-black text-white/30 uppercase tracking-widest">{monitor.turno}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-6">
-                  <div className="hidden md:flex flex-col items-end">
-                    <p className="text-[10px] font-black text-white tracking-widest">{monitor.horarioInicio} — {monitor.horarioFim}</p>
-                    <p className="text-[9px] font-black uppercase" style={{ color: cor }}>{postosHoje} posto{postosHoje !== 1 ? 's' : ''} hoje</p>
-                  </div>
-                  {ativo && <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: cor, boxShadow: `0 0 8px ${cor}` }} />}
-                  <ChevronRight size={18} className="text-[#42a0f5] opacity-20 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ====== SEÇÃO 2: ESCALA GERAL DO DIA ====== */}
-      <section className="space-y-4">
-        <h2 className="text-xl font-black italic tracking-tighter text-white flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Shield size={18} className="text-[#fbbf24]" /> Escala do Dia — {diaFiltro}
-          </div>
-          <select 
-            value={busca || 'Todos'} 
-            onChange={(e) => setBusca(e.target.value === 'Todos' ? '' : e.target.value)}
-            className="bg-[#0a0a0a] border-none rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest outline-none ring-2 ring-[#42a0f5]/10 focus:ring-[#42a0f5]/30 text-[#42a0f5] cursor-pointer"
-          >
-            <option value="Todos">Todos os Monitores</option>
-            {monitores.map(m => <option key={m.id} value={m.nome}>{m.nome}</option>)}
-          </select>
-        </h2>
-
-        {escalaDoDia.length === 0 ? (
-          <div className="py-16 text-center opacity-20 italic font-black text-sm border-2 border-dashed border-white/5 rounded-2xl">Nenhum posto agendado.</div>
-        ) : (
-          <div className="bg-[#0a0a0a] rounded-[1.5rem] border border-white/5 overflow-hidden shadow-premium">
-            {/* Timeline header */}
-            <div className="flex border-b border-white/5">
-              <div className="w-40 shrink-0 p-4 border-r border-white/5">
-                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Monitor</p>
-              </div>
-              <div className="flex-1 relative">
-                <div className="flex">
-                  {HORAS_ESCALA.map(hora => (
-                    <div key={hora} className="flex-1 text-center py-4 text-[8px] font-mono font-black text-white/20 uppercase tracking-widest border-l border-white/5">{hora}</div>
-                  ))}
-                </div>
-                {/* Linha do horário atual */}
-                {minutosAgora >= ESCALA_INICIO && minutosAgora <= ESCALA_FIM && (
-                  <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20"
-                    style={{ left: `${((minutosAgora - ESCALA_INICIO) / ESCALA_TOTAL) * 100}%` }}>
-                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-red-500 shadow-lg shadow-red-500/30" />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Agrupar por monitor */}
-            {(() => {
-              const monitoresNaEscala = Array.from(new Set(escalaDoDia.map(g => g.monitorNome))).sort() as string[];
-              return monitoresNaEscala.map(nome => {
-                const cor = mapaCorMonitor[nome] || '#3B82F6';
-                const postos = escalaDoDia.filter(g => g.monitorNome === nome);
+      {viewMode === 'monitor' ? (
+        <>
+          {/* ====== SEÇÃO 1: LISTA DE MONITORES ====== */}
+          <section className="space-y-4">
+            <h2 className="text-xl font-black italic tracking-tighter text-white flex items-center gap-2">
+              <Users size={18} className="text-[#42a0f5]" /> Equipe
+            </h2>
+            <div className="flex flex-col gap-3">
+              {monitoresFiltrados.map((monitor) => {
+                const cor = mapaCorMonitor[monitor.nome] || '#3B82F6';
+                const postosHoje = (gradeMonitores || []).filter(g => g.monitorNome === monitor.nome && g.diaSemana === diaFiltro).length;
+                const ativo = monitor.status === 'ativo';
 
                 return (
-                  <div key={nome} className="flex border-b border-white/[0.03] hover:bg-white/[0.02] transition-all">
-                    {/* Nome */}
-                    <div className="w-40 shrink-0 p-3 border-r border-white/5 flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0"
+                  <motion.div key={monitor.id} whileHover={{ x: 5 }} onClick={() => setMonitorSelecionadoId(monitor.id)}
+                    className={cn("bg-[#0d0d0d] rounded-2xl shadow-premium p-4 cursor-pointer group border-2 transition-all flex items-center justify-between",
+                      ativo ? "border-white/5 hover:border-white/20" : "border-white/5 opacity-40")}
+                    style={{ borderLeftWidth: '5px', borderLeftColor: cor }}>
+
+                    <div className="flex items-center gap-5">
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black transition-all"
                         style={{ backgroundColor: `${cor}20`, color: cor }}>
-                        {nome.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                        {(monitor.nome || 'M')[0]}
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-black text-white truncate">{nome}</p>
+                      <div>
+                        <h3 className="text-lg font-black text-white tracking-tighter leading-tight italic group-hover:text-[#42a0f5]">{monitor.nome}</h3>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md"
+                            style={{ backgroundColor: `${cor}15`, color: cor }}>
+                            {monitor.tipo === 'volante' ? 'VOLANTE' : monitor.tipo === 'hibrido' ? 'HÍBRIDO' : 'FIXO'}
+                          </span>
+                          <span className="text-[8px] font-black text-white/30 uppercase tracking-widest">{monitor.turno}</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Barras de postos */}
-                    <div className="flex-1 relative py-4 h-24">
-                      {postos.map(slot => {
-                        const minInicio = horaParaMinutos(slot.horarioInicio);
-                        const minFim = horaParaMinutos(slot.horarioFim);
-                        const leftPct = Math.max(0, ((minInicio - ESCALA_INICIO) / ESCALA_TOTAL) * 100);
-                        const widthPct = Math.min(100 - leftPct, ((minFim - minInicio) / ESCALA_TOTAL) * 100);
-                        const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
+                    <div className="flex items-center gap-6">
+                      <div className="hidden md:flex flex-col items-end">
+                        <p className="text-[10px] font-black text-white tracking-widest">{monitor.horarioInicio} — {monitor.horarioFim}</p>
+                        <p className="text-[9px] font-black uppercase" style={{ color: cor }}>{postosHoje} posto{postosHoje !== 1 ? 's' : ''} hoje</p>
+                      </div>
+                      {ativo && <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: cor, boxShadow: `0 0 8px ${cor}` }} />}
+                      <ChevronRight size={18} className="text-[#42a0f5] opacity-20 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </section>
 
-                        return (
-                          <div
-                            key={slot.id}
-                            className={cn("absolute h-16 rounded-xl flex flex-col justify-center px-4 gap-1 overflow-hidden transition-all",
-                              estaAtivo ? "shadow-lg scale-105 z-10" : "opacity-90")}
-                            style={{
-                              left: `${leftPct}%`,
-                              width: `${widthPct}%`,
-                              backgroundColor: estaAtivo ? cor : `${cor}25`,
-                              color: estaAtivo ? '#000' : '#fff',
-                              top: '50%',
-                              transform: 'translateY(-50%)',
-                              boxShadow: estaAtivo ? `0 0 20px ${cor}60` : 'none',
-                              border: `1px solid ${cor}40`
-                            }}
-                            title={`${slot.horarioInicio}–${slot.horarioFim} | ${slot.posto} | ${slot.funcao || 'Monitoria'}`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <MapPin size={10} strokeWidth={3} className={estaAtivo ? 'text-black' : 'text-primary'} />
-                              <span className="text-[10px] font-black uppercase tracking-tight truncate">{slot.posto}</span>
-                            </div>
-                            <span className={cn("text-[8px] font-black opacity-60", estaAtivo ? 'text-black' : 'text-white/60')}>
-                              {slot.horarioInicio} - {slot.horarioFim}
-                            </span>
+          {/* ====== SEÇÃO 2: ESCALA GERAL DO DIA ====== */}
+          <section className="space-y-4">
+            <h2 className="text-xl font-black italic tracking-tighter text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Shield size={18} className="text-[#fbbf24]" /> Escala do Dia — {diaFiltro}
+              </div>
+              <select 
+                value={busca || 'Todos'} 
+                onChange={(e) => setBusca(e.target.value === 'Todos' ? '' : e.target.value)}
+                className="bg-[#0a0a0a] border-none rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest outline-none ring-2 ring-[#42a0f5]/10 focus:ring-[#42a0f5]/30 text-[#42a0f5] cursor-pointer"
+              >
+                <option value="Todos">Todos os Monitores</option>
+                {monitores.map(m => <option key={m.id} value={m.nome}>{m.nome}</option>)}
+              </select>
+            </h2>
+
+            {escalaDoDia.length === 0 ? (
+              <div className="py-16 text-center opacity-20 italic font-black text-sm border-2 border-dashed border-white/5 rounded-2xl">Nenhum posto agendado.</div>
+            ) : (
+              <div className="bg-[#0a0a0a] rounded-[1.5rem] border border-white/5 overflow-hidden shadow-premium">
+                {/* Timeline header */}
+                <div className="flex border-b border-white/5">
+                  <div className="w-40 shrink-0 p-4 border-r border-white/5">
+                    <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Monitor</p>
+                  </div>
+                  <div className="flex-1 relative">
+                    <div className="flex">
+                      {HORAS_ESCALA.map(hora => (
+                        <div key={hora} className="flex-1 text-center py-4 text-[8px] font-mono font-black text-white/20 uppercase tracking-widest border-l border-white/5">{hora}</div>
+                      ))}
+                    </div>
+                    {/* Linha do horário atual */}
+                    {minutosAgora >= ESCALA_INICIO && minutosAgora <= ESCALA_FIM && (
+                      <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20"
+                        style={{ left: `${((minutosAgora - ESCALA_INICIO) / ESCALA_TOTAL) * 100}%` }}>
+                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-red-500 shadow-lg shadow-red-500/30" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Agrupar por monitor */}
+                {(() => {
+                  const monitoresNaEscala = Array.from(new Set(escalaDoDia.map(g => g.monitorNome))).sort() as string[];
+                  return monitoresNaEscala.map(nome => {
+                    const cor = mapaCorMonitor[nome] || '#3B82F6';
+                    const postos = escalaDoDia.filter(g => g.monitorNome === nome);
+
+                    return (
+                      <div key={nome} className="flex border-b border-white/[0.03] hover:bg-white/[0.02] transition-all">
+                        {/* Nome */}
+                        <div className="w-40 shrink-0 p-3 border-r border-white/5 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0"
+                            style={{ backgroundColor: `${cor}20`, color: cor }}>
+                            {nome.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                           </div>
-                        );
-                      })}
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-black text-white truncate">{nome}</p>
+                          </div>
+                        </div>
+
+                        {/* Barras de postos */}
+                        <div className="flex-1 relative py-4 h-24">
+                          {postos.map(slot => {
+                            const minInicio = horaParaMinutos(slot.horarioInicio);
+                            const minFim = horaParaMinutos(slot.horarioFim);
+                            const leftPct = Math.max(0, ((minInicio - ESCALA_INICIO) / ESCALA_TOTAL) * 100);
+                            const widthPct = Math.min(100 - leftPct, ((minFim - minInicio) / ESCALA_TOTAL) * 100);
+                            const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
+
+                            return (
+                              <div
+                                key={slot.id}
+                                className={cn("absolute h-16 rounded-xl flex flex-col justify-center px-4 gap-1 overflow-hidden transition-all",
+                                  estaAtivo ? "shadow-lg scale-105 z-10" : "opacity-90")}
+                                style={{
+                                  left: `${leftPct}%`,
+                                  width: `${widthPct}%`,
+                                  backgroundColor: estaAtivo ? cor : `${cor}25`,
+                                  color: estaAtivo ? '#000' : '#fff',
+                                  top: '50%',
+                                  transform: 'translateY(-50%)',
+                                  boxShadow: estaAtivo ? `0 0 20px ${cor}60` : 'none',
+                                  border: `1px solid ${cor}40`
+                                }}
+                                title={`${slot.horarioInicio}–${slot.horarioFim} | ${slot.posto} | ${slot.funcao || 'Monitoria'}`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <MapPin size={10} strokeWidth={3} className={estaAtivo ? 'text-black' : 'text-primary'} />
+                                  <span className="text-[10px] font-black uppercase tracking-tight truncate">{slot.posto}</span>
+                                </div>
+                                <span className={cn("text-[8px] font-black opacity-60", estaAtivo ? 'text-black' : 'text-white/60')}>
+                                  {slot.horarioInicio} - {slot.horarioFim}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            )}
+          </section>
+        </>
+      ) : (
+        /* ==================== VISÃO POR SETOR ==================== */
+        <div className="space-y-6">
+          {/* Controles da Visão por Setor */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0a0a0a]/50 p-4 rounded-[1.5rem] border border-white/5">
+            <div className="flex gap-1 p-1 bg-black rounded-xl border border-white/5 self-start">
+              <button
+                onClick={() => setSubViewMode('quadro')}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                  subViewMode === 'quadro' ? "bg-[#fbbf24] text-black shadow-md" : "text-white/40 hover:bg-white/5"
+                )}
+              >
+                📋 Quadro de Postos
+              </button>
+              <button
+                onClick={() => setSubViewMode('timeline')}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                  subViewMode === 'timeline' ? "bg-[#fbbf24] text-black shadow-md" : "text-white/40 hover:bg-white/5"
+                )}
+              >
+                📅 Linha do Tempo
+              </button>
+            </div>
+
+            {subViewMode === 'quadro' && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Horário:</span>
+                <select
+                  value={blocoAtivo}
+                  onChange={(e) => setBlocoSelecionado(e.target.value)}
+                  className="bg-black border border-white/10 rounded-xl px-4 py-2 text-[9px] font-black uppercase tracking-widest outline-none ring-2 ring-[#fbbf24]/10 focus:ring-[#fbbf24]/30 text-[#fbbf24] cursor-pointer"
+                >
+                  {blocosHorarios.length === 0 ? (
+                    <option value="">Sem horários hoje</option>
+                  ) : (
+                    blocosHorarios.map(bloco => (
+                      <option key={bloco} value={bloco}>
+                        {bloco}
+                      </option>
+                    ))
+                  )}
+                </select>
+                
+                <button
+                  onClick={() => setBlocoSelecionado('')}
+                  className="px-3 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
+                >
+                  🕒 Agora
+                </button>
+              </div>
+            )}
+          </div>
+
+          {subViewMode === 'quadro' ? (
+            /* ================ RENDER DO QUADRO DE POSTOS ================ */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {MACRO_SETORES.map(macro => {
+                // Filtrar postos deste macro setor na hora selecionada
+                const [inicioSel, fimSel] = (blocoAtivo || '').split(' - ');
+                const alocacoesNoSetor = (gradeMonitores || []).filter(g => {
+                  if (g.diaSemana !== diaFiltro) return false;
+                  if (g.horarioInicio !== inicioSel || g.horarioFim !== fimSel) return false;
+                  
+                  const macroG = obterMacroSetor(g.posto);
+                  return macroG === macro;
+                });
+
+                // Aplicar busca se houver
+                const buscaFiltrada = alocacoesNoSetor.filter(a => {
+                  const b = busca.toLowerCase();
+                  return a.monitorNome.toLowerCase().includes(b) || a.posto.toLowerCase().includes(b);
+                });
+
+                // Se houver busca e não corresponder, não mostra o card
+                if (busca && buscaFiltrada.length === 0) return null;
+
+                const totalMonitores = buscaFiltrada.length;
+
+                return (
+                  <motion.div
+                    key={macro}
+                    layout
+                    className={cn(
+                      "bg-[#0d0d0d] rounded-3xl p-5 border-2 transition-all flex flex-col justify-between min-h-[160px] relative overflow-hidden",
+                      totalMonitores > 0 ? "border-white/5 hover:border-white/10" : "border-red-500/10 bg-red-950/5"
+                    )}
+                    style={totalMonitores > 0 ? { borderTop: `4px solid #fbbf24` } : { borderTop: `4px solid #ef4444` }}
+                  >
+                    <div>
+                      {/* Header do Card */}
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-base font-black text-white italic tracking-tight">{macro}</h3>
+                        {totalMonitores > 0 ? (
+                          <span className="px-2 py-0.5 bg-[#fbbf24]/10 text-[#fbbf24] rounded-md text-[8px] font-black uppercase tracking-wider">
+                            {totalMonitores} monitor{totalMonitores > 1 ? 'es' : ''}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-red-500/10 text-red-500 rounded-md text-[8px] font-black uppercase tracking-wider">
+                            Vazio
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Lista de Alocações */}
+                      {totalMonitores > 0 ? (
+                        <div className="space-y-3">
+                          {buscaFiltrada.map(aloc => {
+                            const cor = mapaCorMonitor[aloc.monitorNome] || '#3B82F6';
+                            return (
+                              <div key={aloc.id} className="p-3 bg-black/40 rounded-2xl border border-white/5 flex items-start gap-3">
+                                <div
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0"
+                                  style={{ backgroundColor: `${cor}20`, color: cor }}
+                                >
+                                  {aloc.monitorNome.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-[10px] font-black text-white truncate leading-tight">{aloc.monitorNome}</p>
+                                  <p className="text-[8px] font-black uppercase tracking-wider mt-0.5" style={{ color: cor }}>
+                                    {aloc.posto}
+                                  </p>
+                                  {aloc.funcao && aloc.funcao !== 'Monitoria Geral' && (
+                                    <p className="text-[8px] text-white/40 italic mt-1">{aloc.funcao}</p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        /* Alerta de buraco/escala vazia (somente para postos de cobertura física, ignora almoço) */
+                        macro !== '🍽️ Almoço' ? (
+                          <div className="flex-1 flex flex-col items-center justify-center py-6 text-center text-red-500/50">
+                            <AlertTriangle size={20} className="mb-1 text-red-500" />
+                            <p className="text-[10px] font-black uppercase tracking-widest">Sem Cobertura</p>
+                            <p className="text-[8px] text-white/30 italic mt-0.5">Nenhum monitor designado para este setor.</p>
+                          </div>
+                        ) : (
+                          <div className="flex-1 flex flex-col items-center justify-center py-6 text-center text-white/20">
+                            <Clock size={20} className="mb-1 text-white/20" />
+                            <p className="text-[10px] font-black uppercase tracking-widest">Ninguém almoçando</p>
+                          </div>
+                        )
+                      )}
                     </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ) : (
+            /* ================ RENDER DA LINHA DO TEMPO POR SETOR ================ */
+            <div className="bg-[#0a0a0a] rounded-[1.5rem] border border-white/5 overflow-hidden shadow-premium">
+              {/* Timeline header */}
+              <div className="flex border-b border-white/5">
+                <div className="w-48 shrink-0 p-4 border-r border-white/5">
+                  <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Setor / Posto</p>
+                </div>
+                <div className="flex-1 relative">
+                  <div className="flex">
+                    {HORAS_ESCALA.map(hora => (
+                      <div key={hora} className="flex-1 text-center py-4 text-[8px] font-mono font-black text-white/20 uppercase tracking-widest border-l border-white/5">
+                        {hora}
+                      </div>
+                    ))}
+                  </div>
+                  {/* Linha do horário atual */}
+                  {minutosAgora >= ESCALA_INICIO && minutosAgora <= ESCALA_FIM && (
+                    <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20"
+                      style={{ left: `${((minutosAgora - ESCALA_INICIO) / ESCALA_TOTAL) * 100}%` }}>
+                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-red-500 shadow-lg shadow-red-500/30" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Agrupamento por Macro Setor */}
+              {MACRO_SETORES.map(macro => {
+                // Pegar todos os postos específicos ativos neste macro setor no dia
+                const postosNoMacro = Array.from(new Set(
+                  (gradeMonitores || [])
+                    .filter(g => g.diaSemana === diaFiltro && obterMacroSetor(g.posto) === macro)
+                    .map(g => g.posto.trim())
+                )).sort();
+
+                if (postosNoMacro.length === 0) return null;
+
+                return (
+                  <div key={macro} className="border-b border-white/5">
+                    {/* Cabeçalho do Grupo */}
+                    <div className="bg-white/[0.02] px-4 py-2 flex items-center justify-between border-b border-white/[0.03]">
+                      <span className="text-[10px] font-black text-[#fbbf24] italic tracking-tight">{macro}</span>
+                    </div>
+
+                    {/* Linhas de postos específicos */}
+                    {postosNoMacro.map(posto => {
+                      const alocacoesNoPosto = (gradeMonitores || []).filter(g => g.diaSemana === diaFiltro && g.posto.trim() === posto);
+
+                      return (
+                        <div key={posto} className="flex border-b border-white/[0.02] hover:bg-white/[0.01] transition-all">
+                          {/* Nome do Posto */}
+                          <div className="w-48 shrink-0 p-3 border-r border-white/5 flex items-center min-w-0">
+                            <p className="text-[10px] font-black text-white truncate" title={posto}>
+                              {posto}
+                            </p>
+                          </div>
+
+                          {/* Barras de tempo dos Monitores */}
+                          <div className="flex-1 relative py-4 h-20">
+                            {alocacoesNoPosto.map(slot => {
+                              const minInicio = horaParaMinutos(slot.horarioInicio);
+                              const minFim = horaParaMinutos(slot.horarioFim);
+                              const leftPct = Math.max(0, ((minInicio - ESCALA_INICIO) / ESCALA_TOTAL) * 100);
+                              const widthPct = Math.min(100 - leftPct, ((minFim - minInicio) / ESCALA_TOTAL) * 100);
+                              const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
+                              const cor = mapaCorMonitor[slot.monitorNome] || '#3B82F6';
+
+                              return (
+                                <div
+                                  key={slot.id}
+                                  className={cn(
+                                    "absolute h-12 rounded-xl flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all",
+                                    estaAtivo ? "shadow-lg scale-105 z-10" : "opacity-90"
+                                  )}
+                                  style={{
+                                    left: `${leftPct}%`,
+                                    width: `${widthPct}%`,
+                                    backgroundColor: estaAtivo ? cor : `${cor}25`,
+                                    color: estaAtivo ? '#000' : '#fff',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    boxShadow: estaAtivo ? `0 0 15px ${cor}50` : 'none',
+                                    border: `1px solid ${cor}40`
+                                  }}
+                                  title={`${slot.horarioInicio}–${slot.horarioFim} | ${slot.monitorNome} | ${slot.funcao}`}
+                                >
+                                  <span className="text-[9px] font-black uppercase tracking-tight truncate leading-none">
+                                    {slot.monitorNome}
+                                  </span>
+                                  <span className={cn("text-[7px] font-black leading-none", estaAtivo ? 'text-black/60' : 'text-white/45')}>
+                                    {slot.horarioInicio} - {slot.horarioFim}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
-              });
-            })()}
-          </div>
-        )}
-      </section>
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Legenda de cores */}
       <section className="flex flex-wrap gap-2">
