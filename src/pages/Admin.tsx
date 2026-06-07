@@ -46,6 +46,33 @@ type AbaAdmin =
 const ANOS_ESCOLARES = ['6º Ano', '7º Ano', '8º Ano', '9º Ano', '1º Ano EM', '2º Ano EM', '3º Ano EM'];
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
+const MACRO_SETORES = [
+  '🏫 Térreo',
+  '🏢 1º Andar',
+  '🏢 2º Andar',
+  '🏢 3º Andar',
+  '📚 Biblioteca',
+  '🏥 Enfermaria',
+  '🚗 Estacionamento',
+  '🌳 Gramado & Pátios',
+  '🛡️ Apoio / Volante',
+  '🍽️ Almoço'
+];
+
+function obterMacroSetor(posto: string): string {
+  const p = (posto || '').toLowerCase();
+  if (p.includes('almoça') || p.includes('almoço')) return '🍽️ Almoço';
+  if (p.includes('estacionamento') || p.includes('apoio s1') || p.includes('saída s1')) return '🚗 Estacionamento';
+  if (p.includes('1º andar') || p.includes('1 andar')) return '🏢 1º Andar';
+  if (p.includes('2º andar') || p.includes('2 andar')) return '🏢 2º Andar';
+  if (p.includes('3º andar') || p.includes('3 andar')) return '🏢 3º Andar';
+  if (p.includes('biblioteca')) return '📚 Biblioteca';
+  if (p.includes('enfermaria')) return '🏥 Enfermaria';
+  if (p.includes('gramado') || p.includes('botânico') || p.includes('patio') || p.includes('pátio')) return '🌳 Gramado & Pátios';
+  if (p.includes('térreo') || p.includes('terreo')) return '🏫 Térreo';
+  return '🛡️ Apoio / Volante';
+}
+
 const PALETA_CORES = [
   '#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6',
   '#EC4899', '#06B6D4', '#F97316', '#14B8A6', '#6366F1',
@@ -132,6 +159,7 @@ export default function Admin() {
   const [editandoGradeMonitor, setEditandoGradeMonitor] = useState<any>(null);
   const [diaMonitor, setDiaMonitor] = useState('SEGUNDA');
   const [subAbaMonitor, setSubAbaMonitor] = useState<'EQUIPE' | 'ESCALA' | 'DASHBOARD'>('EQUIPE');
+  const [viewModeMonitor, setViewModeMonitor] = useState<'monitor' | 'setor'>('monitor');
   const [pasteContent, setPasteContent] = useState('');
   const [mostrandoPasteModal, setMostrandoPasteModal] = useState<{ aberto: boolean; tipo: 'alunos' | 'professores' | 'monitores'; ano?: string } | null>(null);
 
@@ -1128,7 +1156,7 @@ export default function Admin() {
                                   <button onClick={() => setEditandoGradeMonitor(gm)} className="p-1.5 bg-surface-container-high rounded-lg hover:text-primary"><Eye size={12} /></button>
                                   <button onClick={() => { if (confirm('Excluir este plantão?')) doDelete(excluirGradeMonitor(gm.id)); }} className="p-1.5 bg-surface-container-high rounded-lg hover:text-red-500"><Trash2 size={12} /></button>
                                 </div>
-                              </div>
+                               </div>
                               <div className="mt-3 flex items-center justify-between text-[10px] font-bold text-on-surface-variant">
                                 <span>{gm.diaSemana}</span>
                                 <span>{gm.horarioInicio} - {gm.horarioFim}</span>
@@ -1144,9 +1172,35 @@ export default function Admin() {
               {subAbaMonitor === 'DASHBOARD' && (
                 <div className="space-y-6">
                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface-container-low p-4 md:p-4 md:p-6 rounded-2xl md:rounded-3xl border border-primary/5">
-                      <div>
-                         <h3 className="text-base md:text-lg font-black italic tracking-tighter">Dashboard Colorido</h3>
-                         <p className="text-[10px] md:text-xs text-on-surface-variant font-medium">Visualize a escala completa ou individual.</p>
+                      <div className="flex flex-col gap-2">
+                         <h3 className="text-base md:text-lg font-black italic tracking-tighter">Dashboard de Escalas</h3>
+                         {/* Seletor de Modo de Visualização no Admin */}
+                         <div className="flex bg-black/40 p-0.5 rounded-xl border border-white/5 gap-0.5 w-fit">
+                           <button
+                             onClick={() => setViewModeMonitor('monitor')}
+                             className={cn(
+                               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-black text-[9px] uppercase tracking-wider transition-all",
+                               viewModeMonitor === 'monitor'
+                                 ? "bg-primary text-black shadow-md"
+                                 : "text-white/45 hover:bg-white/5"
+                             )}
+                           >
+                             <Users size={10} />
+                             Por Monitor
+                           </button>
+                           <button
+                             onClick={() => setViewModeMonitor('setor')}
+                             className={cn(
+                               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-black text-[9px] uppercase tracking-wider transition-all",
+                               viewModeMonitor === 'setor'
+                                 ? "bg-primary text-black shadow-md"
+                                 : "text-white/45 hover:bg-white/5"
+                             )}
+                           >
+                             <MapPin size={10} />
+                             Por Setor
+                           </button>
+                         </div>
                       </div>
                       <div className="flex flex-col sm:flex-row gap-2">
                          <select value={anoFiltro} onChange={e => setAnoFiltro(e.target.value)} 
@@ -1175,7 +1229,7 @@ export default function Admin() {
                          const inicio = 7 * 60;
                          const total = 11 * 60; // 18:00 - 07:00 = 11 horas
 
-                         if (gradeDia.length === 0) return <VazioMsg texto="Nenhuma escala para este dia/filtro." />;
+                         if (gradeDia.length === 0 && viewModeMonitor === 'monitor') return <VazioMsg texto="Nenhuma escala para este dia/filtro." />;
 
                          return (
                             <div className="space-y-3">
@@ -1187,7 +1241,7 @@ export default function Admin() {
                                      
                                      {/* Linhas de Grade Verticais */}
                                      <div className="absolute inset-0 pointer-events-none flex z-0">
-                                       <div className="w-32 shrink-0 border-r border-white/10" />
+                                       <div className={cn("shrink-0 border-r border-white/10", viewModeMonitor === 'monitor' ? "w-32" : "w-40")} />
                                        <div className="flex-1 flex h-full">
                                          {horas.map(hora => (
                                            <div key={hora} className="flex-1 border-l border-white/10 h-full border-dashed" />
@@ -1195,66 +1249,212 @@ export default function Admin() {
                                        </div>
                                      </div>
 
-                                     {/* Cabeçalho de Horários */}
-                                     <div className="flex border-b border-outline-variant/10 relative z-10 pb-4 mb-4">
-                                        <div className="w-32 shrink-0 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Monitor</div>
-                                        <div className="flex-1 flex">
-                                           {horas.map(h => <div key={h} className="flex-1 text-center text-[8px] font-black text-on-surface-variant/70 tracking-widest">{h}</div>)}
-                                        </div>
-                                     </div>
+                                     {viewModeMonitor === 'monitor' ? (
+                                       <>
+                                         {/* Cabeçalho de Horários - Por Monitor */}
+                                         <div className="flex border-b border-outline-variant/10 relative z-10 pb-4 mb-4">
+                                            <div className="w-32 shrink-0 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Monitor</div>
+                                            <div className="flex-1 flex">
+                                               {horas.map(h => <div key={h} className="flex-1 text-center text-[8px] font-black text-on-surface-variant/70 tracking-widest">{h}</div>)}
+                                            </div>
+                                         </div>
 
-                                     {/* Corpo da Timeline */}
-                                     <div className="relative z-10 space-y-2">
-                                       {monsNoDia.map(nome => {
-                                          const mObj = monitores.find(m => m.nome === nome);
-                                          const cor = mObj?.cor || '#3B82F6';
-                                          const postos = gradeDia.filter(g => g.monitorNome === nome);
-                                          return (
-                                             <div key={nome} className="flex items-center group py-2 hover:bg-white/[0.02] transition-all rounded-xl border-b border-white/[0.02]">
-                                                <div className="w-32 shrink-0 flex items-center gap-3">
-                                                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black" style={{ backgroundColor: `${cor}20`, color: cor }}>{(nome as string).charAt(0)}</div>
-                                                   <span className="text-[10px] font-black truncate">{(nome as string).split(' ')[0]}</span>
-                                                </div>
-                                                <div className="flex-1 relative h-14">
-                                                   {postos.map(p => {
-                                                      const parseH = (h: string) => { const [hh, mm] = h.split(':').map(Number); return hh * 60 + mm; };
-                                                      const l = ((parseH(p.horarioInicio) - inicio) / total) * 100;
-                                                      const w = ((parseH(p.horarioFim) - parseH(p.horarioInicio)) / total) * 100;
-                                                      
-                                                      const minInicio = parseH(p.horarioInicio);
-                                                      const minFim = parseH(p.horarioFim);
-                                                      const minutosAgora = new Date().getHours() * 60 + new Date().getMinutes();
-                                                      const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
+                                         {/* Corpo da Timeline - Por Monitor */}
+                                         <div className="relative z-10 space-y-2">
+                                           {monsNoDia.map(nome => {
+                                              const mObj = monitores.find(m => m.nome === nome);
+                                              const cor = mObj?.cor || '#3B82F6';
+                                              const postos = gradeDia.filter(g => g.monitorNome === nome);
+                                              return (
+                                                 <div key={nome} className="flex items-center group py-2 hover:bg-white/[0.02] transition-all rounded-xl border-b border-white/[0.02]">
+                                                    <div className="w-32 shrink-0 flex items-center justify-between gap-2 pr-2 bg-black/20 p-2 rounded-lg">
+                                                       <div className="flex items-center gap-2 min-w-0">
+                                                          <div className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0" style={{ backgroundColor: `${cor}20`, color: cor }}>{(nome as string).charAt(0)}</div>
+                                                          <span className="text-[10px] font-black truncate text-white/90">{(nome as string).split(' ')[0]}</span>
+                                                       </div>
+                                                       <button 
+                                                          onClick={() => setEditandoGradeMonitor({
+                                                            id: 'novo',
+                                                            monitorNome: nome,
+                                                            posto: '',
+                                                            funcao: 'Monitoria Geral',
+                                                            diaSemana: diaSel,
+                                                            horarioInicio: '08:00',
+                                                            horarioFim: '12:00',
+                                                            corEtiqueta: cor
+                                                          })}
+                                                          className="p-1 bg-white/5 hover:bg-primary/20 rounded text-white/40 hover:text-primary transition-all shrink-0"
+                                                          title="Adicionar Horário"
+                                                       >
+                                                          <Plus size={10} />
+                                                       </button>
+                                                    </div>
+                                                    <div className="flex-1 relative h-14">
+                                                       {postos.map(p => {
+                                                          const parseH = (h: string) => { const [hh, mm] = h.split(':').map(Number); return hh * 60 + mm; };
+                                                          const l = ((parseH(p.horarioInicio) - inicio) / total) * 100;
+                                                          const w = ((parseH(p.horarioFim) - parseH(p.horarioInicio)) / total) * 100;
+                                                          
+                                                          const minInicio = parseH(p.horarioInicio);
+                                                          const minFim = parseH(p.horarioFim);
+                                                          const minutosAgora = new Date().getHours() * 60 + new Date().getMinutes();
+                                                          const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
 
-                                                      return (
-                                                         <div 
-                                                           key={p.id} 
-                                                           className={cn(
-                                                             "absolute h-12 rounded-sm flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e]",
-                                                             estaAtivo ? "shadow-lg scale-102 z-10" : ""
-                                                           )}
-                                                           style={{ 
-                                                             left: `calc(${Math.max(0, l)}% + 2px)`, 
-                                                             width: `calc(${Math.min(100 - l, w)}% - 4px)`, 
-                                                             backgroundColor: estaAtivo ? '#1e1e1e' : '#141414',
-                                                             borderLeft: `4px solid ${cor}`,
-                                                             color: '#fff',
-                                                             top: '50%',
-                                                             transform: 'translateY(-50%)',
-                                                             boxShadow: estaAtivo ? `0 0 12px ${cor}40` : 'none',
-                                                           }}
-                                                           title={`${p.horarioInicio}–${p.horarioFim} | ${p.posto} | ${p.funcao}`}
-                                                         >
-                                                            <span className="text-[9px] font-bold text-white tracking-tight truncate leading-none">{p.posto}</span>
-                                                            <span className="text-[7px] font-bold text-white/40 leading-none">{p.horarioInicio} - {p.horarioFim}</span>
-                                                         </div>
-                                                      );
-                                                   })}
-                                                </div>
-                                             </div>
-                                          );
-                                       })}
-                                     </div>
+                                                          return (
+                                                             <div 
+                                                               key={p.id} 
+                                                               onClick={() => setEditandoGradeMonitor(p)}
+                                                               className={cn(
+                                                                 "absolute h-12 rounded-sm flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e] cursor-pointer hover:border-primary/40",
+                                                                 estaAtivo ? "shadow-lg scale-102 z-10" : ""
+                                                               )}
+                                                               style={{ 
+                                                                 left: `calc(${Math.max(0, l)}% + 2px)`, 
+                                                                 width: `calc(${Math.min(100 - l, w)}% - 4px)`, 
+                                                                 backgroundColor: estaAtivo ? '#1e1e1e' : '#141414',
+                                                                 borderLeft: `4px solid ${cor}`,
+                                                                 color: '#fff',
+                                                                 top: '50%',
+                                                                 transform: 'translateY(-50%)',
+                                                                 boxShadow: estaAtivo ? `0 0 12px ${cor}40` : 'none',
+                                                               }}
+                                                               title={`${p.horarioInicio}–${p.horarioFim} | ${p.posto} | ${p.funcao}`}
+                                                             >
+                                                                <span className="text-[9px] font-bold text-white tracking-tight truncate leading-none">{p.posto}</span>
+                                                                <span className="text-[7px] font-bold text-white/40 leading-none">{p.horarioInicio} - {p.horarioFim}</span>
+                                                             </div>
+                                                          );
+                                                       })}
+                                                    </div>
+                                                 </div>
+                                              );
+                                           })}
+                                         </div>
+                                       </>
+                                     ) : (
+                                       <>
+                                         {/* Cabeçalho de Horários - Por Setor */}
+                                         <div className="flex border-b border-outline-variant/10 relative z-10 pb-4 mb-4">
+                                            <div className="w-40 shrink-0 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Setor / Posto</div>
+                                            <div className="flex-1 flex">
+                                               {horas.map(h => <div key={h} className="flex-1 text-center text-[8px] font-black text-on-surface-variant/70 tracking-widest">{h}</div>)}
+                                            </div>
+                                         </div>
+
+                                         {/* Corpo da Timeline - Por Setor */}
+                                         <div className="relative z-10 space-y-2">
+                                           {MACRO_SETORES.map(macro => {
+                                              const postosNoMacro = Array.from(new Set(
+                                                gradeDia
+                                                  .filter(g => obterMacroSetor(g.posto) === macro)
+                                                  .map(g => g.posto.trim())
+                                              )).sort();
+
+                                              if (postosNoMacro.length === 0) return null;
+
+                                              return (
+                                                 <div key={macro} className="border-b border-white/5 space-y-1">
+                                                    {/* Header do Grupo */}
+                                                    <div className="bg-white/[0.02] px-3 py-1 rounded flex items-center justify-between">
+                                                       <span className="text-[9px] font-black text-primary italic tracking-tight">{macro}</span>
+                                                    </div>
+
+                                                    {postosNoMacro.map(posto => {
+                                                       const alocacoesNoPosto = gradeDia.filter(g => g.posto.trim() === posto);
+                                                       
+                                                       // Algoritmo de lanes
+                                                       const sortedAlocs = [...alocacoesNoPosto].sort((a, b) => {
+                                                          const parseH = (h: string) => { const [hh, mm] = h.split(':').map(Number); return hh * 60 + mm; };
+                                                          return parseH(a.horarioInicio) - parseH(b.horarioInicio);
+                                                       });
+
+                                                       const lanes: any[][] = [];
+                                                       const alocWithLane = sortedAlocs.map(aloc => {
+                                                          const parseH = (h: string) => { const [hh, mm] = h.split(':').map(Number); return hh * 60 + mm; };
+                                                          const start = parseH(aloc.horarioInicio);
+                                                          const end = parseH(aloc.horarioFim);
+                                                          
+                                                          let laneIndex = 0;
+                                                          let placed = false;
+                                                          
+                                                          for (let i = 0; i < lanes.length; i++) {
+                                                            const lane = lanes[i];
+                                                            const hasOverlap = lane.some(item => {
+                                                              const itemStart = parseH(item.horarioInicio);
+                                                              const itemEnd = parseH(item.horarioFim);
+                                                              return (start < itemEnd && end > itemStart);
+                                                            });
+                                                            
+                                                            if (!hasOverlap) {
+                                                              lane.push(aloc);
+                                                              laneIndex = i;
+                                                              placed = true;
+                                                              break;
+                                                            }
+                                                          }
+                                                          
+                                                          if (!placed) {
+                                                            lanes.push([aloc]);
+                                                            laneIndex = lanes.length - 1;
+                                                          }
+                                                          
+                                                          return { ...aloc, laneIndex };
+                                                       });
+
+                                                       const laneCount = lanes.length || 1;
+                                                       const rowHeight = laneCount * 56 + 8;
+
+                                                       return (
+                                                          <div key={posto} className="flex items-stretch hover:bg-white/[0.01] transition-all rounded-lg">
+                                                             <div className="w-40 shrink-0 p-2 border-r border-white/10 flex items-center min-w-0 bg-white/[0.01]">
+                                                                <p className="text-[10px] font-black text-white truncate" title={posto}>{posto}</p>
+                                                             </div>
+                                                             <div className="flex-1 relative py-2" style={{ height: `${rowHeight}px` }}>
+                                                                {alocWithLane.map(slot => {
+                                                                   const parseH = (h: string) => { const [hh, mm] = h.split(':').map(Number); return hh * 60 + mm; };
+                                                                   const l = ((parseH(slot.horarioInicio) - inicio) / total) * 100;
+                                                                   const w = ((parseH(slot.horarioFim) - parseH(slot.horarioInicio)) / total) * 100;
+                                                                   const minInicio = parseH(slot.horarioInicio);
+                                                                   const minFim = parseH(slot.horarioFim);
+                                                                   const minutosAgora = new Date().getHours() * 60 + new Date().getMinutes();
+                                                                   const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
+                                                                   const cor = monitores.find(m => m.nome === slot.monitorNome)?.cor || slot.corEtiqueta || '#3B82F6';
+                                                                   const topPos = slot.laneIndex * 56 + 8;
+
+                                                                   return (
+                                                                      <div
+                                                                        key={slot.id}
+                                                                        onClick={() => setEditandoGradeMonitor(slot)}
+                                                                        className={cn(
+                                                                          "absolute h-12 rounded-sm flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e] cursor-pointer hover:border-primary/40",
+                                                                          estaAtivo ? "shadow-lg scale-102 z-10" : ""
+                                                                        )}
+                                                                        style={{
+                                                                          left: `calc(${Math.max(0, l)}% + 2px)`,
+                                                                          width: `calc(${Math.min(100 - l, w)}% - 4px)`,
+                                                                          backgroundColor: estaAtivo ? '#1e1e1e' : '#141414',
+                                                                          borderLeft: `4px solid ${cor}`,
+                                                                          color: '#fff',
+                                                                          top: `${topPos}px`,
+                                                                          boxShadow: estaAtivo ? `0 0 12px ${cor}40` : 'none',
+                                                                        }}
+                                                                        title={`${slot.horarioInicio}–${slot.horarioFim} | ${slot.monitorNome} | ${slot.funcao}`}
+                                                                      >
+                                                                         <span className="text-[9px] font-bold text-white tracking-tight truncate leading-none">{slot.monitorNome}</span>
+                                                                         <span className="text-[7px] font-bold text-white/40 leading-none">{slot.horarioInicio} - {slot.horarioFim}</span>
+                                                                      </div>
+                                                                   );
+                                                                })}
+                                                             </div>
+                                                          </div>
+                                                       );
+                                                    })}
+                                                 </div>
+                                              );
+                                           })}
+                                         </div>
+                                       </>
+                                     )}
                                    </div>
                                  </div>
                                </div>
@@ -1268,21 +1468,21 @@ export default function Admin() {
                                      const postos = gradeDia.filter(g => g.monitorNome === nome);
                                      return (
                                        <div key={nome} className="bg-surface-container-low p-5 rounded-2xl border border-white/5 space-y-4">
-                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                               <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black shadow-lg" style={{ backgroundColor: cor, color: '#000' }}>{nome.charAt(0)}</div>
-                                               <span className="text-sm font-black italic">{nome.split(' ')[0]}</span>
-                                            </div>
-                                            <div className="text-[10px] font-black text-on-surface-variant/40 italic">{postos.length} postos</div>
-                                         </div>
-                                         <div className="space-y-1.5">
-                                            {postos.map(p => (
-                                               <div key={p.id} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ backgroundColor: `${cor}15` }}>
-                                                  <span className="text-[10px] font-black text-on-surface-variant w-20 shrink-0">{p.horarioInicio}-{p.horarioFim}</span>
-                                                  <span className="text-[10px] font-black uppercase truncate" style={{ color: cor }}>{p.posto || '—'}</span>
-                                               </div>
-                                            ))}
-                                         </div>
+                                          <div className="flex items-center justify-between">
+                                             <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black shadow-lg" style={{ backgroundColor: cor, color: '#000' }}>{nome.charAt(0)}</div>
+                                                <span className="text-sm font-black italic">{nome.split(' ')[0]}</span>
+                                             </div>
+                                             <div className="text-[10px] font-black text-on-surface-variant/40 italic">{postos.length} postos</div>
+                                          </div>
+                                          <div className="space-y-1.5">
+                                             {postos.map(p => (
+                                                <div key={p.id} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ backgroundColor: `${cor}15` }}>
+                                                   <span className="text-[10px] font-black text-on-surface-variant w-20 shrink-0">{p.horarioInicio}-{p.horarioFim}</span>
+                                                   <span className="text-[10px] font-black uppercase truncate" style={{ color: cor }}>{p.posto || '—'}</span>
+                                                </div>
+                                             ))}
+                                          </div>
                                        </div>
                                      );
                                    });
