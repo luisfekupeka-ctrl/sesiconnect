@@ -1166,14 +1166,14 @@ export default function Admin() {
                       </div>
                    </div>
 
-                   <div className="bg-surface-container-low rounded-2xl md:rounded-[2rem] border border-primary/5 overflow-hidden p-4 md:p-4 md:p-6">
+                   <div className="bg-surface-container-low rounded-2xl md:rounded-[2rem] border border-primary/5 overflow-hidden p-4 md:p-4 md:p-6 shadow-premium relative">
                       {(() => {
                          const diaSel = diaMonitor;
                          const gradeDia = gradeMonitores.filter(g => g.diaSemana === diaSel && (anoFiltro === 'Todos' || g.monitorNome === anoFiltro));
                          const monsNoDia = Array.from(new Set(gradeDia.map(g => g.monitorNome))) as string[];
-                         const horas = ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00'];
+                         const horas = ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
                          const inicio = 7 * 60;
-                         const total = 7 * 60;
+                         const total = 11 * 60; // 18:00 - 07:00 = 11 horas
 
                          if (gradeDia.length === 0) return <VazioMsg texto="Nenhuma escala para este dia/filtro." />;
 
@@ -1181,38 +1181,82 @@ export default function Admin() {
                             <div className="space-y-3">
                                {/* DESKTOP: Timeline */}
                                <div className="hidden md:block">
-                                 <div className="flex border-b border-outline-variant/10 mb-4 pb-4">
-                                    <div className="w-32 shrink-0 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Monitor</div>
-                                    <div className="flex-1 flex">
-                                       {horas.map(h => <div key={h} className="flex-1 text-center text-[8px] font-black text-on-surface-variant/30">{h}</div>)}
-                                    </div>
-                                 </div>
-                                 {monsNoDia.map(nome => {
-                                    const mObj = monitores.find(m => m.nome === nome);
-                                    const cor = mObj?.cor || '#3B82F6';
-                                    const postos = gradeDia.filter(g => g.monitorNome === nome);
-                                    return (
-                                       <div key={nome} className="flex items-center group py-2 hover:bg-primary/5 transition-all rounded-xl">
-                                          <div className="w-32 shrink-0 flex items-center gap-3">
-                                             <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black" style={{ backgroundColor: `${cor}20`, color: cor }}>{(nome as string).charAt(0)}</div>
-                                             <span className="text-[10px] font-black truncate">{(nome as string).split(' ')[0]}</span>
-                                          </div>
-                                           <div className="flex-1 relative h-14">
-                                              {postos.map(p => {
-                                                 const parseH = (h: string) => { const [hh, mm] = h.split(':').map(Number); return hh * 60 + mm; };
-                                                 const l = ((parseH(p.horarioInicio) - inicio) / total) * 100;
-                                                 const w = ((parseH(p.horarioFim) - parseH(p.horarioInicio)) / total) * 100;
-                                                 return (
-                                                    <div key={p.id} className="absolute h-12 top-1 rounded-xl flex items-center px-3 shadow-md overflow-hidden border border-white/20"
-                                                      style={{ left: `${Math.max(0, l)}%`, width: `${Math.min(100 - l, w)}%`, backgroundColor: cor }}>
-                                                       <span className="text-[10px] font-black text-white uppercase truncate drop-shadow-md">{p.posto}</span>
-                                                    </div>
-                                                 );
-                                              })}
-                                           </div>
+                                 {/* Scroll Wrapper */}
+                                 <div className="overflow-x-auto scrollbar-premium">
+                                   <div className="min-w-[1200px] relative pb-4">
+                                     
+                                     {/* Linhas de Grade Verticais */}
+                                     <div className="absolute inset-0 pointer-events-none flex z-0">
+                                       <div className="w-32 shrink-0 border-r border-white/10" />
+                                       <div className="flex-1 flex h-full">
+                                         {horas.map(hora => (
+                                           <div key={hora} className="flex-1 border-l border-white/10 h-full border-dashed" />
+                                         ))}
                                        </div>
-                                    );
-                                 })}
+                                     </div>
+
+                                     {/* Cabeçalho de Horários */}
+                                     <div className="flex border-b border-outline-variant/10 relative z-10 pb-4 mb-4">
+                                        <div className="w-32 shrink-0 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Monitor</div>
+                                        <div className="flex-1 flex">
+                                           {horas.map(h => <div key={h} className="flex-1 text-center text-[8px] font-black text-on-surface-variant/70 tracking-widest">{h}</div>)}
+                                        </div>
+                                     </div>
+
+                                     {/* Corpo da Timeline */}
+                                     <div className="relative z-10 space-y-2">
+                                       {monsNoDia.map(nome => {
+                                          const mObj = monitores.find(m => m.nome === nome);
+                                          const cor = mObj?.cor || '#3B82F6';
+                                          const postos = gradeDia.filter(g => g.monitorNome === nome);
+                                          return (
+                                             <div key={nome} className="flex items-center group py-2 hover:bg-white/[0.02] transition-all rounded-xl border-b border-white/[0.02]">
+                                                <div className="w-32 shrink-0 flex items-center gap-3">
+                                                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black" style={{ backgroundColor: `${cor}20`, color: cor }}>{(nome as string).charAt(0)}</div>
+                                                   <span className="text-[10px] font-black truncate">{(nome as string).split(' ')[0]}</span>
+                                                </div>
+                                                <div className="flex-1 relative h-14">
+                                                   {postos.map(p => {
+                                                      const parseH = (h: string) => { const [hh, mm] = h.split(':').map(Number); return hh * 60 + mm; };
+                                                      const l = ((parseH(p.horarioInicio) - inicio) / total) * 100;
+                                                      const w = ((parseH(p.horarioFim) - parseH(p.horarioInicio)) / total) * 100;
+                                                      
+                                                      const minInicio = parseH(p.horarioInicio);
+                                                      const minFim = parseH(p.horarioFim);
+                                                      const minutosAgora = new Date().getHours() * 60 + new Date().getMinutes();
+                                                      const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
+
+                                                      return (
+                                                         <div 
+                                                           key={p.id} 
+                                                           className={cn(
+                                                             "absolute h-12 rounded-lg flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e]",
+                                                             estaAtivo ? "shadow-lg scale-102 z-10" : ""
+                                                           )}
+                                                           style={{ 
+                                                             left: `calc(${Math.max(0, l)}% + 2px)`, 
+                                                             width: `calc(${Math.min(100 - l, w)}% - 4px)`, 
+                                                             backgroundColor: estaAtivo ? '#1e1e1e' : '#141414',
+                                                             borderLeft: `4px solid ${cor}`,
+                                                             color: '#fff',
+                                                             top: '50%',
+                                                             transform: 'translateY(-50%)',
+                                                             boxShadow: estaAtivo ? `0 0 12px ${cor}40` : 'none',
+                                                           }}
+                                                           title={`${p.horarioInicio}–${p.horarioFim} | ${p.posto} | ${p.funcao}`}
+                                                         >
+                                                            <span className="text-[9px] font-bold text-white tracking-tight truncate leading-none">{p.posto}</span>
+                                                            <span className="text-[7px] font-bold text-white/40 leading-none">{p.horarioInicio} - {p.horarioFim}</span>
+                                                         </div>
+                                                      );
+                                                   })}
+                                                </div>
+                                             </div>
+                                          );
+                                       })}
+                                     </div>
+                                   </div>
+                                 </div>
                                </div>
                                {/* MOBILE: Cards */}
                                <div className="md:hidden space-y-4">
