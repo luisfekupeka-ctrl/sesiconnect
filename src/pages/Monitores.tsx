@@ -99,37 +99,7 @@ export default function Monitores() {
   }, [gradeMonitores, diaFiltro]);
 
   const [viewMode, setViewMode] = useState<'monitor' | 'setor'>('monitor');
-  const [subViewMode, setSubViewMode] = useState<'quadro' | 'timeline'>('quadro');
-  const [blocoSelecionado, setBlocoSelecionado] = useState<string>('');
 
-  // Lista de blocos de horário do dia
-  const blocosHorarios = useMemo(() => {
-    const blocos = new Set<string>();
-    (gradeMonitores || []).forEach(g => {
-      if (g.diaSemana === diaFiltro) {
-        blocos.add(`${g.horarioInicio} - ${g.horarioFim}`);
-      }
-    });
-    return Array.from(blocos).sort((a, b) => a.localeCompare(b));
-  }, [gradeMonitores, diaFiltro]);
-
-  // Bloco selecionado atual (se não definido, pega o bloco atual do horário do colégio ou o primeiro)
-  const blocoAtivo = useMemo(() => {
-    if (blocoSelecionado && blocosHorarios.includes(blocoSelecionado)) {
-      return blocoSelecionado;
-    }
-    
-    // Tenta encontrar o bloco atual com base em horaAtual
-    const minutosAgora = horaAtual.getHours() * 60 + horaAtual.getMinutes();
-    const blocoAtual = blocosHorarios.find(bloco => {
-      const [inicio, fim] = bloco.split(' - ');
-      const minInicio = horaParaMinutos(inicio);
-      const minFim = horaParaMinutos(fim);
-      return minutosAgora >= minInicio && minutosAgora < minFim;
-    });
-
-    return blocoAtual || blocosHorarios[0] || '';
-  }, [blocoSelecionado, blocosHorarios, horaAtual]);
 
   // ========== SUB-PÁGINA: Grade individual do monitor ==========
   if (monitorAtivo) {
@@ -452,367 +422,117 @@ export default function Monitores() {
         </>
       ) : (
         /* ==================== VISÃO POR SETOR ==================== */
-        <div className="space-y-6">
-          {/* Controles da Visão por Setor */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0a0a0a]/50 p-4 rounded-[1.5rem] border border-white/5">
-            <div className="flex gap-1 p-1 bg-black rounded-xl border border-white/5 self-start">
-              <button
-                onClick={() => setSubViewMode('quadro')}
-                className={cn(
-                  "px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
-                  subViewMode === 'quadro' ? "bg-[#fbbf24] text-black shadow-md" : "text-white/40 hover:bg-white/5"
-                )}
-              >
-                📋 Quadro de Postos
-              </button>
-              <button
-                onClick={() => setSubViewMode('timeline')}
-                className={cn(
-                  "px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
-                  subViewMode === 'timeline' ? "bg-[#fbbf24] text-black shadow-md" : "text-white/40 hover:bg-white/5"
-                )}
-              >
-                📅 Linha do Tempo
-              </button>
-            </div>
-
-            {subViewMode === 'quadro' && (
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Horário:</span>
-                <select
-                  value={blocoAtivo}
-                  onChange={(e) => setBlocoSelecionado(e.target.value)}
-                  className="bg-black border border-white/10 rounded-xl px-4 py-2 text-[9px] font-black uppercase tracking-widest outline-none ring-2 ring-[#fbbf24]/10 focus:ring-[#fbbf24]/30 text-[#fbbf24] cursor-pointer"
-                >
-                  {blocosHorarios.length === 0 ? (
-                    <option value="">Sem horários hoje</option>
-                  ) : (
-                    blocosHorarios.map(bloco => (
-                      <option key={bloco} value={bloco}>
-                        {bloco}
-                      </option>
-                    ))
-                  )}
-                </select>
-                
-                <button
-                  onClick={() => setBlocoSelecionado('')}
-                  className="px-3 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
-                >
-                  🕒 Agora
-                </button>
-              </div>
-            )}
-          </div>
-
-          {subViewMode === 'quadro' ? (
-            /* ================ RENDER DO QUADRO DE POSTOS (ORGANOGRAMA POR HORÁRIO) ================ */
-            <div className="space-y-12">
-              {blocosHorarios.length === 0 ? (
+        <div className="space-y-4">
+          {(() => {
+            if (escalaDoDia.length === 0) {
+              return (
                 <div className="py-16 text-center opacity-20 italic font-black text-sm border-2 border-dashed border-white/5 rounded-2xl">
-                  Nenhum horário de monitoria agendado para hoje.
+                  Nenhum posto agendado.
                 </div>
-              ) : (
-                blocosHorarios.map(bloco => {
-                  const [inicioSel, fimSel] = bloco.split(' - ');
-                  
-                  // Filtra todas as alocações deste bloco de horário no dia
-                  const alocacoesNoBloco = (gradeMonitores || []).filter(g => {
-                    return g.diaSemana === diaFiltro && 
-                           g.horarioInicio.slice(0, 5) === inicioSel && 
-                           g.horarioFim.slice(0, 5) === fimSel;
-                  });
+              );
+            }
 
-                  // Verifica se há alguma alocação correspondente à busca
-                  const contemBusca = alocacoesNoBloco.some(a => {
-                    const b = busca.toLowerCase();
-                    return a.monitorNome.toLowerCase().includes(b) || 
-                           a.posto.toLowerCase().includes(b) || 
-                           (a.funcao || '').toLowerCase().includes(b);
-                  });
+            return MACRO_SETORES.map(macro => {
+              const postos = escalaDoDia
+                .filter(g => obterMacroSetor(g.posto) === macro)
+                .sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
 
-                  // Se houver busca e não corresponder a nenhuma alocação deste bloco, oculta o bloco
-                  if (busca && !contemBusca) return null;
+              const postosFiltrados = postos.filter(slot => {
+                if (!busca) return true;
+                const b = busca.toLowerCase();
+                return slot.monitorNome.toLowerCase().includes(b) ||
+                       slot.posto.toLowerCase().includes(b) ||
+                       (slot.funcao || '').toLowerCase().includes(b);
+              });
 
-                  return (
-                    <motion.div 
-                      key={bloco} 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="space-y-4"
-                    >
-                      {/* Título do Bloco de Horário */}
-                      <div className="flex items-center gap-3 border-b border-white/5 pb-2">
-                        <Clock size={16} className="text-[#fbbf24] shrink-0" />
-                        <h3 className="text-lg font-black tracking-tight text-white/90 italic font-headline">
-                          {bloco}
-                        </h3>
-                        <span className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 bg-white/5 border border-white/5 rounded-xl text-white/40">
-                          {alocacoesNoBloco.length} {alocacoesNoBloco.length === 1 ? 'Alocação' : 'Alocações'}
-                        </span>
+              if (busca && postosFiltrados.length === 0) return null;
+
+              return (
+                <div key={macro} className="bg-[#0a0a0a]/50 rounded-[1.5rem] border border-white/5 p-5 flex flex-col md:flex-row md:items-center gap-6 hover:border-white/10 transition-all">
+                  {/* Setor Profile Panel */}
+                  <div className="md:w-56 shrink-0 flex items-center gap-4 bg-black/30 p-3 rounded-2xl border border-white/5">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black shrink-0 bg-white/5 text-[#fbbf24]">
+                      {macro.split(' ')[0]}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-black text-white truncate leading-tight tracking-tight italic">{macro.split(' ').slice(1).join(' ')}</h4>
+                      <p className="text-[9px] font-black uppercase mt-1 tracking-widest text-white/40">
+                        {postosFiltrados.length} {postosFiltrados.length === 1 ? 'Plantão' : 'Plantões'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Scrolling shifts list */}
+                  <div className="flex-1 flex gap-4 overflow-x-auto pb-2 pt-1 snap-x scroll-smooth custom-scrollbar">
+                    {postosFiltrados.length === 0 ? (
+                      <div className="flex-shrink-0 w-64 bg-black/10 rounded-2xl p-4 border border-dashed border-white/5 flex flex-col justify-center items-center min-h-[110px]">
+                        <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Sem Monitor</span>
                       </div>
+                    ) : (
+                      postosFiltrados.map(slot => {
+                        const minInicio = horaParaMinutos(slot.horarioInicio);
+                        const minFim = horaParaMinutos(slot.horarioFim);
+                        const minutosAgora = new Date().getHours() * 60 + new Date().getMinutes();
+                        const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
+                        const cor = mapaCorMonitor[slot.monitorNome] || '#3B82F6';
 
-                      {/* Carrossel Horizontal de Cards de Locais */}
-                      <div className="flex gap-6 overflow-x-auto pb-4 pt-1 snap-x scroll-smooth custom-scrollbar">
-                        {MACRO_SETORES.map(macro => {
-                          const alocacoesNoSetor = alocacoesNoBloco.filter(g => obterMacroSetor(g.posto) === macro);
-                          
-                          // Aplica busca individual se houver
-                          const alocacoesFiltradas = alocacoesNoSetor.filter(a => {
-                            const b = busca.toLowerCase();
-                            return a.monitorNome.toLowerCase().includes(b) || 
-                                   a.posto.toLowerCase().includes(b) || 
-                                   (a.funcao || '').toLowerCase().includes(b);
-                          });
-
-                          // Oculta cards vazios apenas se houver uma busca ativa
-                          if (busca && alocacoesFiltradas.length === 0) return null;
-
-                          const totalMonitores = alocacoesNoSetor.length;
-
-                          return (
-                            <motion.div
-                              key={macro}
-                              layout
-                              className={cn(
-                                "flex-shrink-0 w-80 bg-[#0d0d0d]/80 backdrop-blur-md rounded-3xl p-5 border-2 transition-all flex flex-col justify-between min-h-[220px] snap-start hover:border-white/10",
-                                totalMonitores > 0 ? "border-white/5" : "border-red-500/10 bg-red-950/5"
-                              )}
-                              style={{ borderTop: `4px solid ${totalMonitores > 0 ? '#fbbf24' : '#ef4444'}` }}
-                            >
-                              <div className="flex flex-col h-full justify-between">
-                                <div>
-                                  {/* Header do Card */}
-                                  <div className="flex items-center justify-between mb-4 gap-2">
-                                    <h4 className="text-sm font-black text-white italic tracking-tight truncate">{macro}</h4>
-                                    {totalMonitores > 0 ? (
-                                      <span className="px-2 py-0.5 bg-[#fbbf24]/10 text-[#fbbf24] rounded-md text-[8px] font-black uppercase tracking-wider shrink-0">
-                                        {totalMonitores} monitor{totalMonitores > 1 ? 'es' : ''}
-                                      </span>
-                                    ) : (
-                                      <span className="px-2 py-0.5 bg-red-500/10 text-red-500 rounded-md text-[8px] font-black uppercase tracking-wider shrink-0">
-                                        Vazio
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  {/* Lista de Monitores Alocados */}
-                                  {totalMonitores > 0 ? (
-                                    <div className="space-y-3">
-                                      {alocacoesNoSetor.map(aloc => {
-                                        const cor = mapaCorMonitor[aloc.monitorNome] || '#3B82F6';
-                                        return (
-                                          <div key={aloc.id} className="p-3 bg-black/40 rounded-2xl border border-white/5 flex items-start gap-3">
-                                            <div
-                                              className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 shadow-inner"
-                                              style={{ backgroundColor: `${cor}20`, color: cor }}
-                                            >
-                                              {aloc.monitorNome.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                              <p className="text-xs font-black text-white truncate leading-tight">{aloc.monitorNome}</p>
-                                              <p className="text-[8px] font-black uppercase tracking-wider mt-0.5" style={{ color: cor }}>
-                                                {aloc.posto}
-                                              </p>
-                                              {aloc.funcao && aloc.funcao !== 'Monitoria Geral' && (
-                                                <p className="text-[9px] text-white/40 italic mt-1 font-medium leading-none">{aloc.funcao}</p>
-                                              )}
-                                              {aloc.instrucoes && (
-                                                <p className="text-[8px] text-white/30 italic mt-1.5 bg-white/[0.02] p-1.5 rounded-lg border border-white/[0.03] leading-relaxed">
-                                                  {aloc.instrucoes}
-                                                </p>
-                                              )}
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  ) : (
-                                    /* Sem Cobertura */
-                                    macro !== '🍽️ Almoço' ? (
-                                      <div className="flex-1 flex flex-col items-center justify-center py-6 text-center text-red-500/50">
-                                        <AlertTriangle size={20} className="mb-1 text-red-500" />
-                                        <p className="text-[10px] font-black uppercase tracking-widest leading-none">Sem Cobertura</p>
-                                        <p className="text-[8px] text-white/30 italic mt-1">Nenhum monitor designado para este setor.</p>
-                                      </div>
-                                    ) : (
-                                      <div className="flex-1 flex flex-col items-center justify-center py-6 text-center text-white/20">
-                                        <Clock size={20} className="mb-1 text-white/20" />
-                                        <p className="text-[10px] font-black uppercase tracking-widest leading-none">Sem Almoço</p>
-                                      </div>
-                                    )
-                                  )}
-                                </div>
+                        return (
+                          <div
+                            key={slot.id}
+                            className={cn(
+                              "flex-shrink-0 w-64 bg-[#0d0d0d] rounded-2xl p-4 border transition-all flex flex-col justify-between min-h-[110px] snap-start hover:bg-[#121212]",
+                              estaAtivo ? "border-[#fbbf24]/50 shadow-[0_0_12px_rgba(251,191,36,0.15)] bg-[#141414]" : "border-white/5"
+                            )}
+                            style={{ borderLeft: `5px solid ${cor}` }}
+                          >
+                            <div className="flex flex-col gap-2">
+                              {/* Horário */}
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-[10px] font-black text-white/40 tracking-wider">
+                                  🕒 {slot.horarioInicio} - {slot.horarioFim}
+                                </span>
+                                {estaAtivo && (
+                                  <span className="px-2 py-0.5 bg-[#fbbf24]/10 text-[#fbbf24] border border-[#fbbf24]/20 rounded-md text-[8px] font-black uppercase tracking-wider animate-pulse">
+                                    Agora
+                                  </span>
+                                )}
                               </div>
-                            </motion.div>
-                          );
-                        })}
-                      </div>
-                    </motion.div>
-                  );
-                })
-              )}
-            </div>
-          ) : (
-            /* ================ RENDER DA LINHA DO TEMPO POR SETOR ================ */
-            <div className="bg-[#0a0a0a] rounded-[1.5rem] border border-white/5 overflow-hidden shadow-premium relative">
-              {/* Scroll Wrapper */}
-              <div className="overflow-x-auto scrollbar-premium">
-                <div className="min-w-[1600px] relative">
-                  
-                  {/* Linhas de Grade Verticais */}
-                  <div className="absolute inset-0 pointer-events-none flex z-0">
-                    <div className="w-48 shrink-0 border-r border-white/10" />
-                    <div className="flex-1 flex h-full">
-                      {HORAS_ESCALA.map(hora => (
-                        <div key={hora} className="flex-1 border-l border-white/10 h-full border-dashed" />
-                      ))}
-                    </div>
-                  </div>
 
-                  {/* Cabeçalho de Horários */}
-                  <div className="flex border-b border-white/10 bg-white/[0.02] relative z-10">
-                    <div className="w-48 shrink-0 p-4 border-r border-white/10">
-                      <p className="text-[10px] font-black text-white/50 uppercase tracking-widest">Setor / Posto</p>
-                    </div>
-                    <div className="flex-1 relative">
-                      <div className="flex">
-                        {HORAS_ESCALA.map(hora => (
-                          <div key={hora} className="flex-1 text-center py-4 text-[10px] font-mono font-bold text-white/70 uppercase tracking-widest border-l border-white/10">
-                            {hora}
-                          </div>
-                        ))}
-                      </div>
-                      {/* Linha do horário atual */}
-                      {minutosAgora >= ESCALA_INICIO && minutosAgora <= ESCALA_FIM && (
-                        <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20"
-                          style={{ left: `${((minutosAgora - ESCALA_INICIO) / ESCALA_TOTAL) * 100}%` }}>
-                          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-red-500 shadow-lg shadow-red-500/30" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                              {/* Monitor */}
+                              <h5 className="text-xs font-black text-white italic tracking-tight truncate leading-none mt-0.5">
+                                👤 {slot.monitorNome}
+                              </h5>
 
-                  {/* Agrupamento por Macro Setor */}
-                  {MACRO_SETORES.map(macro => {
-                    // Pegar todos os postos específicos ativos neste macro setor no dia
-                    const postosNoMacro = Array.from(new Set(
-                      (gradeMonitores || [])
-                        .filter(g => g.diaSemana === diaFiltro && obterMacroSetor(g.posto) === macro)
-                        .map(g => g.posto.trim())
-                    )).sort();
-
-                    if (postosNoMacro.length === 0) return null;
-
-                    return (
-                      <div key={macro} className="border-b border-white/5">
-                        {/* Cabeçalho do Grupo */}
-                        <div className="bg-white/[0.02] px-4 py-2 flex items-center justify-between border-b border-white/[0.03]">
-                          <span className="text-[10px] font-black text-[#fbbf24] italic tracking-tight">{macro}</span>
-                        </div>
-
-                        {/* Linhas de postos específicos */}
-                        {postosNoMacro.map(posto => {
-                          const alocacoesNoPosto = (gradeMonitores || []).filter(g => g.diaSemana === diaFiltro && g.posto.trim() === posto);
-
-                          // Algoritmo de Distribuição em Raias (Lanes) para evitar sobreposição
-                          const sortedAlocs = [...alocacoesNoPosto].sort((a, b) => {
-                            return horaParaMinutos(a.horarioInicio) - horaParaMinutos(b.horarioInicio);
-                          });
-
-                          const lanes: any[][] = [];
-                          const alocWithLane = sortedAlocs.map(aloc => {
-                            const start = horaParaMinutos(aloc.horarioInicio);
-                            const end = horaParaMinutos(aloc.horarioFim);
-                            
-                            let laneIndex = 0;
-                            let placed = false;
-                            
-                            for (let i = 0; i < lanes.length; i++) {
-                              const lane = lanes[i];
-                              const hasOverlap = lane.some(item => {
-                                const itemStart = horaParaMinutos(item.horarioInicio);
-                                const itemEnd = horaParaMinutos(item.horarioFim);
-                                return (start < itemEnd && end > itemStart);
-                              });
-                              
-                              if (!hasOverlap) {
-                                lane.push(aloc);
-                                laneIndex = i;
-                                placed = true;
-                                break;
-                              }
-                            }
-                            
-                            if (!placed) {
-                              lanes.push([aloc]);
-                              laneIndex = lanes.length - 1;
-                            }
-                            
-                            return { ...aloc, laneIndex };
-                          });
-
-                          const laneCount = lanes.length || 1;
-                          const rowHeight = laneCount * 76 + 12; // 76px por raia + padding
-
-                          return (
-                            <div key={posto} className="flex border-b border-white/[0.02] hover:bg-white/[0.01] transition-all relative z-10">
-                              {/* Nome do Posto */}
-                              <div className="w-48 shrink-0 p-3 border-r border-white/10 flex items-center min-w-0 bg-[#0a0a0a]/40">
-                                <p className="text-[10px] font-black text-white truncate" title={posto}>
-                                  {posto}
+                              {/* Posto específico se diferente do macro */}
+                              {slot.posto && slot.posto !== macro && (
+                                <p className="text-[9px] text-[#fbbf24] font-bold uppercase tracking-wider mt-0.5">
+                                  📍 {slot.posto}
                                 </p>
-                              </div>
+                              )}
 
-                              {/* Barras de tempo dos Monitores */}
-                              <div className="flex-1 relative py-2" style={{ height: `${rowHeight}px` }}>
-                                {alocWithLane.map(slot => {
-                                  const minInicio = horaParaMinutos(slot.horarioInicio);
-                                  const minFim = horaParaMinutos(slot.horarioFim);
-                                  const leftPct = Math.max(0, ((minInicio - ESCALA_INICIO) / ESCALA_TOTAL) * 100);
-                                  const widthPct = Math.min(100 - leftPct, ((minFim - minInicio) / ESCALA_TOTAL) * 100);
-                                  const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
-                                  const cor = mapaCorMonitor[slot.monitorNome] || '#3B82F6';
-                                  const topPos = slot.laneIndex * 76 + 8; // 76px de altura por item + margem
+                              {/* Função */}
+                              {slot.funcao && slot.funcao !== 'Monitoria Geral' && (
+                                <p className="text-[9px] text-white/50 font-semibold italic truncate mt-0.5">
+                                  ⚙️ {slot.funcao}
+                                </p>
+                              )}
 
-                                  return (
-                                    <div
-                                      key={slot.id}
-                                      className={cn(
-                                        "absolute h-16 rounded-sm flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e]",
-                                        estaAtivo ? "shadow-lg scale-102 z-10" : ""
-                                      )}
-                                      style={{
-                                        left: `calc(${leftPct}% + 2px)`,
-                                        width: `calc(${widthPct}% - 4px)`,
-                                        backgroundColor: estaAtivo ? '#1e1e1e' : '#141414',
-                                        borderLeft: `4px solid ${cor}`,
-                                        color: '#fff',
-                                        top: `${topPos}px`,
-                                        boxShadow: estaAtivo ? `0 0 12px ${cor}40` : 'none',
-                                      }}
-                                      title={`${slot.horarioInicio}–${slot.horarioFim} | ${slot.monitorNome} | ${slot.funcao}`}
-                                    >
-                                      <span className="text-xs font-bold text-white tracking-tight truncate leading-none">
-                                        {slot.monitorNome}
-                                      </span>
-                                      <span className="text-[9px] font-bold text-white/40 leading-none">
-                                        {slot.horarioInicio} - {slot.horarioFim}
-                                      </span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
+                              {/* Instruções se houver */}
+                              {slot.instrucoes && (
+                                <p className="text-[8px] text-white/30 italic mt-1 bg-white/[0.01] p-1.5 rounded-lg border border-white/[0.02] line-clamp-2 leading-relaxed">
+                                  {slot.instrucoes}
+                                </p>
+                              )}
                             </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              );
+            });
+          })()}
         </div>
       )}
 
