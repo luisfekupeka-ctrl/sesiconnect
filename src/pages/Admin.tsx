@@ -1285,11 +1285,11 @@ export default function Admin() {
                                                           })}
                                                           className="p-1 bg-white/5 hover:bg-primary/20 rounded text-white/40 hover:text-primary transition-all shrink-0"
                                                           title="Adicionar Horário"
-                                                       >
+                                                        >
                                                           <Plus size={10} />
                                                        </button>
                                                     </div>
-                                                    <div className="flex-1 relative h-14">
+                                                    <div className="flex-1 relative h-20">
                                                        {postos.map(p => {
                                                           const parseH = (h: string) => { const [hh, mm] = h.split(':').map(Number); return hh * 60 + mm; };
                                                           const l = ((parseH(p.horarioInicio) - inicio) / total) * 100;
@@ -1305,7 +1305,7 @@ export default function Admin() {
                                                                key={p.id} 
                                                                onClick={() => setEditandoGradeMonitor(p)}
                                                                className={cn(
-                                                                 "absolute h-12 rounded-sm flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e] cursor-pointer hover:border-primary/40",
+                                                                 "absolute h-16 rounded-sm flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e] cursor-pointer hover:border-primary/40",
                                                                  estaAtivo ? "shadow-lg scale-102 z-10" : ""
                                                                )}
                                                                style={{ 
@@ -1320,7 +1320,7 @@ export default function Admin() {
                                                                }}
                                                                title={`${p.horarioInicio}–${p.horarioFim} | ${p.posto} | ${p.funcao}`}
                                                              >
-                                                                <span className="text-[9px] font-bold text-white tracking-tight truncate leading-none">{p.posto}</span>
+                                                                <span className="text-xs font-bold text-white tracking-tight truncate leading-none">{p.posto}</span>
                                                                 <span className="text-[7px] font-bold text-white/40 leading-none">{p.horarioInicio} - {p.horarioFim}</span>
                                                              </div>
                                                           );
@@ -1402,7 +1402,7 @@ export default function Admin() {
                                                        });
 
                                                        const laneCount = lanes.length || 1;
-                                                       const rowHeight = laneCount * 56 + 8;
+                                                       const rowHeight = laneCount * 76 + 12;
 
                                                        return (
                                                           <div key={posto} className="flex items-stretch hover:bg-white/[0.01] transition-all rounded-lg">
@@ -1419,14 +1419,14 @@ export default function Admin() {
                                                                    const minutosAgora = new Date().getHours() * 60 + new Date().getMinutes();
                                                                    const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
                                                                    const cor = monitores.find(m => m.nome === slot.monitorNome)?.cor || slot.corEtiqueta || '#3B82F6';
-                                                                   const topPos = slot.laneIndex * 56 + 8;
+                                                                   const topPos = slot.laneIndex * 76 + 8;
 
                                                                    return (
                                                                       <div
                                                                         key={slot.id}
                                                                         onClick={() => setEditandoGradeMonitor(slot)}
                                                                         className={cn(
-                                                                          "absolute h-12 rounded-sm flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e] cursor-pointer hover:border-primary/40",
+                                                                          "absolute h-16 rounded-sm flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e] cursor-pointer hover:border-primary/40",
                                                                           estaAtivo ? "shadow-lg scale-102 z-10" : ""
                                                                         )}
                                                                         style={{
@@ -1440,8 +1440,8 @@ export default function Admin() {
                                                                         }}
                                                                         title={`${slot.horarioInicio}–${slot.horarioFim} | ${slot.monitorNome} | ${slot.funcao}`}
                                                                       >
-                                                                         <span className="text-[9px] font-bold text-white tracking-tight truncate leading-none">{slot.monitorNome}</span>
-                                                                         <span className="text-[7px] font-bold text-white/40 leading-none">{slot.horarioInicio} - {slot.horarioFim}</span>
+                                                                         <span className="text-xs font-bold text-white tracking-tight truncate leading-none">{slot.monitorNome}</span>
+                                                                         <span className="text-[9px] font-bold text-white/40 leading-none">{slot.horarioInicio} - {slot.horarioFim}</span>
                                                                       </div>
                                                                    );
                                                                 })}

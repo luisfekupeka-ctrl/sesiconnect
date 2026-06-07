@@ -411,7 +411,7 @@ export default function Monitores() {
                               </div>
 
                               {/* Barras de postos */}
-                              <div className="flex-1 relative py-4 h-24">
+                              <div className="flex-1 relative py-4 h-32">
                                 {postos.map(slot => {
                                   const minInicio = horaParaMinutos(slot.horarioInicio);
                                   const minFim = horaParaMinutos(slot.horarioFim);
@@ -422,7 +422,7 @@ export default function Monitores() {
                                   return (
                                     <div
                                       key={slot.id}
-                                      className={cn("absolute h-14 rounded-sm flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e]",
+                                      className={cn("absolute h-18 rounded-sm flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e]",
                                         estaAtivo ? "shadow-lg scale-102 z-10" : "")}
                                       style={{
                                         left: `calc(${leftPct}% + 2px)`,
@@ -437,10 +437,10 @@ export default function Monitores() {
                                       title={`${slot.horarioInicio}–${slot.horarioFim} | ${slot.posto} | ${slot.funcao || 'Monitoria'}`}
                                     >
                                       <div className="flex items-center gap-1.5">
-                                        <MapPin size={9} strokeWidth={3} style={{ color: cor }} />
-                                        <span className="text-[9px] font-bold text-white tracking-tight truncate leading-none">{slot.posto}</span>
+                                        <MapPin size={12} strokeWidth={3} style={{ color: cor }} />
+                                        <span className="text-xs font-bold text-white tracking-tight truncate leading-none">{slot.posto}</span>
                                       </div>
-                                      <span className="text-[7px] font-bold text-white/40 leading-none">
+                                      <span className="text-[9px] font-bold text-white/40 leading-none">
                                         {slot.horarioInicio} - {slot.horarioFim}
                                       </span>
                                     </div>
@@ -709,7 +709,7 @@ export default function Monitores() {
                           });
 
                           const laneCount = lanes.length || 1;
-                          const rowHeight = laneCount * 56 + 8; // 56px por raia + padding
+                          const rowHeight = laneCount * 76 + 12; // 76px por raia + padding
 
                           return (
                             <div key={posto} className="flex border-b border-white/[0.02] hover:bg-white/[0.01] transition-all relative z-10">
@@ -729,13 +729,13 @@ export default function Monitores() {
                                   const widthPct = Math.min(100 - leftPct, ((minFim - minInicio) / ESCALA_TOTAL) * 100);
                                   const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
                                   const cor = mapaCorMonitor[slot.monitorNome] || '#3B82F6';
-                                  const topPos = slot.laneIndex * 56 + 8; // 56px de altura por item + margem
+                                  const topPos = slot.laneIndex * 76 + 8; // 76px de altura por item + margem
 
                                   return (
                                     <div
                                       key={slot.id}
                                       className={cn(
-                                        "absolute h-12 rounded-sm flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e]",
+                                        "absolute h-16 rounded-sm flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e]",
                                         estaAtivo ? "shadow-lg scale-102 z-10" : ""
                                       )}
                                       style={{
@@ -749,10 +749,10 @@ export default function Monitores() {
                                       }}
                                       title={`${slot.horarioInicio}–${slot.horarioFim} | ${slot.monitorNome} | ${slot.funcao}`}
                                     >
-                                      <span className="text-[9px] font-bold text-white tracking-tight truncate leading-none">
+                                      <span className="text-xs font-bold text-white tracking-tight truncate leading-none">
                                         {slot.monitorNome}
                                       </span>
-                                      <span className="text-[7px] font-bold text-white/40 leading-none">
+                                      <span className="text-[9px] font-bold text-white/40 leading-none">
                                         {slot.horarioInicio} - {slot.horarioFim}
                                       </span>
                                     </div>
