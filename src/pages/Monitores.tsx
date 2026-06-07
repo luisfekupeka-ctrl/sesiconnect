@@ -356,7 +356,7 @@ export default function Monitores() {
               <div className="bg-[#0a0a0a] rounded-[1.5rem] border border-white/5 overflow-hidden shadow-premium relative">
                 {/* Scroll Wrapper */}
                 <div className="overflow-x-auto scrollbar-premium">
-                  <div className="min-w-[1200px] relative">
+                  <div className="min-w-[1600px] relative">
                     
                     {/* Linhas de Grade Verticais */}
                     <div className="absolute inset-0 pointer-events-none flex z-0">
@@ -422,7 +422,7 @@ export default function Monitores() {
                                   return (
                                     <div
                                       key={slot.id}
-                                      className={cn("absolute h-14 rounded-lg flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e]",
+                                      className={cn("absolute h-14 rounded-sm flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e]",
                                         estaAtivo ? "shadow-lg scale-102 z-10" : "")}
                                       style={{
                                         left: `calc(${leftPct}% + 2px)`,
@@ -614,7 +614,7 @@ export default function Monitores() {
             <div className="bg-[#0a0a0a] rounded-[1.5rem] border border-white/5 overflow-hidden shadow-premium relative">
               {/* Scroll Wrapper */}
               <div className="overflow-x-auto scrollbar-premium">
-                <div className="min-w-[1200px] relative">
+                <div className="min-w-[1600px] relative">
                   
                   {/* Linhas de Grade Verticais */}
                   <div className="absolute inset-0 pointer-events-none flex z-0">
@@ -735,7 +735,7 @@ export default function Monitores() {
                                     <div
                                       key={slot.id}
                                       className={cn(
-                                        "absolute h-12 rounded-lg flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e]",
+                                        "absolute h-12 rounded-sm flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e]",
                                         estaAtivo ? "shadow-lg scale-102 z-10" : ""
                                       )}
                                       style={{

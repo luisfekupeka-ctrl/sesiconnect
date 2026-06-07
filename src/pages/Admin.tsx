@@ -1183,7 +1183,7 @@ export default function Admin() {
                                <div className="hidden md:block">
                                  {/* Scroll Wrapper */}
                                  <div className="overflow-x-auto scrollbar-premium">
-                                   <div className="min-w-[1200px] relative pb-4">
+                                   <div className="min-w-[1600px] relative pb-4">
                                      
                                      {/* Linhas de Grade Verticais */}
                                      <div className="absolute inset-0 pointer-events-none flex z-0">
@@ -1230,7 +1230,7 @@ export default function Admin() {
                                                          <div 
                                                            key={p.id} 
                                                            className={cn(
-                                                             "absolute h-12 rounded-lg flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e]",
+                                                             "absolute h-12 rounded-sm flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e]",
                                                              estaAtivo ? "shadow-lg scale-102 z-10" : ""
                                                            )}
                                                            style={{ 
