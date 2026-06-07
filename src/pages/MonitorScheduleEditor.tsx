@@ -10,6 +10,7 @@ import { salvarGradeMonitores } from '../services/dataService';
 import { cn } from '../lib/utils';
 import { Monitor, GradeMonitor } from '../types';
 import { useNavigate } from 'react-router-dom';
+import SeletorLocalPosto from '../components/SeletorLocalPosto';
 
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
@@ -256,10 +257,15 @@ export default function MonitorScheduleEditor() {
                           <div className="relative">
                             <span className="text-[8px] font-black text-white/20 uppercase tracking-widest block mb-1 ml-1 md:hidden">Local de Trabalho</span>
                             <div className="relative">
-                              <MapPin size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#fbbf24]" />
-                              <input type="text" value={linha.posto} placeholder="Ex: Pátio Principal..."
-                                onChange={e => atualizarLinha(linha.id, 'posto', e.target.value)}
-                                className="w-full bg-black/40 border border-white/5 rounded-2xl py-3.5 pl-11 pr-5 text-xs font-bold outline-none placeholder:opacity-20 focus:border-primary/30 transition-all uppercase text-white" />
+                              <MapPin size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#fbbf24] pointer-events-none" />
+                              <SeletorLocalPosto 
+                                value={linha.posto}
+                                onChange={v => atualizarLinha(linha.id, 'posto', v)}
+                                className="w-full bg-[#1a1a1a] border border-white/5 rounded-2xl py-3.5 pl-11 pr-8 text-xs font-bold outline-none focus:border-primary/30 transition-all uppercase text-white appearance-none cursor-pointer"
+                              />
+                              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/30 text-[9px]">
+                                ▼
+                              </div>
                             </div>
                           </div>
 

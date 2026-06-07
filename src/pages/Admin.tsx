@@ -17,6 +17,7 @@ import SeletorAlunos from '../components/SeletorAlunos';
 import { RegistroOcorrencia, Aluno, ProfessorCMS, LocalCMS, Monitor, GradeMonitor, LanguageLabRecord, AtividadeAfter, EntradaGradeSala, PeriodoConfig } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import SeletorLocalPosto from '../components/SeletorLocalPosto';
 import {
   salvarAluno, excluirAluno, excluirTodosAlunos,
   salvarMonitor, excluirMonitor, excluirTodosMonitores,
@@ -1599,7 +1600,14 @@ export default function Admin() {
                     setEditandoGradeMonitor({ ...editandoGradeMonitor, monitorNome: v, corEtiqueta: mCor });
                   }} 
                 />
-                <CampoTexto label="Posto / Local" value={editandoGradeMonitor.posto} onChange={v => setEditandoGradeMonitor({ ...editandoGradeMonitor, posto: v })} />
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black text-white/40 uppercase tracking-widest block ml-2">Posto / Local</label>
+                  <SeletorLocalPosto 
+                    value={editandoGradeMonitor.posto} 
+                    onChange={v => setEditandoGradeMonitor({ ...editandoGradeMonitor, posto: v })} 
+                    className="campo-input cursor-pointer"
+                  />
+                </div>
                 <CampoTexto label="Função" value={editandoGradeMonitor.funcao || 'Monitoria Geral'} onChange={v => setEditandoGradeMonitor({ ...editandoGradeMonitor, funcao: v })} />
                 <CampoTexto label="Instruções / Notas (Opcional)" value={editandoGradeMonitor.instrucoes || ''} onChange={v => setEditandoGradeMonitor({ ...editandoGradeMonitor, instrucoes: v })} />
                 
@@ -1611,7 +1619,7 @@ export default function Admin() {
                   <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2 block">Cor da Etiqueta</label>
                   <div className="flex gap-2">
                     {['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'].map(c => (
-                      <button key={c} onClick={() => setEditandoGradeMonitor({ ...editandoGradeMonitor, corEtiqueta: c })}
+                      <button key={c} type="button" onClick={() => setEditandoGradeMonitor({ ...editandoGradeMonitor, corEtiqueta: c })}
                         className={cn("w-6 h-6 rounded-full border-2", editandoGradeMonitor.corEtiqueta === c ? "border-on-surface" : "border-transparent")}
                         style={{ backgroundColor: c }} />
                     ))}
@@ -2516,7 +2524,7 @@ function CampoSelect({ label, value, options, onChange }: { label: string; value
     <div className="space-y-1.5">
       <label className="text-xs font-black text-white/40 uppercase tracking-widest block ml-2">{label}</label>
       <select value={value || ''} onChange={e => onChange(e.target.value)} className="campo-input">
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
+        {options.map(o => <option key={o} value={o}>{o || 'SELECIONE...'}</option>)}
       </select>
     </div>
   );
