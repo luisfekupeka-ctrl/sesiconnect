@@ -1385,67 +1385,87 @@ export default function Admin() {
                                                  <span className="text-[8px] font-bold text-white/20">Clique para alocar</span>
                                                </div>
                                              ) : (
-                                               postos.map(p => {
-                                                  const parseH = (h: string) => { const [hh, mm] = h.split(':').map(Number); return hh * 60 + mm; };
-                                                  const minInicio = parseH(p.horarioInicio);
-                                                  const minFim = parseH(p.horarioFim);
-                                                  const minutosAgora = new Date().getHours() * 60 + new Date().getMinutes();
-                                                  const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
-                                                  const mObj = monitores.find(m => m.nome === p.monitorNome);
-                                                  const cor = mObj?.cor || p.corEtiqueta || '#3B82F6';
+                                               (() => {
+                                                 const slotsByTime: { [key: string]: typeof postos } = {};
+                                                 postos.forEach(slot => {
+                                                   const key = `${slot.horarioInicio} - ${slot.horarioFim}`;
+                                                   if (!slotsByTime[key]) slotsByTime[key] = [];
+                                                   slotsByTime[key].push(slot);
+                                                 });
+                                                 const sortedKeys = Object.keys(slotsByTime).sort((a, b) => {
+                                                   const startA = a.split(' - ')[0];
+                                                   const startB = b.split(' - ')[0];
+                                                   return startA.localeCompare(startB);
+                                                 });
+                                                 return sortedKeys.map(timeKey => {
+                                                   const slots = slotsByTime[timeKey];
+                                                   return (
+                                                     <div key={timeKey} className="flex-shrink-0 w-64 flex flex-col gap-3 snap-start">
+                                                       {slots.map(p => {
+                                                         const parseH = (h: string) => { const [hh, mm] = h.split(':').map(Number); return hh * 60 + mm; };
+                                                         const minInicio = parseH(p.horarioInicio);
+                                                         const minFim = parseH(p.horarioFim);
+                                                         const minutosAgora = new Date().getHours() * 60 + new Date().getMinutes();
+                                                         const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
+                                                         const mObj = monitores.find(m => m.nome === p.monitorNome);
+                                                         const cor = mObj?.cor || p.corEtiqueta || '#3B82F6';
 
-                                                  return (
-                                                    <div 
-                                                      key={p.id} 
-                                                      onClick={() => setEditandoGradeMonitor(p)}
-                                                      className={cn(
-                                                        "flex-shrink-0 w-64 bg-[#0d0d0d] rounded-2xl p-4 border transition-all flex flex-col justify-between min-h-[110px] snap-start hover:bg-[#121212] cursor-pointer hover:border-primary/40",
-                                                        estaAtivo ? "border-[#fbbf24]/50 shadow-[0_0_12px_rgba(251,191,36,0.15)] bg-[#141414]" : "border-white/5"
-                                                      )}
-                                                      style={{ borderLeft: `5px solid ${cor}` }}
-                                                    >
-                                                      <div className="flex flex-col gap-2">
-                                                        {/* Horário */}
-                                                        <div className="flex items-center justify-between gap-2">
-                                                          <span className="text-[10px] font-black text-white/40 tracking-wider">
-                                                            🕒 {p.horarioInicio} - {p.horarioFim}
-                                                          </span>
-                                                          {estaAtivo && (
-                                                            <span className="px-2 py-0.5 bg-[#fbbf24]/10 text-[#fbbf24] border border-[#fbbf24]/20 rounded-md text-[8px] font-black uppercase tracking-wider animate-pulse">
-                                                              Agora
-                                                            </span>
-                                                          )}
-                                                        </div>
+                                                         return (
+                                                           <div 
+                                                             key={p.id} 
+                                                             onClick={() => setEditandoGradeMonitor(p)}
+                                                             className={cn(
+                                                               "w-full bg-[#0d0d0d] rounded-2xl p-4 border transition-all flex flex-col justify-between min-h-[110px] hover:bg-[#121212] cursor-pointer hover:border-primary/40",
+                                                               estaAtivo ? "border-[#fbbf24]/50 shadow-[0_0_12px_rgba(251,191,36,0.15)] bg-[#141414]" : "border-white/5"
+                                                             )}
+                                                             style={{ borderLeft: `5px solid ${cor}` }}
+                                                           >
+                                                             <div className="flex flex-col gap-2">
+                                                               {/* Horário */}
+                                                               <div className="flex items-center justify-between gap-2">
+                                                                 <span className="text-[10px] font-black text-white/40 tracking-wider">
+                                                                   🕒 {p.horarioInicio} - {p.horarioFim}
+                                                                 </span>
+                                                                 {estaAtivo && (
+                                                                   <span className="px-2 py-0.5 bg-[#fbbf24]/10 text-[#fbbf24] border border-[#fbbf24]/20 rounded-md text-[8px] font-black uppercase tracking-wider animate-pulse">
+                                                                     Agora
+                                                                   </span>
+                                                                 )}
+                                                               </div>
 
-                                                        {/* Monitor */}
-                                                        <h5 className="text-xs font-black text-white italic tracking-tight truncate leading-none mt-0.5">
-                                                          👤 {p.monitorNome}
-                                                        </h5>
+                                                               {/* Monitor */}
+                                                               <h5 className="text-xs font-black text-white italic tracking-tight truncate leading-none mt-0.5">
+                                                                 👤 {p.monitorNome}
+                                                               </h5>
 
-                                                        {/* Posto específico se diferente do macro */}
-                                                        {p.posto && p.posto !== macro && (
-                                                          <p className="text-[9px] text-[#fbbf24] font-bold uppercase tracking-wider mt-0.5">
-                                                            📍 {p.posto}
-                                                          </p>
-                                                        )}
+                                                               {/* Posto específico se diferente do macro */}
+                                                               {p.posto && p.posto !== macro && (
+                                                                 <p className="text-[9px] text-[#fbbf24] font-bold uppercase tracking-wider mt-0.5">
+                                                                   📍 {p.posto}
+                                                                 </p>
+                                                               )}
 
-                                                        {/* Função */}
-                                                        {p.funcao && p.funcao !== 'Monitoria Geral' && (
-                                                          <p className="text-[9px] text-white/50 font-semibold italic truncate mt-0.5">
-                                                            ⚙️ {p.funcao}
-                                                          </p>
-                                                        )}
+                                                               {/* Função */}
+                                                               {p.funcao && p.funcao !== 'Monitoria Geral' && (
+                                                                 <p className="text-[9px] text-white/50 font-semibold italic truncate mt-0.5">
+                                                                   ⚙️ {p.funcao}
+                                                                 </p>
+                                                               )}
 
-                                                        {/* Instruções se houver */}
-                                                        {p.instrucoes && (
-                                                          <p className="text-[8px] text-white/30 italic mt-1 bg-white/[0.01] p-1.5 rounded-lg border border-white/[0.02] line-clamp-2 leading-relaxed">
-                                                            {p.instrucoes}
-                                                          </p>
-                                                        )}
-                                                      </div>
-                                                    </div>
-                                                  );
-                                               })
+                                                               {/* Instruções se houver */}
+                                                               {p.instrucoes && (
+                                                                 <p className="text-[8px] text-white/30 italic mt-1 bg-white/[0.01] p-1.5 rounded-lg border border-white/[0.02] line-clamp-2 leading-relaxed">
+                                                                   {p.instrucoes}
+                                                                 </p>
+                                                               )}
+                                                             </div>
+                                                           </div>
+                                                         );
+                                                       })}
+                                                     </div>
+                                                   );
+                                                 });
+                                               })()
                                              )}
                                            </div>
                                          </div>

@@ -469,64 +469,84 @@ export default function Monitores() {
                         <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Sem Monitor</span>
                       </div>
                     ) : (
-                      postosFiltrados.map(slot => {
-                        const minInicio = horaParaMinutos(slot.horarioInicio);
-                        const minFim = horaParaMinutos(slot.horarioFim);
-                        const minutosAgora = new Date().getHours() * 60 + new Date().getMinutes();
-                        const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
-                        const cor = mapaCorMonitor[slot.monitorNome] || '#3B82F6';
+                      (() => {
+                        const slotsByTime: { [key: string]: typeof postosFiltrados } = {};
+                        postosFiltrados.forEach(slot => {
+                          const key = `${slot.horarioInicio} - ${slot.horarioFim}`;
+                          if (!slotsByTime[key]) slotsByTime[key] = [];
+                          slotsByTime[key].push(slot);
+                        });
+                        const sortedKeys = Object.keys(slotsByTime).sort((a, b) => {
+                          const startA = a.split(' - ')[0];
+                          const startB = b.split(' - ')[0];
+                          return startA.localeCompare(startB);
+                        });
+                        return sortedKeys.map(timeKey => {
+                          const slots = slotsByTime[timeKey];
+                          return (
+                            <div key={timeKey} className="flex-shrink-0 w-64 flex flex-col gap-3 snap-start">
+                              {slots.map(slot => {
+                                const minInicio = horaParaMinutos(slot.horarioInicio);
+                                const minFim = horaParaMinutos(slot.horarioFim);
+                                const minutosAgora = new Date().getHours() * 60 + new Date().getMinutes();
+                                const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
+                                const cor = mapaCorMonitor[slot.monitorNome] || '#3B82F6';
 
-                        return (
-                          <div
-                            key={slot.id}
-                            className={cn(
-                              "flex-shrink-0 w-64 bg-[#0d0d0d] rounded-2xl p-4 border transition-all flex flex-col justify-between min-h-[110px] snap-start hover:bg-[#121212]",
-                              estaAtivo ? "border-[#fbbf24]/50 shadow-[0_0_12px_rgba(251,191,36,0.15)] bg-[#141414]" : "border-white/5"
-                            )}
-                            style={{ borderLeft: `5px solid ${cor}` }}
-                          >
-                            <div className="flex flex-col gap-2">
-                              {/* Horário */}
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-[10px] font-black text-white/40 tracking-wider">
-                                  🕒 {slot.horarioInicio} - {slot.horarioFim}
-                                </span>
-                                {estaAtivo && (
-                                  <span className="px-2 py-0.5 bg-[#fbbf24]/10 text-[#fbbf24] border border-[#fbbf24]/20 rounded-md text-[8px] font-black uppercase tracking-wider animate-pulse">
-                                    Agora
-                                  </span>
-                                )}
-                              </div>
+                                return (
+                                  <div
+                                    key={slot.id}
+                                    className={cn(
+                                      "w-full bg-[#0d0d0d] rounded-2xl p-4 border transition-all flex flex-col justify-between min-h-[110px] hover:bg-[#121212]",
+                                      estaAtivo ? "border-[#fbbf24]/50 shadow-[0_0_12px_rgba(251,191,36,0.15)] bg-[#141414]" : "border-white/5"
+                                    )}
+                                    style={{ borderLeft: `5px solid ${cor}` }}
+                                  >
+                                    <div className="flex flex-col gap-2">
+                                      {/* Horário */}
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="text-[10px] font-black text-white/40 tracking-wider">
+                                          🕒 {slot.horarioInicio} - {slot.horarioFim}
+                                        </span>
+                                        {estaAtivo && (
+                                          <span className="px-2 py-0.5 bg-[#fbbf24]/10 text-[#fbbf24] border border-[#fbbf24]/20 rounded-md text-[8px] font-black uppercase tracking-wider animate-pulse">
+                                            Agora
+                                          </span>
+                                        )}
+                                      </div>
 
-                              {/* Monitor */}
-                              <h5 className="text-xs font-black text-white italic tracking-tight truncate leading-none mt-0.5">
-                                👤 {slot.monitorNome}
-                              </h5>
+                                      {/* Monitor */}
+                                      <h5 className="text-xs font-black text-white italic tracking-tight truncate leading-none mt-0.5">
+                                        👤 {slot.monitorNome}
+                                      </h5>
 
-                              {/* Posto específico se diferente do macro */}
-                              {slot.posto && slot.posto !== macro && (
-                                <p className="text-[9px] text-[#fbbf24] font-bold uppercase tracking-wider mt-0.5">
-                                  📍 {slot.posto}
-                                </p>
-                              )}
+                                      {/* Posto específico se diferente do macro */}
+                                      {slot.posto && slot.posto !== macro && (
+                                        <p className="text-[9px] text-[#fbbf24] font-bold uppercase tracking-wider mt-0.5">
+                                          📍 {slot.posto}
+                                        </p>
+                                      )}
 
-                              {/* Função */}
-                              {slot.funcao && slot.funcao !== 'Monitoria Geral' && (
-                                <p className="text-[9px] text-white/50 font-semibold italic truncate mt-0.5">
-                                  ⚙️ {slot.funcao}
-                                </p>
-                              )}
+                                      {/* Função */}
+                                      {slot.funcao && slot.funcao !== 'Monitoria Geral' && (
+                                        <p className="text-[9px] text-white/50 font-semibold italic truncate mt-0.5">
+                                          ⚙️ {slot.funcao}
+                                        </p>
+                                      )}
 
-                              {/* Instruções se houver */}
-                              {slot.instrucoes && (
-                                <p className="text-[8px] text-white/30 italic mt-1 bg-white/[0.01] p-1.5 rounded-lg border border-white/[0.02] line-clamp-2 leading-relaxed">
-                                  {slot.instrucoes}
-                                </p>
-                              )}
+                                      {/* Instruções se houver */}
+                                      {slot.instrucoes && (
+                                        <p className="text-[8px] text-white/30 italic mt-1 bg-white/[0.01] p-1.5 rounded-lg border border-white/[0.02] line-clamp-2 leading-relaxed">
+                                          {slot.instrucoes}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
-                          </div>
-                        );
-                      })
+                          );
+                        });
+                      })()
                     )}
                   </div>
                 </div>
