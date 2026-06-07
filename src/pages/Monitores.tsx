@@ -353,89 +353,107 @@ export default function Monitores() {
             {escalaDoDia.length === 0 ? (
               <div className="py-16 text-center opacity-20 italic font-black text-sm border-2 border-dashed border-white/5 rounded-2xl">Nenhum posto agendado.</div>
             ) : (
-              <div className="bg-[#0a0a0a] rounded-[1.5rem] border border-white/5 overflow-hidden shadow-premium">
-                {/* Timeline header */}
-                <div className="flex border-b border-white/5">
-                  <div className="w-40 shrink-0 p-4 border-r border-white/5">
-                    <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Monitor</p>
-                  </div>
-                  <div className="flex-1 relative">
-                    <div className="flex">
-                      {HORAS_ESCALA.map(hora => (
-                        <div key={hora} className="flex-1 text-center py-4 text-[8px] font-mono font-black text-white/20 uppercase tracking-widest border-l border-white/5">{hora}</div>
-                      ))}
-                    </div>
-                    {/* Linha do horário atual */}
-                    {minutosAgora >= ESCALA_INICIO && minutosAgora <= ESCALA_FIM && (
-                      <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20"
-                        style={{ left: `${((minutosAgora - ESCALA_INICIO) / ESCALA_TOTAL) * 100}%` }}>
-                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-red-500 shadow-lg shadow-red-500/30" />
+              <div className="bg-[#0a0a0a] rounded-[1.5rem] border border-white/5 overflow-hidden shadow-premium relative">
+                {/* Scroll Wrapper */}
+                <div className="overflow-x-auto scrollbar-premium">
+                  <div className="min-w-[1200px] relative">
+                    
+                    {/* Linhas de Grade Verticais */}
+                    <div className="absolute inset-0 pointer-events-none flex z-0">
+                      <div className="w-40 shrink-0 border-r border-white/10" />
+                      <div className="flex-1 flex h-full">
+                        {HORAS_ESCALA.map(hora => (
+                          <div key={hora} className="flex-1 border-l border-white/10 h-full border-dashed" />
+                        ))}
                       </div>
-                    )}
+                    </div>
+
+                    {/* Cabeçalho de Horários */}
+                    <div className="flex border-b border-white/10 bg-white/[0.02] relative z-10">
+                      <div className="w-40 shrink-0 p-4 border-r border-white/10">
+                        <p className="text-[10px] font-black text-white/50 uppercase tracking-widest">Monitor</p>
+                      </div>
+                      <div className="flex-1 relative">
+                        <div className="flex">
+                          {HORAS_ESCALA.map(hora => (
+                            <div key={hora} className="flex-1 text-center py-4 text-[10px] font-mono font-bold text-white/70 uppercase tracking-widest border-l border-white/10">{hora}</div>
+                          ))}
+                        </div>
+                        {/* Linha do horário atual */}
+                        {minutosAgora >= ESCALA_INICIO && minutosAgora <= ESCALA_FIM && (
+                          <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20"
+                            style={{ left: `${((minutosAgora - ESCALA_INICIO) / ESCALA_TOTAL) * 100}%` }}>
+                            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-red-500 shadow-lg shadow-red-500/30" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Corpo da Escala por Monitor */}
+                    <div className="relative z-10">
+                      {(() => {
+                        const monitoresNaEscala = Array.from(new Set(escalaDoDia.map(g => g.monitorNome))).sort() as string[];
+                        return monitoresNaEscala.map(nome => {
+                          const cor = mapaCorMonitor[nome] || '#3B82F6';
+                          const postos = escalaDoDia.filter(g => g.monitorNome === nome);
+
+                          return (
+                            <div key={nome} className="flex border-b border-white/[0.03] hover:bg-white/[0.02] transition-all">
+                              {/* Nome */}
+                              <div className="w-40 shrink-0 p-3 border-r border-white/10 flex items-center gap-3 bg-[#0a0a0a]/50">
+                                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0"
+                                  style={{ backgroundColor: `${cor}20`, color: cor }}>
+                                  {nome.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-[10px] font-black text-white truncate">{nome}</p>
+                                </div>
+                              </div>
+
+                              {/* Barras de postos */}
+                              <div className="flex-1 relative py-4 h-24">
+                                {postos.map(slot => {
+                                  const minInicio = horaParaMinutos(slot.horarioInicio);
+                                  const minFim = horaParaMinutos(slot.horarioFim);
+                                  const leftPct = Math.max(0, ((minInicio - ESCALA_INICIO) / ESCALA_TOTAL) * 100);
+                                  const widthPct = Math.min(100 - leftPct, ((minFim - minInicio) / ESCALA_TOTAL) * 100);
+                                  const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
+
+                                  return (
+                                    <div
+                                      key={slot.id}
+                                      className={cn("absolute h-14 rounded-lg flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e]",
+                                        estaAtivo ? "shadow-lg scale-102 z-10" : "")}
+                                      style={{
+                                        left: `calc(${leftPct}% + 2px)`,
+                                        width: `calc(${widthPct}% - 4px)`,
+                                        backgroundColor: estaAtivo ? '#1e1e1e' : '#141414',
+                                        borderLeft: `4px solid ${cor}`,
+                                        color: '#fff',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        boxShadow: estaAtivo ? `0 0 12px ${cor}40` : 'none',
+                                      }}
+                                      title={`${slot.horarioInicio}–${slot.horarioFim} | ${slot.posto} | ${slot.funcao || 'Monitoria'}`}
+                                    >
+                                      <div className="flex items-center gap-1.5">
+                                        <MapPin size={9} strokeWidth={3} style={{ color: cor }} />
+                                        <span className="text-[9px] font-bold text-white tracking-tight truncate leading-none">{slot.posto}</span>
+                                      </div>
+                                      <span className="text-[7px] font-bold text-white/40 leading-none">
+                                        {slot.horarioInicio} - {slot.horarioFim}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
                   </div>
                 </div>
-
-                {/* Agrupar por monitor */}
-                {(() => {
-                  const monitoresNaEscala = Array.from(new Set(escalaDoDia.map(g => g.monitorNome))).sort() as string[];
-                  return monitoresNaEscala.map(nome => {
-                    const cor = mapaCorMonitor[nome] || '#3B82F6';
-                    const postos = escalaDoDia.filter(g => g.monitorNome === nome);
-
-                    return (
-                      <div key={nome} className="flex border-b border-white/[0.03] hover:bg-white/[0.02] transition-all">
-                        {/* Nome */}
-                        <div className="w-40 shrink-0 p-3 border-r border-white/5 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0"
-                            style={{ backgroundColor: `${cor}20`, color: cor }}>
-                            {nome.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-black text-white truncate">{nome}</p>
-                          </div>
-                        </div>
-
-                        {/* Barras de postos */}
-                        <div className="flex-1 relative py-4 h-24">
-                          {postos.map(slot => {
-                            const minInicio = horaParaMinutos(slot.horarioInicio);
-                            const minFim = horaParaMinutos(slot.horarioFim);
-                            const leftPct = Math.max(0, ((minInicio - ESCALA_INICIO) / ESCALA_TOTAL) * 100);
-                            const widthPct = Math.min(100 - leftPct, ((minFim - minInicio) / ESCALA_TOTAL) * 100);
-                            const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
-
-                            return (
-                              <div
-                                key={slot.id}
-                                className={cn("absolute h-16 rounded-xl flex flex-col justify-center px-4 gap-1 overflow-hidden transition-all",
-                                  estaAtivo ? "shadow-lg scale-105 z-10" : "opacity-90")}
-                                style={{
-                                  left: `${leftPct}%`,
-                                  width: `${widthPct}%`,
-                                  backgroundColor: estaAtivo ? cor : `${cor}25`,
-                                  color: estaAtivo ? '#000' : '#fff',
-                                  top: '50%',
-                                  transform: 'translateY(-50%)',
-                                  boxShadow: estaAtivo ? `0 0 20px ${cor}60` : 'none',
-                                  border: `1px solid ${cor}40`
-                                }}
-                                title={`${slot.horarioInicio}–${slot.horarioFim} | ${slot.posto} | ${slot.funcao || 'Monitoria'}`}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <MapPin size={10} strokeWidth={3} className={estaAtivo ? 'text-black' : 'text-primary'} />
-                                  <span className="text-[10px] font-black uppercase tracking-tight truncate">{slot.posto}</span>
-                                </div>
-                                <span className={cn("text-[8px] font-black opacity-60", estaAtivo ? 'text-black' : 'text-white/60')}>
-                                  {slot.horarioInicio} - {slot.horarioFim}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  });
-                })()}
               </div>
             )}
           </section>
@@ -594,155 +612,161 @@ export default function Monitores() {
           ) : (
             /* ================ RENDER DA LINHA DO TEMPO POR SETOR ================ */
             <div className="bg-[#0a0a0a] rounded-[1.5rem] border border-white/5 overflow-hidden shadow-premium relative">
-              {/* Linhas de Grade Verticais */}
-              <div className="absolute inset-0 pointer-events-none flex z-0">
-                <div className="w-48 shrink-0 border-r border-white/10" />
-                <div className="flex-1 flex h-full">
-                  {HORAS_ESCALA.map(hora => (
-                    <div key={hora} className="flex-1 border-l border-white/10 h-full border-dashed" />
-                  ))}
-                </div>
-              </div>
+              {/* Scroll Wrapper */}
+              <div className="overflow-x-auto scrollbar-premium">
+                <div className="min-w-[1200px] relative">
+                  
+                  {/* Linhas de Grade Verticais */}
+                  <div className="absolute inset-0 pointer-events-none flex z-0">
+                    <div className="w-48 shrink-0 border-r border-white/10" />
+                    <div className="flex-1 flex h-full">
+                      {HORAS_ESCALA.map(hora => (
+                        <div key={hora} className="flex-1 border-l border-white/10 h-full border-dashed" />
+                      ))}
+                    </div>
+                  </div>
 
-              {/* Cabeçalho de Horários */}
-              <div className="flex border-b border-white/10 bg-white/[0.02] relative z-10">
-                <div className="w-48 shrink-0 p-4 border-r border-white/10">
-                  <p className="text-[10px] font-black text-white/50 uppercase tracking-widest">Setor / Posto</p>
-                </div>
-                <div className="flex-1 relative">
-                  <div className="flex">
-                    {HORAS_ESCALA.map(hora => (
-                      <div key={hora} className="flex-1 text-center py-4 text-[10px] font-mono font-bold text-white/70 uppercase tracking-widest border-l border-white/10">
-                        {hora}
+                  {/* Cabeçalho de Horários */}
+                  <div className="flex border-b border-white/10 bg-white/[0.02] relative z-10">
+                    <div className="w-48 shrink-0 p-4 border-r border-white/10">
+                      <p className="text-[10px] font-black text-white/50 uppercase tracking-widest">Setor / Posto</p>
+                    </div>
+                    <div className="flex-1 relative">
+                      <div className="flex">
+                        {HORAS_ESCALA.map(hora => (
+                          <div key={hora} className="flex-1 text-center py-4 text-[10px] font-mono font-bold text-white/70 uppercase tracking-widest border-l border-white/10">
+                            {hora}
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                  {/* Linha do horário atual */}
-                  {minutosAgora >= ESCALA_INICIO && minutosAgora <= ESCALA_FIM && (
-                    <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20"
-                      style={{ left: `${((minutosAgora - ESCALA_INICIO) / ESCALA_TOTAL) * 100}%` }}>
-                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-red-500 shadow-lg shadow-red-500/30" />
+                      {/* Linha do horário atual */}
+                      {minutosAgora >= ESCALA_INICIO && minutosAgora <= ESCALA_FIM && (
+                        <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20"
+                          style={{ left: `${((minutosAgora - ESCALA_INICIO) / ESCALA_TOTAL) * 100}%` }}>
+                          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-red-500 shadow-lg shadow-red-500/30" />
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
+
+                  {/* Agrupamento por Macro Setor */}
+                  {MACRO_SETORES.map(macro => {
+                    // Pegar todos os postos específicos ativos neste macro setor no dia
+                    const postosNoMacro = Array.from(new Set(
+                      (gradeMonitores || [])
+                        .filter(g => g.diaSemana === diaFiltro && obterMacroSetor(g.posto) === macro)
+                        .map(g => g.posto.trim())
+                    )).sort();
+
+                    if (postosNoMacro.length === 0) return null;
+
+                    return (
+                      <div key={macro} className="border-b border-white/5">
+                        {/* Cabeçalho do Grupo */}
+                        <div className="bg-white/[0.02] px-4 py-2 flex items-center justify-between border-b border-white/[0.03]">
+                          <span className="text-[10px] font-black text-[#fbbf24] italic tracking-tight">{macro}</span>
+                        </div>
+
+                        {/* Linhas de postos específicos */}
+                        {postosNoMacro.map(posto => {
+                          const alocacoesNoPosto = (gradeMonitores || []).filter(g => g.diaSemana === diaFiltro && g.posto.trim() === posto);
+
+                          // Algoritmo de Distribuição em Raias (Lanes) para evitar sobreposição
+                          const sortedAlocs = [...alocacoesNoPosto].sort((a, b) => {
+                            return horaParaMinutos(a.horarioInicio) - horaParaMinutos(b.horarioInicio);
+                          });
+
+                          const lanes: any[][] = [];
+                          const alocWithLane = sortedAlocs.map(aloc => {
+                            const start = horaParaMinutos(aloc.horarioInicio);
+                            const end = horaParaMinutos(aloc.horarioFim);
+                            
+                            let laneIndex = 0;
+                            let placed = false;
+                            
+                            for (let i = 0; i < lanes.length; i++) {
+                              const lane = lanes[i];
+                              const hasOverlap = lane.some(item => {
+                                const itemStart = horaParaMinutos(item.horarioInicio);
+                                const itemEnd = horaParaMinutos(item.horarioFim);
+                                return (start < itemEnd && end > itemStart);
+                              });
+                              
+                              if (!hasOverlap) {
+                                lane.push(aloc);
+                                laneIndex = i;
+                                placed = true;
+                                break;
+                              }
+                            }
+                            
+                            if (!placed) {
+                              lanes.push([aloc]);
+                              laneIndex = lanes.length - 1;
+                            }
+                            
+                            return { ...aloc, laneIndex };
+                          });
+
+                          const laneCount = lanes.length || 1;
+                          const rowHeight = laneCount * 56 + 8; // 56px por raia + padding
+
+                          return (
+                            <div key={posto} className="flex border-b border-white/[0.02] hover:bg-white/[0.01] transition-all relative z-10">
+                              {/* Nome do Posto */}
+                              <div className="w-48 shrink-0 p-3 border-r border-white/10 flex items-center min-w-0 bg-[#0a0a0a]/40">
+                                <p className="text-[10px] font-black text-white truncate" title={posto}>
+                                  {posto}
+                                </p>
+                              </div>
+
+                              {/* Barras de tempo dos Monitores */}
+                              <div className="flex-1 relative py-2" style={{ height: `${rowHeight}px` }}>
+                                {alocWithLane.map(slot => {
+                                  const minInicio = horaParaMinutos(slot.horarioInicio);
+                                  const minFim = horaParaMinutos(slot.horarioFim);
+                                  const leftPct = Math.max(0, ((minInicio - ESCALA_INICIO) / ESCALA_TOTAL) * 100);
+                                  const widthPct = Math.min(100 - leftPct, ((minFim - minInicio) / ESCALA_TOTAL) * 100);
+                                  const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
+                                  const cor = mapaCorMonitor[slot.monitorNome] || '#3B82F6';
+                                  const topPos = slot.laneIndex * 56 + 8; // 56px de altura por item + margem
+
+                                  return (
+                                    <div
+                                      key={slot.id}
+                                      className={cn(
+                                        "absolute h-12 rounded-lg flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e]",
+                                        estaAtivo ? "shadow-lg scale-102 z-10" : ""
+                                      )}
+                                      style={{
+                                        left: `calc(${leftPct}% + 2px)`,
+                                        width: `calc(${widthPct}% - 4px)`,
+                                        backgroundColor: estaAtivo ? '#1e1e1e' : '#141414',
+                                        borderLeft: `4px solid ${cor}`,
+                                        color: '#fff',
+                                        top: `${topPos}px`,
+                                        boxShadow: estaAtivo ? `0 0 12px ${cor}40` : 'none',
+                                      }}
+                                      title={`${slot.horarioInicio}–${slot.horarioFim} | ${slot.monitorNome} | ${slot.funcao}`}
+                                    >
+                                      <span className="text-[9px] font-bold text-white tracking-tight truncate leading-none">
+                                        {slot.monitorNome}
+                                      </span>
+                                      <span className="text-[7px] font-bold text-white/40 leading-none">
+                                        {slot.horarioInicio} - {slot.horarioFim}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-
-              {/* Agrupamento por Macro Setor */}
-              {MACRO_SETORES.map(macro => {
-                // Pegar todos os postos específicos ativos neste macro setor no dia
-                const postosNoMacro = Array.from(new Set(
-                  (gradeMonitores || [])
-                    .filter(g => g.diaSemana === diaFiltro && obterMacroSetor(g.posto) === macro)
-                    .map(g => g.posto.trim())
-                )).sort();
-
-                if (postosNoMacro.length === 0) return null;
-
-                return (
-                  <div key={macro} className="border-b border-white/5">
-                    {/* Cabeçalho do Grupo */}
-                    <div className="bg-white/[0.02] px-4 py-2 flex items-center justify-between border-b border-white/[0.03]">
-                      <span className="text-[10px] font-black text-[#fbbf24] italic tracking-tight">{macro}</span>
-                    </div>
-
-                    {/* Linhas de postos específicos */}
-                    {postosNoMacro.map(posto => {
-                      const alocacoesNoPosto = (gradeMonitores || []).filter(g => g.diaSemana === diaFiltro && g.posto.trim() === posto);
-
-                      // Algoritmo de Distribuição em Raias (Lanes) para evitar sobreposição
-                      const sortedAlocs = [...alocacoesNoPosto].sort((a, b) => {
-                        return horaParaMinutos(a.horarioInicio) - horaParaMinutos(b.horarioInicio);
-                      });
-
-                      const lanes: any[][] = [];
-                      const alocWithLane = sortedAlocs.map(aloc => {
-                        const start = horaParaMinutos(aloc.horarioInicio);
-                        const end = horaParaMinutos(aloc.horarioFim);
-                        
-                        let laneIndex = 0;
-                        let placed = false;
-                        
-                        for (let i = 0; i < lanes.length; i++) {
-                          const lane = lanes[i];
-                          const hasOverlap = lane.some(item => {
-                            const itemStart = horaParaMinutos(item.horarioInicio);
-                            const itemEnd = horaParaMinutos(item.horarioFim);
-                            return (start < itemEnd && end > itemStart);
-                          });
-                          
-                          if (!hasOverlap) {
-                            lane.push(aloc);
-                            laneIndex = i;
-                            placed = true;
-                            break;
-                          }
-                        }
-                        
-                        if (!placed) {
-                          lanes.push([aloc]);
-                          laneIndex = lanes.length - 1;
-                        }
-                        
-                        return { ...aloc, laneIndex };
-                      });
-
-                      const laneCount = lanes.length || 1;
-                      const rowHeight = laneCount * 56 + 12; // 56px por raia + padding
-
-                      return (
-                        <div key={posto} className="flex border-b border-white/[0.02] hover:bg-white/[0.01] transition-all relative z-10">
-                          {/* Nome do Posto */}
-                          <div className="w-48 shrink-0 p-3 border-r border-white/10 flex items-center min-w-0 bg-[#0a0a0a]/40">
-                            <p className="text-[10px] font-black text-white truncate" title={posto}>
-                              {posto}
-                            </p>
-                          </div>
-
-                          {/* Barras de tempo dos Monitores */}
-                          <div className="flex-1 relative py-2" style={{ height: `${rowHeight}px` }}>
-                            {alocWithLane.map(slot => {
-                              const minInicio = horaParaMinutos(slot.horarioInicio);
-                              const minFim = horaParaMinutos(slot.horarioFim);
-                              const leftPct = Math.max(0, ((minInicio - ESCALA_INICIO) / ESCALA_TOTAL) * 100);
-                              const widthPct = Math.min(100 - leftPct, ((minFim - minInicio) / ESCALA_TOTAL) * 100);
-                              const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
-                              const cor = mapaCorMonitor[slot.monitorNome] || '#3B82F6';
-                              const topPos = slot.laneIndex * 52 + 8; // 52px de altura por item + margem
-
-                              return (
-                                <div
-                                  key={slot.id}
-                                  className={cn(
-                                    "absolute h-11 rounded-xl flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border-2 border-[#0a0a0a]",
-                                    estaAtivo ? "shadow-lg scale-105 z-10" : "opacity-90"
-                                  )}
-                                  style={{
-                                    left: `calc(${leftPct}% + 2px)`,
-                                    width: `calc(${widthPct}% - 4px)`,
-                                    backgroundColor: estaAtivo ? cor : `${cor}25`,
-                                    color: estaAtivo ? '#000' : '#fff',
-                                    top: `${topPos}px`,
-                                    boxShadow: estaAtivo ? `0 0 15px ${cor}50` : 'none',
-                                    border: `1px solid ${cor}40`
-                                  }}
-                                  title={`${slot.horarioInicio}–${slot.horarioFim} | ${slot.monitorNome} | ${slot.funcao}`}
-                                >
-                                  <span className="text-[9px] font-black uppercase tracking-tight truncate leading-none">
-                                    {slot.monitorNome}
-                                  </span>
-                                  <span className={cn("text-[7px] font-black leading-none", estaAtivo ? 'text-black/60' : 'text-white/45')}>
-                                    {slot.horarioInicio} - {slot.horarioFim}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
             </div>
           )}
         </div>
