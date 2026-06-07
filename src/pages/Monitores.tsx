@@ -12,14 +12,17 @@ const ESCALA_TOTAL = ESCALA_FIM - ESCALA_INICIO;
 
 const MACRO_SETORES = [
   '🏫 Térreo',
+  '🌳 Pátio Lateral',
   '🏢 1º Andar',
   '🏢 2º Andar',
   '🏢 3º Andar',
+  '🚗 S1',
+  '🚗 S2',
+  '🛡️ Volante 1',
+  '🛡️ Volante 2',
+  '🛡️ Monitoria',
   '📚 Biblioteca',
   '🏥 Enfermaria',
-  '🚗 Estacionamento',
-  '🌳 Gramado & Pátios',
-  '🛡️ Apoio / Volante',
   '🍽️ Almoço'
 ];
 
@@ -37,17 +40,55 @@ function horaParaMinutos(hora: string): number {
 }
 
 function obterMacroSetor(posto: string): string {
-  const p = (posto || '').toLowerCase();
+  const p = (posto || '').trim().toLowerCase();
+  
+  if (p === 'almoço' || p === 'almoco' || p === 'almoçando') return '🍽️ Almoço';
+  if (p === 'volante 1') return '🛡️ Volante 1';
+  if (p === 'volante 2') return '🛡️ Volante 2';
+  if (p === 'térreo' || p === 'terreo') return '🏫 Térreo';
+  if (p === 'pátio lateral' || p === 'patio lateral') return '🌳 Pátio Lateral';
+  if (p === '1º andar' || p === '1 andar') return '🏢 1º Andar';
+  if (p === '2º andar' || p === '2 andar') return '🏢 2º Andar';
+  if (p === '3º andar' || p === '3 andar') return '🏢 3º Andar';
+  if (p === 's1') return '🚗 S1';
+  if (p === 's2') return '🚗 S2';
+  if (p === 'monitoria') return '🛡️ Monitoria';
+  if (p === 'biblioteca') return '📚 Biblioteca';
+  if (p === 'enfermaria') return '🏥 Enfermaria';
+
   if (p.includes('almoça') || p.includes('almoço')) return '🍽️ Almoço';
-  if (p.includes('estacionamento') || p.includes('apoio s1') || p.includes('saída s1')) return '🚗 Estacionamento';
-  if (p.includes('1º andar') || p.includes('1 andar')) return '🏢 1º Andar';
-  if (p.includes('2º andar') || p.includes('2 andar')) return '🏢 2º Andar';
-  if (p.includes('3º andar') || p.includes('3 andar')) return '🏢 3º Andar';
-  if (p.includes('biblioteca')) return '📚 Biblioteca';
-  if (p.includes('enfermaria')) return '🏥 Enfermaria';
-  if (p.includes('gramado') || p.includes('botânico') || p.includes('patio') || p.includes('pátio')) return '🌳 Gramado & Pátios';
-  if (p.includes('térreo') || p.includes('terreo')) return '🏫 Térreo';
-  return '🛡️ Apoio / Volante';
+
+  const candidates: { sector: string; index: number }[] = [];
+
+  const addCandidate = (sector: string, keywords: string[]) => {
+    for (const kw of keywords) {
+      const idx = p.indexOf(kw);
+      if (idx !== -1) {
+        candidates.push({ sector, index: idx });
+      }
+    }
+  };
+
+  // Raw spreadsheet/text matching rules
+  addCandidate('🛡️ Volante 1', ['volante 2', 'volante2', 'apoio interno']);
+  addCandidate('🛡️ Volante 2', ['volante 1', 'volante1', 'apoio externo']);
+  addCandidate('🛡️ Monitoria', ['monitoria']);
+  addCandidate('📚 Biblioteca', ['biblioteca', 'bliblioteca']);
+  addCandidate('🏥 Enfermaria', ['enfermaria']);
+  addCandidate('🚗 S1', ['s1']);
+  addCandidate('🚗 S2', ['s2']);
+  addCandidate('🏢 1º Andar', ['1º andar', '1 andar', 'primeiro andar']);
+  addCandidate('🏢 2º Andar', ['2º andar', '2 andar', 'segundo andar']);
+  addCandidate('🏢 3º Andar', ['3º andar', '3 andar', 'terceiro andar']);
+  addCandidate('🌳 Pátio Lateral', ['patio', 'pátio', 'lateral', 'gramado', 'botânico', 'botanico']);
+  addCandidate('🏫 Térreo', ['térreo', 'terreo']);
+
+  if (candidates.length > 0) {
+    candidates.sort((a, b) => a.index - b.index);
+    return candidates[0].sector;
+  }
+
+  return '🛡️ Monitoria';
 }
 
 export default function Monitores() {
