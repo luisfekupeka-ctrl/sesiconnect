@@ -514,100 +514,152 @@ export default function Monitores() {
           </div>
 
           {subViewMode === 'quadro' ? (
-            /* ================ RENDER DO QUADRO DE POSTOS ================ */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {MACRO_SETORES.map(macro => {
-                // Filtrar postos deste macro setor na hora selecionada
-                const [inicioSel, fimSel] = (blocoAtivo || '').split(' - ');
-                const alocacoesNoSetor = (gradeMonitores || []).filter(g => {
-                  if (g.diaSemana !== diaFiltro) return false;
-                  if (g.horarioInicio !== inicioSel || g.horarioFim !== fimSel) return false;
+            /* ================ RENDER DO QUADRO DE POSTOS (ORGANOGRAMA POR HORÁRIO) ================ */
+            <div className="space-y-12">
+              {blocosHorarios.length === 0 ? (
+                <div className="py-16 text-center opacity-20 italic font-black text-sm border-2 border-dashed border-white/5 rounded-2xl">
+                  Nenhum horário de monitoria agendado para hoje.
+                </div>
+              ) : (
+                blocosHorarios.map(bloco => {
+                  const [inicioSel, fimSel] = bloco.split(' - ');
                   
-                  const macroG = obterMacroSetor(g.posto);
-                  return macroG === macro;
-                });
+                  // Filtra todas as alocações deste bloco de horário no dia
+                  const alocacoesNoBloco = (gradeMonitores || []).filter(g => {
+                    return g.diaSemana === diaFiltro && 
+                           g.horarioInicio.slice(0, 5) === inicioSel && 
+                           g.horarioFim.slice(0, 5) === fimSel;
+                  });
 
-                // Aplicar busca se houver
-                const buscaFiltrada = alocacoesNoSetor.filter(a => {
-                  const b = busca.toLowerCase();
-                  return a.monitorNome.toLowerCase().includes(b) || a.posto.toLowerCase().includes(b);
-                });
+                  // Verifica se há alguma alocação correspondente à busca
+                  const contemBusca = alocacoesNoBloco.some(a => {
+                    const b = busca.toLowerCase();
+                    return a.monitorNome.toLowerCase().includes(b) || 
+                           a.posto.toLowerCase().includes(b) || 
+                           (a.funcao || '').toLowerCase().includes(b);
+                  });
 
-                // Se houver busca e não corresponder, não mostra o card
-                if (busca && buscaFiltrada.length === 0) return null;
+                  // Se houver busca e não corresponder a nenhuma alocação deste bloco, oculta o bloco
+                  if (busca && !contemBusca) return null;
 
-                const totalMonitores = buscaFiltrada.length;
-
-                return (
-                  <motion.div
-                    key={macro}
-                    layout
-                    className={cn(
-                      "bg-[#0d0d0d] rounded-3xl p-5 border-2 transition-all flex flex-col justify-between min-h-[160px] relative overflow-hidden",
-                      totalMonitores > 0 ? "border-white/5 hover:border-white/10" : "border-red-500/10 bg-red-950/5"
-                    )}
-                    style={totalMonitores > 0 ? { borderTop: `4px solid #fbbf24` } : { borderTop: `4px solid #ef4444` }}
-                  >
-                    <div>
-                      {/* Header do Card */}
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-base font-black text-white italic tracking-tight">{macro}</h3>
-                        {totalMonitores > 0 ? (
-                          <span className="px-2 py-0.5 bg-[#fbbf24]/10 text-[#fbbf24] rounded-md text-[8px] font-black uppercase tracking-wider">
-                            {totalMonitores} monitor{totalMonitores > 1 ? 'es' : ''}
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 bg-red-500/10 text-red-500 rounded-md text-[8px] font-black uppercase tracking-wider">
-                            Vazio
-                          </span>
-                        )}
+                  return (
+                    <motion.div 
+                      key={bloco} 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-4"
+                    >
+                      {/* Título do Bloco de Horário */}
+                      <div className="flex items-center gap-3 border-b border-white/5 pb-2">
+                        <Clock size={16} className="text-[#fbbf24] shrink-0" />
+                        <h3 className="text-lg font-black tracking-tight text-white/90 italic font-headline">
+                          {bloco}
+                        </h3>
+                        <span className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 bg-white/5 border border-white/5 rounded-xl text-white/40">
+                          {alocacoesNoBloco.length} {alocacoesNoBloco.length === 1 ? 'Alocação' : 'Alocações'}
+                        </span>
                       </div>
 
-                      {/* Lista de Alocações */}
-                      {totalMonitores > 0 ? (
-                        <div className="space-y-3">
-                          {buscaFiltrada.map(aloc => {
-                            const cor = mapaCorMonitor[aloc.monitorNome] || '#3B82F6';
-                            return (
-                              <div key={aloc.id} className="p-3 bg-black/40 rounded-2xl border border-white/5 flex items-start gap-3">
-                                <div
-                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0"
-                                  style={{ backgroundColor: `${cor}20`, color: cor }}
-                                >
-                                  {aloc.monitorNome.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-[10px] font-black text-white truncate leading-tight">{aloc.monitorNome}</p>
-                                  <p className="text-[8px] font-black uppercase tracking-wider mt-0.5" style={{ color: cor }}>
-                                    {aloc.posto}
-                                  </p>
-                                  {aloc.funcao && aloc.funcao !== 'Monitoria Geral' && (
-                                    <p className="text-[8px] text-white/40 italic mt-1">{aloc.funcao}</p>
+                      {/* Carrossel Horizontal de Cards de Locais */}
+                      <div className="flex gap-6 overflow-x-auto pb-4 pt-1 snap-x scroll-smooth custom-scrollbar">
+                        {MACRO_SETORES.map(macro => {
+                          const alocacoesNoSetor = alocacoesNoBloco.filter(g => obterMacroSetor(g.posto) === macro);
+                          
+                          // Aplica busca individual se houver
+                          const alocacoesFiltradas = alocacoesNoSetor.filter(a => {
+                            const b = busca.toLowerCase();
+                            return a.monitorNome.toLowerCase().includes(b) || 
+                                   a.posto.toLowerCase().includes(b) || 
+                                   (a.funcao || '').toLowerCase().includes(b);
+                          });
+
+                          // Oculta cards vazios apenas se houver uma busca ativa
+                          if (busca && alocacoesFiltradas.length === 0) return null;
+
+                          const totalMonitores = alocacoesNoSetor.length;
+
+                          return (
+                            <motion.div
+                              key={macro}
+                              layout
+                              className={cn(
+                                "flex-shrink-0 w-80 bg-[#0d0d0d]/80 backdrop-blur-md rounded-3xl p-5 border-2 transition-all flex flex-col justify-between min-h-[220px] snap-start hover:border-white/10",
+                                totalMonitores > 0 ? "border-white/5" : "border-red-500/10 bg-red-950/5"
+                              )}
+                              style={{ borderTop: `4px solid ${totalMonitores > 0 ? '#fbbf24' : '#ef4444'}` }}
+                            >
+                              <div className="flex flex-col h-full justify-between">
+                                <div>
+                                  {/* Header do Card */}
+                                  <div className="flex items-center justify-between mb-4 gap-2">
+                                    <h4 className="text-sm font-black text-white italic tracking-tight truncate">{macro}</h4>
+                                    {totalMonitores > 0 ? (
+                                      <span className="px-2 py-0.5 bg-[#fbbf24]/10 text-[#fbbf24] rounded-md text-[8px] font-black uppercase tracking-wider shrink-0">
+                                        {totalMonitores} monitor{totalMonitores > 1 ? 'es' : ''}
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 bg-red-500/10 text-red-500 rounded-md text-[8px] font-black uppercase tracking-wider shrink-0">
+                                        Vazio
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Lista de Monitores Alocados */}
+                                  {totalMonitores > 0 ? (
+                                    <div className="space-y-3">
+                                      {alocacoesNoSetor.map(aloc => {
+                                        const cor = mapaCorMonitor[aloc.monitorNome] || '#3B82F6';
+                                        return (
+                                          <div key={aloc.id} className="p-3 bg-black/40 rounded-2xl border border-white/5 flex items-start gap-3">
+                                            <div
+                                              className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 shadow-inner"
+                                              style={{ backgroundColor: `${cor}20`, color: cor }}
+                                            >
+                                              {aloc.monitorNome.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                              <p className="text-xs font-black text-white truncate leading-tight">{aloc.monitorNome}</p>
+                                              <p className="text-[8px] font-black uppercase tracking-wider mt-0.5" style={{ color: cor }}>
+                                                {aloc.posto}
+                                              </p>
+                                              {aloc.funcao && aloc.funcao !== 'Monitoria Geral' && (
+                                                <p className="text-[9px] text-white/40 italic mt-1 font-medium leading-none">{aloc.funcao}</p>
+                                              )}
+                                              {aloc.instrucoes && (
+                                                <p className="text-[8px] text-white/30 italic mt-1.5 bg-white/[0.02] p-1.5 rounded-lg border border-white/[0.03] leading-relaxed">
+                                                  {aloc.instrucoes}
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  ) : (
+                                    /* Sem Cobertura */
+                                    macro !== '🍽️ Almoço' ? (
+                                      <div className="flex-1 flex flex-col items-center justify-center py-6 text-center text-red-500/50">
+                                        <AlertTriangle size={20} className="mb-1 text-red-500" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest leading-none">Sem Cobertura</p>
+                                        <p className="text-[8px] text-white/30 italic mt-1">Nenhum monitor designado para este setor.</p>
+                                      </div>
+                                    ) : (
+                                      <div className="flex-1 flex flex-col items-center justify-center py-6 text-center text-white/20">
+                                        <Clock size={20} className="mb-1 text-white/20" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest leading-none">Sem Almoço</p>
+                                      </div>
+                                    )
                                   )}
                                 </div>
                               </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        /* Alerta de buraco/escala vazia (somente para postos de cobertura física, ignora almoço) */
-                        macro !== '🍽️ Almoço' ? (
-                          <div className="flex-1 flex flex-col items-center justify-center py-6 text-center text-red-500/50">
-                            <AlertTriangle size={20} className="mb-1 text-red-500" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Sem Cobertura</p>
-                            <p className="text-[8px] text-white/30 italic mt-0.5">Nenhum monitor designado para este setor.</p>
-                          </div>
-                        ) : (
-                          <div className="flex-1 flex flex-col items-center justify-center py-6 text-center text-white/20">
-                            <Clock size={20} className="mb-1 text-white/20" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Ninguém almoçando</p>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  );
+                })
+              )}
             </div>
           ) : (
             /* ================ RENDER DA LINHA DO TEMPO POR SETOR ================ */
