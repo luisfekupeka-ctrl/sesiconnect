@@ -353,107 +353,99 @@ export default function Monitores() {
             {escalaDoDia.length === 0 ? (
               <div className="py-16 text-center opacity-20 italic font-black text-sm border-2 border-dashed border-white/5 rounded-2xl">Nenhum posto agendado.</div>
             ) : (
-              <div className="bg-[#0a0a0a] rounded-[1.5rem] border border-white/5 overflow-hidden shadow-premium relative">
-                {/* Scroll Wrapper */}
-                <div className="overflow-x-auto scrollbar-premium">
-                  <div className="min-w-[1600px] relative">
-                    
-                    {/* Linhas de Grade Verticais */}
-                    <div className="absolute inset-0 pointer-events-none flex z-0">
-                      <div className="w-40 shrink-0 border-r border-white/10" />
-                      <div className="flex-1 flex h-full">
-                        {HORAS_ESCALA.map(hora => (
-                          <div key={hora} className="flex-1 border-l border-white/10 h-full border-dashed" />
-                        ))}
-                      </div>
-                    </div>
+              <div className="space-y-4">
+                {(() => {
+                  const monitoresNaEscala = Array.from(new Set(escalaDoDia.map(g => g.monitorNome)))
+                    .filter(nome => !busca || nome.toLowerCase().includes(busca.toLowerCase()))
+                    .sort() as string[];
 
-                    {/* Cabeçalho de Horários */}
-                    <div className="flex border-b border-white/10 bg-white/[0.02] relative z-10">
-                      <div className="w-40 shrink-0 p-4 border-r border-white/10">
-                        <p className="text-[10px] font-black text-white/50 uppercase tracking-widest">Monitor</p>
+                  if (monitoresNaEscala.length === 0) {
+                    return (
+                      <div className="py-16 text-center opacity-20 italic font-black text-sm border-2 border-dashed border-white/5 rounded-2xl">
+                        Nenhum monitor correspondente à busca.
                       </div>
-                      <div className="flex-1 relative">
-                        <div className="flex">
-                          {HORAS_ESCALA.map(hora => (
-                            <div key={hora} className="flex-1 text-center py-4 text-[10px] font-mono font-bold text-white/70 uppercase tracking-widest border-l border-white/10">{hora}</div>
-                          ))}
-                        </div>
-                        {/* Linha do horário atual */}
-                        {minutosAgora >= ESCALA_INICIO && minutosAgora <= ESCALA_FIM && (
-                          <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20"
-                            style={{ left: `${((minutosAgora - ESCALA_INICIO) / ESCALA_TOTAL) * 100}%` }}>
-                            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-red-500 shadow-lg shadow-red-500/30" />
+                    );
+                  }
+
+                  return monitoresNaEscala.map(nome => {
+                    const cor = mapaCorMonitor[nome] || '#3B82F6';
+                    const postos = escalaDoDia
+                      .filter(g => g.monitorNome === nome)
+                      .sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
+
+                    return (
+                      <div key={nome} className="bg-[#0a0a0a]/50 rounded-[1.5rem] border border-white/5 p-5 flex flex-col md:flex-row md:items-center gap-6 hover:border-white/10 transition-all">
+                        {/* Monitor Profile Panel */}
+                        <div className="md:w-56 shrink-0 flex items-center gap-4 bg-black/30 p-3 rounded-2xl border border-white/5">
+                          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black shrink-0"
+                            style={{ backgroundColor: `${cor}20`, color: cor }}>
+                            {nome.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                           </div>
-                        )}
-                      </div>
-                    </div>
+                          <div className="min-w-0">
+                            <h4 className="text-sm font-black text-white truncate leading-tight tracking-tight italic">{nome}</h4>
+                            <p className="text-[9px] font-black uppercase mt-1 tracking-widest" style={{ color: cor }}>
+                              {postos.length} {postos.length === 1 ? 'Plantão' : 'Plantões'}
+                            </p>
+                          </div>
+                        </div>
 
-                    {/* Corpo da Escala por Monitor */}
-                    <div className="relative z-10">
-                      {(() => {
-                        const monitoresNaEscala = Array.from(new Set(escalaDoDia.map(g => g.monitorNome))).sort() as string[];
-                        return monitoresNaEscala.map(nome => {
-                          const cor = mapaCorMonitor[nome] || '#3B82F6';
-                          const postos = escalaDoDia.filter(g => g.monitorNome === nome);
+                        {/* Scrolling shifts list */}
+                        <div className="flex-1 flex gap-4 overflow-x-auto pb-2 pt-1 snap-x scroll-smooth custom-scrollbar">
+                          {postos.map(slot => {
+                            const minInicio = horaParaMinutos(slot.horarioInicio);
+                            const minFim = horaParaMinutos(slot.horarioFim);
+                            const minutosAgora = new Date().getHours() * 60 + new Date().getMinutes();
+                            const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
 
-                          return (
-                            <div key={nome} className="flex border-b border-white/[0.03] hover:bg-white/[0.02] transition-all">
-                              {/* Nome */}
-                              <div className="w-40 shrink-0 p-3 border-r border-white/10 flex items-center gap-3 bg-[#0a0a0a]/50">
-                                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0"
-                                  style={{ backgroundColor: `${cor}20`, color: cor }}>
-                                  {nome.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-[10px] font-black text-white truncate">{nome}</p>
-                                </div>
-                              </div>
-
-                              {/* Barras de postos */}
-                              <div className="flex-1 relative py-4 h-32">
-                                {postos.map(slot => {
-                                  const minInicio = horaParaMinutos(slot.horarioInicio);
-                                  const minFim = horaParaMinutos(slot.horarioFim);
-                                  const leftPct = Math.max(0, ((minInicio - ESCALA_INICIO) / ESCALA_TOTAL) * 100);
-                                  const widthPct = Math.min(100 - leftPct, ((minFim - minInicio) / ESCALA_TOTAL) * 100);
-                                  const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
-
-                                  return (
-                                    <div
-                                      key={slot.id}
-                                      className={cn("absolute h-18 rounded-sm flex flex-col justify-center px-3 gap-0.5 overflow-hidden transition-all border border-white/[0.06] hover:bg-[#1e1e1e]",
-                                        estaAtivo ? "shadow-lg scale-102 z-10" : "")}
-                                      style={{
-                                        left: `calc(${leftPct}% + 2px)`,
-                                        width: `calc(${widthPct}% - 4px)`,
-                                        backgroundColor: estaAtivo ? '#1e1e1e' : '#141414',
-                                        borderLeft: `4px solid ${cor}`,
-                                        color: '#fff',
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        boxShadow: estaAtivo ? `0 0 12px ${cor}40` : 'none',
-                                      }}
-                                      title={`${slot.horarioInicio}–${slot.horarioFim} | ${slot.posto} | ${slot.funcao || 'Monitoria'}`}
-                                    >
-                                      <div className="flex items-center gap-1.5">
-                                        <MapPin size={12} strokeWidth={3} style={{ color: cor }} />
-                                        <span className="text-xs font-bold text-white tracking-tight truncate leading-none">{slot.posto}</span>
-                                      </div>
-                                      <span className="text-[9px] font-bold text-white/40 leading-none">
-                                        {slot.horarioInicio} - {slot.horarioFim}
+                            return (
+                              <div
+                                key={slot.id}
+                                className={cn(
+                                  "flex-shrink-0 w-64 bg-[#0d0d0d] rounded-2xl p-4 border transition-all flex flex-col justify-between min-h-[110px] snap-start hover:bg-[#121212]",
+                                  estaAtivo ? "border-[#fbbf24]/50 shadow-[0_0_12px_rgba(251,191,36,0.15)] bg-[#141414]" : "border-white/5"
+                                )}
+                                style={{ borderLeft: `5px solid ${cor}` }}
+                              >
+                                <div className="flex flex-col gap-2">
+                                  {/* Horário */}
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-[10px] font-black text-white/40 tracking-wider">
+                                      🕒 {slot.horarioInicio} - {slot.horarioFim}
+                                    </span>
+                                    {estaAtivo && (
+                                      <span className="px-2 py-0.5 bg-[#fbbf24]/10 text-[#fbbf24] border border-[#fbbf24]/20 rounded-md text-[8px] font-black uppercase tracking-wider animate-pulse">
+                                        Agora
                                       </span>
-                                    </div>
-                                  );
-                                })}
+                                    )}
+                                  </div>
+
+                                  {/* Posto / Local */}
+                                  <h5 className="text-xs font-black text-white italic tracking-tight truncate leading-none mt-0.5">
+                                    📍 {slot.posto}
+                                  </h5>
+
+                                  {/* Função */}
+                                  {slot.funcao && slot.funcao !== 'Monitoria Geral' && (
+                                    <p className="text-[9px] text-white/50 font-semibold italic truncate mt-0.5">
+                                      ⚙️ {slot.funcao}
+                                    </p>
+                                  )}
+
+                                  {/* Instruções se houver */}
+                                  {slot.instrucoes && (
+                                    <p className="text-[8px] text-white/30 italic mt-1 bg-white/[0.01] p-1.5 rounded-lg border border-white/[0.02] line-clamp-2 leading-relaxed">
+                                      {slot.instrucoes}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          );
-                        });
-                      })()}
-                    </div>
-                  </div>
-                </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             )}
           </section>
