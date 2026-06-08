@@ -605,7 +605,8 @@ export const generateSingleOccurrencePDF = async (record: DailyOccurrenceRecord)
 
 export const generateEscalaGeralPDF = async (
   escalaDoDia: GradeMonitor[],
-  diaSemana: string
+  diaSemana: string,
+  monitores: Monitor[]
 ) => {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -639,6 +640,16 @@ export const generateEscalaGeralPDF = async (
       slot.instrucoes || ''
     ]);
 
+    const hexToRgb = (hex: string): [number, number, number] => {
+      const cleanHex = (hex || '#3B82F6').replace('#', '');
+      const num = parseInt(cleanHex, 16);
+      return [
+        (num >> 16) & 255,
+        (num >> 8) & 255,
+        num & 255
+      ];
+    };
+
     autoTable(doc, {
       startY: currentY,
       margin: { top: 50, bottom: 20, left: 15, right: 15 },
@@ -648,11 +659,35 @@ export const generateEscalaGeralPDF = async (
       headStyles: { fillColor: [12, 35, 64], textColor: [255, 255, 255] },
       styles: { fontSize: 8.5, cellPadding: 3 },
       columnStyles: {
-        0: { cellWidth: 28 },
+        0: { cellWidth: 28, cellPadding: { left: 7, right: 3, top: 3, bottom: 3 } },
         1: { cellWidth: 35 },
         2: { cellWidth: 40 },
         3: { cellWidth: 35 },
         4: { cellWidth: 'auto' }
+      },
+      didParseCell: (data) => {
+        if (data.section === 'body') {
+          const monitorNome = data.row.cells[1].raw as string;
+          const monitorObj = monitores.find(m => m.nome === monitorNome);
+          const corHex = monitorObj?.cor || '#3B82F6';
+          const rgb = hexToRgb(corHex);
+
+          if (data.column.index === 1) {
+            data.cell.styles.textColor = rgb;
+            data.cell.styles.fontStyle = 'bold';
+          }
+        }
+      },
+      didDrawCell: (data) => {
+        if (data.section === 'body' && data.column.index === 0) {
+          const monitorNome = data.row.cells[1].raw as string;
+          const monitorObj = monitores.find(m => m.nome === monitorNome);
+          const corHex = monitorObj?.cor || '#3B82F6';
+          const rgb = hexToRgb(corHex);
+
+          doc.setFillColor(rgb[0], rgb[1], rgb[2]);
+          doc.rect(data.cell.x + 1.5, data.cell.y + 0.5, 2.5, data.cell.height - 1, 'F');
+        }
       },
       willDrawPage: (data) => {
         if (data.pageNumber > 1 && bgBase64) {
@@ -682,6 +717,16 @@ export const generateEscalasIndividuaisPDF = async (
     const bgBase64 = await loadImageAsBase64(papelTimbradoImg).catch(() => undefined);
     let isFirstPage = true;
 
+    const hexToRgb = (hex: string): [number, number, number] => {
+      const cleanHex = (hex || '#3B82F6').replace('#', '');
+      const num = parseInt(cleanHex, 16);
+      return [
+        (num >> 16) & 255,
+        (num >> 8) & 255,
+        num & 255
+      ];
+    };
+
     const activeMonitors = monitores.filter(m => m.status === 'ativo');
 
     for (const monitor of activeMonitors) {
@@ -700,25 +745,29 @@ export const generateEscalasIndividuaisPDF = async (
 
       let currentY = 50;
 
-      doc.setFontSize(16);
+      const monitorCor = monitor.cor || '#3B82F6';
+      const rgbHeader = hexToRgb(monitorCor);
+      
+      const brightness = Math.round(((rgbHeader[0] * 299) + (rgbHeader[1] * 587) + (rgbHeader[2] * 114)) / 1000);
+      const textRGB: [number, number, number] = brightness > 140 ? [0, 0, 0] : [255, 255, 255];
+
+      doc.setFillColor(rgbHeader[0], rgbHeader[1], rgbHeader[2]);
+      doc.rect(15, currentY - 2, pageWidth - 30, 20, 'F');
+
+      doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(12, 35, 64);
-      doc.text(monitor.nome.toUpperCase(), 15, currentY);
+      doc.setTextColor(textRGB[0], textRGB[1], textRGB[2]);
+      doc.text(monitor.nome.toUpperCase(), 20, currentY + 6);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`TURNO: ${monitor.turno.toUpperCase()} | TIPO: ${monitor.tipo.toUpperCase()}`, 20, currentY + 13);
 
       doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Turno: ${monitor.turno.toUpperCase()} | Tipo: ${monitor.tipo.toUpperCase()}`, 15, currentY + 6);
-      
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(12, 35, 64);
-      doc.text(`ESCALA DE ${diaSemana.toUpperCase()}`, pageWidth - 15, currentY + 3, { align: 'right' });
+      doc.text(`ESCALA DE ${diaSemana.toUpperCase()}`, pageWidth - 20, currentY + 10, { align: 'right' });
 
-      currentY += 15;
-      doc.setDrawColor(220, 220, 220);
-      doc.line(15, currentY, pageWidth - 15, currentY);
-
-      currentY += 10;
+      currentY += 26;
 
       if (postos.length === 0) {
         doc.setFont('helvetica', 'italic');
@@ -740,7 +789,7 @@ export const generateEscalasIndividuaisPDF = async (
           head: [['Item', 'Horário', 'Posto / Local', 'Função', 'Notas / Instruções']],
           body: tableData,
           theme: 'grid',
-          headStyles: { fillColor: [12, 35, 64], textColor: [255, 255, 255] },
+          headStyles: { fillColor: rgbHeader, textColor: textRGB },
           styles: { fontSize: 9.5, cellPadding: 4.5 },
           columnStyles: {
             0: { cellWidth: 15, halign: 'center' },

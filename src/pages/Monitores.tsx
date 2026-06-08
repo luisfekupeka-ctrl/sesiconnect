@@ -145,7 +145,7 @@ export default function Monitores() {
   const [viewMode, setViewMode] = useState<'monitor' | 'setor'>('monitor');
 
   const handleExportarGeral = () => {
-    generateEscalaGeralPDF(escalaDoDia, diaFiltro);
+    generateEscalaGeralPDF(escalaDoDia, diaFiltro, monitores);
   };
 
   const handleExportarIndividuais = () => {
