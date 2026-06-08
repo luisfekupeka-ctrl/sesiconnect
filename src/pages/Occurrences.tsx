@@ -126,6 +126,7 @@ export function Occurrences() {
   }, []);
 
   const [activeTab, setActiveTab] = useState<'registro' | 'consulta' | 'relatorios'>('registro');
+  const [registroSubTab, setRegistroSubTab] = useState<'ocorrencia' | 'emprestimos'>('ocorrencia');
   
   // Registration Form State
   const [studentName, setStudentName] = useState('');
@@ -584,10 +585,39 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
         >
           {/* TAB: REGISTRO */}
           {activeTab === 'registro' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-              
-              {/* COLUNA 1 & 2: NOVA OCORRÊNCIA */}
-              <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
+            <div className="space-y-4">
+              {/* Mobile sub-tabs selector */}
+              <div className="flex lg:hidden p-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-xl w-full max-w-sm mx-auto mb-2 border border-[#30363d] dark:border-slate-700/50">
+                <button
+                  type="button"
+                  onClick={() => setRegistroSubTab('ocorrencia')}
+                  className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
+                    registroSubTab === 'ocorrencia'
+                      ? 'bg-white dark:bg-slate-705 text-blue-600 dark:text-blue-400 shadow-sm'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                  }`}
+                >
+                  Registrar Ocorrência
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRegistroSubTab('emprestimos')}
+                  className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
+                    registroSubTab === 'emprestimos'
+                      ? 'bg-white dark:bg-slate-705 text-purple-600 dark:text-purple-400 shadow-sm'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                  }`}
+                >
+                  Empréstimos do Dia
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                
+                {/* COLUNA 1 & 2: NOVA OCORRÊNCIA */}
+                <div className={`lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm relative ${
+                  registroSubTab === 'ocorrencia' ? 'block' : 'hidden lg:block'
+                }`}>
                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
                 
                 <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
@@ -801,7 +831,9 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
               </div>
 
               {/* COLUNA 3: EMPRÉSTIMO DE MATERIAIS */}
-              <div className="lg:col-span-1 bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden flex flex-col">
+              <div className={`lg:col-span-1 bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm relative flex flex-col ${
+                registroSubTab === 'emprestimos' ? 'block' : 'hidden lg:block'
+              }`}>
                 <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
                 
                 <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-slate-800 dark:text-white">
@@ -826,7 +858,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                           setShowLoanAutocomplete(true);
                         }}
                         onFocus={() => setShowLoanAutocomplete(true)}
-                        className="pl-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all dark:text-white"
+                        className="pl-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all dark:text-white h-11"
                         placeholder="Buscar aluno..."
                         autoComplete="off"
                       />
@@ -844,7 +876,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                             <div
                               key={idx}
                               onClick={() => handleSelectLoanStudent(aluno)}
-                              className="px-3 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 flex flex-col transition-colors border-b border-slate-100 dark:border-slate-700/50 last:border-0"
+                              className="px-3 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 flex flex-col transition-colors border-b border-slate-100 dark:border-slate-700/50 last:border-0"
                             >
                               <span className="text-xs font-semibold text-slate-900 dark:text-white">{aluno.nome}</span>
                               <span className="text-[9px] text-slate-500 font-medium uppercase tracking-wider">{aluno.ano || 'Série indefinida'} {aluno.turma ? `• ${aluno.turma}` : ''}</span>
@@ -864,7 +896,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                         value={loanItem}
                         onChange={(e) => setLoanItem(e.target.value)}
                         placeholder="Ex: Bola de basquete"
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all dark:text-white"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all dark:text-white h-11"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -874,14 +906,14 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                         required
                         value={loanLimitTime}
                         onChange={(e) => setLoanLimitTime(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all dark:text-white"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all dark:text-white h-11"
                       />
                     </div>
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-purple-500/10 flex items-center justify-center gap-1.5"
+                    className="w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-purple-500/10 flex items-center justify-center gap-1.5 h-11 cursor-pointer"
                   >
                     <PlusCircle className="w-4 h-4" />
                     Emprestar Item
@@ -995,6 +1027,7 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                 </div>
               </div>
 
+            </div>
             </div>
           )}
 
