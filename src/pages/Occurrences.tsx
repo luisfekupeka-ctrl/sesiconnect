@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2, Copy, X, Printer, Trash2, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2, Copy, X, Printer, Trash2, AlertTriangle, ShieldAlert, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { occurrenceService } from '../services/occurrenceService';
 import { generateOccurrencesPDF, generateOccurrencesExcel, generateSingleOccurrencePDF } from '../lib/reportGenerator';
@@ -10,6 +10,16 @@ import { generateWordOccurrence } from '../lib/wordGenerator';
 import FichaOcorrencia from '../components/FichaOcorrencia';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+
+interface Emprestimo {
+  id: string;
+  studentName: string;
+  item: string;
+  loanTime: string;      // HH:MM
+  limitTime: string;     // HH:MM
+  status: 'emprestado' | 'devolvido';
+  date: string;          // YYYY-MM-DD
+}
 
 const TIPOS_OCORRENCIA = [
   'Uso Indevido de Celular',
@@ -61,11 +71,23 @@ export function Occurrences() {
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
 
   const autocompleteRef = useRef<HTMLDivElement>(null);
+  const loanAutocompleteRef = useRef<HTMLDivElement>(null);
+
+  // Material Loans State
+  const [loans, setLoans] = useState<Emprestimo[]>([]);
+  const [loanStudentName, setLoanStudentName] = useState('');
+  const [showLoanAutocomplete, setShowLoanAutocomplete] = useState(false);
+  const [loanItem, setLoanItem] = useState('');
+  const [loanLimitTime, setLoanLimitTime] = useState('');
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
     const handleClose = (e: Event) => {
       if (autocompleteRef.current && !autocompleteRef.current.contains(e.target as Node)) {
         setShowAutocomplete(false);
+      }
+      if (loanAutocompleteRef.current && !loanAutocompleteRef.current.contains(e.target as Node)) {
+        setShowLoanAutocomplete(false);
       }
     };
     document.addEventListener('mousedown', handleClose);
@@ -74,6 +96,33 @@ export function Occurrences() {
       document.removeEventListener('mousedown', handleClose);
       document.removeEventListener('touchstart', handleClose);
     };
+  }, []);
+
+  // Load loans from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('sesiconnect_loans');
+    if (stored) {
+      try {
+        setLoans(JSON.parse(stored));
+      } catch (e) {
+        console.error('Erro ao carregar empréstimos:', e);
+      }
+    }
+    
+    // Set default limit time (current time + 30 mins)
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 30);
+    const hours = String(now.getHours()).padStart(2, '0');
+    const mins = String(now.getMinutes()).padStart(2, '0');
+    setLoanLimitTime(`${hours}:${mins}`);
+  }, []);
+
+  // Update current time periodically for overdue checks
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 15000); // Check every 15 seconds
+    return () => clearInterval(interval);
   }, []);
 
   const [activeTab, setActiveTab] = useState<'registro' | 'consulta' | 'relatorios'>('registro');
@@ -134,6 +183,92 @@ export function Occurrences() {
     setSchoolYear(aluno.ano || '');
     setShowAutocomplete(false);
   };
+
+  const filteredLoanStudents = useMemo(() => {
+    if (!loanStudentName) return alunos.slice(0, 5);
+    const query = loanStudentName.toLowerCase();
+    return alunos.filter(a => a.nome?.toLowerCase().includes(query)).slice(0, 5);
+  }, [loanStudentName, alunos]);
+
+  const handleSelectLoanStudent = (aluno: any) => {
+    setLoanStudentName(aluno.nome);
+    setShowLoanAutocomplete(false);
+  };
+
+  const handleRegisterLoan = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loanStudentName.trim() || !loanItem.trim() || !loanLimitTime) return;
+
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const mins = String(now.getMinutes()).padStart(2, '0');
+    
+    const newLoan: Emprestimo = {
+      id: Math.random().toString(36).substring(2, 9),
+      studentName: loanStudentName.trim(),
+      item: loanItem.trim(),
+      loanTime: `${hours}:${mins}`,
+      limitTime: loanLimitTime,
+      status: 'emprestado',
+      date: now.toISOString().split('T')[0]
+    };
+
+    const updatedLoans = [newLoan, ...loans];
+    setLoans(updatedLoans);
+    localStorage.setItem('sesiconnect_loans', JSON.stringify(updatedLoans));
+
+    // Reset fields
+    setLoanStudentName('');
+    setLoanItem('');
+    
+    // Set next default limit time (current time + 30 mins)
+    const nextLimit = new Date();
+    nextLimit.setMinutes(nextLimit.getMinutes() + 30);
+    const nHours = String(nextLimit.getHours()).padStart(2, '0');
+    const nMins = String(nextLimit.getMinutes()).padStart(2, '0');
+    setLoanLimitTime(`${nHours}:${nMins}`);
+  };
+
+  const handleToggleReturn = (id: string) => {
+    const updatedLoans = loans.map(loan => {
+      if (loan.id === id) {
+        return {
+          ...loan,
+          status: loan.status === 'emprestado' ? 'devolvido' as const : 'emprestado' as const
+        };
+      }
+      return loan;
+    });
+    setLoans(updatedLoans);
+    localStorage.setItem('sesiconnect_loans', JSON.stringify(updatedLoans));
+  };
+
+  const handleDeleteLoan = (id: string) => {
+    if (window.confirm('Deseja realmente excluir este empréstimo?')) {
+      const updatedLoans = loans.filter(loan => loan.id !== id);
+      setLoans(updatedLoans);
+      localStorage.setItem('sesiconnect_loans', JSON.stringify(updatedLoans));
+    }
+  };
+
+  const isLoanOverdue = (loan: Emprestimo) => {
+    if (loan.status === 'devolvido') return false;
+    
+    const todayStr = currentTime.toISOString().split('T')[0];
+    if (loan.date < todayStr) return true;
+    if (loan.date > todayStr) return false;
+
+    const [limitHour, limitMin] = loan.limitTime.split(':').map(Number);
+    const limitDate = new Date(currentTime);
+    limitDate.setHours(limitHour, limitMin, 0, 0);
+    
+    return currentTime > limitDate;
+  };
+
+  const displayedLoans = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return loans.filter(l => l.status === 'emprestado' || l.date === today);
+  }, [loans, currentTime]);
 
   const getPeriodDateRange = (period: string, customDate?: string) => {
     const now = new Date();
@@ -449,102 +584,270 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
         >
           {/* TAB: REGISTRO */}
           {activeTab === 'registro' && (
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
               
-              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                <PlusCircle className="w-5 h-5 text-blue-500" />
-                Nova Ocorrência
-              </h2>
+              {/* COLUNA 1 & 2: NOVA OCORRÊNCIA */}
+              <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                
+                <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                  <PlusCircle className="w-5 h-5 text-blue-500" />
+                  Nova Ocorrência
+                </h2>
 
-              <AnimatePresence>
-                {generatedMessageAfterSubmit && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: -10 }} 
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="mb-6 p-4 md:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 relative"
-                  >
-                    <button 
-                      onClick={() => setGeneratedMessageAfterSubmit('')}
-                      className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                <AnimatePresence>
+                  {generatedMessageAfterSubmit && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -10 }} 
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="mb-6 p-4 md:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 relative"
                     >
-                      <X className="w-5 h-5" />
-                    </button>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4 pr-10">
-                      <h3 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-blue-500" />
-                        Mensagem Gerada (Copie e envie aos responsáveis)
-                      </h3>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(generatedMessageAfterSubmit);
-                          alert('Mensagem copiada para a área de transferência!');
-                        }}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors shadow-sm"
+                      <button 
+                        onClick={() => setGeneratedMessageAfterSubmit('')}
+                        className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                       >
-                        <Copy className="w-4 h-4" />
-                        Copiar Mensagem
+                        <X className="w-5 h-5" />
                       </button>
-                    </div>
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm text-slate-600 dark:text-slate-400 whitespace-pre-line font-medium leading-relaxed">
-                      {generatedMessageAfterSubmit}
-                    </div>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4 pr-10">
+                        <h3 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-blue-500" />
+                          Mensagem Gerada (Copie e envie aos responsáveis)
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(generatedMessageAfterSubmit);
+                            alert('Mensagem copiada para a área de transferência!');
+                          }}
+                          className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors shadow-sm"
+                        >
+                          <Copy className="w-4 h-4" />
+                          Copiar Mensagem
+                        </button>
+                      </div>
+                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm text-slate-600 dark:text-slate-400 whitespace-pre-line font-medium leading-relaxed">
+                        {generatedMessageAfterSubmit}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {successMessage && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="mb-6 p-4 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 rounded-xl flex items-center gap-3 border border-emerald-200 dark:border-emerald-500/20"
+                  >
+                    <CheckCircle2 className="w-5 h-5" />
+                    {successMessage}
                   </motion.div>
                 )}
-              </AnimatePresence>
 
-              {successMessage && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="mb-6 p-4 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 rounded-xl flex items-center gap-3 border border-emerald-200 dark:border-emerald-500/20"
-                >
-                  <CheckCircle2 className="w-5 h-5" />
-                  {successMessage}
-                </motion.div>
-              )}
+                <form onSubmit={handleRegister} className="space-y-6 relative z-10">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2 relative" ref={autocompleteRef}>
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Nome do Aluno</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <User className="h-5 w-5 text-slate-400" />
+                        </div>
+                        <input
+                          type="text"
+                          required
+                          value={studentName}
+                          onChange={(e) => {
+                            setStudentName(e.target.value);
+                            setShowAutocomplete(true);
+                          }}
+                          onFocus={() => setShowAutocomplete(true)}
+                          className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                          placeholder="Ex: João Silva"
+                          autoComplete="off"
+                        />
+                      </div>
+                      {/* Autocomplete Dropdown */}
+                      <AnimatePresence>
+                        {showAutocomplete && filteredStudents.length > 0 && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden"
+                          >
+                            {filteredStudents.map((aluno, idx) => (
+                              <div
+                                key={idx}
+                                onClick={() => handleSelectStudent(aluno)}
+                                className="px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 flex flex-col transition-colors border-b border-slate-100 dark:border-slate-700/50 last:border-0"
+                              >
+                                <span className="text-sm font-semibold text-slate-900 dark:text-white">{aluno.nome}</span>
+                                <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{aluno.ano || 'Série indefinida'} {aluno.turma ? `• ${aluno.turma}` : ''}</span>
+                              </div>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
 
-              <form onSubmit={handleRegister} className="space-y-6 relative z-10">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2 relative" ref={autocompleteRef}>
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Nome do Aluno</label>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Ano Letivo</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Calendar className="h-5 w-5 text-slate-400" />
+                        </div>
+                        <select
+                          required
+                          value={schoolYear}
+                          onChange={(e) => setSchoolYear(e.target.value)}
+                          className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
+                        >
+                          <option value="" disabled>Selecione o ano</option>
+                          {SERIES_CADASTRO.map(serie => (
+                            <option key={serie} value={serie}>{serie}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Tipo de Ocorrência</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Tag className="h-5 w-5 text-slate-400" />
+                        </div>
+                        <select
+                          value={occurrenceType}
+                          onChange={(e) => {
+                            setOccurrenceType(e.target.value);
+                            setDynamicValue('');
+                          }}
+                          className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
+                        >
+                          {TIPOS_OCORRENCIA.map(tipo => (
+                            <option key={tipo} value={tipo}>{tipo}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Seu Nome (Responsável pelo Registro)</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <User className="h-5 w-5 text-slate-400" />
+                        </div>
+                        <input
+                          type="text"
+                          required
+                          value={emissorName}
+                          onChange={(e) => setEmissorName(e.target.value)}
+                          placeholder="Ex: Prof. João"
+                          className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {currentDynamicField && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="space-y-2"
+                    >
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{currentDynamicField.label}</label>
+                      <input
+                        type={currentDynamicField.type}
+                        required={currentDynamicField.type === 'time'}
+                        value={dynamicValue}
+                        onChange={(e) => setDynamicValue(e.target.value)}
+                        placeholder={currentDynamicField.placeholder}
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                      />
+                    </motion.div>
+                  )}
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Relato Completo</label>
+                    <textarea
+                      required
+                      value={report}
+                      onChange={(e) => setReport(e.target.value)}
+                      rows={4}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white resize-none"
+                      placeholder="Descreva o que aconteceu em detalhes..."
+                    />
+                  </div>
+
+                  <div className="pt-4">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full sm:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors shadow-sm shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <>
+                          <PlusCircle className="w-5 h-5" />
+                          Registrar Ocorrência
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* COLUNA 3: EMPRÉSTIMO DE MATERIAIS */}
+              <div className="lg:col-span-1 bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden flex flex-col">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                
+                <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-slate-800 dark:text-white">
+                  <Clock className="w-5 h-5 text-purple-500" />
+                  Empréstimo de Itens
+                </h2>
+
+                {/* Form Cadastro Empréstimo */}
+                <form onSubmit={handleRegisterLoan} className="space-y-4 relative z-10 border-b border-slate-100 dark:border-slate-700/50 pb-6 mb-6">
+                  <div className="space-y-1.5 relative" ref={loanAutocompleteRef}>
+                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Nome do Aluno</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-slate-400" />
+                        <User className="h-4 w-4 text-slate-400" />
                       </div>
                       <input
                         type="text"
                         required
-                        value={studentName}
+                        value={loanStudentName}
                         onChange={(e) => {
-                          setStudentName(e.target.value);
-                          setShowAutocomplete(true);
+                          setLoanStudentName(e.target.value);
+                          setShowLoanAutocomplete(true);
                         }}
-                        onFocus={() => setShowAutocomplete(true)}
-                        className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
-                        placeholder="Ex: João Silva"
+                        onFocus={() => setShowLoanAutocomplete(true)}
+                        className="pl-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all dark:text-white"
+                        placeholder="Buscar aluno..."
                         autoComplete="off"
                       />
                     </div>
-                    {/* Autocomplete Dropdown */}
+                    {/* Loan Autocomplete Dropdown */}
                     <AnimatePresence>
-                      {showAutocomplete && filteredStudents.length > 0 && (
+                      {showLoanAutocomplete && filteredLoanStudents.length > 0 && (
                         <motion.div
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
                           className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden"
                         >
-                          {filteredStudents.map((aluno, idx) => (
+                          {filteredLoanStudents.map((aluno, idx) => (
                             <div
                               key={idx}
-                              onClick={() => handleSelectStudent(aluno)}
-                              className="px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 flex flex-col transition-colors border-b border-slate-100 dark:border-slate-700/50 last:border-0"
+                              onClick={() => handleSelectLoanStudent(aluno)}
+                              className="px-3 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 flex flex-col transition-colors border-b border-slate-100 dark:border-slate-700/50 last:border-0"
                             >
-                              <span className="text-sm font-semibold text-slate-900 dark:text-white">{aluno.nome}</span>
-                              <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{aluno.ano || 'Série indefinida'} {aluno.turma ? `• ${aluno.turma}` : ''}</span>
+                              <span className="text-xs font-semibold text-slate-900 dark:text-white">{aluno.nome}</span>
+                              <span className="text-[9px] text-slate-500 font-medium uppercase tracking-wider">{aluno.ano || 'Série indefinida'} {aluno.turma ? `• ${aluno.turma}` : ''}</span>
                             </div>
                           ))}
                         </motion.div>
@@ -552,114 +855,146 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                     </AnimatePresence>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Ano Letivo</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Calendar className="h-5 w-5 text-slate-400" />
-                      </div>
-                      <select
-                        required
-                        value={schoolYear}
-                        onChange={(e) => setSchoolYear(e.target.value)}
-                        className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
-                      >
-                        <option value="" disabled>Selecione o ano</option>
-                        {SERIES_CADASTRO.map(serie => (
-                          <option key={serie} value={serie}>{serie}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Tipo de Ocorrência</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Tag className="h-5 w-5 text-slate-400" />
-                      </div>
-                      <select
-                        value={occurrenceType}
-                        onChange={(e) => {
-                          setOccurrenceType(e.target.value);
-                          setDynamicValue('');
-                        }}
-                        className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
-                      >
-                        {TIPOS_OCORRENCIA.map(tipo => (
-                          <option key={tipo} value={tipo}>{tipo}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Seu Nome (Responsável pelo Registro)</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-slate-400" />
-                      </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Material</label>
                       <input
                         type="text"
                         required
-                        value={emissorName}
-                        onChange={(e) => setEmissorName(e.target.value)}
-                        placeholder="Ex: Prof. João"
-                        className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                        value={loanItem}
+                        onChange={(e) => setLoanItem(e.target.value)}
+                        placeholder="Ex: Bola de basquete"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all dark:text-white"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Devolução até</label>
+                      <input
+                        type="time"
+                        required
+                        value={loanLimitTime}
+                        onChange={(e) => setLoanLimitTime(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all dark:text-white"
                       />
                     </div>
                   </div>
-                </div>
 
-                {currentDynamicField && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="space-y-2"
-                  >
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{currentDynamicField.label}</label>
-                    <input
-                      type={currentDynamicField.type}
-                      required={currentDynamicField.type === 'time'}
-                      value={dynamicValue}
-                      onChange={(e) => setDynamicValue(e.target.value)}
-                      placeholder={currentDynamicField.placeholder}
-                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
-                    />
-                  </motion.div>
-                )}
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Relato Completo</label>
-                  <textarea
-                    required
-                    value={report}
-                    onChange={(e) => setReport(e.target.value)}
-                    rows={4}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white resize-none"
-                    placeholder="Descreva o que aconteceu em detalhes..."
-                  />
-                </div>
-
-                <div className="pt-4">
                   <button
                     type="submit"
-                    disabled={isSubmitting}
-                    className="w-full sm:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors shadow-sm shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-purple-500/10 flex items-center justify-center gap-1.5"
                   >
-                    {isSubmitting ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <>
-                        <PlusCircle className="w-5 h-5" />
-                        Registrar Ocorrência
-                      </>
-                    )}
+                    <PlusCircle className="w-4 h-4" />
+                    Emprestar Item
                   </button>
+                </form>
+
+                {/* Lista de Empréstimos */}
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">
+                  Painel de Devoluções
+                </h3>
+                <div className="flex-1 overflow-y-auto max-h-[380px] space-y-3 pr-1 custom-scrollbar relative z-10">
+                  {displayedLoans.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800 rounded-xl">
+                      <Clock className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                      <p className="text-xs">Nenhum empréstimo ativo ou devolvido hoje.</p>
+                    </div>
+                  ) : (
+                    displayedLoans.map((loan) => {
+                      const overdue = isLoanOverdue(loan);
+                      return (
+                        <div
+                          key={loan.id}
+                          className={`p-3 rounded-xl border transition-all duration-200 flex flex-col justify-between gap-3 ${
+                            loan.status === 'devolvido'
+                              ? 'bg-slate-50/50 dark:bg-slate-900/30 border-slate-100 dark:border-slate-850 text-slate-400 dark:text-slate-500'
+                              : overdue
+                              ? 'bg-red-500/10 dark:bg-red-500/5 border-red-500/30 shadow-sm shadow-red-500/5 ring-1 ring-red-500/20'
+                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-xs'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start gap-2">
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`text-xs font-bold ${
+                                  loan.status === 'devolvido' 
+                                    ? 'line-through text-slate-400 dark:text-slate-500' 
+                                    : overdue 
+                                    ? 'text-red-500 dark:text-red-400' 
+                                    : 'text-slate-800 dark:text-slate-200'
+                                }`}>
+                                  {loan.studentName}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 mt-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                  loan.status === 'devolvido'
+                                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                                    : overdue
+                                    ? 'bg-red-500/10 text-red-500'
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                                }`}>
+                                  {loan.item}
+                                </span>
+                                <span>•</span>
+                                <span>{loan.loanTime}</span>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteLoan(loan.id)}
+                              className="text-slate-400 hover:text-red-500 transition-colors p-1"
+                              title="Excluir empréstimo"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 mt-1">
+                            <div className="flex items-center gap-1">
+                              <Clock className={`w-3.5 h-3.5 ${loan.status === 'devolvido' ? 'text-slate-300 dark:text-slate-700' : overdue ? 'text-red-500 dark:text-red-400' : 'text-slate-400'}`} />
+                              <span className={`text-[10px] font-bold ${
+                                loan.status === 'devolvido'
+                                  ? 'text-slate-400'
+                                  : overdue
+                                  ? 'text-red-500 dark:text-red-400'
+                                  : 'text-slate-600 dark:text-slate-350'
+                              }`}>
+                                Limite: {loan.limitTime}
+                              </span>
+                            </div>
+
+                            {loan.status === 'devolvido' ? (
+                              <span className="flex items-center gap-1 text-[10px] font-black text-emerald-650 dark:text-emerald-500 uppercase tracking-wider">
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                Devolvido
+                              </span>
+                            ) : (
+                              <div className="flex items-center gap-1.5">
+                                {overdue && (
+                                  <span className="px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-650 dark:text-red-400 text-[8px] font-black uppercase tracking-widest flex items-center gap-0.5 animate-pulse">
+                                    <AlertTriangle className="w-2.5 h-2.5" />
+                                    Atrasado
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => handleToggleReturn(loan.id)}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1 ${
+                                    overdue
+                                      ? 'bg-red-600 hover:bg-red-700 text-white shadow-red-500/10'
+                                      : 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-white'
+                                  }`}
+                                >
+                                  Devolver
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
-              </form>
+              </div>
+
             </div>
           )}
 

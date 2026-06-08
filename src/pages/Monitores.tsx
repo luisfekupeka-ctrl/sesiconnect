@@ -423,7 +423,7 @@ export default function Monitores() {
             ) : (
               <div className="space-y-4">
                 {(() => {
-                  const monitoresNaEscala = Array.from(new Set(escalaDoDia.map(g => g.monitorNome)))
+                  const monitoresNaEscala = Array.from(new Set<string>(escalaDoDia.map(g => g.monitorNome)))
                     .filter(nome => !busca || nome.toLowerCase().includes(busca.toLowerCase()))
                     .sort() as string[];
 
