@@ -4,6 +4,7 @@ import { UserCircle, Search, Clock, MapPin, ChevronLeft, ChevronRight, Users, Ca
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 import { generateEscalaGeralPDF, generateEscalasIndividuaisPDF } from '../lib/reportGenerator';
+import { useAuth } from '../context/AuthContext';
 
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 const HORAS_ESCALA = ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
@@ -93,6 +94,7 @@ function obterMacroSetor(posto: string): string {
 }
 
 export default function Monitores() {
+  const { isAdmin } = useAuth();
   const { monitores, horaAtual, gradeMonitores } = useEscola();
   const [busca, setBusca] = useState('');
   const [monitorSelecionadoId, setMonitorSelecionadoId] = useState<string | null>(null);
@@ -167,13 +169,15 @@ export default function Monitores() {
           {/* Cabeçalho */}
           <div className="p-6 md:p-8 text-white relative" style={{ backgroundColor: cor }}>
             <div className="absolute top-6 right-6 flex gap-2">
-              <button 
-                onClick={handleExportarMonitorAtivo} 
-                className="w-10 h-10 bg-black/10 rounded-xl flex items-center justify-center hover:bg-black/20 transition-all text-black"
-                title="Exportar PDF deste monitor"
-              >
-                <FileText size={20} />
-              </button>
+              {isAdmin && (
+                <button 
+                  onClick={handleExportarMonitorAtivo} 
+                  className="w-10 h-10 bg-black/10 rounded-xl flex items-center justify-center hover:bg-black/20 transition-all text-black"
+                  title="Exportar PDF deste monitor"
+                >
+                  <FileText size={20} />
+                </button>
+              )}
               <button 
                 onClick={() => setMonitorSelecionadoId(null)} 
                 className="w-10 h-10 bg-black/10 rounded-xl flex items-center justify-center hover:bg-black/20 transition-all text-black"
@@ -326,24 +330,26 @@ export default function Monitores() {
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-2 w-full md:w-auto">
-          <button
-            onClick={handleExportarGeral}
-            className="flex-1 md:flex-initial btn-secondary flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all"
-            title="Exportar PDF da escala geral do dia"
-          >
-            <FileText size={12} className="text-[#fbbf24]" />
-            PDF Escala Geral
-          </button>
-          <button
-            onClick={handleExportarIndividuais}
-            className="flex-1 md:flex-initial btn-secondary flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all"
-            title="Exportar PDFs individuais (um por página) de todos os monitores"
-          >
-            <Printer size={12} className="text-[#42a0f5]" />
-            PDFs Individuais
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
+            <button
+              onClick={handleExportarGeral}
+              className="flex-1 md:flex-initial btn-secondary flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all"
+              title="Exportar PDF da escala geral do dia"
+            >
+              <FileText size={12} className="text-[#fbbf24]" />
+              PDF Escala Geral
+            </button>
+            <button
+              onClick={handleExportarIndividuais}
+              className="flex-1 md:flex-initial btn-secondary flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all"
+              title="Exportar PDFs individuais (um por página) de todos os monitores"
+            >
+              <Printer size={12} className="text-[#42a0f5]" />
+              PDFs Individuais
+            </button>
+          </div>
+        )}
       </div>
 
       {viewMode === 'monitor' ? (
