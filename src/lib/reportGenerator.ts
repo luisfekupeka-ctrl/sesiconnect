@@ -3,7 +3,7 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
-import type { DailyOccurrenceRecord, RegistroOcorrencia } from '../types';
+import type { DailyOccurrenceRecord, RegistroOcorrencia, Monitor, GradeMonitor } from '../types';
 
 import papelTimbradoImg from '../assets/papel_timbrado.png';
 
@@ -600,5 +600,173 @@ export const generateSingleOccurrencePDF = async (record: DailyOccurrenceRecord)
   } catch (error) {
     console.error('Error generating PDF:', error);
     alert('Erro ao gerar PDF.');
+  }
+};
+
+export const generateEscalaGeralPDF = async (
+  escalaDoDia: GradeMonitor[],
+  diaSemana: string
+) => {
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  try {
+    const bgBase64 = await loadImageAsBase64(papelTimbradoImg).catch(() => undefined);
+    if (bgBase64) {
+      doc.addImage(bgBase64, 'PNG', 0, 0, pageWidth, pageHeight);
+    }
+
+    let currentY = 50;
+
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(12, 35, 64);
+    doc.text('ESCALA GERAL DE MONITORES', pageWidth / 2, currentY, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Dia da Semana: ${diaSemana.toUpperCase()}`, pageWidth / 2, currentY + 6, { align: 'center' });
+    
+    currentY += 14;
+
+    const tableData = escalaDoDia.map(slot => [
+      `${slot.horarioInicio} - ${slot.horarioFim}`,
+      slot.monitorNome,
+      slot.posto,
+      slot.funcao || 'Monitoria Geral',
+      slot.instrucoes || ''
+    ]);
+
+    autoTable(doc, {
+      startY: currentY,
+      margin: { top: 50, bottom: 20, left: 15, right: 15 },
+      head: [['Horário', 'Monitor', 'Posto / Local', 'Função', 'Notas / Instruções']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [12, 35, 64], textColor: [255, 255, 255] },
+      styles: { fontSize: 8.5, cellPadding: 3 },
+      columnStyles: {
+        0: { cellWidth: 28 },
+        1: { cellWidth: 35 },
+        2: { cellWidth: 40 },
+        3: { cellWidth: 35 },
+        4: { cellWidth: 'auto' }
+      },
+      willDrawPage: (data) => {
+        if (data.pageNumber > 1 && bgBase64) {
+          doc.addImage(bgBase64, 'PNG', 0, 0, pageWidth, pageHeight);
+        }
+      }
+    });
+
+    const dataFormatada = new Date().toLocaleDateString('pt-BR').replace(/\//g, '_');
+    doc.save(`escala_geral_${diaSemana.toLowerCase()}_${dataFormatada}.pdf`);
+  } catch (error) {
+    console.error('Error generating general scale PDF:', error);
+    alert('Erro ao gerar PDF da escala geral.');
+  }
+};
+
+export const generateEscalasIndividuaisPDF = async (
+  monitores: Monitor[],
+  gradeMonitores: GradeMonitor[],
+  diaSemana: string
+) => {
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  try {
+    const bgBase64 = await loadImageAsBase64(papelTimbradoImg).catch(() => undefined);
+    let isFirstPage = true;
+
+    const activeMonitors = monitores.filter(m => m.status === 'ativo');
+
+    for (const monitor of activeMonitors) {
+      const postos = gradeMonitores
+        .filter(g => g.monitorNome === monitor.nome && g.diaSemana === diaSemana)
+        .sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
+
+      if (!isFirstPage) {
+        doc.addPage();
+      }
+      isFirstPage = false;
+
+      if (bgBase64) {
+        doc.addImage(bgBase64, 'PNG', 0, 0, pageWidth, pageHeight);
+      }
+
+      let currentY = 50;
+
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(12, 35, 64);
+      doc.text(monitor.nome.toUpperCase(), 15, currentY);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Turno: ${monitor.turno.toUpperCase()} | Tipo: ${monitor.tipo.toUpperCase()}`, 15, currentY + 6);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(12, 35, 64);
+      doc.text(`ESCALA DE ${diaSemana.toUpperCase()}`, pageWidth - 15, currentY + 3, { align: 'right' });
+
+      currentY += 15;
+      doc.setDrawColor(220, 220, 220);
+      doc.line(15, currentY, pageWidth - 15, currentY);
+
+      currentY += 10;
+
+      if (postos.length === 0) {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(11);
+        doc.setTextColor(150, 150, 150);
+        doc.text('Nenhum posto escalado para este dia.', pageWidth / 2, currentY + 20, { align: 'center' });
+      } else {
+        const tableData = postos.map((slot, idx) => [
+          `#${idx + 1}`,
+          `${slot.horarioInicio} - ${slot.horarioFim}`,
+          slot.posto,
+          slot.funcao || 'Monitoria Geral',
+          slot.instrucoes || ''
+        ]);
+
+        autoTable(doc, {
+          startY: currentY,
+          margin: { top: 50, bottom: 20, left: 15, right: 15 },
+          head: [['Item', 'Horário', 'Posto / Local', 'Função', 'Notas / Instruções']],
+          body: tableData,
+          theme: 'grid',
+          headStyles: { fillColor: [12, 35, 64], textColor: [255, 255, 255] },
+          styles: { fontSize: 9.5, cellPadding: 4.5 },
+          columnStyles: {
+            0: { cellWidth: 15, halign: 'center' },
+            1: { cellWidth: 32 },
+            2: { cellWidth: 45 },
+            3: { cellWidth: 40 },
+            4: { cellWidth: 'auto' }
+          },
+          willDrawPage: (data) => {
+            if (data.pageNumber > 1 && bgBase64) {
+              doc.addImage(bgBase64, 'PNG', 0, 0, pageWidth, pageHeight);
+            }
+          }
+        });
+      }
+
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7);
+      doc.setTextColor(180, 180, 180);
+      doc.text(`SESI Connect · Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    }
+
+    const dataFormatada = new Date().toLocaleDateString('pt-BR').replace(/\//g, '_');
+    doc.save(`escalas_individuais_${diaSemana.toLowerCase()}_${dataFormatada}.pdf`);
+  } catch (error) {
+    console.error('Error generating individual scales PDF:', error);
+    alert('Erro ao gerar PDF das escalas individuais.');
   }
 };

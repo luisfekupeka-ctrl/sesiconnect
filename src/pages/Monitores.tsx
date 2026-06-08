@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { UserCircle, Search, Clock, MapPin, ChevronLeft, ChevronRight, Users, Calendar, Shield, AlertTriangle } from 'lucide-react';
+import { UserCircle, Search, Clock, MapPin, ChevronLeft, ChevronRight, Users, Calendar, Shield, AlertTriangle, FileText, Printer } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
+import { generateEscalaGeralPDF, generateEscalasIndividuaisPDF } from '../lib/reportGenerator';
 
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 const HORAS_ESCALA = ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
@@ -141,6 +142,20 @@ export default function Monitores() {
 
   const [viewMode, setViewMode] = useState<'monitor' | 'setor'>('monitor');
 
+  const handleExportarGeral = () => {
+    generateEscalaGeralPDF(escalaDoDia, diaFiltro);
+  };
+
+  const handleExportarIndividuais = () => {
+    generateEscalasIndividuaisPDF(monitores, gradeMonitores, diaFiltro);
+  };
+
+  const handleExportarMonitorAtivo = () => {
+    if (monitorAtivo) {
+      generateEscalasIndividuaisPDF([monitorAtivo], gradeMonitores, diaFiltro);
+    }
+  };
+
 
   // ========== SUB-PÁGINA: Grade individual do monitor ==========
   if (monitorAtivo) {
@@ -151,7 +166,22 @@ export default function Monitores() {
         <div className="bg-[#0a0a0a] rounded-[1.5rem] border border-white/5 overflow-hidden shadow-premium">
           {/* Cabeçalho */}
           <div className="p-6 md:p-8 text-white relative" style={{ backgroundColor: cor }}>
-            <button onClick={() => setMonitorSelecionadoId(null)} className="absolute top-6 right-6 w-10 h-10 bg-black/10 rounded-xl flex items-center justify-center hover:bg-black/20 transition-all"><ChevronLeft size={20} /></button>
+            <div className="absolute top-6 right-6 flex gap-2">
+              <button 
+                onClick={handleExportarMonitorAtivo} 
+                className="w-10 h-10 bg-black/10 rounded-xl flex items-center justify-center hover:bg-black/20 transition-all text-black"
+                title="Exportar PDF deste monitor"
+              >
+                <FileText size={20} />
+              </button>
+              <button 
+                onClick={() => setMonitorSelecionadoId(null)} 
+                className="w-10 h-10 bg-black/10 rounded-xl flex items-center justify-center hover:bg-black/20 transition-all text-black"
+                title="Voltar"
+              >
+                <ChevronLeft size={20} />
+              </button>
+            </div>
             <div className="flex items-center gap-6">
               <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center text-3xl font-black" style={{ color: cor }}>
                 {(monitorAtivo.nome || 'M').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()}
@@ -267,32 +297,53 @@ export default function Monitores() {
         </div>
       </header>
 
-      {/* Seletor de Modo de Visualização */}
-      <div className="flex bg-[#0a0a0a] p-1 rounded-2xl border border-white/5 self-start gap-1 w-fit">
-        <button
-          onClick={() => setViewMode('monitor')}
-          className={cn(
-            "flex items-center gap-2 px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all",
-            viewMode === 'monitor'
-              ? "bg-[#42a0f5] text-black shadow-md"
-              : "text-white/45 hover:bg-white/5 hover:text-white"
-          )}
-        >
-          <Users size={12} />
-          Por Monitor
-        </button>
-        <button
-          onClick={() => setViewMode('setor')}
-          className={cn(
-            "flex items-center gap-2 px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all",
-            viewMode === 'setor'
-              ? "bg-[#fbbf24] text-black shadow-md"
-              : "text-white/45 hover:bg-white/5 hover:text-white"
-          )}
-        >
-          <MapPin size={12} />
-          Por Setor / Local
-        </button>
+      {/* Seletor de Modo de Visualização e Botões de PDF */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex bg-[#0a0a0a] p-1 rounded-2xl border border-white/5 gap-1 w-fit">
+          <button
+            onClick={() => setViewMode('monitor')}
+            className={cn(
+              "flex items-center gap-2 px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all",
+              viewMode === 'monitor'
+                ? "bg-[#42a0f5] text-black shadow-md"
+                : "text-white/45 hover:bg-white/5 hover:text-white"
+            )}
+          >
+            <Users size={12} />
+            Por Monitor
+          </button>
+          <button
+            onClick={() => setViewMode('setor')}
+            className={cn(
+              "flex items-center gap-2 px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all",
+              viewMode === 'setor'
+                ? "bg-[#fbbf24] text-black shadow-md"
+                : "text-white/45 hover:bg-white/5 hover:text-white"
+            )}
+          >
+            <MapPin size={12} />
+            Por Setor / Local
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2 w-full md:w-auto">
+          <button
+            onClick={handleExportarGeral}
+            className="flex-1 md:flex-initial btn-secondary flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all"
+            title="Exportar PDF da escala geral do dia"
+          >
+            <FileText size={12} className="text-[#fbbf24]" />
+            PDF Escala Geral
+          </button>
+          <button
+            onClick={handleExportarIndividuais}
+            className="flex-1 md:flex-initial btn-secondary flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all"
+            title="Exportar PDFs individuais (um por página) de todos os monitores"
+          >
+            <Printer size={12} className="text-[#42a0f5]" />
+            PDFs Individuais
+          </button>
+        </div>
       </div>
 
       {viewMode === 'monitor' ? (
