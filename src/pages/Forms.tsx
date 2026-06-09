@@ -5,6 +5,7 @@ import { FileText, Search, UserCheck, Download, BarChart3, Plus, X, ChevronDown,
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
 import { Aluno, ModeloFormulario, CampoFormulario, RegistroOcorrencia } from '../types';
+import { useAuth } from '../context/AuthContext';
 import { 
   salvarOcorrencia, 
   salvarModeloFormulario, 
@@ -107,6 +108,8 @@ export default function FormsPage() {
     alunos, modelosFormulario, ocorrencias, 
     adicionarOcorrencia, atualizar, professoresCMS 
   } = useEscola();
+
+  const { profile } = useAuth();
 
   const location = useLocation();
 
@@ -240,7 +243,7 @@ O(A) aluno(a) declarou estar ciente das orientações recebidas, bem como da leg
       turmaAluno: alunoSelecionado.turma,
       anoAluno: alunoSelecionado.ano,
       salaAluno: alunoSelecionado.numeroSala,
-      professorAtual: 'A DEFINIR', // Poderia vir do contexto se logado
+      professorAtual: profile?.full_name || 'Administração',
     });
 
     if (ok) {

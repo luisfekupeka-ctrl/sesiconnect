@@ -149,8 +149,8 @@ export function Occurrences() {
   } | null>(null);
 
   useEffect(() => {
-    if (profile?.nome) {
-      setEmissorName(profile.nome);
+    if (profile?.full_name) {
+      setEmissorName(profile.full_name);
     }
   }, [profile]);
 
@@ -160,7 +160,9 @@ export function Occurrences() {
       case 'Atraso': return { label: 'Horário de Chegada', type: 'time', placeholder: 'Ex: 07:30' };
       case 'Sem uniforme': return { label: 'Peça Faltando (Opcional)', type: 'text', placeholder: 'Ex: Camiseta padrão' };
       case 'Indisciplina em sala': return { label: 'Aula / Matéria', type: 'text', placeholder: 'Ex: Matemática' };
-      case 'Uso indevido de celular': return { label: 'Local do Ocorrido', type: 'text', placeholder: 'Ex: Pátio, Sala 3...' };
+      case 'Uso indevido de celular':
+      case 'Uso Indevido de Celular':
+        return { label: 'Justificativa do(a) Estudante', type: 'text', placeholder: 'Ex: Estava verificando o horário / Falando com a mãe...' };
       case 'Falta de material': return { label: 'Qual Material', type: 'text', placeholder: 'Ex: Apostila de História' };
       case 'Agressão verbal': return { label: 'Envolvidos / Vítima', type: 'text', placeholder: 'Ex: Colega de classe' };
       case 'Agressão física': return { label: 'Envolvidos / Vítima', type: 'text', placeholder: 'Ex: Colega de classe' };
@@ -340,16 +342,22 @@ export function Occurrences() {
     }
   };
 
+  const isCellPhoneUse = occurrenceType === 'Uso indevido de celular' || occurrenceType === 'Uso Indevido de Celular';
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentName || !schoolYear || !occurrenceType || !report) return;
+    if (!studentName || !schoolYear || !occurrenceType || (!isCellPhoneUse && !report)) return;
 
     setIsSubmitting(true);
     try {
-      const dynField = getDynamicField(occurrenceType);
       let finalReport = report;
-      if (dynField && dynamicValue) {
-        finalReport = `[${dynField.label}: ${dynamicValue}]\n${report}`;
+      if (isCellPhoneUse) {
+        finalReport = getCellPhoneReport();
+      } else {
+        const dynField = getDynamicField(occurrenceType);
+        if (dynField && dynamicValue) {
+          finalReport = `[${dynField.label}: ${dynamicValue}]\n${report}`;
+        }
       }
 
       await occurrenceService.createRecord({
@@ -363,6 +371,8 @@ export function Occurrences() {
 
       if (occurrenceType === 'Sem uniforme') {
         setGeneratedMessageAfterSubmit(getUniformMessage());
+      } else if (isCellPhoneUse) {
+        setGeneratedMessageAfterSubmit(getCellPhoneMessage());
       }
 
       setSuccessMessage('Ocorrência registrada com sucesso!');
@@ -527,6 +537,34 @@ Em caso de dúvidas, permanecemos à disposição.
 Atenciosamente,
 ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
     }
+  };
+
+  const getCellPhoneMessage = () => {
+    return `Prezados responsáveis,
+
+Informamos que o(a) aluno(a) ${studentName || '_____________________________'}, do ${schoolYear || '____ ano'}, foi orientado(a) nesta data quanto ao uso de aparelho celular durante o período escolar, conforme as normas da instituição e a Lei Federal nº 15.100/2025.
+
+Justificativa informada pelo(a) estudante: ${dynamicValue || '_____________________________'} .
+
+Reforçamos que o uso de celular na escola é permitido apenas para fins pedagógicos, mediante autorização da equipe escolar, ou em situações específicas e locais previamente definidos pela instituição.
+
+Solicitamos o apoio da família para reforçar junto ao(à) estudante a importância do cumprimento das normas escolares e das orientações recebidas, contribuindo para um ambiente favorável à aprendizagem.
+
+Atenciosamente,
+${emissorName || '_____________________'}`;
+  };
+
+  const getCellPhoneReport = () => {
+    const currentDateStr = new Date().toLocaleDateString('pt-BR');
+    return `Na data de ${currentDateStr}, o(a) aluno(a) ${studentName || '_____________________________'}, do ${schoolYear || '____ ano'} foi abordado(a) pela equipe escolar em razão da utilização de aparelho celular durante o período escolar.
+
+Ao ser questionado(a), o(a) estudante apresentou a seguinte justificativa: ${dynamicValue || '_____________________________'}
+
+O(a) aluno(a) foi orientado(a) sobre as normas institucionais referentes ao uso de dispositivos eletrônicos e sobre a Lei Federal nº 15.100/2025, que regulamenta o uso de aparelhos eletrônicos pessoais nas instituições de ensino.
+
+Foi esclarecido que a utilização do celular somente é permitida para fins pedagógicos, mediante autorização da equipe escolar, ou em situações específicas previstas pela instituição, nos locais previamente definidos para essa finalidade.
+
+O(a) estudante declarou estar ciente das orientações recebidas e comprometeu-se a cumprir as normas estabelecidas pela escola.`;
   };
 
   const copyUniformMessage = () => {
@@ -799,17 +837,26 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
                     </motion.div>
                   )}
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Relato Completo</label>
-                    <textarea
-                      required
-                      value={report}
-                      onChange={(e) => setReport(e.target.value)}
-                      rows={4}
-                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white resize-none"
-                      placeholder="Descreva o que aconteceu em detalhes..."
-                    />
-                  </div>
+                  {isCellPhoneUse ? (
+                    <div className="space-y-2 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pré-visualização do Relato Diário (Será salvo automaticamente)</label>
+                      <div className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-line font-medium leading-relaxed bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl">
+                        {getCellPhoneReport()}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Relato Completo</label>
+                      <textarea
+                        required
+                        value={report}
+                        onChange={(e) => setReport(e.target.value)}
+                        rows={4}
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white resize-none"
+                        placeholder="Descreva o que aconteceu em detalhes..."
+                      />
+                    </div>
+                  )}
 
                   <div className="pt-4">
                     <button
