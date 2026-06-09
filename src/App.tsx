@@ -3,24 +3,24 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './Layout';
 import { ProvedorEscola } from './context/ContextoEscola';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import Dashboard from './pages/Dashboard';
-import TeachersPage from './pages/Teachers';
-import RoomsPage from './pages/Rooms';
-import LanguageLab from './pages/LanguageLab';
-import AfterSchool from './pages/AfterSchool';
-import Monitores from './pages/Monitores';
-import FormsPage from './pages/Forms';
-import Admin from './pages/Admin';
-import ScheduleEditor from './pages/ScheduleEditor';
-import MonitorScheduleEditor from './pages/MonitorScheduleEditor';
-import MonitorPortal from './pages/MonitorPortal';
-import LoginPage from './pages/Login';
-import ChamadaProfessor from './pages/ChamadaProfessor';
-import ControleFaltas from './pages/ControleFaltas';
-import GestaoRealocacao from './pages/GestaoRealocacao';
-import RelatorioDiario from './pages/RelatorioDiario';
-import { Occurrences } from './pages/Occurrences';
-import PendingAtas from './pages/PendingAtas';
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const TeachersPage = React.lazy(() => import('./pages/Teachers'));
+const RoomsPage = React.lazy(() => import('./pages/Rooms'));
+const LanguageLab = React.lazy(() => import('./pages/LanguageLab'));
+const AfterSchool = React.lazy(() => import('./pages/AfterSchool'));
+const Monitores = React.lazy(() => import('./pages/Monitores'));
+const FormsPage = React.lazy(() => import('./pages/Forms'));
+const Admin = React.lazy(() => import('./pages/Admin'));
+const ScheduleEditor = React.lazy(() => import('./pages/ScheduleEditor'));
+const MonitorScheduleEditor = React.lazy(() => import('./pages/MonitorScheduleEditor'));
+const MonitorPortal = React.lazy(() => import('./pages/MonitorPortal'));
+const LoginPage = React.lazy(() => import('./pages/Login'));
+const ChamadaProfessor = React.lazy(() => import('./pages/ChamadaProfessor'));
+const ControleFaltas = React.lazy(() => import('./pages/ControleFaltas'));
+const GestaoRealocacao = React.lazy(() => import('./pages/GestaoRealocacao'));
+const RelatorioDiario = React.lazy(() => import('./pages/RelatorioDiario'));
+const Occurrences = React.lazy(() => import('./pages/Occurrences').then(module => ({ default: module.Occurrences })));
+const PendingAtas = React.lazy(() => import('./pages/PendingAtas'));
 
 // Componente de Proteção de Rota
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode; requiredRole?: string }) {
@@ -82,39 +82,47 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode;
   return <>{children}</>;
 }
 
+const LoadingFallback = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+  </div>
+);
+
 export default function App() {
   return (
     <AuthProvider>
       <ProvedorEscola>
         <BrowserRouter>
-          <Routes>
-            {/* Rotas Públicas */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/meu-horario" element={<MonitorPortal />} />
-            
-            {/* Rotas com Layout (Agora 100% Protegidas por Login e Aprovação) */}
-            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-              {/* Páginas Internas de Consulta */}
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/teachers" element={<TeachersPage />} />
-              <Route path="/rooms" element={<RoomsPage />} />
-              <Route path="/language-lab" element={<LanguageLab />} />
-              <Route path="/after" element={<AfterSchool />} />
-              <Route path="/monitores" element={<Monitores />} />
-              <Route path="/relatorio-diario" element={<RelatorioDiario />} />
-              <Route path="/ocorrencias" element={<Occurrences />} />
+          <React.Suspense fallback={<LoadingFallback />}>
+            <Routes>
+              {/* Rotas Públicas */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/meu-horario" element={<MonitorPortal />} />
               
-              {/* Áreas que exigem Login/Role ADMIN */}
-              <Route path="/atas-pendentes" element={<ProtectedRoute requiredRole="admin"><PendingAtas /></ProtectedRoute>} />
-              <Route path="/forms" element={<ProtectedRoute requiredRole="admin"><FormsPage /></ProtectedRoute>} />
-              <Route path="/controle-faltas" element={<ProtectedRoute requiredRole="admin"><ControleFaltas /></ProtectedRoute>} />
-              <Route path="/realocacao" element={<ProtectedRoute requiredRole="admin"><GestaoRealocacao /></ProtectedRoute>} />
-              <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><Admin /></ProtectedRoute>} />
-              <Route path="/schedule-editor" element={<ProtectedRoute requiredRole="admin"><ScheduleEditor /></ProtectedRoute>} />
-              <Route path="/monitor-schedule" element={<ProtectedRoute requiredRole="admin"><MonitorScheduleEditor /></ProtectedRoute>} />
-              <Route path="/professor-chamada" element={<ProtectedRoute requiredRole="admin"><ChamadaProfessor /></ProtectedRoute>} />
-            </Route>
-          </Routes>
+              {/* Rotas com Layout (Agora 100% Protegidas por Login e Aprovação) */}
+              <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                {/* Páginas Internas de Consulta */}
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/teachers" element={<TeachersPage />} />
+                <Route path="/rooms" element={<RoomsPage />} />
+                <Route path="/language-lab" element={<LanguageLab />} />
+                <Route path="/after" element={<AfterSchool />} />
+                <Route path="/monitores" element={<Monitores />} />
+                <Route path="/relatorio-diario" element={<RelatorioDiario />} />
+                <Route path="/ocorrencias" element={<Occurrences />} />
+                
+                {/* Áreas que exigem Login/Role ADMIN */}
+                <Route path="/atas-pendentes" element={<ProtectedRoute requiredRole="admin"><PendingAtas /></ProtectedRoute>} />
+                <Route path="/forms" element={<ProtectedRoute requiredRole="admin"><FormsPage /></ProtectedRoute>} />
+                <Route path="/controle-faltas" element={<ProtectedRoute requiredRole="admin"><ControleFaltas /></ProtectedRoute>} />
+                <Route path="/realocacao" element={<ProtectedRoute requiredRole="admin"><GestaoRealocacao /></ProtectedRoute>} />
+                <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><Admin /></ProtectedRoute>} />
+                <Route path="/schedule-editor" element={<ProtectedRoute requiredRole="admin"><ScheduleEditor /></ProtectedRoute>} />
+                <Route path="/monitor-schedule" element={<ProtectedRoute requiredRole="admin"><MonitorScheduleEditor /></ProtectedRoute>} />
+                <Route path="/professor-chamada" element={<ProtectedRoute requiredRole="admin"><ChamadaProfessor /></ProtectedRoute>} />
+              </Route>
+            </Routes>
+          </React.Suspense>
         </BrowserRouter>
       </ProvedorEscola>
     </AuthProvider>

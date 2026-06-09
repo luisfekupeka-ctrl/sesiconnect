@@ -70,79 +70,128 @@ const Contexto = createContext<ContextoEscolaType | null>(null);
 
 export function ProvedorEscola({ children }: { children: ReactNode }) {
   const [horaAtual, setHoraAtual] = useState(new Date());
-  const [salas, setSalas] = useState<Sala[]>([]);
-  const [gradeCompleta, setGradeCompleta] = useState<EntradaGradeSala[]>([]);
-  const [alunos, setAlunos] = useState<Aluno[]>([]);
+  const [salas, setSalas] = useState<Sala[]>(() => {
+    try {
+      const cached = localStorage.getItem('sesiconnect_cache_salas');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [gradeCompleta, setGradeCompleta] = useState<EntradaGradeSala[]>(() => {
+    try {
+      const cached = localStorage.getItem('sesiconnect_cache_gradeCompleta');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [alunos, setAlunos] = useState<Aluno[]>(() => {
+    try {
+      const cached = localStorage.getItem('sesiconnect_cache_alunos');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
   const [languageLab, setLanguageLab] = useState<LanguageLabRecord[]>([]);
   const [atividadesAfter, setAtividadesAfter] = useState<AtividadeAfter[]>([]);
   const [monitores, setMonitores] = useState<Monitor[]>([]);
-  const [professoresCMS, setProfessoresCMS] = useState<ProfessorCMS[]>([]);
-  const [locaisCMS, setLocaisCMS] = useState<LocalCMS[]>([]);
+  const [professoresCMS, setProfessoresCMS] = useState<ProfessorCMS[]>(() => {
+    try {
+      const cached = localStorage.getItem('sesiconnect_cache_professoresCMS');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [locaisCMS, setLocaisCMS] = useState<LocalCMS[]>(() => {
+    try {
+      const cached = localStorage.getItem('sesiconnect_cache_locaisCMS');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
   const [modelosFormulario, setModelosFormulario] = useState<ModeloFormulario[]>([]);
   const [ocorrencias, setOcorrencias] = useState<RegistroOcorrencia[]>([]);
   const [gradeMonitores, setGradeMonitores] = useState<GradeMonitor[]>([]);
-  const [periodos, setPeriodos] = useState<PeriodoConfig[]>([]);
+  const [periodos, setPeriodos] = useState<PeriodoConfig[]>(() => {
+    try {
+      const cached = localStorage.getItem('sesiconnect_cache_periodos');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
   const [realocacoes, setRealocacoes] = useState<ResultadoRealocacao[]>([]);
-  const [carregando, setCarregando] = useState(true);
+  const [carregando, setCarregando] = useState(() => {
+    try {
+      const cachedSalas = localStorage.getItem('sesiconnect_cache_salas');
+      const cachedGrade = localStorage.getItem('sesiconnect_cache_gradeCompleta');
+      return !(cachedSalas && cachedGrade);
+    } catch { return true; }
+  });
 
   const carregarDados = useCallback(async () => {
-    setCarregando(true);
+    // Sincronização assíncrona progressiva (SWR) com o Supabase
+    const syncTasks = [
+      buscarSalas().then(data => {
+        if (data) {
+          setSalas(data);
+          localStorage.setItem('sesiconnect_cache_salas', JSON.stringify(data));
+        }
+      }),
+      buscarMapaSalas().then(data => {
+        if (data) {
+          setGradeCompleta(data);
+          localStorage.setItem('sesiconnect_cache_gradeCompleta', JSON.stringify(data));
+        }
+      }),
+      buscarAlunos().then(data => {
+        if (data) {
+          setAlunos(data);
+          localStorage.setItem('sesiconnect_cache_alunos', JSON.stringify(data));
+        }
+      }),
+      buscarLanguageLab().then(setLanguageLab),
+      buscarAtividadesAfter().then(setAtividadesAfter),
+      buscarMonitores().then(setMonitores),
+      buscarModelosFormulario().then(mf => {
+        if (mf && mf.length > 0) {
+          setModelosFormulario(mf);
+        } else {
+          setModelosFormulario([
+            {
+              id: '11111111-1111-1111-1111-111111111111',
+              nome: 'Ocorrência Disciplinar',
+              descricao: 'Registre ocorrências disciplinares de alunos com categoria e descrição detalhada.',
+              campos: [
+                { id: 'f-aluno', rotulo: 'Aluno', tipo: 'autocomplete_aluno', obrigatorio: true },
+                { id: 'f-tipo', rotulo: 'Tipo de Ocorrência', tipo: 'selecao', obrigatorio: true, opcoes: ['Atraso', 'Indisciplina', 'Falta', 'Elogio', 'Outro'] },
+                { id: 'f-desc', rotulo: 'Descrição', tipo: 'area_texto', obrigatorio: true },
+                { id: 'f-prof', rotulo: 'Responsável', tipo: 'texto', obrigatorio: false },
+              ],
+              criadoEm: new Date().toISOString(),
+            },
+          ]);
+        }
+      }),
+      buscarOcorrencias().then(setOcorrencias),
+      buscarProfessoresCMS().then(data => {
+        if (data) {
+          setProfessoresCMS(data);
+          localStorage.setItem('sesiconnect_cache_professoresCMS', JSON.stringify(data));
+        }
+      }),
+      buscarLocaisCMS().then(data => {
+        if (data) {
+          setLocaisCMS(data);
+          localStorage.setItem('sesiconnect_cache_locaisCMS', JSON.stringify(data));
+        }
+      }),
+      buscarGradeMonitores().then(setGradeMonitores),
+      buscarPeriodos().then(data => {
+        if (data && data.length > 0) {
+          setPeriodos(data);
+          localStorage.setItem('sesiconnect_cache_periodos', JSON.stringify(data));
+        }
+      }),
+      buscarRealocacoes().then(setRealocacoes),
+    ];
+
     try {
-      const [s, g, a, li, aa, m, mf, oc, pCms, lCms, gm, periodosDB, realocDB] = await Promise.all([
-        buscarSalas(),
-        buscarMapaSalas(),
-        buscarAlunos(),
-        buscarLanguageLab(),
-        buscarAtividadesAfter(),
-        buscarMonitores(),
-        buscarModelosFormulario(),
-        buscarOcorrencias(),
-        buscarProfessoresCMS(),
-        buscarLocaisCMS(),
-        buscarGradeMonitores(),
-        buscarPeriodos(),
-        buscarRealocacoes(),
-      ]);
-
-      setProfessoresCMS(pCms || []);
-      setAlunos(a || []);
-      setGradeCompleta(g || []);
-      setSalas(s || []);
-      setAtividadesAfter(aa);
-      setLocaisCMS(lCms);
-      setOcorrencias(oc);
-      setLanguageLab(li || []);
-      setGradeMonitores(gm || []);
-      setMonitores(m || []);
-      setRealocacoes(realocDB || []);
-
-      if (mf && mf.length > 0) {
-        setModelosFormulario(mf);
-      } else {
-        setModelosFormulario([
-          {
-            id: '11111111-1111-1111-1111-111111111111',
-            nome: 'Ocorrência Disciplinar',
-            descricao: 'Registre ocorrências disciplinares de alunos com categoria e descrição detalhada.',
-            campos: [
-              { id: 'f-aluno', rotulo: 'Aluno', tipo: 'autocomplete_aluno', obrigatorio: true },
-              { id: 'f-tipo', rotulo: 'Tipo de Ocorrência', tipo: 'selecao', obrigatorio: true, opcoes: ['Atraso', 'Indisciplina', 'Falta', 'Elogio', 'Outro'] },
-              { id: 'f-desc', rotulo: 'Descrição', tipo: 'area_texto', obrigatorio: true },
-              { id: 'f-prof', rotulo: 'Responsável', tipo: 'texto', obrigatorio: false },
-            ],
-            criadoEm: new Date().toISOString(),
-          },
-        ]);
-      }
-
-      if (periodosDB && periodosDB.length > 0) {
-        setPeriodos(periodosDB as PeriodoConfig[]);
-      } else {
-        console.warn('[AVISO] Nenhum período encontrado no banco. Verifique a tabela periodos_escolares.');
-        setPeriodos([]);
-      }
+      await Promise.all(syncTasks);
     } catch (error) {
-      console.error('Erro ao carregar dados do Supabase:', error);
+      console.error('Erro ao sincronizar dados do Supabase:', error);
     } finally {
       setCarregando(false);
     }
