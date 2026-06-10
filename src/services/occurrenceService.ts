@@ -111,5 +111,22 @@ export const occurrenceService = {
       console.error('Error marking daily occurrence records as treated:', error);
       throw error;
     }
+  },
+
+  async updateRecord(id: string, record: Partial<DailyOccurrenceRecord>): Promise<DailyOccurrenceRecord> {
+    const { data, error } = await supabase
+      .from('daily_occurrence_records')
+      .update(record)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating daily occurrence record:', error);
+      throw error;
+    }
+
+    return data;
   }
 };
+

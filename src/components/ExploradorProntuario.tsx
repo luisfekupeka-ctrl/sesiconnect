@@ -217,35 +217,99 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
     }
   };
 
+  const obterTurmasDoAno = (ano: string) => {
+    const prefix = ano.split(' ')[0]; // pega "6º" ou "1º", por exemplo
+    const turmasValidas = new Set<string>();
+    
+    ocorrencias
+      .filter(o => (o.anoAluno || '').includes(prefix))
+      .forEach(o => {
+        if (o.turmaAluno) turmasValidas.add(o.turmaAluno);
+      });
+      
+    registrosDiarios
+      .filter(r => (r.school_year || '').includes(prefix))
+      .forEach(r => {
+        if (r.school_year) turmasValidas.add(r.school_year);
+      });
+
+    return Array.from(turmasValidas).sort();
+  };
+
+  const filteredAnos = useMemo(() => {
+    if (!busca) return ANOS;
+    return ANOS.filter(ano => ano.toLowerCase().includes(busca.toLowerCase().trim()));
+  }, [ANOS, busca]);
+
+  const filteredTurmas = useMemo(() => {
+    if (!busca) return turmasDaUnidade;
+    return turmasDaUnidade.filter(turma => turma.toLowerCase().includes(busca.toLowerCase().trim()));
+  }, [turmasDaUnidade, busca]);
+
+  const filteredAlunos = useMemo(() => {
+    if (!busca) return alunosDaTurma;
+    return alunosDaTurma.filter(aluno => aluno.nome.toLowerCase().includes(busca.toLowerCase().trim()));
+  }, [alunosDaTurma, busca]);
+
+  const filteredDocumentos = useMemo(() => {
+    if (!busca) return documentosDoAluno;
+    return documentosDoAluno.filter(doc => 
+      doc.titulo.toLowerCase().includes(busca.toLowerCase().trim()) || 
+      (doc.dadosOriginais.relato && doc.dadosOriginais.relato.toLowerCase().includes(busca.toLowerCase().trim())) ||
+      (doc.dadosOriginais.report && doc.dadosOriginais.report.toLowerCase().includes(busca.toLowerCase().trim())) ||
+      (doc.dadosOriginais.dados && Object.values(doc.dadosOriginais.dados).some(val => String(val).toLowerCase().includes(busca.toLowerCase().trim())))
+    );
+  }, [documentosDoAluno, busca]);
+
   // Navegação
   const entrarUnidade = (ano: string) => {
-    setSelecao({ unidade: ano });
-    setCaminho(['Sesi Connect', 'Prontuário', ano]);
-    setViewMode('TURMAS');
+    setBusca('');
+    const turmas = obterTurmasDoAno(ano);
+    if (turmas.length === 1) {
+      const unicaTurma = turmas[0];
+      setSelecao({ unidade: ano, turma: unicaTurma });
+      setCaminho(['Sesi Connect', 'Prontuário', ano, unicaTurma]);
+      setViewMode('ALUNOS');
+    } else {
+      setSelecao({ unidade: ano });
+      setCaminho(['Sesi Connect', 'Prontuário', ano]);
+      setViewMode('TURMAS');
+    }
   };
 
   const entrarTurma = (turma: string) => {
+    setBusca('');
     setSelecao(prev => ({ ...prev, turma }));
     setCaminho(['Sesi Connect', 'Prontuário', selecao.unidade!, turma]);
     setViewMode('ALUNOS');
   };
 
   const entrarAluno = (aluno: Aluno) => {
+    setBusca('');
     setSelecao(prev => ({ ...prev, aluno }));
     setCaminho(['Sesi Connect', 'Prontuário', selecao.unidade!, selecao.turma!, aluno.nome]);
     setViewMode('DOCUMENTOS');
   };
 
   const voltar = () => {
+    setBusca('');
     if (viewMode === 'DOCUMENTOS') {
         setViewMode('ALUNOS');
         setCaminho(['Sesi Connect', 'Prontuário', selecao.unidade!, selecao.turma!]);
     } else if (viewMode === 'ALUNOS') {
-        setViewMode('TURMAS');
-        setCaminho(['Sesi Connect', 'Prontuário', selecao.unidade!]);
+        const turmas = obterTurmasDoAno(selecao.unidade || '');
+        if (turmas.length === 1) {
+          setViewMode('UNIDADES');
+          setCaminho(['Sesi Connect', 'Prontuário']);
+          setSelecao({});
+        } else {
+          setViewMode('TURMAS');
+          setCaminho(['Sesi Connect', 'Prontuário', selecao.unidade!]);
+        }
     } else if (viewMode === 'TURMAS') {
         setViewMode('UNIDADES');
         setCaminho(['Sesi Connect', 'Prontuário']);
+        setSelecao({});
     }
   };
 
@@ -396,7 +460,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
               exit={{ opacity: 0, y: -10 }}
               className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-8"
             >
-              {viewMode === 'UNIDADES' && ANOS.map(ano => (
+              {viewMode === 'UNIDADES' && filteredAnos.map(ano => (
                 <button key={ano} onClick={() => entrarUnidade(ano)} className="flex flex-col items-center gap-4 group cursor-pointer">
                     <div className="w-24 h-24 flex items-center justify-center relative">
                         <Folder size={80} className="text-primary fill-primary/10 group-hover:scale-110 group-hover:fill-primary transition-all duration-300" />
@@ -406,7 +470,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
                 </button>
               ))}
 
-              {viewMode === 'TURMAS' && turmasDaUnidade.map(turma => (
+              {viewMode === 'TURMAS' && filteredTurmas.map(turma => (
                 <button key={turma} onClick={() => entrarTurma(turma)} className="flex flex-col items-center gap-4 group cursor-pointer">
                     <div className="w-24 h-24 flex items-center justify-center">
                         <Folder size={80} className="text-primary fill-primary/10 group-hover:scale-110 group-hover:fill-primary transition-all" />
@@ -415,7 +479,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
                 </button>
               ))}
 
-              {viewMode === 'ALUNOS' && alunosDaTurma.map(aluno => (
+              {viewMode === 'ALUNOS' && filteredAlunos.map(aluno => (
                 <button key={aluno.id} onClick={() => entrarAluno(aluno)} className="flex flex-col items-center gap-4 group cursor-pointer">
                     <div className="w-24 h-24 bg-white/5 rounded-[2rem] flex items-center justify-center border border-white/5 group-hover:border-primary/50 group-hover:bg-primary/5 transition-all">
                         <Folder size={48} className="text-primary fill-primary/10 group-hover:fill-primary transition-all" />
@@ -424,13 +488,13 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
                 </button>
               ))}
 
-              {viewMode === 'DOCUMENTOS' && documentosDoAluno.map(doc => (
+              {viewMode === 'DOCUMENTOS' && filteredDocumentos.map(doc => (
                 <button key={doc.id} onClick={() => handleVerDocumento(doc)} className="flex flex-col items-center gap-4 group cursor-pointer">
                     <div className={cn(
-                      "w-24 h-24 border rounded-[2rem] flex flex-col items-center justify-center transition-all relative overflow-hidden",
-                      doc.tipo === 'ata' 
-                        ? "bg-black border-red-500/20 group-hover:border-red-500/60" 
-                        : "bg-black border-blue-500/20 group-hover:border-blue-500/60"
+                       "w-24 h-24 border rounded-[2rem] flex flex-col items-center justify-center transition-all relative overflow-hidden",
+                       doc.tipo === 'ata' 
+                         ? "bg-black border-red-500/20 group-hover:border-red-500/60" 
+                         : "bg-black border-blue-500/20 group-hover:border-blue-500/60"
                     )}>
                         <FileText size={40} className={doc.tipo === 'ata' ? "text-red-500" : "text-blue-500"} />
                         <div className={cn(
@@ -453,7 +517,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
             </motion.div>
           </AnimatePresence>
 
-          {viewMode === 'DOCUMENTOS' && documentosDoAluno.length === 0 && (
+          {viewMode === 'DOCUMENTOS' && filteredDocumentos.length === 0 && (
             <div className="h-full flex flex-col items-center justify-center opacity-5">
               <FileSearch size={100} />
               <p className="font-black uppercase tracking-[0.5em] mt-6">Arquivo Vazio</p>
@@ -476,7 +540,12 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
 
       <AnimatePresence>
         {visualizandoDoc && (
-          <FichaOcorrencia ocorrencia={visualizandoDoc} onClose={() => setVisualizandoDoc(null)} />
+          <FichaOcorrencia 
+            ocorrencia={visualizandoDoc} 
+            onClose={() => setVisualizandoDoc(null)} 
+            onEditSuccess={atualizar}
+            onDeleteSuccess={atualizar}
+          />
         )}
         {dossieAberto && mappedDossieOcorrencias.length > 0 && (
           <ProntuarioPDF ocorrencias={mappedDossieOcorrencias} onClose={() => setDossieAberto(false)} alunoNome={selecao.aluno?.nome || ''} />

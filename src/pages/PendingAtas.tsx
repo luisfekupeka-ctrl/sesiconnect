@@ -43,12 +43,12 @@ export default function PendingAtas() {
       setLoading(true);
       setError(null);
       try {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
         
-        // Busca ocorrências não tratadas nos últimos 30 dias
+        // Busca ocorrências não tratadas no trimestre
         const records = await occurrenceService.fetchRecords({
-          start_date: thirtyDaysAgo.toISOString(),
+          start_date: ninetyDaysAgo.toISOString(),
           tratada: false
         });
         setDailyRecords(records);
@@ -185,7 +185,7 @@ export default function PendingAtas() {
             <h1 className="text-4xl font-black tracking-tighter text-white">Atas Pendentes</h1>
           </div>
           <p className="text-on-surface-variant font-medium max-w-2xl text-sm leading-relaxed">
-            Alunos que atingiram o limite de reincidência de conduta (4 ou mais ocorrências diárias ativas nos últimos 30 dias) e necessitam de uma ata oficial de orientação e tratativa pedagógica da Coordenação.
+            Alunos que atingiram o limite de reincidência de conduta (4 ou mais ocorrências diárias ativas no trimestre) e necessitam de uma ata oficial de orientação e tratativa pedagógica da Coordenação.
           </p>
         </div>
 
@@ -290,7 +290,7 @@ export default function PendingAtas() {
             </div>
             <h3 className="text-xl font-black mb-2 text-white">Nenhuma Ata Pendente</h3>
             <p className="text-on-surface-variant text-sm max-w-md mx-auto leading-relaxed">
-              Todos os alunos estão em conformidade! Não há nenhum estudante com 4 ou mais ocorrências diárias ativas nos últimos 30 dias precisando de ata pedagógica neste momento.
+              Todos os alunos estão em conformidade! Não há nenhum estudante com 4 ou mais ocorrências diárias ativas no trimestre precisando de ata pedagógica neste momento.
             </p>
           </motion.div>
         ) : (
@@ -382,7 +382,7 @@ export default function PendingAtas() {
                           <div className="p-6 md:p-8 space-y-6">
                             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                               <Clock size={14} className="text-primary" />
-                              Histórico dos últimos 30 dias
+                              Histórico do trimestre
                             </h3>
 
                             <div className="relative pl-6 border-l-2 border-outline-variant/30 space-y-6">

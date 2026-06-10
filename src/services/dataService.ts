@@ -297,7 +297,7 @@ export async function buscarAlunos(): Promise<Aluno[]> {
     turma: item.turma,
     ano: item.ano,
     numeroSala: item.numero_sala,
-  }));
+  })).sort((a, b) => a.nome.localeCompare(b.nome));
 }
 
 export async function salvarAluno(aluno: Partial<Aluno>): Promise<boolean> {
@@ -432,7 +432,7 @@ export async function buscarAtividadesAfter(): Promise<AtividadeAfter[]> {
     grupoAlunos: item.grupo_alunos,
     vagas: item.vagas,
     listaAlunos: item.lista_alunos || []
-  }));
+  })).sort((a, b) => a.nome.localeCompare(b.nome));
 }
 
 export async function salvarAtividadeAfter(atividade: Partial<AtividadeAfter>): Promise<boolean> {
@@ -489,7 +489,7 @@ export async function buscarMonitores(): Promise<Monitor[]> {
     tipo: (item.tipo || 'fixo') as 'volante' | 'fixo' | 'hibrido',
     status: item.status as 'ativo' | 'inativo',
     cor: item.cor || '#3B82F6'
-  }));
+  })).sort((a, b) => a.nome.localeCompare(b.nome));
 }
 
 export async function salvarMonitor(monitor: Partial<Monitor>): Promise<boolean> {
@@ -647,7 +647,7 @@ export async function buscarLanguageLab(): Promise<LanguageLabRecord[]> {
     horarioFim: item.horario_fim,
     diaSemana: item.dia_semana,
     listaAlunos: item.lista_alunos || [],
-  }));
+  })).sort((a, b) => a.turma.localeCompare(b.turma));
 }
 
 export async function salvarLanguageLab(record: Partial<LanguageLabRecord>): Promise<boolean> {
@@ -696,7 +696,7 @@ export async function buscarLocaisCMS(): Promise<LocalCMS[]> {
     tipo: l.tipo,
     capacidade: l.capacidade,
     lista_alunos: l.lista_alunos || []
-  }));
+  })).sort((a, b) => a.nome.localeCompare(b.nome));
 }
 
 export async function salvarLocalCMS(local: Partial<LocalCMS>): Promise<boolean> {
@@ -764,7 +764,7 @@ export async function buscarOcorrencias(): Promise<RegistroOcorrencia[]> {
   }));
 }
 
-export async function salvarOcorrencia(ocorrencia: Partial<RegistroOcorrencia>): Promise<boolean> {
+export async function salvarOcorrencia(ocorrencia: Partial<RegistroOcorrencia>): Promise<RegistroOcorrencia | null> {
   const payload: any = {
     modelo_id: ocorrencia.modeloFormularioId,
     nome_modelo: ocorrencia.nomeModelo,
@@ -778,11 +778,26 @@ export async function salvarOcorrencia(ocorrencia: Partial<RegistroOcorrencia>):
 
   if (ocorrencia.id) payload.id = ocorrencia.id;
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('ocorrencias')
-    .upsert([payload]);
+    .upsert([payload])
+    .select('*');
 
-  return !error;
+  if (error || !data || data.length === 0) return null;
+
+  const item = data[0];
+  return {
+    id: item.id,
+    modeloFormularioId: item.modelo_id,
+    nomeModelo: item.nome_modelo,
+    dados: item.dados || {},
+    nomeAluno: item.nome_aluno,
+    turmaAluno: item.turma_aluno,
+    anoAluno: item.ano_aluno,
+    salaAluno: item.sala_aluno,
+    professorAtual: item.professor_atual,
+    criadoEm: item.criado_em,
+  };
 }
 
 export async function registrarAtrasoProfessor(payload: {

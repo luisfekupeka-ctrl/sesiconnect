@@ -140,6 +140,7 @@ export function Occurrences() {
   const [selectedRecord, setSelectedRecord] = useState<DailyOccurrenceRecord | null>(null);
   const [emissorName, setEmissorName] = useState('');
   const [generatedMessageAfterSubmit, setGeneratedMessageAfterSubmit] = useState('');
+  const [submittedRecord, setSubmittedRecord] = useState<DailyOccurrenceRecord | null>(null);
   const [reoffenderAlert, setReoffenderAlert] = useState<{
     visible: boolean;
     studentName: string;
@@ -288,8 +289,8 @@ export function Occurrences() {
     } else if (period === 'Quinzenal') {
       start.setDate(now.getDate() - 15);
       start.setHours(0, 0, 0, 0);
-    } else if (period === 'Mensal') {
-      start.setDate(now.getDate() - 30);
+    } else if (period === 'Trimestral') {
+      start.setDate(now.getDate() - 90);
       start.setHours(0, 0, 0, 0);
     } else if (period === 'Personalizado' && customDate) {
       const [y, m, d] = customDate.split('-').map(Number);
@@ -360,7 +361,7 @@ export function Occurrences() {
         }
       }
 
-      await occurrenceService.createRecord({
+      const newRec = await occurrenceService.createRecord({
         student_name: studentName,
         school_year: schoolYear,
         occurrence_type: occurrenceType,
@@ -375,21 +376,20 @@ export function Occurrences() {
         setGeneratedMessageAfterSubmit(getCellPhoneMessage());
       }
 
-      setSuccessMessage('Ocorrência registrada com sucesso!');
+      setSubmittedRecord(newRec);
       setStudentName('');
       setSchoolYear('');
       setOccurrenceType(TIPOS_OCORRENCIA[0]);
       setDynamicValue('');
       setReport('');
-      setTimeout(() => setSuccessMessage(''), 3000);
 
-      // Check for reoffending (recurrence) in the last 30 days
+      // Check for reoffending (recurrence) in the last 90 days (trimestre)
       try {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
         const studentPastRecords = await occurrenceService.fetchRecords({
           student_name: registeredStudent,
-          start_date: thirtyDaysAgo.toISOString()
+          start_date: ninetyDaysAgo.toISOString()
         });
 
         const studentOccurrences = studentPastRecords.filter(r => 
@@ -453,13 +453,13 @@ export function Occurrences() {
       const data = await occurrenceService.fetchRecords(params);
       setRecords(data);
 
-      // Load 30 days master records for recurrence counting
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const data30 = await occurrenceService.fetchRecords({
-        start_date: thirtyDaysAgo.toISOString()
+      // Load 90 days (trimestre) master records for recurrence counting
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      const data90 = await occurrenceService.fetchRecords({
+        start_date: ninetyDaysAgo.toISOString()
       });
-      setThirtyDaysRecords(data30);
+      setThirtyDaysRecords(data90);
     } catch (error) {
       console.error(error);
     } finally {
@@ -499,7 +499,7 @@ export function Occurrences() {
         if (reportFilterPeriod === 'Hoje') return diffDays === 0;
         if (reportFilterPeriod === 'Semanal') return diffDays < 7;
         if (reportFilterPeriod === 'Quinzenal') return diffDays < 15;
-        if (reportFilterPeriod === 'Mensal') return diffDays < 30;
+        if (reportFilterPeriod === 'Trimestral') return diffDays < 90;
         return true;
       });
     }
@@ -650,231 +650,295 @@ O(a) estudante declarou estar ciente das orientações recebidas e comprometeu-s
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                 
                 {/* COLUNA 1 & 2: NOVA OCORRÊNCIA */}
                 <div className={`lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm relative ${
                   registroSubTab === 'ocorrencia' ? 'block' : 'hidden lg:block'
                 }`}>
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-                
-                <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                  <PlusCircle className="w-5 h-5 text-blue-500" />
-                  Nova Ocorrência
-                </h2>
+                {submittedRecord ? (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }} 
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="p-6 md:p-10 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl text-center space-y-6 flex flex-col items-center justify-center relative text-slate-800 dark:text-slate-100"
+                  >
+                    <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/5">
+                      <CheckCircle2 size={36} />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h2 className="text-xl font-black text-emerald-600 dark:text-emerald-400">Registro Efetuado!</h2>
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">A ocorrência diária foi salva no prontuário com sucesso.</p>
+                    </div>
 
-                <AnimatePresence>
-                  {generatedMessageAfterSubmit && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: -10 }} 
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      className="mb-6 p-4 md:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 relative"
-                    >
+                    <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 max-w-md w-full text-left space-y-2.5 text-xs text-slate-600 dark:text-slate-400 font-medium">
+                      <p><span className="font-bold text-slate-800 dark:text-slate-200">Estudante:</span> {submittedRecord.student_name}</p>
+                      <p><span className="font-bold text-slate-800 dark:text-slate-200">Série/Ano:</span> {submittedRecord.school_year}</p>
+                      <p><span className="font-bold text-slate-800 dark:text-slate-200">Tipo:</span> {submittedRecord.occurrence_type}</p>
+                      <p className="line-clamp-3"><span className="font-bold text-slate-800 dark:text-slate-200">Relato:</span> {submittedRecord.report}</p>
+                    </div>
+
+                    {generatedMessageAfterSubmit && (
+                      <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 max-w-md w-full text-left space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-wider">Mensagem para Responsáveis</span>
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(generatedMessageAfterSubmit);
+                              alert('Mensagem copiada!');
+                            }}
+                            className="text-[9px] font-black uppercase text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-white px-2 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-md transition-all border border-slate-200 dark:border-slate-700"
+                          >
+                            Copiar
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed max-h-24 overflow-y-auto whitespace-pre-wrap">{generatedMessageAfterSubmit}</p>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md pt-2">
                       <button 
-                        onClick={() => setGeneratedMessageAfterSubmit('')}
-                        className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                        type="button"
+                        onClick={() => {
+                          setSubmittedRecord(null);
+                          setGeneratedMessageAfterSubmit('');
+                        }}
+                        className="flex-1 py-3 bg-slate-100 dark:bg-slate-750 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-white font-bold rounded-xl text-xs uppercase tracking-widest transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
                       >
-                        <X className="w-5 h-5" />
+                        Novo Registro
                       </button>
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4 pr-10">
-                        <h3 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-blue-500" />
-                          Mensagem Gerada (Copie e envie aos responsáveis)
-                        </h3>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(generatedMessageAfterSubmit);
-                            alert('Mensagem copiada para a área de transferência!');
-                          }}
-                          className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors shadow-sm"
+                      <button 
+                        type="button"
+                        onClick={() => generateSingleOccurrencePDF(submittedRecord)}
+                        className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs uppercase tracking-widest transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        <Download size={14} /> Baixar PDF
+                      </button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <>
+                    <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                      <PlusCircle className="w-5 h-5 text-blue-500" />
+                      Nova Ocorrência
+                    </h2>
+
+                    <AnimatePresence>
+                      {generatedMessageAfterSubmit && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: -10 }} 
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="mb-6 p-4 md:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 relative"
                         >
-                          <Copy className="w-4 h-4" />
-                          Copiar Mensagem
+                          <button 
+                            type="button"
+                            onClick={() => setGeneratedMessageAfterSubmit('')}
+                            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4 pr-10">
+                            <h3 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                              <FileText className="w-4 h-4 text-blue-500" />
+                              Mensagem Gerada (Copie e envie aos responsáveis)
+                            </h3>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(generatedMessageAfterSubmit);
+                                alert('Mensagem copiada para a área de transferência!');
+                              }}
+                              className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors shadow-sm"
+                            >
+                              <Copy className="w-4 h-4" />
+                              Copiar Mensagem
+                            </button>
+                          </div>
+                          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm text-slate-600 dark:text-slate-400 whitespace-pre-line font-medium leading-relaxed">
+                            {generatedMessageAfterSubmit}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {successMessage && (
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="mb-6 p-4 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 rounded-xl flex items-center gap-3 border border-emerald-200 dark:border-emerald-500/20"
+                      >
+                        <CheckCircle2 className="w-5 h-5" />
+                        {successMessage}
+                      </motion.div>
+                    )}
+
+                    <form onSubmit={handleRegister} className="space-y-6 relative z-10">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2 relative" ref={autocompleteRef}>
+                          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Nome do Aluno</label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <User className="h-5 w-5 text-slate-400" />
+                            </div>
+                            <input
+                              type="text"
+                              required
+                              value={studentName}
+                              onChange={(e) => {
+                                setStudentName(e.target.value);
+                                setShowAutocomplete(true);
+                              }}
+                              onFocus={() => setShowAutocomplete(true)}
+                              className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                              placeholder="Ex: João Silva"
+                              autoComplete="off"
+                            />
+                          </div>
+                          {/* Autocomplete Dropdown */}
+                          <AnimatePresence>
+                            {showAutocomplete && filteredStudents.length > 0 && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden"
+                              >
+                                {filteredStudents.map((aluno, idx) => (
+                                  <div
+                                    key={idx}
+                                    onClick={() => handleSelectStudent(aluno)}
+                                    className="px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 flex flex-col transition-colors border-b border-slate-100 dark:border-slate-700/50 last:border-0"
+                                  >
+                                    <span className="text-sm font-semibold text-slate-900 dark:text-white">{aluno.nome}</span>
+                                    <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{aluno.ano || 'Série indefinida'} {aluno.turma ? `• ${aluno.turma}` : ''}</span>
+                                  </div>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Ano Letivo</label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <Calendar className="h-5 w-5 text-slate-400" />
+                            </div>
+                            <select
+                              required
+                              value={schoolYear}
+                              onChange={(e) => setSchoolYear(e.target.value)}
+                              className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
+                            >
+                              <option value="" disabled>Selecione o ano</option>
+                              {SERIES_CADASTRO.map(serie => (
+                                <option key={serie} value={serie}>{serie}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Tipo de Ocorrência</label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <Tag className="h-5 w-5 text-slate-400" />
+                            </div>
+                            <select
+                              value={occurrenceType}
+                              onChange={(e) => {
+                                setOccurrenceType(e.target.value);
+                                setDynamicValue('');
+                              }}
+                              className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
+                            >
+                              {TIPOS_OCORRENCIA.map(tipo => (
+                                <option key={tipo} value={tipo}>{tipo}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Seu Nome (Responsável pelo Registro)</label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <User className="h-5 w-5 text-slate-400" />
+                            </div>
+                            <input
+                              type="text"
+                              required
+                              value={emissorName}
+                              onChange={(e) => setEmissorName(e.target.value)}
+                              placeholder="Ex: Prof. João"
+                              className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {currentDynamicField && (
+                        <motion.div 
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          className="space-y-2"
+                        >
+                          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{currentDynamicField.label}</label>
+                          <input
+                            type={currentDynamicField.type}
+                            required={currentDynamicField.type === 'time'}
+                            value={dynamicValue}
+                            onChange={(e) => setDynamicValue(e.target.value)}
+                            placeholder={currentDynamicField.placeholder}
+                            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                          />
+                        </motion.div>
+                      )}
+
+                      {isCellPhoneUse ? (
+                        <div className="space-y-2 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+                          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pré-visualização do Relato Diário (Será salvo automaticamente)</label>
+                          <div className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-line font-medium leading-relaxed bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl">
+                            {getCellPhoneReport()}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Relato Completo</label>
+                          <textarea
+                            required
+                            value={report}
+                            onChange={(e) => setReport(e.target.value)}
+                            rows={4}
+                            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white resize-none"
+                            placeholder="Descreva o que aconteceu em detalhes..."
+                          />
+                        </div>
+                      )}
+
+                      <div className="pt-4">
+                        <button
+                          type="submit"
+                          disabled={isSubmitting}
+                          className="w-full sm:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors shadow-sm shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          {isSubmitting ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <>
+                              <PlusCircle className="w-5 h-5" />
+                              Registrar Ocorrência
+                            </>
+                          )}
                         </button>
                       </div>
-                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm text-slate-600 dark:text-slate-400 whitespace-pre-line font-medium leading-relaxed">
-                        {generatedMessageAfterSubmit}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {successMessage && (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="mb-6 p-4 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 rounded-xl flex items-center gap-3 border border-emerald-200 dark:border-emerald-500/20"
-                  >
-                    <CheckCircle2 className="w-5 h-5" />
-                    {successMessage}
-                  </motion.div>
+                    </form>
+                  </>
                 )}
-
-                <form onSubmit={handleRegister} className="space-y-6 relative z-10">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2 relative" ref={autocompleteRef}>
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Nome do Aluno</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <User className="h-5 w-5 text-slate-400" />
-                        </div>
-                        <input
-                          type="text"
-                          required
-                          value={studentName}
-                          onChange={(e) => {
-                            setStudentName(e.target.value);
-                            setShowAutocomplete(true);
-                          }}
-                          onFocus={() => setShowAutocomplete(true)}
-                          className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
-                          placeholder="Ex: João Silva"
-                          autoComplete="off"
-                        />
-                      </div>
-                      {/* Autocomplete Dropdown */}
-                      <AnimatePresence>
-                        {showAutocomplete && filteredStudents.length > 0 && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden"
-                          >
-                            {filteredStudents.map((aluno, idx) => (
-                              <div
-                                key={idx}
-                                onClick={() => handleSelectStudent(aluno)}
-                                className="px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 flex flex-col transition-colors border-b border-slate-100 dark:border-slate-700/50 last:border-0"
-                              >
-                                <span className="text-sm font-semibold text-slate-900 dark:text-white">{aluno.nome}</span>
-                                <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{aluno.ano || 'Série indefinida'} {aluno.turma ? `• ${aluno.turma}` : ''}</span>
-                              </div>
-                            ))}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Ano Letivo</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Calendar className="h-5 w-5 text-slate-400" />
-                        </div>
-                        <select
-                          required
-                          value={schoolYear}
-                          onChange={(e) => setSchoolYear(e.target.value)}
-                          className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
-                        >
-                          <option value="" disabled>Selecione o ano</option>
-                          {SERIES_CADASTRO.map(serie => (
-                            <option key={serie} value={serie}>{serie}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Tipo de Ocorrência</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Tag className="h-5 w-5 text-slate-400" />
-                        </div>
-                        <select
-                          value={occurrenceType}
-                          onChange={(e) => {
-                            setOccurrenceType(e.target.value);
-                            setDynamicValue('');
-                          }}
-                          className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
-                        >
-                          {TIPOS_OCORRENCIA.map(tipo => (
-                            <option key={tipo} value={tipo}>{tipo}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Seu Nome (Responsável pelo Registro)</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <User className="h-5 w-5 text-slate-400" />
-                        </div>
-                        <input
-                          type="text"
-                          required
-                          value={emissorName}
-                          onChange={(e) => setEmissorName(e.target.value)}
-                          placeholder="Ex: Prof. João"
-                          className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {currentDynamicField && (
-                    <motion.div 
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="space-y-2"
-                    >
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{currentDynamicField.label}</label>
-                      <input
-                        type={currentDynamicField.type}
-                        required={currentDynamicField.type === 'time'}
-                        value={dynamicValue}
-                        onChange={(e) => setDynamicValue(e.target.value)}
-                        placeholder={currentDynamicField.placeholder}
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
-                      />
-                    </motion.div>
-                  )}
-
-                  {isCellPhoneUse ? (
-                    <div className="space-y-2 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
-                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pré-visualização do Relato Diário (Será salvo automaticamente)</label>
-                      <div className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-line font-medium leading-relaxed bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl">
-                        {getCellPhoneReport()}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Relato Completo</label>
-                      <textarea
-                        required
-                        value={report}
-                        onChange={(e) => setReport(e.target.value)}
-                        rows={4}
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white resize-none"
-                        placeholder="Descreva o que aconteceu em detalhes..."
-                      />
-                    </div>
-                  )}
-
-                  <div className="pt-4">
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full sm:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors shadow-sm shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {isSubmitting ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <>
-                          <PlusCircle className="w-5 h-5" />
-                          Registrar Ocorrência
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
               </div>
 
               {/* COLUNA 3: EMPRÉSTIMO DE MATERIAIS */}
@@ -1127,7 +1191,7 @@ O(a) estudante declarou estar ciente das orientações recebidas e comprometeu-s
                     }}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
                   >
-                    {['Hoje', 'Semanal', 'Quinzenal', 'Mensal', 'Todos', 'Personalizado'].map(p => (
+                    {['Hoje', 'Semanal', 'Quinzenal', 'Trimestral', 'Todos', 'Personalizado'].map(p => (
                       <option key={p} value={p}>{p}</option>
                     ))}
                   </select>
@@ -1196,7 +1260,7 @@ O(a) estudante declarou estar ciente das orientações recebidas e comprometeu-s
                                 const count = getRecurrenceCount(record.student_name, record.occurrence_type);
                                 if (count >= 4) {
                                   return (
-                                    <span className="text-red-500 font-extrabold flex items-center gap-1.5" title={`${count} ocorrências deste tipo nos últimos 30 dias`}>
+                                    <span className="text-red-500 font-extrabold flex items-center gap-1.5" title={`${count} ocorrências deste tipo no trimestre`}>
                                       {record.student_name}
                                       <span className="px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-500 text-[8px] font-black uppercase tracking-widest">{count}x Reincidente</span>
                                     </span>
@@ -1276,7 +1340,7 @@ O(a) estudante declarou estar ciente das orientações recebidas e comprometeu-s
                     onChange={(e) => setReportFilterPeriod(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
                   >
-                    {['Todos', 'Hoje', 'Semanal', 'Quinzenal', 'Mensal'].map(p => (
+                    {['Todos', 'Hoje', 'Semanal', 'Quinzenal', 'Trimestral'].map(p => (
                       <option key={p} value={p}>{p}</option>
                     ))}
                   </select>
@@ -1399,6 +1463,8 @@ O(a) estudante declarou estar ciente das orientações recebidas e comprometeu-s
                   <FichaOcorrencia 
                     ocorrencia={mappedRecord} 
                     onClose={() => setSelectedRecord(null)} 
+                    onEditSuccess={fetchRecords}
+                    onDeleteSuccess={fetchRecords}
                   />
                 );
               })()}
@@ -1448,7 +1514,7 @@ O(a) estudante declarou estar ciente das orientações recebidas e comprometeu-s
               {/* Occurrences compilation title */}
               <div className="w-full flex items-center gap-1.5 justify-start text-left mb-2 z-10">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Histórico (Últimos 30 dias):</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Histórico (Trimestre):</span>
               </div>
  
               {/* Compact feed of occurrences */}

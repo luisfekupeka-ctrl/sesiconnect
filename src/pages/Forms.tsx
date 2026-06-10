@@ -11,7 +11,7 @@ import {
   salvarModeloFormulario, 
   excluirModeloFormulario 
  } from '../services/dataService';
-import { generateOccurrencesPDF, generateOccurrencesExcel } from '../lib/reportGenerator';
+import { generateOccurrencesPDF, generateOccurrencesExcel, generateFichaOcorrenciaPDF } from '../lib/reportGenerator';
 import FichaOcorrencia from '../components/FichaOcorrencia';
 import { occurrenceService } from '../services/occurrenceService';
 import { DailyOccurrenceRecord } from '../types';
@@ -118,10 +118,44 @@ export default function FormsPage() {
   const [alunoSelecionado, setAlunoSelecionado] = useState<Aluno | null>(null);
   const [dadosFormulario, setDadosFormulario] = useState<Record<string, string>>({});
   const [enviado, setEnviado] = useState(false);
+  const [submittedRecord, setSubmittedRecord] = useState<RegistroOcorrencia | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [filtroRelatorio, setFiltroRelatorio] = useState<'diario' | 'semanal' | 'quinzenal' | 'mensal'>('diario');
   const [ocorrenciaSelecionada, setOcorrenciaSelecionada] = useState<RegistroOcorrencia | null>(null);
   const [tratandoOcorrenciaTipo, setTratandoOcorrenciaTipo] = useState<string | null>(null);
+
+  // Prefill responsible/professor fields automatically
+  useEffect(() => {
+    if (modeloSelecionado && profile?.full_name) {
+      setDadosFormulario(prev => {
+        const novosDados = { ...prev };
+        let mudou = false;
+        
+        modeloSelecionado.campos.forEach(campo => {
+          const rotuloLower = campo.rotulo.toLowerCase().trim();
+          const matches = [
+            'responsável pelo registro',
+            'responsavel pelo registro',
+            'responsável',
+            'responsavel',
+            'professor',
+            'professor(a)',
+            'orientador',
+            'orientador(a)'
+          ];
+          
+          if (matches.includes(rotuloLower)) {
+            if (!novosDados[campo.rotulo]) {
+              novosDados[campo.rotulo] = profile.full_name;
+              mudou = true;
+            }
+          }
+        });
+        
+        return mudou ? novosDados : prev;
+      });
+    }
+  }, [modeloSelecionado, profile]);
 
   // Estado do Construtor
   const [editandoModelo, setEditandoModelo] = useState<Partial<ModeloFormulario> | null>(null);
@@ -207,11 +241,32 @@ O(A) aluno(a) declarou estar ciente das orientações recebidas, bem como da leg
       defaultDescription = `O(a) aluno(a) ${studentName} acumula ${count} ocorrências de "${type}" registradas recentemente. Considerando a reincidência, foi realizada esta ata de tratativa e encaminhamento pedagógico em ${dateStr}.`;
     }
 
-    setDadosFormulario({
+    const initialDados: Record<string, string> = {
       'Data': todayStr,
       'Tipo de Ocorrência': tipoOcorrenciaMapped,
       'Descrição': defaultDescription
-    });
+    };
+
+    if (profile?.full_name) {
+      formModel?.campos.forEach(campo => {
+        const rotuloLower = campo.rotulo.toLowerCase().trim();
+        const matches = [
+          'responsável pelo registro',
+          'responsavel pelo registro',
+          'responsável',
+          'responsavel',
+          'professor',
+          'professor(a)',
+          'orientador',
+          'orientador(a)'
+        ];
+        if (matches.includes(rotuloLower)) {
+          initialDados[campo.rotulo] = profile.full_name;
+        }
+      });
+    }
+
+    setDadosFormulario(initialDados);
   };
 
   useEffect(() => {
@@ -235,7 +290,7 @@ O(A) aluno(a) declarou estar ciente das orientações recebidas, bem como da leg
     if (!modeloSelecionado || !alunoSelecionado) return;
 
     setSalvando(true);
-    const ok = await salvarOcorrencia({
+    const occurrencePayload = {
       modeloFormularioId: modeloSelecionado.id,
       nomeModelo: modeloSelecionado.nome,
       dados: dadosFormulario,
@@ -244,9 +299,13 @@ O(A) aluno(a) declarou estar ciente das orientações recebidas, bem como da leg
       anoAluno: alunoSelecionado.ano,
       salaAluno: alunoSelecionado.numeroSala,
       professorAtual: profile?.full_name || 'Administração',
-    });
+    };
 
-    if (ok) {
+    const savedRec = await salvarOcorrencia(occurrencePayload);
+
+    if (savedRec) {
+      setSubmittedRecord(savedRec);
+      
       if (tratandoOcorrenciaTipo) {
         try {
           await occurrenceService.markRecordsAsTreated(alunoSelecionado.nome, tratandoOcorrenciaTipo);
@@ -266,6 +325,7 @@ O(A) aluno(a) declarou estar ciente das orientações recebidas, bem como da leg
     setDadosFormulario({});
     setEnviado(false);
     setTratandoOcorrenciaTipo(null);
+    setSubmittedRecord(null);
   };
 
   // Filtrar ocorrências por período (Defensivo)
@@ -573,12 +633,66 @@ O(A) aluno(a) declarou estar ciente das orientações recebidas, bem como da leg
             )}
 
             {enviado && (
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                className="bg-surface-container-lowest p-16 rounded-[2.5rem] editorial-shadow text-center space-y-6">
-                <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto"><UserCheck size={40} /></div>
-                <h2 className="text-2xl font-black">Registrado com Sucesso!</h2>
-                <p className="text-on-surface-variant font-medium">{alunoSelecionado?.nome}</p>
-                <button onClick={limparFormulario} className="btn-primary">Novo Registro</button>
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }} 
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-surface-container-lowest p-10 md:p-16 rounded-[2.5rem] editorial-shadow text-center space-y-8 flex flex-col items-center justify-center border-2 border-emerald-500/20 max-w-2xl mx-auto"
+              >
+                <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/5">
+                  <UserCheck size={40} />
+                </div>
+                
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-black text-emerald-500">Registrado com Sucesso!</h2>
+                  <p className="text-on-surface-variant font-medium text-sm">O formulário de ata foi salvo no prontuário com sucesso.</p>
+                </div>
+
+                {submittedRecord && (
+                  <div className="w-full bg-white/[0.02] border border-white/[0.05] rounded-3xl p-6 text-left space-y-3 text-xs md:text-sm font-medium text-on-surface-variant max-w-md mx-auto">
+                    <p><span className="font-bold text-white">Aluno:</span> {submittedRecord.nomeAluno}</p>
+                    <p><span className="font-bold text-white">Série/Ano:</span> {submittedRecord.anoAluno || submittedRecord.turmaAluno || 'Não informado'}</p>
+                    <p><span className="font-bold text-white">Formulário:</span> {submittedRecord.nomeModelo}</p>
+                    {submittedRecord.dados && Object.keys(submittedRecord.dados).length > 0 && (
+                      <p className="line-clamp-3">
+                        <span className="font-bold text-white">Descrição:</span>{' '}
+                        {(() => {
+                          const descKey = Object.keys(submittedRecord.dados).find(
+                            k => k.toLowerCase() === 'descrição' || k.toLowerCase() === 'descricao' || k.toLowerCase() === 'relato'
+                          );
+                          return descKey ? String(submittedRecord.dados[descKey]) : '';
+                        })()}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md pt-2">
+                  <button 
+                    onClick={limparFormulario} 
+                    className="flex-1 py-4 bg-white/[0.05] hover:bg-white/[0.1] text-white font-bold rounded-2xl text-xs uppercase tracking-widest transition-all cursor-pointer border border-white/10"
+                  >
+                    Novo Registro
+                  </button>
+                  <button 
+                    onClick={async () => {
+                      if (submittedRecord) {
+                        const configAssinaturas = {
+                          mostrarAluno: true,
+                          nomeAluno: submittedRecord.nomeAluno,
+                          mostrarResponsavel: true,
+                          nomeResponsavel: '',
+                          mostrarEmissor: true,
+                          nomeEmissor: submittedRecord.professorAtual || 'Administração'
+                        };
+                        await generateFichaOcorrenciaPDF(submittedRecord, configAssinaturas, []);
+                      }
+                    }} 
+                    disabled={!submittedRecord}
+                    className="flex-1 py-4 bg-emerald-500 hover:bg-emerald-600 text-black font-black rounded-2xl text-xs uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Download size={14} /> Baixar PDF
+                  </button>
+                </div>
               </motion.div>
             )}
           </motion.div>
