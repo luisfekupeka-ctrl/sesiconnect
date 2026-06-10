@@ -7,13 +7,21 @@ import papelTimbradoImg from '../assets/papel_timbrado.png';
 import { occurrenceService } from '../services/occurrenceService';
 
 const TIPOS_OCORRENCIA = [
-  'Uso Indevido de Celular / Eletrônicos',
-  'Indisciplina / Conduta Escolar',
-  'Descumprimento do Uniforme',
-  'Atraso',
-  'Conflito / Agressão',
-  'Danos ao Patrimônio',
-  'Outros'
+  'Uso indevido de celular e aparelhos eletrônicos',
+  'Desrespeito a colegas, professores e funcionários',
+  'Baderna, gritaria e perturbação das aulas',
+  'Bullying, cyberbullying e constrangimentos',
+  'Agressão física ou verbal',
+  'Saída da sala ou da escola sem autorização',
+  'Atrasos e descumprimento de horários',
+  'Danos ao patrimônio escolar ou pertences alheios',
+  'Cola, fraude e falsificação de documentos',
+  'Porte ou uso de vape, cigarros, álcool e drogas',
+  'Uso inadequado do uniforme escolar',
+  'Porte de objetos ou materiais não autorizados',
+  'Comércio, vendas ou arrecadações sem autorização',
+  'Descumprimento de orientações da equipe escolar',
+  'Conduta incompatível com o ambiente escolar'
 ];
 
 const SERIES_CADASTRO = [

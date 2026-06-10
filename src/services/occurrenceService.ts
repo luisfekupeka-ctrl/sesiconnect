@@ -2,37 +2,72 @@ import { supabase } from '../lib/supabase';
 import type { DailyOccurrenceRecord } from '../types';
 
 export const GROUP_FRIENDLY_NAMES: Record<string, string> = {
-  celular_eletronicos: 'Uso Indevido de Celular / Eletrônicos',
-  indisciplina_conduta: 'Indisciplina / Conduta Escolar',
-  uniforme: 'Descumprimento do Uniforme',
-  atraso: 'Atraso',
-  conflito_agressao: 'Conflito / Agressão',
-  patrimonio: 'Danos ao Patrimônio',
-  outros: 'Outros'
+  celular_eletronicos: 'Uso indevido de celular e aparelhos eletrônicos',
+  desrespeito: 'Desrespeito a colegas, professores e funcionários',
+  baderna_perturbacao: 'Baderna, gritaria e perturbação das aulas',
+  bullying_constrangimentos: 'Bullying, cyberbullying e constrangimentos',
+  agressao_fisica_verbal: 'Agressão física ou verbal',
+  saida_sem_autorizacao: 'Saída da sala ou da escola sem autorização',
+  atraso: 'Atrasos e descumprimento de horários',
+  patrimonio: 'Danos ao patrimônio escolar ou pertences alheios',
+  cola_fraude: 'Cola, fraude e falsificação de documentos',
+  substancias_proibidas: 'Porte ou uso de vape, cigarros, álcool e drogas',
+  uniforme: 'Uso inadequado do uniforme escolar',
+  porte_objetos: 'Porte de objetos ou materiais não autorizados',
+  comercio_vendas: 'Comércio, vendas ou arrecadações sem autorização',
+  descumprimento_orientacoes: 'Descumprimento de orientações da equipe escolar',
+  conduta_incompativel: 'Conduta incompatível com o ambiente escolar'
 };
 
 export const getOccurrenceGroup = (type: string): string => {
   const t = (type || '').toLowerCase().trim();
   
-  if (t.includes('celular') || t.includes('aparelho') || t.includes('eletrônico') || t.includes('eletronico')) {
+  if (t.includes('celular') || t.includes('aparelho') || t.includes('eletrô') || t.includes('eletro')) {
     return 'celular_eletronicos';
   }
   if (t.includes('uniforme')) {
     return 'uniforme';
   }
-  if (t.includes('atraso')) {
+  if (t.includes('atraso') || t.includes('horário') || t.includes('horario')) {
     return 'atraso';
   }
-  if (t.includes('agressão') || t.includes('agressao') || t.includes('conflito') || t.includes('desrespeito')) {
-    return 'conflito_agressao';
+  if (t.includes('bullying') || t.includes('cyberbullying') || t.includes('constrangimento')) {
+    return 'bullying_constrangimentos';
   }
-  if (t.includes('patrimônio') || t.includes('patrimonio') || t.includes('danos')) {
+  if (t.includes('agressão') || t.includes('agressao') || t.includes('física') || t.includes('fisica') || t.includes('verbal') || t.includes('briga') || t.includes('conflito')) {
+    return 'agressao_fisica_verbal';
+  }
+  if (t.includes('desrespeito') || t.includes('ofensa') || t.includes('xingamento') || t.includes('ofender')) {
+    return 'desrespeito';
+  }
+  if (t.includes('patrimônio') || t.includes('patrimonio') || t.includes('danos') || t.includes('pertence') || t.includes('quebrar')) {
     return 'patrimonio';
   }
-  if (t.includes('indisciplina') || t.includes('conduta') || t.includes('normas') || t.includes('atividades') || t.includes('orientações') || t.includes('material')) {
-    return 'indisciplina_conduta';
+  if (t.includes('saída') || t.includes('saida')) {
+    return 'saida_sem_autorizacao';
   }
-  return 'outros';
+  if (t.includes('vape') || t.includes('cigarro') || t.includes('álcool') || t.includes('alcool') || t.includes('droga') || t.includes('bebida')) {
+    return 'substancias_proibidas';
+  }
+  if (t.includes('baderna') || t.includes('gritaria') || t.includes('perturbação') || t.includes('perturbacao') || t.includes('bagunça') || t.includes('bagunca') || t.includes('barulho')) {
+    return 'baderna_perturbacao';
+  }
+  if (t.includes('cola') || t.includes('fraude') || t.includes('falsificação') || t.includes('falsificacao')) {
+    return 'cola_fraude';
+  }
+  if (t.includes('objeto') || t.includes('material') || t.includes('materiais')) {
+    return 'porte_objetos';
+  }
+  if (t.includes('comércio') || t.includes('comercio') || t.includes('venda') || t.includes('arrecada')) {
+    return 'comercio_vendas';
+  }
+  if (t.includes('orienta')) {
+    return 'descumprimento_orientacoes';
+  }
+  if (t.includes('conduta') || t.includes('incompatível') || t.includes('incompativel') || t.includes('indisciplina') || t.includes('normas') || t.includes('regras') || t.includes('postura')) {
+    return 'conduta_incompativel';
+  }
+  return 'conduta_incompativel';
 };
 
 export const occurrenceService = {

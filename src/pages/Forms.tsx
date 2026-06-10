@@ -200,26 +200,50 @@ export default function FormsPage() {
     } else {
       // Regras de fallback inteligentes
       const normalizedType = type.toLowerCase();
-      if (normalizedType.includes('celular')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('celular'));
-        tipoOcorrenciaMapped = found || 'Uso Indevido de Celular';
-      } else if (normalizedType.includes('aparelho') || normalizedType.includes('eletrônico')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('eletrônico') || o.toLowerCase().includes('aparelho'));
-        tipoOcorrenciaMapped = found || 'Uso Indevido de Aparelhos Eletrônicos';
-      } else if (normalizedType.includes('indisciplina') || normalizedType.includes('material') || normalizedType.includes('agressão')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('indisciplina'));
-        tipoOcorrenciaMapped = found || 'Indisciplina Escolar';
+      if (normalizedType.includes('celular') || normalizedType.includes('aparelho') || normalizedType.includes('eletrô') || normalizedType.includes('eletro')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('celular') || o.toLowerCase().includes('eletrô') || o.toLowerCase().includes('aparelho'));
+        tipoOcorrenciaMapped = found || 'Uso indevido de celular e aparelhos eletrônicos';
       } else if (normalizedType.includes('uniforme')) {
         const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('uniforme'));
-        tipoOcorrenciaMapped = found || 'Descumprimento do Uniforme Escolar';
-      } else if (normalizedType.includes('atraso')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('atraso') || o.toLowerCase().includes('atrasos'));
-        tipoOcorrenciaMapped = found || 'Atrasos Reincidentes';
-      } else if (normalizedType.includes('falta')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('falta'));
-        tipoOcorrenciaMapped = found || 'Falta';
+        tipoOcorrenciaMapped = found || 'Uso inadequado do uniforme escolar';
+      } else if (normalizedType.includes('atraso') || normalizedType.includes('horário') || normalizedType.includes('horario')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('atraso'));
+        tipoOcorrenciaMapped = found || 'Atrasos e descumprimento de horários';
+      } else if (normalizedType.includes('bullying') || normalizedType.includes('cyberbullying') || normalizedType.includes('constrangimento')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('bullying') || o.toLowerCase().includes('constrangimento'));
+        tipoOcorrenciaMapped = found || 'Bullying, cyberbullying e constrangimentos';
+      } else if (normalizedType.includes('agressão') || normalizedType.includes('agressao') || normalizedType.includes('física') || normalizedType.includes('fisica') || normalizedType.includes('verbal') || normalizedType.includes('briga') || normalizedType.includes('conflito')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('agressão') || o.toLowerCase().includes('agressao') || o.toLowerCase().includes('verbal') || o.toLowerCase().includes('briga'));
+        tipoOcorrenciaMapped = found || 'Agressão física ou verbal';
+      } else if (normalizedType.includes('desrespeito') || normalizedType.includes('ofensa') || normalizedType.includes('xingamento') || normalizedType.includes('ofender')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('desrespeito'));
+        tipoOcorrenciaMapped = found || 'Desrespeito a colegas, professores e funcionários';
+      } else if (normalizedType.includes('patrimônio') || normalizedType.includes('patrimonio') || normalizedType.includes('danos') || normalizedType.includes('pertence')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('patrimônio') || o.toLowerCase().includes('patrimonio') || o.toLowerCase().includes('danos'));
+        tipoOcorrenciaMapped = found || 'Danos ao patrimônio escolar ou pertences alheios';
+      } else if (normalizedType.includes('saída') || normalizedType.includes('saida')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('saída') || o.toLowerCase().includes('saida'));
+        tipoOcorrenciaMapped = found || 'Saída da sala ou da escola sem autorização';
+      } else if (normalizedType.includes('vape') || normalizedType.includes('cigarro') || normalizedType.includes('álcool') || normalizedType.includes('alcool') || normalizedType.includes('droga')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('vape') || o.toLowerCase().includes('cigarro') || o.toLowerCase().includes('droga'));
+        tipoOcorrenciaMapped = found || 'Porte ou uso de vape, cigarros, álcool e drogas';
+      } else if (normalizedType.includes('baderna') || normalizedType.includes('gritaria') || normalizedType.includes('perturbação') || normalizedType.includes('perturbacao') || normalizedType.includes('bagunça') || normalizedType.includes('bagunca') || normalizedType.includes('barulho')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('baderna') || o.toLowerCase().includes('gritaria') || o.toLowerCase().includes('perturbação') || o.toLowerCase().includes('perturbacao'));
+        tipoOcorrenciaMapped = found || 'Baderna, gritaria e perturbação das aulas';
+      } else if (normalizedType.includes('cola') || normalizedType.includes('fraude') || normalizedType.includes('falsificação') || normalizedType.includes('falsificacao')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('cola') || o.toLowerCase().includes('fraude') || o.toLowerCase().includes('falsificação') || o.toLowerCase().includes('falsificacao'));
+        tipoOcorrenciaMapped = found || 'Cola, fraude e falsificação de documentos';
+      } else if (normalizedType.includes('objeto') || normalizedType.includes('material') || normalizedType.includes('materiais')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('objeto') || o.toLowerCase().includes('material'));
+        tipoOcorrenciaMapped = found || 'Porte de objetos ou materiais não autorizados';
+      } else if (normalizedType.includes('comércio') || normalizedType.includes('comercio') || normalizedType.includes('venda') || normalizedType.includes('arrecada')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('comércio') || o.toLowerCase().includes('comercio') || o.toLowerCase().includes('venda') || o.toLowerCase().includes('arrecada'));
+        tipoOcorrenciaMapped = found || 'Comércio, vendas ou arrecadações sem autorização';
+      } else if (normalizedType.includes('orienta')) {
+        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('orienta'));
+        tipoOcorrenciaMapped = found || 'Descumprimento de orientações da equipe escolar';
       } else {
-        tipoOcorrenciaMapped = opcoesDisponiveis[opcoesDisponiveis.length - 1] || 'Outros';
+        tipoOcorrenciaMapped = opcoesDisponiveis.find(o => o.toLowerCase().includes('conduta')) || opcoesDisponiveis[opcoesDisponiveis.length - 1] || 'Conduta incompatível com o ambiente escolar';
       }
     }
 
@@ -229,7 +253,7 @@ export default function FormsPage() {
 
     let defaultDescription = '';
 
-    if (type === 'Uso indevido de celular' || type === 'Uso Indevido de Celular' || type === 'Uso Indevido de Celular / Eletrônicos') {
+    if (type === 'Uso indevido de celular' || type === 'Uso Indevido de Celular' || type === 'Uso Indevido de Celular / Eletrônicos' || type.toLowerCase().includes('celular') || type.toLowerCase().includes('aparelhos eletrônicos') || type.toLowerCase().includes('aparelhos eletronicos')) {
       defaultDescription = `Em ${dateStr}, o(a) aluno(a) ${studentName}, da série ${schoolYear}, foi atendido(a) pela equipe escolar para registro e orientação em razão do uso indevido de aparelho eletrônico (celular) no ambiente escolar.
 
 Durante a tratativa, foram realizadas orientações acerca da importância do cumprimento das normas institucionais, da manutenção de uma postura adequada ao ambiente educacional e da colaboração para o bom desenvolvimento das atividades escolares.

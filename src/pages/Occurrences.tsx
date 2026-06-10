@@ -22,13 +22,21 @@ interface Emprestimo {
 }
 
 const TIPOS_OCORRENCIA = [
-  'Uso Indevido de Celular / Eletrônicos',
-  'Indisciplina / Conduta Escolar',
-  'Descumprimento do Uniforme',
-  'Atraso',
-  'Conflito / Agressão',
-  'Danos ao Patrimônio',
-  'Outros'
+  'Uso indevido de celular e aparelhos eletrônicos',
+  'Desrespeito a colegas, professores e funcionários',
+  'Baderna, gritaria e perturbação das aulas',
+  'Bullying, cyberbullying e constrangimentos',
+  'Agressão física ou verbal',
+  'Saída da sala ou da escola sem autorização',
+  'Atrasos e descumprimento de horários',
+  'Danos ao patrimônio escolar ou pertences alheios',
+  'Cola, fraude e falsificação de documentos',
+  'Porte ou uso de vape, cigarros, álcool e drogas',
+  'Uso inadequado do uniforme escolar',
+  'Porte de objetos ou materiais não autorizados',
+  'Comércio, vendas ou arrecadações sem autorização',
+  'Descumprimento de orientações da equipe escolar',
+  'Conduta incompatível com o ambiente escolar'
 ];
 
 const SERIES_OPCOES = [
@@ -146,12 +154,12 @@ export function Occurrences() {
   // Dynamic field config
   const getDynamicField = (type: string) => {
     switch (type) {
-      case 'Atraso': return { label: 'Horário de Chegada', type: 'time', placeholder: 'Ex: 07:30' };
-      case 'Descumprimento do Uniforme': return { label: 'Peça Faltando (Opcional)', type: 'text', placeholder: 'Ex: Camiseta padrão' };
-      case 'Indisciplina / Conduta Escolar': return { label: 'Aula / Matéria (Opcional)', type: 'text', placeholder: 'Ex: Matemática' };
-      case 'Uso Indevido de Celular / Eletrônicos':
+      case 'Atrasos e descumprimento de horários': return { label: 'Horário de Chegada', type: 'time', placeholder: 'Ex: 07:30' };
+      case 'Uso inadequado do uniforme escolar': return { label: 'Peça Faltando / Inadequada (Opcional)', type: 'text', placeholder: 'Ex: Sem camiseta padrão' };
+      case 'Baderna, gritaria e perturbação das aulas': return { label: 'Aula / Matéria (Opcional)', type: 'text', placeholder: 'Ex: Matemática' };
+      case 'Uso indevido de celular e aparelhos eletrônicos':
         return { label: 'Justificativa do(a) Estudante', type: 'text', placeholder: 'Ex: Estava verificando o horário / Falando com a mãe...' };
-      case 'Conflito / Agressão': return { label: 'Envolvidos / Vítima (Opcional)', type: 'text', placeholder: 'Ex: Colega de classe' };
+      case 'Agressão física ou verbal': return { label: 'Envolvidos / Vítima (Opcional)', type: 'text', placeholder: 'Ex: Colega de classe' };
       default: return null;
     }
   };
@@ -329,7 +337,7 @@ export function Occurrences() {
     }
   };
 
-  const isCellPhoneUse = occurrenceType === 'Uso Indevido de Celular / Eletrônicos';
+  const isCellPhoneUse = occurrenceType === 'Uso indevido de celular e aparelhos eletrônicos';
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -340,7 +348,7 @@ export function Occurrences() {
       let finalReport = report;
       if (isCellPhoneUse) {
         finalReport = getCellPhoneReport();
-      } else if (occurrenceType === 'Atraso') {
+      } else if (occurrenceType === 'Atrasos e descumprimento de horários') {
         finalReport = `[Horário de Chegada: ${dynamicValue || 'Não informado'}]\nNa presente data, o(a) estudante foi atendido(a) em razão de atraso na chegada ao colégio. Como justificativa, relatou: ${motivoAtraso || '________________________________'}.\n\nO(a) estudante foi orientado(a) quanto à importância de cumprir os horários estabelecidos pela instituição, visando seu pleno aproveitamento acadêmico e a organização da rotina escolar. Declara estar ciente das orientações recebidas e comprometido(a) a evitar novos atrasos.\n\nRegistro realizado para acompanhamento.`;
       } else {
         const dynField = getDynamicField(occurrenceType);
@@ -358,11 +366,11 @@ export function Occurrences() {
       const registeredStudent = studentName;
       const registeredType = occurrenceType;
 
-      if (occurrenceType === 'Descumprimento do Uniforme') {
+      if (occurrenceType === 'Uso inadequado do uniforme escolar') {
         setGeneratedMessageAfterSubmit(getUniformMessage());
       } else if (isCellPhoneUse) {
         setGeneratedMessageAfterSubmit(getCellPhoneMessage());
-      } else if (occurrenceType === 'Atraso') {
+      } else if (occurrenceType === 'Atrasos e descumprimento de horários') {
         setGeneratedMessageAfterSubmit(getAtrasoMessage());
       }
 
@@ -903,7 +911,7 @@ Agradecemos a parceria.`;
                             />
                           </div>
 
-                          {occurrenceType === 'Atraso' && (
+                          {occurrenceType === 'Atrasos e descumprimento de horários' && (
                             <div className="space-y-2">
                               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Motivo do Atraso</label>
                               <input
