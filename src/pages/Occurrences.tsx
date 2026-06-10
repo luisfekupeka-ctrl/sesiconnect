@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2, Copy, X, Printer, Trash2, AlertTriangle, ShieldAlert, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { occurrenceService } from '../services/occurrenceService';
+import { occurrenceService, getOccurrenceGroup, GROUP_FRIENDLY_NAMES } from '../services/occurrenceService';
 import { generateOccurrencesPDF, generateOccurrencesExcel, generateSingleOccurrencePDF } from '../lib/reportGenerator';
 import { useEscola } from '../context/ContextoEscola';
 import { useAuth } from '../context/AuthContext';
@@ -22,25 +22,12 @@ interface Emprestimo {
 }
 
 const TIPOS_OCORRENCIA = [
-  'Uso Indevido de Celular',
-  'Uso Indevido de Aparelhos Eletrônicos',
-  'Indisciplina Escolar',
-  'Conduta Incompatível com o Ambiente Escolar',
-  'Descumprimento das Normas Escolares',
-  'Desrespeito a Membros da Comunidade Escolar',
-  'Conflitos entre Alunos',
-  'Danos ao Patrimônio Escolar',
-  'Descumprimento do Uniforme Escolar',
-  'Atrasos Reincidentes',
-  'Saída sem Autorização',
-  'Não Cumprimento de Atividades ou Orientações Escolares',
+  'Uso Indevido de Celular / Eletrônicos',
+  'Indisciplina / Conduta Escolar',
+  'Descumprimento do Uniforme',
   'Atraso',
-  'Sem uniforme',
-  'Indisciplina em sala',
-  'Uso indevido de celular',
-  'Falta de material',
-  'Agressão verbal',
-  'Agressão física',
+  'Conflito / Agressão',
+  'Danos ao Patrimônio',
   'Outros'
 ];
 
@@ -134,6 +121,7 @@ export function Occurrences() {
   const [schoolYear, setSchoolYear] = useState('');
   const [occurrenceType, setOccurrenceType] = useState(TIPOS_OCORRENCIA[0]);
   const [dynamicValue, setDynamicValue] = useState('');
+  const [motivoAtraso, setMotivoAtraso] = useState('');
   const [report, setReport] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -159,14 +147,11 @@ export function Occurrences() {
   const getDynamicField = (type: string) => {
     switch (type) {
       case 'Atraso': return { label: 'Horário de Chegada', type: 'time', placeholder: 'Ex: 07:30' };
-      case 'Sem uniforme': return { label: 'Peça Faltando (Opcional)', type: 'text', placeholder: 'Ex: Camiseta padrão' };
-      case 'Indisciplina em sala': return { label: 'Aula / Matéria', type: 'text', placeholder: 'Ex: Matemática' };
-      case 'Uso indevido de celular':
-      case 'Uso Indevido de Celular':
+      case 'Descumprimento do Uniforme': return { label: 'Peça Faltando (Opcional)', type: 'text', placeholder: 'Ex: Camiseta padrão' };
+      case 'Indisciplina / Conduta Escolar': return { label: 'Aula / Matéria (Opcional)', type: 'text', placeholder: 'Ex: Matemática' };
+      case 'Uso Indevido de Celular / Eletrônicos':
         return { label: 'Justificativa do(a) Estudante', type: 'text', placeholder: 'Ex: Estava verificando o horário / Falando com a mãe...' };
-      case 'Falta de material': return { label: 'Qual Material', type: 'text', placeholder: 'Ex: Apostila de História' };
-      case 'Agressão verbal': return { label: 'Envolvidos / Vítima', type: 'text', placeholder: 'Ex: Colega de classe' };
-      case 'Agressão física': return { label: 'Envolvidos / Vítima', type: 'text', placeholder: 'Ex: Colega de classe' };
+      case 'Conflito / Agressão': return { label: 'Envolvidos / Vítima (Opcional)', type: 'text', placeholder: 'Ex: Colega de classe' };
       default: return null;
     }
   };
@@ -321,9 +306,10 @@ export function Occurrences() {
 
   const getRecurrenceCount = (studentName: string, type: string) => {
     if (!studentName || !type) return 0;
+    const targetGroup = getOccurrenceGroup(type);
     return thirtyDaysRecords.filter(r => 
       r.student_name.trim().toLowerCase() === studentName.trim().toLowerCase() &&
-      r.occurrence_type.trim().toLowerCase() === type.trim().toLowerCase() &&
+      getOccurrenceGroup(r.occurrence_type) === targetGroup &&
       !r.tratada
     ).length;
   };
@@ -343,7 +329,7 @@ export function Occurrences() {
     }
   };
 
-  const isCellPhoneUse = occurrenceType === 'Uso indevido de celular' || occurrenceType === 'Uso Indevido de Celular';
+  const isCellPhoneUse = occurrenceType === 'Uso Indevido de Celular / Eletrônicos';
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -354,6 +340,8 @@ export function Occurrences() {
       let finalReport = report;
       if (isCellPhoneUse) {
         finalReport = getCellPhoneReport();
+      } else if (occurrenceType === 'Atraso') {
+        finalReport = `[Horário de Chegada: ${dynamicValue}]` + (motivoAtraso ? ` [Motivo: ${motivoAtraso}]` : '') + `\n${report}`;
       } else {
         const dynField = getDynamicField(occurrenceType);
         if (dynField && dynamicValue) {
@@ -370,7 +358,7 @@ export function Occurrences() {
       const registeredStudent = studentName;
       const registeredType = occurrenceType;
 
-      if (occurrenceType === 'Sem uniforme') {
+      if (occurrenceType === 'Descumprimento do Uniforme') {
         setGeneratedMessageAfterSubmit(getUniformMessage());
       } else if (isCellPhoneUse) {
         setGeneratedMessageAfterSubmit(getCellPhoneMessage());
@@ -381,6 +369,7 @@ export function Occurrences() {
       setSchoolYear('');
       setOccurrenceType(TIPOS_OCORRENCIA[0]);
       setDynamicValue('');
+      setMotivoAtraso('');
       setReport('');
 
       // Check for reoffending (recurrence) in the last 90 days (trimestre)
@@ -392,9 +381,10 @@ export function Occurrences() {
           start_date: ninetyDaysAgo.toISOString()
         });
 
+        const targetGroup = getOccurrenceGroup(registeredType);
         const studentOccurrences = studentPastRecords.filter(r => 
           r.student_name.trim().toLowerCase() === registeredStudent.trim().toLowerCase() &&
-          r.occurrence_type.trim().toLowerCase() === registeredType.trim().toLowerCase() &&
+          getOccurrenceGroup(r.occurrence_type) === targetGroup &&
           !r.tratada
         );
 
@@ -402,7 +392,7 @@ export function Occurrences() {
           setReoffenderAlert({
             visible: true,
             studentName: registeredStudent,
-            occurrenceType: registeredType,
+            occurrenceType: GROUP_FRIENDLY_NAMES[targetGroup] || registeredType,
             count: studentOccurrences.length,
             occurrences: studentOccurrences
           });
@@ -885,17 +875,32 @@ O(a) estudante declarou estar ciente das orientações recebidas e comprometeu-s
                         <motion.div 
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
-                          className="space-y-2"
+                          className="space-y-4"
                         >
-                          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{currentDynamicField.label}</label>
-                          <input
-                            type={currentDynamicField.type}
-                            required={currentDynamicField.type === 'time'}
-                            value={dynamicValue}
-                            onChange={(e) => setDynamicValue(e.target.value)}
-                            placeholder={currentDynamicField.placeholder}
-                            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
-                          />
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{currentDynamicField.label}</label>
+                            <input
+                              type={currentDynamicField.type}
+                              required={currentDynamicField.type === 'time'}
+                              value={dynamicValue}
+                              onChange={(e) => setDynamicValue(e.target.value)}
+                              placeholder={currentDynamicField.placeholder}
+                              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                            />
+                          </div>
+
+                          {occurrenceType === 'Atraso' && (
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Motivo do Atraso</label>
+                              <input
+                                type="text"
+                                value={motivoAtraso}
+                                onChange={(e) => setMotivoAtraso(e.target.value)}
+                                placeholder="Ex: Ônibus quebrou, consulta médica..."
+                                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                              />
+                            </div>
+                          )}
                         </motion.div>
                       )}
 

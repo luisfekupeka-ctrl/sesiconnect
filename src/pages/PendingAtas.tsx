@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronUp, Calendar, Clock, User, CheckCircle2,
   BookOpen
 } from 'lucide-react';
-import { occurrenceService } from '../services/occurrenceService';
+import { occurrenceService, getOccurrenceGroup, GROUP_FRIENDLY_NAMES } from '../services/occurrenceService';
 import type { DailyOccurrenceRecord } from '../types';
 import { cn } from '../lib/utils';
 
@@ -63,14 +63,15 @@ export default function PendingAtas() {
     carregarOcorrenciasAtivas();
   }, []);
 
-  // Agrupa ocorrências por Estudante + Tipo de Ocorrência
+  // Agrupa ocorrências por Estudante + Grupo de Ocorrência
   const pendingAtas = useMemo(() => {
     const groups: Record<string, PendingAtaGroup> = {};
 
     dailyRecords.forEach(r => {
       const studentClean = r.student_name.trim();
       const typeClean = r.occurrence_type.trim();
-      const key = `${studentClean.toLowerCase()}|${typeClean.toLowerCase()}`;
+      const groupKey = getOccurrenceGroup(typeClean);
+      const key = `${studentClean.toLowerCase()}|${groupKey}`;
 
       const recDate = r.created_at ? new Date(r.created_at) : new Date();
 
@@ -78,7 +79,7 @@ export default function PendingAtas() {
         groups[key] = {
           studentName: studentClean,
           schoolYear: r.school_year || 'Não especificado',
-          type: typeClean,
+          type: GROUP_FRIENDLY_NAMES[groupKey] || typeClean,
           count: 0,
           latestDate: recDate,
           records: []

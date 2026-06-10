@@ -6,6 +6,7 @@ import { saveAs } from 'file-saver';
 import type { DailyOccurrenceRecord, RegistroOcorrencia, Monitor, GradeMonitor } from '../types';
 
 import papelTimbradoImg from '../assets/papel_timbrado.png';
+import { getOccurrenceGroup } from '../services/occurrenceService';
 
 // Function to load the image as base64 so jsPDF can use it
 const loadImageAsBase64 = async (url: string): Promise<string> => {
@@ -116,9 +117,10 @@ export const generateOccurrencesPDF = async (
 
     const getRecurrenceCount = (studentName: string, type: string) => {
       if (!studentName || !type || thirtyDaysRecords.length === 0) return 0;
+      const targetGroup = getOccurrenceGroup(type);
       return thirtyDaysRecords.filter(r => 
         r.student_name.trim().toLowerCase() === studentName.trim().toLowerCase() &&
-        r.occurrence_type.trim().toLowerCase() === type.trim().toLowerCase()
+        getOccurrenceGroup(r.occurrence_type) === targetGroup
       ).length;
     };
 
@@ -212,9 +214,10 @@ export const generateOccurrencesExcel = (
 ) => {
   const getRecurrenceCount = (studentName: string, type: string) => {
     if (!studentName || !type || thirtyDaysRecords.length === 0) return 0;
+    const targetGroup = getOccurrenceGroup(type);
     return thirtyDaysRecords.filter(r => 
       r.student_name.trim().toLowerCase() === studentName.trim().toLowerCase() &&
-      r.occurrence_type.trim().toLowerCase() === type.trim().toLowerCase()
+      getOccurrenceGroup(r.occurrence_type) === targetGroup
     ).length;
   };
 

@@ -1,6 +1,40 @@
 import { supabase } from '../lib/supabase';
 import type { DailyOccurrenceRecord } from '../types';
 
+export const GROUP_FRIENDLY_NAMES: Record<string, string> = {
+  celular_eletronicos: 'Uso Indevido de Celular / Eletrônicos',
+  indisciplina_conduta: 'Indisciplina / Conduta Escolar',
+  uniforme: 'Descumprimento do Uniforme',
+  atraso: 'Atraso',
+  conflito_agressao: 'Conflito / Agressão',
+  patrimonio: 'Danos ao Patrimônio',
+  outros: 'Outros'
+};
+
+export const getOccurrenceGroup = (type: string): string => {
+  const t = (type || '').toLowerCase().trim();
+  
+  if (t.includes('celular') || t.includes('aparelho') || t.includes('eletrônico') || t.includes('eletronico')) {
+    return 'celular_eletronicos';
+  }
+  if (t.includes('uniforme')) {
+    return 'uniforme';
+  }
+  if (t.includes('atraso')) {
+    return 'atraso';
+  }
+  if (t.includes('agressão') || t.includes('agressao') || t.includes('conflito') || t.includes('desrespeito')) {
+    return 'conflito_agressao';
+  }
+  if (t.includes('patrimônio') || t.includes('patrimonio') || t.includes('danos')) {
+    return 'patrimonio';
+  }
+  if (t.includes('indisciplina') || t.includes('conduta') || t.includes('normas') || t.includes('atividades') || t.includes('orientações') || t.includes('material')) {
+    return 'indisciplina_conduta';
+  }
+  return 'outros';
+};
+
 export const occurrenceService = {
   async createRecord(record: Omit<DailyOccurrenceRecord, 'id' | 'created_at'>): Promise<DailyOccurrenceRecord> {
     const { data, error } = await supabase
@@ -101,11 +135,24 @@ export const occurrenceService = {
   },
 
   async markRecordsAsTreated(studentName: string, occurrenceType: string): Promise<void> {
+    // Busca registros não tratados do aluno
+    const records = await this.fetchRecords({
+      student_name: studentName,
+      tratada: false
+    });
+    
+    const targetGroup = getOccurrenceGroup(occurrenceType);
+    const targetIds = records
+      .filter(r => getOccurrenceGroup(r.occurrence_type) === targetGroup)
+      .map(r => r.id)
+      .filter((id): id is string => !!id);
+
+    if (targetIds.length === 0) return;
+
     const { error } = await supabase
       .from('daily_occurrence_records')
       .update({ tratada: true })
-      .ilike('student_name', studentName.trim())
-      .eq('occurrence_type', occurrenceType.trim());
+      .in('id', targetIds);
 
     if (error) {
       console.error('Error marking daily occurrence records as treated:', error);

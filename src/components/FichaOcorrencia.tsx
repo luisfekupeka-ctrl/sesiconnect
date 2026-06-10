@@ -7,25 +7,12 @@ import papelTimbradoImg from '../assets/papel_timbrado.png';
 import { occurrenceService } from '../services/occurrenceService';
 
 const TIPOS_OCORRENCIA = [
-  'Uso Indevido de Celular',
-  'Uso Indevido de Aparelhos Eletrônicos',
-  'Indisciplina Escolar',
-  'Conduta Incompatível com o Ambiente Escolar',
-  'Descumprimento das Normas Escolares',
-  'Desrespeito a Membros da Comunidade Escolar',
-  'Conflitos entre Alunos',
-  'Danos ao Patrimônio Escolar',
-  'Descumprimento do Uniforme Escolar',
-  'Atrasos Reincidentes',
-  'Saída sem Autorização',
-  'Não Cumprimento de Atividades ou Orientações Escolares',
+  'Uso Indevido de Celular / Eletrônicos',
+  'Indisciplina / Conduta Escolar',
+  'Descumprimento do Uniforme',
   'Atraso',
-  'Sem uniforme',
-  'Indisciplina em sala',
-  'Uso indevido de celular',
-  'Falta de material',
-  'Agressão verbal',
-  'Agressão física',
+  'Conflito / Agressão',
+  'Danos ao Patrimônio',
   'Outros'
 ];
 
