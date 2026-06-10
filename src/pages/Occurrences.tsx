@@ -342,15 +342,16 @@ export function Occurrences() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentName || !schoolYear || !occurrenceType || (!isCellPhoneUse && !report)) return;
+    const isAtraso = occurrenceType === 'Atrasos e descumprimento de horários';
+    if (!studentName || !schoolYear || !occurrenceType || (!isCellPhoneUse && !isAtraso && !report)) return;
 
     setIsSubmitting(true);
     try {
       let finalReport = report;
       if (isCellPhoneUse) {
         finalReport = getCellPhoneReport();
-      } else if (occurrenceType === 'Atrasos e descumprimento de horários') {
-        finalReport = `[Horário de Chegada: ${dynamicValue || 'Não informado'}]\nNa presente data, o(a) estudante foi atendido(a) em razão de atraso na chegada ao colégio. Como justificativa, relatou: ${motivoAtraso || '________________________________'}.\n\nO(a) estudante foi orientado(a) quanto à importância de cumprir os horários estabelecidos pela instituição, visando seu pleno aproveitamento acadêmico e a organização da rotina escolar. Declara estar ciente das orientações recebidas e comprometido(a) a evitar novos atrasos.\n\nRegistro realizado para acompanhamento.`;
+      } else if (isAtraso) {
+        finalReport = getAtrasoReport();
       } else {
         const dynField = getDynamicField(occurrenceType);
         if (dynField && dynamicValue) {
@@ -543,11 +544,11 @@ ${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
   const getCellPhoneMessage = () => {
     return `Prezados responsáveis,
 
-Informamos que o(a) aluno(a) ${studentName || '_____________________________'}, do ${schoolYear || '____ ano'}, foi orientado(a) nesta data quanto ao uso de aparelho celular durante o período escolar, conforme as normas da instituição e a Lei Federal nº 15.100/2025.
+Informamos que o(a) aluno(a) ${studentName || '_____________________________'}, do ${schoolYear || '____ ano'}, foi orientado(a) nesta data quanto ao uso indevido de celular e aparelhos eletrônicos durante o período escolar, conforme as normas da instituição e a Lei Federal nº 15.100/2025.
 
 Justificativa informada pelo(a) estudante: ${dynamicValue || '_____________________________'} .
 
-Reforçamos que o uso de celular na escola é permitido apenas para fins pedagógicos, mediante autorização da equipe escolar, ou em situações específicas e locais previamente definidos pela instituição.
+Reforçamos que o uso de celular e aparelhos eletrônicos na escola é permitido apenas para fins pedagógicos, mediante autorização da equipe escolar, ou em situações específicas e locais previamente definidos pela instituição.
 
 Solicitamos o apoio da família para reforçar junto ao(à) estudante a importância do cumprimento das normas escolares e das orientações recebidas, contribuindo para um ambiente favorável à aprendizagem.
 
@@ -557,15 +558,19 @@ ${emissorName || '_____________________'}`;
 
   const getCellPhoneReport = () => {
     const currentDateStr = new Date().toLocaleDateString('pt-BR');
-    return `Na data de ${currentDateStr}, o(a) aluno(a) ${studentName || '_____________________________'}, do ${schoolYear || '____ ano'} foi abordado(a) pela equipe escolar em razão da utilização de aparelho celular durante o período escolar.
+    return `Na data de ${currentDateStr}, o(a) aluno(a) ${studentName || '_____________________________'}, do ${schoolYear || '____ ano'} foi abordado(a) pela equipe escolar em razão do uso indevido de celular e aparelhos eletrônicos durante o período escolar.
 
 Ao ser questionado(a), o(a) estudante apresentou a seguinte justificativa: ${dynamicValue || '_____________________________'}
 
 O(a) aluno(a) foi orientado(a) sobre as normas institucionais referentes ao uso de dispositivos eletrônicos e sobre a Lei Federal nº 15.100/2025, que regulamenta o uso de aparelhos eletrônicos pessoais nas instituições de ensino.
 
-Foi esclarecido que a utilização do celular somente é permitida para fins pedagógicos, mediante autorização da equipe escolar, ou em situações específicas previstas pela instituição, nos locais previamente definidos para essa finalidade.
+Foi esclarecido que a utilização de celular e aparelhos eletrônicos somente é permitida para fins pedagógicos, mediante autorização da equipe escolar, ou em situações específicas previstas pela instituição, nos locais previamente definidos para essa finalidade.
 
 O(a) estudante declarou estar ciente das orientações recebidas e comprometeu-se a cumprir as normas estabelecidas pela escola.`;
+  };
+
+  const getAtrasoReport = () => {
+    return `[Horário de Chegada: ${dynamicValue || 'Não informado'}]\nNa presente data, o(a) estudante foi atendido(a) em razão de atraso na chegada ao colégio. Como justificativa, relatou: ${motivoAtraso || '________________________________'}.\n\nO(a) estudante foi orientado(a) quanto à importância de cumprir os horários estabelecidos pela instituição, visando seu pleno aproveitamento acadêmico e a organização da rotina escolar. Declara estar ciente das orientações recebidas e comprometido(a) a evitar novos atrasos.\n\nRegistro realizado para acompanhamento.`;
   };
 
   const getAtrasoMessage = () => {
@@ -927,11 +932,11 @@ Agradecemos a parceria.`;
                         </motion.div>
                       )}
 
-                      {isCellPhoneUse ? (
+                      {isCellPhoneUse || occurrenceType === 'Atrasos e descumprimento de horários' ? (
                         <div className="space-y-2 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
                           <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pré-visualização do Relato Diário (Será salvo automaticamente)</label>
                           <div className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-line font-medium leading-relaxed bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl">
-                            {getCellPhoneReport()}
+                            {occurrenceType === 'Atrasos e descumprimento de horários' ? getAtrasoReport() : getCellPhoneReport()}
                           </div>
                         </div>
                       ) : (
