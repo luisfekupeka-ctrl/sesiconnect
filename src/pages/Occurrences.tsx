@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2, Copy, X, Printer, Trash2, AlertTriangle, ShieldAlert, Clock } from 'lucide-react';
+import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2, Copy, X, Printer, Trash2, AlertTriangle, ShieldAlert, Clock, Pencil } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { occurrenceService, getOccurrenceGroup, GROUP_FRIENDLY_NAMES } from '../services/occurrenceService';
 import { generateOccurrencesPDF, generateOccurrencesExcel, generateSingleOccurrencePDF } from '../lib/reportGenerator';
@@ -134,6 +134,7 @@ export function Occurrences() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedRecord, setSelectedRecord] = useState<DailyOccurrenceRecord | null>(null);
+  const [editModeOnOpen, setEditModeOnOpen] = useState(false);
   const [emissorName, setEmissorName] = useState('');
   const [generatedMessageAfterSubmit, setGeneratedMessageAfterSubmit] = useState('');
   const [submittedRecord, setSubmittedRecord] = useState<DailyOccurrenceRecord | null>(null);
@@ -1250,9 +1251,9 @@ Agradecemos a parceria.`;
               </div>
 
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto pb-2">
+                <div className="max-h-[65vh] overflow-auto pb-2">
                   <table className="w-full text-left text-xs md:text-sm text-slate-600 dark:text-slate-400">
-                    <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
+                    <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 z-10 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
                       <tr>
                         <th className="px-4 py-3 md:px-6 md:py-4 font-medium whitespace-nowrap">Data</th>
                         <th className="px-4 py-3 md:px-6 md:py-4 font-medium min-w-[150px]">Aluno</th>
@@ -1278,7 +1279,7 @@ Agradecemos a parceria.`;
                         </tr>
                       ) : (
                         records.map((record) => (
-                          <tr key={record.id} onClick={() => setSelectedRecord(record)} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-colors cursor-pointer">
+                          <tr key={record.id} onClick={() => { setSelectedRecord(record); setEditModeOnOpen(false); }} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-colors cursor-pointer">
                             <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-slate-900 dark:text-slate-200">
                               {new Date(record.created_at || '').toLocaleDateString('pt-BR')}
                             </td>
@@ -1310,28 +1311,39 @@ Agradecemos a parceria.`;
                               {record.report}
                             </td>
                             {isAdmin && (
-                              <td className="px-4 py-3 md:px-6 md:py-4 text-right">
-                                <button
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    if (window.confirm('Tem certeza que deseja apagar este registro?')) {
-                                      try {
-                                        if (record.id) {
-                                          await occurrenceService.deleteRecord(record.id);
-                                          setRecords(prev => prev.filter(r => r.id !== record.id));
-                                          setThirtyDaysRecords(prev => prev.filter(r => r.id !== record.id));
-                                          if (selectedRecord?.id === record.id) setSelectedRecord(null);
+                              <td className="px-4 py-3 md:px-6 md:py-4 text-right whitespace-nowrap">
+                                <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedRecord(record);
+                                      setEditModeOnOpen(true);
+                                    }}
+                                    className="p-2 rounded-full text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
+                                    title="Editar Registro"
+                                  >
+                                    <Pencil className="w-4 h-4 inline" />
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (window.confirm('Tem certeza que deseja apagar este registro?')) {
+                                        try {
+                                          if (record.id) {
+                                            await occurrenceService.deleteRecord(record.id);
+                                            setRecords(prev => prev.filter(r => r.id !== record.id));
+                                            setThirtyDaysRecords(prev => prev.filter(r => r.id !== record.id));
+                                            if (selectedRecord?.id === record.id) setSelectedRecord(null);
+                                          }
+                                        } catch(error) {
+                                          alert('Erro ao apagar registro.');
                                         }
-                                      } catch(error) {
-                                        alert('Erro ao apagar registro.');
                                       }
-                                    }
-                                  }}
-                                  className="p-2 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-                                  title="Apagar Registro"
-                                >
-                                  <Trash2 className="w-4 h-4 inline" />
-                                </button>
+                                    }}
+                                    className="p-2 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                    title="Apagar Registro"
+                                  >
+                                    <Trash2 className="w-4 h-4 inline" />
+                                  </button>
+                                </div>
                               </td>
                             )}
                           </tr>
@@ -1492,6 +1504,7 @@ Agradecemos a parceria.`;
                     onClose={() => setSelectedRecord(null)} 
                     onEditSuccess={fetchRecords}
                     onDeleteSuccess={fetchRecords}
+                    startInEditMode={editModeOnOpen}
                   />
                 );
               })()}

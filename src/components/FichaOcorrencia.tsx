@@ -40,13 +40,14 @@ interface Props {
   isPrintOnly?: boolean;
   onEditSuccess?: () => void;
   onDeleteSuccess?: () => void;
+  startInEditMode?: boolean;
 }
 
-export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly, onEditSuccess, onDeleteSuccess }: Props) {
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
+export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly, onEditSuccess, onDeleteSuccess, startInEditMode }: Props) {
+  const [isConfigOpen, setIsConfigOpen] = useState(startInEditMode || false);
   
   // Estados para edição de Ocorrências Diárias
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(startInEditMode || false);
   const [editStudentName, setEditStudentName] = useState(ocorrencia.nomeAluno || '');
   const [editSchoolYear, setEditSchoolYear] = useState(ocorrencia.turmaAluno || '');
   const [editOccurrenceType, setEditOccurrenceType] = useState('');
@@ -84,7 +85,9 @@ export default function FichaOcorrencia({ ocorrencia, onClose, isPrintOnly, onEd
     const typeKey = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase() === 'tipo de ocorrência' || k.toLowerCase() === 'tipo de ocorrencia' || k.toLowerCase() === 'tipo');
     setEditOccurrenceType(typeKey ? String(ocorrencia.dados[typeKey]) : (ocorrencia.nomeModelo || ''));
     setEditReport(descKey ? String(ocorrencia.dados[descKey]) : '');
-  }, [ocorrencia]);
+    setIsEditing(startInEditMode || false);
+    setIsConfigOpen(startInEditMode || false);
+  }, [ocorrencia, startInEditMode]);
 
 
   interface AssinaturaExtra {
