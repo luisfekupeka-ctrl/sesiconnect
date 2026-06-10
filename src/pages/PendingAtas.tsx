@@ -159,7 +159,6 @@ export default function PendingAtas() {
     return result;
   }, [pendingAtas, busca, filtroAno, filtroTipo, ordenacao]);
 
-  // Função para encaminhar para a tela de geração de Ata
   const handleGerarAta = (group: PendingAtaGroup) => {
     navigate('/forms', {
       state: {
@@ -167,7 +166,8 @@ export default function PendingAtas() {
           studentName: group.studentName,
           schoolYear: group.schoolYear,
           type: group.type,
-          count: group.count
+          count: group.count,
+          records: group.records
         }
       }
     });

@@ -341,7 +341,7 @@ export function Occurrences() {
       if (isCellPhoneUse) {
         finalReport = getCellPhoneReport();
       } else if (occurrenceType === 'Atraso') {
-        finalReport = `[Horário de Chegada: ${dynamicValue}]` + (motivoAtraso ? ` [Motivo: ${motivoAtraso}]` : '') + `\n${report}`;
+        finalReport = `[Horário de Chegada: ${dynamicValue || 'Não informado'}]\nNa presente data, o(a) estudante foi atendido(a) em razão de atraso na chegada ao colégio. Como justificativa, relatou: ${motivoAtraso || '________________________________'}.\n\nO(a) estudante foi orientado(a) quanto à importância de cumprir os horários estabelecidos pela instituição, visando seu pleno aproveitamento acadêmico e a organização da rotina escolar. Declara estar ciente das orientações recebidas e comprometido(a) a evitar novos atrasos.\n\nRegistro realizado para acompanhamento.`;
       } else {
         const dynField = getDynamicField(occurrenceType);
         if (dynField && dynamicValue) {
@@ -362,6 +362,8 @@ export function Occurrences() {
         setGeneratedMessageAfterSubmit(getUniformMessage());
       } else if (isCellPhoneUse) {
         setGeneratedMessageAfterSubmit(getCellPhoneMessage());
+      } else if (occurrenceType === 'Atraso') {
+        setGeneratedMessageAfterSubmit(getAtrasoMessage());
       }
 
       setSubmittedRecord(newRec);
@@ -555,6 +557,18 @@ O(a) aluno(a) foi orientado(a) sobre as normas institucionais referentes ao uso 
 Foi esclarecido que a utilização do celular somente é permitida para fins pedagógicos, mediante autorização da equipe escolar, ou em situações específicas previstas pela instituição, nos locais previamente definidos para essa finalidade.
 
 O(a) estudante declarou estar ciente das orientações recebidas e comprometeu-se a cumprir as normas estabelecidas pela escola.`;
+  };
+
+  const getAtrasoMessage = () => {
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('pt-BR');
+    return `Prezados responsáveis,
+
+Registramos que o(a) estudante chegou ao colégio com atraso no dia ${dateStr}, às ${dynamicValue || '____'}h. Como justificativa, informou: ${motivoAtraso || '________________________________'}.
+
+Solicitamos o apoio da família para reforçar a importância da pontualidade e do cumprimento dos horários escolares, a fim de evitar novas ocorrências.
+
+Agradecemos a parceria.`;
   };
 
   const copyUniformMessage = () => {

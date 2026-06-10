@@ -162,7 +162,7 @@ export default function FormsPage() {
 
 
 
-  const handleSelectTratativaPendente = (studentName: string, schoolYear: string, type: string, count: number) => {
+  const handleSelectTratativaPendente = (studentName: string, schoolYear: string, type: string, count: number, records?: any[]) => {
     setTratandoOcorrenciaTipo(type);
     const studentObj = alunos.find(a => a.nome.trim().toLowerCase() === studentName.trim().toLowerCase());
     if (studentObj) {
@@ -237,6 +237,47 @@ Durante a tratativa, foram realizadas orientações acerca da importância do cu
 Foi esclarecido ao(à) estudante que a Lei Federal nº 15.100, de 13 de janeiro de 2025, em seu Art. 2º, restringe a utilização de aparelhos eletrônicos portáteis pessoais, incluindo telefones celulares, pelos estudantes da Educação Básica durante as aulas, recreios e intervalos, ressalvadas as exceções previstas na própria legislação para fins pedagógicos, de acessibilidade, inclusão ou necessidades de saúde.
 
 O(A) aluno(a) declarou estar ciente das orientações recebidas, bem como da legislação vigente e das normas estabelecidas pela instituição, comprometendo-se a adequar sua conduta às regras escolares.`;
+    } else if (type.toLowerCase().includes('atraso')) {
+      let listLines = '';
+      if (records && records.length > 0) {
+        listLines = records.slice(0, 4).map(r => {
+          const rDateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('pt-BR') : '__/__/____';
+          
+          let timeStr = '______';
+          const timeMatch = (r.report || '').match(/\[Horário de Chegada:\s*([^\]]+)\]/);
+          if (timeMatch) timeStr = timeMatch[1];
+          
+          let motiveStr = '____________________';
+          const motiveMatch = (r.report || '').match(/Como justificativa, relatou:\s*([^.\n]+)/) || (r.report || '').match(/\[Motivo:\s*([^\]]+)\]/);
+          if (motiveMatch) {
+            motiveStr = motiveMatch[1].trim();
+          } else {
+            const firstLine = (r.report || '').split('\n')[0].replace(/\[[^\]]+\]/g, '').trim();
+            if (firstLine) motiveStr = firstLine;
+          }
+
+          return `• ${rDateStr} – horário: ${timeStr} – local/situação: ${motiveStr}`;
+        }).join(';\n') + '.';
+      } else {
+        listLines = `• __/__/____ – horário: ______ – local/situação: _______________;
+• __/__/____ – horário: ______ – local/situação: _______________;
+• __/__/____ – horário: ______ – local/situação: _______________;
+• __/__/____ – horário: ______ – local/situação: ____________________.`;
+      }
+
+      defaultDescription = `ATA DE ATENDIMENTO PEDAGÓGICO – ATRASOS
+
+Na presente data, foi atendido o aluno ${studentName}, do ${schoolYear || '______ ano/série'}, em razão dos atrasos registrados durante a rotina escolar, conforme segue:
+
+${listLines}
+
+O aluno foi orientado quanto à importância da pontualidade e do cumprimento dos horários escolares. Foi esclarecido que a recorrência dos atrasos prejudica seu aproveitamento acadêmico, ocasionando perda de conteúdos e atividades, além de impactar sua frequência e acompanhamento escolar.
+
+Também foi informado que novas ocorrências poderão resultar em registros pedagógicos, comunicação aos responsáveis, convocação da família para reunião, acompanhamento pela equipe pedagógica e demais medidas educativas previstas pela instituição.
+
+O aluno declara estar ciente das orientações recebidas e compromete-se a evitar novas ocorrências.
+
+Registro realizado para acompanhamento pedagógico.`;
     } else {
       defaultDescription = `O(a) aluno(a) ${studentName} acumula ${count} ocorrências de "${type}" registradas recentemente. Considerando a reincidência, foi realizada esta ata de tratativa e encaminhamento pedagógico em ${dateStr}.`;
     }
@@ -277,9 +318,9 @@ O(A) aluno(a) declarou estar ciente das orientações recebidas, bem como da leg
 
   useEffect(() => {
     if (location.state?.prefill && modelosFormulario.length > 0 && alunos.length > 0) {
-      const { studentName, schoolYear, type, count } = location.state.prefill;
+      const { studentName, schoolYear, type, count, records } = location.state.prefill;
       setAbaAtiva('nova');
-      handleSelectTratativaPendente(studentName, schoolYear, type, count);
+      handleSelectTratativaPendente(studentName, schoolYear, type, count, records);
       // Limpa o estado da rota para não re-preencher ao atualizar a página
       window.history.replaceState({}, document.title);
     }
