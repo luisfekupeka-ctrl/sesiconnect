@@ -281,6 +281,7 @@ export interface DailyOccurrenceRecord {
   school_year: string;
   occurrence_type: string;
   report: string;
+  created_by?: string;
   created_at?: string;
   tratada?: boolean;
 }

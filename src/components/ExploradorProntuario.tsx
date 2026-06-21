@@ -182,7 +182,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
           nomeAluno: rec.student_name,
           turmaAluno: rec.school_year,
           anoAluno: rec.school_year,
-          professorAtual: 'Administração',
+          professorAtual: rec.created_by || 'Administração',
           criadoEm: rec.created_at || new Date().toISOString(),
           dados: {
             'Tipo de Ocorrência': rec.occurrence_type,
@@ -206,7 +206,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
         nomeAluno: rec.student_name,
         turmaAluno: rec.school_year,
         anoAluno: rec.school_year,
-        professorAtual: 'Administração',
+        professorAtual: rec.created_by || 'Administração',
         criadoEm: rec.created_at || new Date().toISOString(),
         dados: {
           'Tipo de Ocorrência': rec.occurrence_type,
@@ -343,7 +343,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
             nomeAluno: rec.student_name,
             turmaAluno: rec.school_year,
             anoAluno: rec.school_year,
-            professorAtual: 'Administração',
+            professorAtual: rec.created_by || 'Administração',
             criadoEm: rec.created_at || new Date().toISOString(),
             dados: {
               'Tipo de Ocorrência': rec.occurrence_type,

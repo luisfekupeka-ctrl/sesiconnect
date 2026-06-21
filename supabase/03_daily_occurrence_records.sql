@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS daily_occurrence_records (
   school_year INTEGER NOT NULL,
   occurrence_type TEXT NOT NULL,
   report TEXT NOT NULL,
+  created_by TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

@@ -363,7 +363,8 @@ export function Occurrences() {
         student_name: studentName,
         school_year: schoolYear,
         occurrence_type: occurrenceType,
-        report: finalReport
+        report: finalReport,
+        created_by: profile?.full_name || 'Administração'
       });
       const registeredStudent = studentName;
       const registeredType = occurrenceType;
@@ -1496,7 +1497,7 @@ Agradecemos a parceria.`;
                   nomeAluno: selectedRecord.student_name,
                   turmaAluno: selectedRecord.school_year,
                   anoAluno: selectedRecord.school_year,
-                  professorAtual: emissorName || 'Administração',
+                  professorAtual: selectedRecord.created_by || 'Administração',
                   criadoEm: selectedRecord.created_at || new Date().toISOString(),
                   dados: {
                     'Tipo de Ocorrência': selectedRecord.occurrence_type,
