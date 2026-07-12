@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS andares (
 CREATE TABLE IF NOT EXISTS locais (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nome TEXT UNIQUE NOT NULL,
+  andar_id UUID REFERENCES andares(id) ON DELETE SET NULL,
   ordem INTEGER NOT NULL DEFAULT 0,
   ativo BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -40,6 +41,7 @@ CREATE TABLE IF NOT EXISTS chamados (
   andar_id UUID REFERENCES andares(id) ON DELETE SET NULL,
   local_id UUID REFERENCES locais(id) ON DELETE SET NULL,
   tipo_id UUID REFERENCES tipos_chamado(id) ON DELETE SET NULL,
+  tipo_outro_descricao TEXT,
   descricao VARCHAR(1000) NOT NULL,
   status TEXT NOT NULL DEFAULT 'Aberto' CHECK (status IN ('Aberto', 'Em Atendimento', 'Aguardando Validação', 'Concluído', 'Cancelado')),
   created_at TIMESTAMPTZ DEFAULT now(),

@@ -25,6 +25,7 @@ interface Andar {
 interface Local {
   id: string;
   nome: string;
+  andar_id: string | null;
   ordem: number;
   ativo: boolean;
 }
@@ -44,6 +45,7 @@ interface Chamado {
   andar_id: string;
   local_id: string;
   tipo_id: string;
+  tipo_outro_descricao: string | null;
   descricao: string;
   status: 'Aberto' | 'Em Atendimento' | 'Aguardando Validação' | 'Concluído' | 'Cancelado';
   created_at: string;
@@ -88,7 +90,7 @@ export default function ChamadosPage() {
   
   // Controle de Abas
   const [activeTab, setActiveTab] = useState<'consulta' | 'novo' | 'config'>('consulta');
-  const [subTabConfig, setSubTabConfig] = useState<'andares' | 'locais' | 'tipos' | 'usuarios'>('andares');
+  const [subTabConfig, setSubTabConfig] = useState<'andares' | 'locais' | 'tipos'>('andares');
 
   // Estados dos Dados
   const [chamados, setChamados] = useState<Chamado[]>([]);
@@ -99,7 +101,7 @@ export default function ChamadosPage() {
   const [carregando, setCarregando] = useState(true);
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
 
-  // Estados de Filtro
+  // Estados de Filtro (Consulta)
   const [filtroNumero, setFiltroNumero] = useState('');
   const [filtroSolicitante, setFiltroSolicitante] = useState('');
   const [filtroAndar, setFiltroAndar] = useState('');
@@ -109,15 +111,21 @@ export default function ChamadosPage() {
   const [filtroDataInicio, setFiltroDataInicio] = useState('');
   const [filtroDataFim, setFiltroDataFim] = useState('');
 
-  // Ordenação e Paginação
+  // Ordenação e Paginação (Consulta)
   const [ordenacao, setOrdenacao] = useState<{ campo: keyof Chamado | 'andar' | 'local' | 'tipo'; ascendente: boolean }>({ campo: 'created_at', ascendente: false });
   const [paginaAtual, setPaginaAtual] = useState(1);
   const itensPorPagina = 10;
+
+  // Estados de Filtro/Pesquisa para CRUD de Configurações
+  const [buscaConfig, setBuscaConfig] = useState('');
+  const [filtroAndarConfig, setFiltroAndarConfig] = useState('');
+  const [filtroAtivoConfig, setFiltroAtivoConfig] = useState('');
 
   // Estados do Novo Chamado
   const [andarId, setAndarId] = useState('');
   const [localId, setLocalId] = useState('');
   const [tipoId, setTipoId] = useState('');
+  const [tipoOutroDescricao, setTipoOutroDescricao] = useState('');
   const [descricao, setDescricao] = useState('');
   const [fotosUpload, setFotosUpload] = useState<File[]>([]);
   const [salvandoChamado, setSalvandoChamado] = useState(false);
@@ -141,14 +149,11 @@ export default function ChamadosPage() {
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
 
   // Estados de CRUD Auxiliar (Andares, Locais, Tipos)
-  const [editandoConfig, setEditandoConfig] = useState<{ id?: string; nome: string; ordem: number; ativo: boolean } | null>(null);
+  const [editandoConfig, setEditandoConfig] = useState<{ id?: string; nome: string; andar_id?: string | null; ordem: number; ativo: boolean } | null>(null);
   const [carregandoConfigAction, setCarregandoConfigAction] = useState(false);
 
-  // Estados de Edição de Usuários
-  const [editandoUsuario, setEditandoUsuario] = useState<{ id: string; full_name: string; role: string; status: string } | null>(null);
-
   // ---------------------------------------------------------------------------
-  // Carregamento de Dados Inicial
+  // Carregamento de Dados e Seed Inicial
   // ---------------------------------------------------------------------------
   const carregarDadosAuxiliares = async () => {
     try {
@@ -158,11 +163,150 @@ export default function ChamadosPage() {
         supabase.from('tipos_chamado').select('*').order('ordem', { ascending: true }),
       ]);
 
+      let andaresData = resAndares.data || [];
+      let locaisData = resLocais.data || [];
+      let tiposData = resTipos.data || [];
+
       if (resAndares.data) setAndares(resAndares.data);
       if (resLocais.data) setLocais(resLocais.data);
       if (resTipos.data) setTiposChamado(resTipos.data);
+
+      // Chamar rotina de inicialização automática se os dados estiverem vazios
+      await rodarSeedSeVazio(andaresData, locaisData, tiposData);
     } catch (err) {
       console.error('Erro ao carregar dados auxiliares:', err);
+    }
+  };
+
+  const rodarSeedSeVazio = async (listaAndares: Andar[], listaLocais: Local[], listaTipos: TipoChamado[]) => {
+    let precisaRecarregar = false;
+    let andaresAtuais = [...listaAndares];
+
+    // 1. Seed Inicial de Andares (Térreo, 1º Andar, etc.) para vincularmos depósitos
+    if (listaAndares.length === 0) {
+      precisaRecarregar = true;
+      const andaresPadrao = [
+        { nome: 'Subsolo', ordem: 10, ativo: true },
+        { nome: 'Térreo', ordem: 20, ativo: true },
+        { nome: '1º Andar', ordem: 30, ativo: true },
+        { nome: '2º Andar', ordem: 40, ativo: true },
+        { nome: 'Bloco A', ordem: 50, ativo: true }
+      ];
+      const { data, error } = await supabase.from('andares').insert(andaresPadrao).select();
+      if (!error && data) {
+        andaresAtuais = data;
+      }
+    }
+
+    // 2. Seed Inicial de Locais
+    if (listaLocais.length === 0) {
+      precisaRecarregar = true;
+      const locaisParaInserir: any[] = [];
+      let ordem = 10;
+
+      // Salas de Aula (Sala 01 até Sala 31)
+      for (let i = 1; i <= 31; i++) {
+        const numStr = String(i).padStart(2, '0');
+        locaisParaInserir.push({ nome: `Sala ${numStr}`, ordem: ordem, ativo: true });
+        ordem += 10;
+      }
+
+      // Áreas Administrativas
+      const admin = ['Secretaria', 'Direção', 'Coordenação', 'Monitoria', 'Sala dos Professores', 'Biblioteca'];
+      admin.forEach(n => {
+        locaisParaInserir.push({ nome: n, ordem: ordem, ativo: true });
+        ordem += 10;
+      });
+
+      // Laboratórios
+      const labs = ['Laboratório de Biologia', 'Laboratório de Química'];
+      labs.forEach(n => {
+        locaisParaInserir.push({ nome: n, ordem: ordem, ativo: true });
+        ordem += 10;
+      });
+
+      // Ambientes de Apoio
+      const apoio = ['Auditório', 'Refeitório', 'Cantina', 'Cozinha'];
+      apoio.forEach(n => {
+        locaisParaInserir.push({ nome: n, ordem: ordem, ativo: true });
+        ordem += 10;
+      });
+
+      // Área Esportiva
+      locaisParaInserir.push({ nome: 'Arena', ordem: ordem, ativo: true });
+      ordem += 10;
+
+      // Áreas Externas
+      const externas = ['Pátio Lateral', 'Jardim de Inverno 1', 'Jardim de Inverno 2', 'Gramado'];
+      externas.forEach(n => {
+        locaisParaInserir.push({ nome: n, ordem: ordem, ativo: true });
+        ordem += 10;
+      });
+
+      // Banheiros
+      const banheiros = ['Banheiro Feminino', 'Banheiro Masculino', 'Banheiro PCD'];
+      banheiros.forEach(n => {
+        locaisParaInserir.push({ nome: n, ordem: ordem, ativo: true });
+        ordem += 10;
+      });
+
+      // Estacionamentos
+      const estacionamentos = ['Estacionamento S1', 'Estacionamento S2'];
+      estacionamentos.forEach(n => {
+        locaisParaInserir.push({ nome: n, ordem: ordem, ativo: true });
+        ordem += 10;
+      });
+
+      // Outros Ambientes
+      const outros = ['Corredor', 'Escadaria', 'Elevador', 'Portaria'];
+      outros.forEach(n => {
+        locaisParaInserir.push({ nome: n, ordem: ordem, ativo: true });
+        ordem += 10;
+      });
+
+      // Depósitos (vincular depósito para cada andar cadastrado)
+      andaresAtuais.forEach(a => {
+        locaisParaInserir.push({
+          nome: `Depósito - ${a.nome}`,
+          andar_id: a.id,
+          ordem: ordem,
+          ativo: true
+        });
+        ordem += 10;
+      });
+
+      await supabase.from('locais').insert(locaisParaInserir);
+    }
+
+    // 3. Seed Inicial de Tipos de Chamado
+    if (listaTipos.length === 0) {
+      precisaRecarregar = true;
+      const tiposPadrao = [
+        'Elétrico', 'Hidráulico', 'Informática', 'Internet / Rede', 'Telefonia', 
+        'Impressoras', 'Projetor / Datashow', 'Ar-condicionado', 'Iluminação', 
+        'Mobiliário', 'Marcenaria', 'Serralheria', 'Pintura', 'Alvenaria', 
+        'Gesso / Forro', 'Cobertura / Telhado', 'Vidraçaria', 'Limpeza', 
+        'Jardinagem', 'Controle de Pragas', 'Equipamentos', 'Segurança', 
+        'Acessibilidade', 'Outro'
+      ];
+      const tiposParaInserir = tiposPadrao.map((t, idx) => ({
+        nome: t,
+        ordem: (idx + 1) * 10,
+        ativo: true
+      }));
+
+      await supabase.from('tipos_chamado').insert(tiposParaInserir);
+    }
+
+    if (precisaRecarregar) {
+      const [resAndares, resLocais, resTipos] = await Promise.all([
+        supabase.from('andares').select('*').order('ordem', { ascending: true }),
+        supabase.from('locais').select('*').order('ordem', { ascending: true }),
+        supabase.from('tipos_chamado').select('*').order('ordem', { ascending: true }),
+      ]);
+      if (resAndares.data) setAndares(resAndares.data);
+      if (resLocais.data) setLocais(resLocais.data);
+      if (resTipos.data) setTiposChamado(resTipos.data);
     }
   };
 
@@ -208,7 +352,7 @@ export default function ChamadosPage() {
     carregarUsuarios();
   }, []);
 
-  // Mapeamento rápido de Usuários para exibir nomes no histórico e comentários
+  // Mapeamento rápido de Usuários para exibir nomes
   const mapaUsuarios = useMemo(() => {
     const mapa: Record<string, any> = {};
     usuarios.forEach(u => {
@@ -216,6 +360,18 @@ export default function ChamadosPage() {
     });
     return mapa;
   }, [usuarios]);
+
+  // ID do Tipo "Outro" para exibir campo adicional
+  const tipoOutroId = useMemo(() => {
+    return tiposChamado.find(t => t.nome.toLowerCase() === 'outro')?.id || '';
+  }, [tiposChamado]);
+
+  // Resetar busca/filtros de CRUD ao mudar sub-aba
+  useEffect(() => {
+    setBuscaConfig('');
+    setFiltroAndarConfig('');
+    setFiltroAtivoConfig('');
+  }, [subTabConfig]);
 
   // ---------------------------------------------------------------------------
   // Exibição de Mensagens
@@ -270,8 +426,14 @@ export default function ChamadosPage() {
   const handleSalvarChamado = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    
     if (!andarId || !localId || !tipoId || !descricao.trim()) {
       exibirMensagem('erro', 'Por favor, preencha todos os campos obrigatórios.');
+      return;
+    }
+
+    if (tipoId === tipoOutroId && !tipoOutroDescricao.trim()) {
+      exibirMensagem('erro', 'Por favor, descreva o tipo de chamado.');
       return;
     }
 
@@ -286,6 +448,7 @@ export default function ChamadosPage() {
           andar_id: andarId,
           local_id: localId,
           tipo_id: tipoId,
+          tipo_outro_descricao: tipoId === tipoOutroId ? tipoOutroDescricao.trim() : null,
           descricao: descricao.trim(),
           status: 'Aberto'
         })
@@ -336,6 +499,7 @@ export default function ChamadosPage() {
       setAndarId('');
       setLocalId('');
       setTipoId('');
+      setTipoOutroDescricao('');
       setDescricao('');
       setFotosUpload([]);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -345,7 +509,7 @@ export default function ChamadosPage() {
       await carregarChamados();
       setActiveTab('consulta');
     } catch (err: any) {
-      exibirMensagem('erro', 'Erro ao salvar chamado: ' + err.message);
+      exibirMensagem('erro', 'Erro ao abrir chamado: ' + err.message);
     } finally {
       setSalvandoChamado(false);
     }
@@ -504,7 +668,7 @@ export default function ChamadosPage() {
   };
 
   // ---------------------------------------------------------------------------
-  // Filtros Avançados e Ordenação da Tabela
+  // Filtros Avançados e Ordenação (Chamados)
   // ---------------------------------------------------------------------------
   const chamadosFiltrados = useMemo(() => {
     return chamados.filter(c => {
@@ -512,7 +676,10 @@ export default function ChamadosPage() {
       const bateSolicitante = c.solicitante?.toLowerCase().includes(filtroSolicitante.toLowerCase());
       const bateAndar = filtroAndar === '' || c.andar_id === filtroAndar;
       const bateLocal = filtroLocal === '' || c.local_id === filtroLocal;
+      
+      // Filtragem por Tipo de Chamado
       const bateTipo = filtroTipo === '' || c.tipo_id === filtroTipo;
+      
       const bateStatus = filtroStatus === '' || c.status === filtroStatus;
       
       let bateData = true;
@@ -557,6 +724,13 @@ export default function ChamadosPage() {
     return dados;
   }, [chamadosFiltrados, ordenacao]);
 
+  // Locais filtrados dinamicamente no formulário de Novo Chamado com base no Andar selecionado
+  const locaisFiltradosParaForm = useMemo(() => {
+    const ativos = locais.filter(l => l.ativo);
+    if (!andarId) return ativos; // Se nenhum andar for selecionado, exibe todos os ativos
+    return ativos.filter(l => l.andar_id === andarId || l.andar_id === null);
+  }, [locais, andarId]);
+
   // Paginação
   const totalPaginas = Math.ceil(chamadosOrdenados.length / itensPorPagina);
   const chamadosPaginados = useMemo(() => {
@@ -587,17 +761,23 @@ export default function ChamadosPage() {
   // Exportar Excel e PDF
   // ---------------------------------------------------------------------------
   const handleExportarExcel = () => {
-    const dataToExport = chamadosFiltrados.map(c => ({
-      'Número': c.numero_chamado,
-      'Data Abertura': new Date(c.created_at).toLocaleString('pt-BR'),
-      'Solicitante': c.solicitante,
-      'Andar': c.andares?.nome || '—',
-      'Local': c.locais?.nome || '—',
-      'Tipo de Chamado': c.tipos_chamado?.nome || '—',
-      'Status': c.status,
-      'Descrição': c.descricao,
-      'Última Atualização': new Date(c.updated_at).toLocaleString('pt-BR')
-    }));
+    const dataToExport = chamadosFiltrados.map(c => {
+      const tipoNome = c.tipo_outro_descricao 
+        ? `${c.tipos_chamado?.nome} (${c.tipo_outro_descricao})` 
+        : (c.tipos_chamado?.nome || '—');
+
+      return {
+        'Número': c.numero_chamado,
+        'Data Abertura': new Date(c.created_at).toLocaleString('pt-BR'),
+        'Solicitante': c.solicitante,
+        'Andar': c.andares?.nome || '—',
+        'Local': c.locais?.nome || '—',
+        'Tipo de Chamado': tipoNome,
+        'Status': c.status,
+        'Descrição': c.descricao,
+        'Última Atualização': new Date(c.updated_at).toLocaleString('pt-BR')
+      };
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
@@ -615,15 +795,21 @@ export default function ChamadosPage() {
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 26);
 
     const columns = ['Número', 'Data', 'Solicitante', 'Andar', 'Local', 'Tipo', 'Status'];
-    const rows = chamadosFiltrados.map(c => [
-      c.numero_chamado || '',
-      new Date(c.created_at).toLocaleDateString('pt-BR') || '',
-      c.solicitante || '',
-      c.andares?.nome || '—',
-      c.locais?.nome || '—',
-      c.tipos_chamado?.nome || '—',
-      c.status || ''
-    ]);
+    const rows = chamadosFiltrados.map(c => {
+      const tipoNome = c.tipo_outro_descricao 
+        ? `${c.tipos_chamado?.nome} (${c.tipo_outro_descricao})` 
+        : (c.tipos_chamado?.nome || '—');
+
+      return [
+        c.numero_chamado || '',
+        new Date(c.created_at).toLocaleDateString('pt-BR') || '',
+        c.solicitante || '',
+        c.andares?.nome || '—',
+        c.locais?.nome || '—',
+        tipoNome,
+        c.status || ''
+      ];
+    });
 
     autoTable(doc, {
       head: [columns],
@@ -638,7 +824,6 @@ export default function ChamadosPage() {
     doc.save(`Chamados_${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
-  // Baixar arquivos de mídia
   const baixarArquivo = async (url: string, nomeOriginal: string) => {
     try {
       const response = await fetch(url);
@@ -665,29 +850,52 @@ export default function ChamadosPage() {
     try {
       if (editandoConfig.id) {
         // Atualizar
+        const payload: any = {
+          nome: editandoConfig.nome.trim(),
+          ordem: editandoConfig.ordem,
+          ativo: editandoConfig.ativo,
+          updated_at: new Date().toISOString()
+        };
+        if (tabela === 'locais') {
+          payload.andar_id = editandoConfig.andar_id || null;
+        }
+
         const { error } = await supabase
           .from(tabela)
-          .update({
-            nome: editandoConfig.nome.trim(),
-            ordem: editandoConfig.ordem,
-            ativo: editandoConfig.ativo,
-            updated_at: new Date().toISOString()
-          })
+          .update(payload)
           .eq('id', editandoConfig.id);
 
         if (error) throw error;
         exibirMensagem('ok', 'Item atualizado com sucesso!');
       } else {
         // Inserir
-        const { error } = await supabase
+        const payload: any = {
+          nome: editandoConfig.nome.trim(),
+          ordem: editandoConfig.ordem,
+          ativo: editandoConfig.ativo
+        };
+        if (tabela === 'locais') {
+          payload.andar_id = editandoConfig.andar_id || null;
+        }
+
+        const { data: novoAndar, error } = await supabase
           .from(tabela)
-          .insert({
-            nome: editandoConfig.nome.trim(),
-            ordem: editandoConfig.ordem,
-            ativo: editandoConfig.ativo
-          });
+          .insert(payload)
+          .select()
+          .single();
 
         if (error) throw error;
+
+        // Regra Especial: se for adicionado um andar, criar automaticamente o respectivo Depósito
+        if (tabela === 'andares' && novoAndar) {
+          await supabase.from('locais').insert({
+            nome: `Depósito - ${novoAndar.nome}`,
+            andar_id: novoAndar.id,
+            ordem: 999,
+            ativo: true
+          });
+        }
+
         exibirMensagem('ok', 'Item cadastrado com sucesso!');
       }
 
@@ -735,47 +943,33 @@ export default function ChamadosPage() {
   };
 
   // ---------------------------------------------------------------------------
-  // CRUD de Usuários (Painel Administrativo)
+  // Listas Filtradas do CRUD (Configurações)
   // ---------------------------------------------------------------------------
-  const handleAtualizarUsuario = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editandoUsuario) return;
+  const listaConfigFiltrada = useMemo(() => {
+    let dados: any[] = [];
+    if (subTabConfig === 'andares') dados = [...andares];
+    else if (subTabConfig === 'locais') dados = [...locais];
+    else if (subTabConfig === 'tipos') dados = [...tiposChamado];
 
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          role: editandoUsuario.role,
-          status: editandoUsuario.status
-        })
-        .eq('id', editandoUsuario.id);
+    return dados.filter(item => {
+      const bateNome = item.nome?.toLowerCase().includes(buscaConfig.toLowerCase());
+      
+      let bateAndar = true;
+      if (subTabConfig === 'locais' && filtroAndarConfig) {
+        bateAndar = item.andar_id === filtroAndarConfig;
+      }
 
-      if (error) throw error;
-      exibirMensagem('ok', 'Usuário atualizado com sucesso!');
-      setEditandoUsuario(null);
-      await carregarUsuarios();
-    } catch (err: any) {
-      exibirMensagem('erro', 'Erro ao atualizar usuário: ' + err.message);
-    }
-  };
+      let bateAtivo = true;
+      if (filtroAtivoConfig !== '') {
+        const ativoBool = filtroAtivoConfig === 'true';
+        bateAtivo = item.ativo === ativoBool;
+      }
 
-  const handleRedefinirSenha = async (email: string) => {
-    if (!window.confirm(`Deseja enviar um e-mail de redefinição de senha para "${email}"?`)) return;
+      return bateNome && bateAndar && bateAtivo;
+    });
+  }, [subTabConfig, andares, locais, tiposChamado, buscaConfig, filtroAndarConfig, filtroAtivoConfig]);
 
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/login`
-      });
-      if (error) throw error;
-      exibirMensagem('ok', 'E-mail de redefinição enviado com sucesso!');
-    } catch (err: any) {
-      exibirMensagem('erro', 'Erro ao enviar redefinição: ' + err.message);
-    }
-  };
-
-  // ---------------------------------------------------------------------------
   // Helpers de Estilo do Status
-  // ---------------------------------------------------------------------------
   const obterBadgeStatus = (status: string) => {
     switch (status) {
       case 'Aberto':
@@ -1057,30 +1251,36 @@ export default function ChamadosPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                      {chamadosPaginados.map(c => (
-                        <tr key={c.id} className="hover:bg-surface-container-high transition-colors font-medium text-sm text-on-surface-bright">
-                          <td className="p-5 font-black text-primary">{c.numero_chamado}</td>
-                          <td className="p-5 text-xs text-on-surface-variant">{new Date(c.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td>
-                          <td className="p-5">{c.solicitante}</td>
-                          <td className="p-5">{c.andares?.nome || '—'}</td>
-                          <td className="p-5">{c.locais?.nome || '—'}</td>
-                          <td className="p-5">{c.tipos_chamado?.nome || '—'}</td>
-                          <td className="p-5">
-                            <span className={cn("px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider", obterBadgeStatus(c.status))}>
-                              {c.status}
-                            </span>
-                          </td>
-                          <td className="p-5 text-xs text-on-surface-variant">{new Date(c.updated_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td>
-                          <td className="p-5 text-right">
-                            <button
-                              onClick={() => selecionarChamado(c)}
-                              className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-black rounded-xl text-xs font-bold transition-all active:scale-95"
-                            >
-                              Visualizar
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {chamadosPaginados.map(c => {
+                        const tipoNome = c.tipo_outro_descricao 
+                          ? `${c.tipos_chamado?.nome} (${c.tipo_outro_descricao})` 
+                          : (c.tipos_chamado?.nome || '—');
+
+                        return (
+                          <tr key={c.id} className="hover:bg-surface-container-high transition-colors font-medium text-sm text-on-surface-bright">
+                            <td className="p-5 font-black text-primary">{c.numero_chamado}</td>
+                            <td className="p-5 text-xs text-on-surface-variant">{new Date(c.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                            <td className="p-5">{c.solicitante}</td>
+                            <td className="p-5">{c.andares?.nome || '—'}</td>
+                            <td className="p-5">{c.locais?.nome || '—'}</td>
+                            <td className="p-5">{tipoNome}</td>
+                            <td className="p-5">
+                              <span className={cn("px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider", obterBadgeStatus(c.status))}>
+                                {c.status}
+                              </span>
+                            </td>
+                            <td className="p-5 text-xs text-on-surface-variant">{new Date(c.updated_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                            <td className="p-5 text-right">
+                              <button
+                                onClick={() => selecionarChamado(c)}
+                                className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-black rounded-xl text-xs font-bold transition-all active:scale-95"
+                              >
+                                Visualizar
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1144,10 +1344,10 @@ export default function ChamadosPage() {
               </div>
             </div>
 
-            {/* Layout em Grade: Detalhes + Timeline/Histórico */}
+            {/* Layout em Grade */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
-              {/* Painel Esquerdo: Info do Chamado (Col 2) */}
+              {/* Painel Esquerdo: Info do Chamado */}
               <div className="lg:col-span-2 space-y-6">
                 
                 {/* Informações Gerais */}
@@ -1171,7 +1371,9 @@ export default function ChamadosPage() {
                     <div>
                       <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block mb-1">Tipo de Manutenção</span>
                       <p className="font-bold text-white flex items-center gap-2">
-                        <Tag size={16} className="text-[#f1d86f]" /> {chamadoSelecionado.tipos_chamado?.nome || '—'}
+                        <Tag size={16} className="text-[#f1d86f]" /> 
+                        {chamadoSelecionado.tipos_chamado?.nome || '—'}
+                        {chamadoSelecionado.tipo_outro_descricao ? ` (${chamadoSelecionado.tipo_outro_descricao})` : ''}
                       </p>
                     </div>
                     <div>
@@ -1180,7 +1382,9 @@ export default function ChamadosPage() {
                     </div>
                     <div>
                       <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block mb-1">Local / Sala</span>
-                      <p className="font-bold text-white">{chamadoSelecionado.locais?.nome || '—'}</p>
+                      <p className="font-bold text-white">
+                        {chamadoSelecionado.locais?.nome || '—'}
+                      </p>
                     </div>
                   </div>
 
@@ -1276,7 +1480,7 @@ export default function ChamadosPage() {
                     )}
                   </div>
 
-                  {/* Formulário/Input para justificar Problema não resolvido */}
+                  {/* Justificativa Problema não resolvido */}
                   {mostrarMotivoRecusa && (
                     <div className="bg-surface p-4 rounded-2xl border border-red-500/20 space-y-3">
                       <label className="text-xs font-bold text-red-400">Descreva o motivo de o problema persistir (Obrigatório):</label>
@@ -1385,7 +1589,7 @@ export default function ChamadosPage() {
                       className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm outline-none focus:border-primary text-white"
                     />
 
-                    {/* Preview de fotos selecionadas para o comentário */}
+                    {/* Preview de fotos selecionadas */}
                     {fotosComentario.length > 0 && (
                       <div className="flex flex-wrap gap-2">
                         {fotosComentario.map((f, idx) => (
@@ -1460,7 +1664,7 @@ export default function ChamadosPage() {
                 </div>
               </div>
 
-              {/* Painel Direito: Histórico (Col 1) */}
+              {/* Painel Direito: Histórico */}
               <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-6">
                 <h3 className="text-sm font-black text-white uppercase tracking-widest border-b border-white/5 pb-2">Histórico do Chamado</h3>
                 
@@ -1470,9 +1674,7 @@ export default function ChamadosPage() {
                   ) : (
                     historico.map(h => (
                       <div key={h.id} className="relative">
-                        {/* Indicador na linha */}
                         <div className="absolute -left-[31px] top-0 w-2.5 h-2.5 rounded-full bg-primary border-4 border-surface shadow-[0_0_8px_rgba(66,160,245,0.8)]" />
-                        
                         <div className="space-y-1 text-xs">
                           <p className="font-semibold text-on-surface-variant">
                             {new Date(h.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
@@ -1542,7 +1744,10 @@ export default function ChamadosPage() {
                     <select
                       required
                       value={andarId}
-                      onChange={(e) => setAndarId(e.target.value)}
+                      onChange={(e) => {
+                        setAndarId(e.target.value);
+                        setLocalId(''); // reset local ao trocar de andar
+                      }}
                       className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm font-semibold outline-none focus:border-primary text-white"
                     >
                       <option value="">Selecione...</option>
@@ -1561,9 +1766,14 @@ export default function ChamadosPage() {
                       className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm font-semibold outline-none focus:border-primary text-white"
                     >
                       <option value="">Selecione...</option>
-                      {locais.filter(l => l.ativo).map(l => (
-                        <option key={l.id} value={l.id}>{l.nome}</option>
-                      ))}
+                      {locaisFiltradosParaForm.map(l => {
+                        const andarNome = andares.find(a => a.id === l.andar_id)?.nome;
+                        return (
+                          <option key={l.id} value={l.id}>
+                            {l.nome} {andarNome ? `(${andarNome})` : ''}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
 
@@ -1572,7 +1782,12 @@ export default function ChamadosPage() {
                     <select
                       required
                       value={tipoId}
-                      onChange={(e) => setTipoId(e.target.value)}
+                      onChange={(e) => {
+                        setTipoId(e.target.value);
+                        if (e.target.value !== tipoOutroId) {
+                          setTipoOutroDescricao('');
+                        }
+                      }}
                       className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm font-semibold outline-none focus:border-primary text-white"
                     >
                       <option value="">Selecione...</option>
@@ -1582,6 +1797,21 @@ export default function ChamadosPage() {
                     </select>
                   </div>
                 </div>
+
+                {/* Campo Tipo Especial "Outro" */}
+                {tipoId === tipoOutroId && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block">Descreva o tipo do chamado *</label>
+                    <input
+                      type="text"
+                      required
+                      value={tipoOutroDescricao}
+                      onChange={(e) => setTipoOutroDescricao(e.target.value)}
+                      placeholder="Especifique qual tipo de serviço de manutenção..."
+                      className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm font-semibold outline-none focus:border-primary text-white"
+                    />
+                  </div>
+                )}
 
                 {/* Descrição */}
                 <div className="space-y-2">
@@ -1688,7 +1918,7 @@ export default function ChamadosPage() {
           </motion.div>
         )}
 
-        {/* TAB 3: CONFIGURAÇÕES E CRUD */}
+        {/* TAB 3: CONFIGURAÇÕES E CRUD (Administrador) */}
         {activeTab === 'config' && isAdmin && (
           <motion.div
             key="config"
@@ -1702,15 +1932,13 @@ export default function ChamadosPage() {
               {[
                 { id: 'andares', label: 'Andares' },
                 { id: 'locais', label: 'Locais' },
-                { id: 'tipos', label: 'Tipos de Chamado' },
-                { id: 'usuarios', label: 'Gerenciar Usuários' }
+                { id: 'tipos', label: 'Tipos de Chamado' }
               ].map((subTab) => (
                 <button
                   key={subTab.id}
                   onClick={() => {
                     setSubTabConfig(subTab.id as any);
                     setEditandoConfig(null);
-                    setEditandoUsuario(null);
                   }}
                   className={cn(
                     "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all",
@@ -1724,254 +1952,185 @@ export default function ChamadosPage() {
               ))}
             </div>
 
-            {/* Sub-Aba: CRUD de Andares, Locais e Tipos */}
-            {subTabConfig !== 'usuarios' && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                {/* Form Esquerdo */}
-                <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-6">
-                  <h3 className="text-sm font-black text-white uppercase tracking-widest border-b border-white/5 pb-2">
-                    {editandoConfig?.id ? 'Editar Item' : 'Cadastrar Novo'}
-                  </h3>
+            {/* Layout em Grade: CRUD Form + CRUD Lista */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              {/* Form Esquerdo */}
+              <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-6">
+                <h3 className="text-sm font-black text-white uppercase tracking-widest border-b border-white/5 pb-2">
+                  {editandoConfig?.id ? 'Editar Item' : 'Cadastrar Novo'}
+                </h3>
 
-                  <form onSubmit={handleSalvarConfig} className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Nome *</label>
-                      <input
-                        type="text"
-                        required
-                        value={editandoConfig?.nome || ''}
-                        onChange={(e) => setEditandoConfig(prev => ({ ...prev, nome: e.target.value } as any))}
-                        placeholder="Nome do local / andar / tipo"
-                        className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm outline-none focus:border-primary text-white font-semibold"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Ordem de Exibição</label>
-                      <input
-                        type="number"
-                        value={editandoConfig?.ordem || 0}
-                        onChange={(e) => setEditandoConfig(prev => ({ ...prev, ordem: parseInt(e.target.value) || 0 } as any))}
-                        className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm outline-none focus:border-primary text-white font-semibold"
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-3 pt-2">
-                      <input
-                        type="checkbox"
-                        id="ativo-config"
-                        checked={editandoConfig?.ativo ?? true}
-                        onChange={(e) => setEditandoConfig(prev => ({ ...prev, ativo: e.target.checked } as any))}
-                        className="w-4 h-4 rounded bg-surface border-white/10 text-primary focus:ring-primary"
-                      />
-                      <label htmlFor="ativo-config" className="text-xs font-bold text-on-surface-variant">Ativo (visível nos formulários)</label>
-                    </div>
-
-                    <div className="flex gap-2 justify-end pt-4">
-                      {editandoConfig && (
-                        <button
-                          type="button"
-                          onClick={() => setEditandoConfig(null)}
-                          className="px-4 py-2.5 bg-surface-container-high rounded-xl text-xs font-bold text-white hover:bg-surface-container-highest"
-                        >
-                          Limpar
-                        </button>
-                      )}
-                      <button
-                        type="submit"
-                        disabled={carregandoConfigAction}
-                        className="px-5 py-2.5 bg-primary text-black rounded-xl text-xs font-black uppercase tracking-wider hover:opacity-90 active:scale-95 shadow-glow-yellow disabled:opacity-50"
-                      >
-                        {carregandoConfigAction ? 'Salvando...' : 'Salvar'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-
-                {/* Lista Direita (Col 2) */}
-                <div className="md:col-span-2 bg-surface-container-low rounded-[2rem] border border-white/5 overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-white/5 text-[10px] text-on-surface-variant font-black uppercase tracking-wider bg-surface-container-medium">
-                          <th className="p-4">Ordem</th>
-                          <th className="p-4">Nome</th>
-                          <th className="p-4">Status</th>
-                          <th className="p-4 text-right">Ações</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5 text-sm text-on-surface-bright">
-                        {((subTabConfig === 'andares' ? andares : subTabConfig === 'locais' ? locais : tiposChamado) || []).map(item => (
-                          <tr key={item.id} className="hover:bg-surface-container-high transition-colors font-medium">
-                            <td className="p-4 font-bold text-primary">{item.ordem}</td>
-                            <td className="p-4 font-bold">{item.nome}</td>
-                            <td className="p-4">
-                              <button
-                                onClick={() => handleToggleAtivoConfig(item)}
-                                className={cn(
-                                  "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all",
-                                  item.ativo
-                                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                                    : "bg-red-500/10 text-red-500 border-red-500/20"
-                                )}
-                              >
-                                {item.ativo ? 'Ativo' : 'Inativo'}
-                              </button>
-                            </td>
-                            <td className="p-4 text-right flex justify-end gap-2">
-                              <button
-                                onClick={() => setEditandoConfig(item)}
-                                className="p-2 bg-surface hover:bg-surface-container-high border border-white/5 text-white rounded-lg transition-all"
-                                title="Editar"
-                              >
-                                <Pencil size={12} />
-                              </button>
-                              <button
-                                onClick={() => handleExcluirConfig(item.id, item.nome)}
-                                className="p-2 bg-red-500/15 hover:bg-red-500/25 border border-red-500/10 text-red-500 rounded-lg transition-all"
-                                title="Excluir"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                <form onSubmit={handleSalvarConfig} className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Nome *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editandoConfig?.nome || ''}
+                      onChange={(e) => setEditandoConfig(prev => ({ ...prev, nome: e.target.value } as any))}
+                      placeholder="Nome do local / andar / tipo"
+                      className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm outline-none focus:border-primary text-white font-semibold"
+                    />
                   </div>
-                </div>
 
-              </div>
-            )}
-
-            {/* Sub-Aba: CRUD de Usuários */}
-            {subTabConfig === 'usuarios' && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Form de Edição de Usuário */}
-                <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-6">
-                  <h3 className="text-sm font-black text-white uppercase tracking-widest border-b border-white/5 pb-2">
-                    Editar Permissões do Usuário
-                  </h3>
-
-                  {editandoUsuario ? (
-                    <form onSubmit={handleAtualizarUsuario} className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block">Nome</label>
-                        <input
-                          type="text"
-                          readOnly
-                          value={editandoUsuario.full_name}
-                          className="w-full bg-surface rounded-xl p-3 border border-white/5 text-sm font-semibold text-on-surface-variant outline-none cursor-not-allowed"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block">Perfil / Cargo</label>
-                        <select
-                          value={editandoUsuario.role}
-                          onChange={(e) => setEditandoUsuario(prev => ({ ...prev, role: e.target.value } as any))}
-                          className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm font-semibold outline-none focus:border-primary text-white"
-                        >
-                          <option value="user">Usuário Comum</option>
-                          <option value="admin">Administrador</option>
-                          <option value="super_admin">Super Admin</option>
-                          <option value="professor">Professor</option>
-                          <option value="monitor">Monitor</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block">Status do Cadastro</label>
-                        <select
-                          value={editandoUsuario.status}
-                          onChange={(e) => setEditandoUsuario(prev => ({ ...prev, status: e.target.value } as any))}
-                          className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm font-semibold outline-none focus:border-primary text-white"
-                        >
-                          <option value="approved">Aprovado (Ativo)</option>
-                          <option value="pending">Pendente (Em Análise)</option>
-                          <option value="rejected">Inativo (Rejeitado)</option>
-                        </select>
-                      </div>
-
-                      <div className="flex gap-2 justify-end pt-4">
-                        <button
-                          type="button"
-                          onClick={() => setEditandoUsuario(null)}
-                          className="px-4 py-2.5 bg-surface-container-high rounded-xl text-xs font-bold text-white hover:bg-surface-container-highest transition-all"
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          type="submit"
-                          className="px-5 py-2.5 bg-primary text-black rounded-xl text-xs font-black uppercase tracking-wider hover:opacity-90 active:scale-95 shadow-glow-yellow transition-all"
-                        >
-                          Salvar
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <div className="text-center py-10">
-                      <Shield size={32} className="text-on-surface-variant mx-auto mb-2 opacity-50" />
-                      <p className="text-xs font-bold text-on-surface-variant max-w-[200px] mx-auto leading-relaxed">
-                        Selecione um usuário na tabela ao lado para editar suas permissões ou redefinir a senha.
-                      </p>
+                  {/* Vínculo de Andar (apenas para Locais) */}
+                  {subTabConfig === 'locais' && (
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block">Andar Vinculado</label>
+                      <select
+                        value={editandoConfig?.andar_id || ''}
+                        onChange={(e) => setEditandoConfig(prev => ({ ...prev, andar_id: e.target.value || null } as any))}
+                        className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm font-semibold outline-none focus:border-primary text-white"
+                      >
+                        <option value="">Nenhum (Geral)</option>
+                        {andares.map(a => (
+                          <option key={a.id} value={a.id}>{a.nome}</option>
+                        ))}
+                      </select>
                     </div>
                   )}
-                </div>
 
-                {/* Tabela de Usuários */}
-                <div className="md:col-span-2 bg-surface-container-low rounded-[2rem] border border-white/5 overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-white/5 text-[10px] text-on-surface-variant font-black uppercase tracking-wider bg-surface-container-medium">
-                          <th className="p-4">Nome</th>
-                          <th className="p-4">E-mail</th>
-                          <th className="p-4">Perfil</th>
-                          <th className="p-4">Acesso</th>
-                          <th className="p-4 text-right">Ações</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5 text-sm text-on-surface-bright">
-                        {usuarios.map(u => (
-                          <tr key={u.id} className="hover:bg-surface-container-high transition-colors font-medium">
-                            <td className="p-4 font-bold">{u.full_name || '—'}</td>
-                            <td className="p-4 text-xs text-on-surface-variant">{u.email}</td>
-                            <td className="p-4 text-xs text-primary font-black uppercase tracking-wider">{u.role}</td>
-                            <td className="p-4">
-                              <span className={cn("px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
-                                u.status === 'approved' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
-                                u.status === 'pending' ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
-                                "bg-red-500/10 text-red-500 border-red-500/20"
-                              )}>
-                                {u.status}
-                              </span>
-                            </td>
-                            <td className="p-4 text-right flex justify-end gap-2">
-                              <button
-                                onClick={() => setEditandoUsuario(u)}
-                                className="p-2 bg-surface hover:bg-surface-container-high border border-white/5 text-white rounded-lg transition-all"
-                                title="Editar Permissões"
-                              >
-                                <Pencil size={12} />
-                              </button>
-                              <button
-                                onClick={() => handleRedefinirSenha(u.email)}
-                                className="p-2 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/10 text-blue-400 rounded-lg transition-all"
-                                title="Redefinir Senha"
-                              >
-                                <Key size={12} />
-                              </button>
-                            </td>
-                          </tr>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Ordem de Exibição</label>
+                    <input
+                      type="number"
+                      value={editandoConfig?.ordem || 0}
+                      onChange={(e) => setEditandoConfig(prev => ({ ...prev, ordem: parseInt(e.target.value) || 0 } as any))}
+                      className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm outline-none focus:border-primary text-white font-semibold"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <input
+                      type="checkbox"
+                      id="ativo-config"
+                      checked={editandoConfig?.ativo ?? true}
+                      onChange={(e) => setEditandoConfig(prev => ({ ...prev, ativo: e.target.checked } as any))}
+                      className="w-4 h-4 rounded bg-surface border-white/10 text-primary focus:ring-primary"
+                    />
+                    <label htmlFor="ativo-config" className="text-xs font-bold text-on-surface-variant">Ativo (visível nos formulários)</label>
+                  </div>
+
+                  <div className="flex gap-2 justify-end pt-4">
+                    {editandoConfig && (
+                      <button
+                        type="button"
+                        onClick={() => setEditandoConfig(null)}
+                        className="px-4 py-2.5 bg-surface-container-high rounded-xl text-xs font-bold text-white hover:bg-surface-container-highest"
+                      >
+                        Limpar
+                      </button>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={carregandoConfigAction}
+                      className="px-5 py-2.5 bg-primary text-black rounded-xl text-xs font-black uppercase tracking-wider hover:opacity-90 active:scale-95 shadow-glow-yellow disabled:opacity-50"
+                    >
+                      {carregandoConfigAction ? 'Salvando...' : 'Salvar'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Lista Direita (Com Busca e Filtros) */}
+              <div className="md:col-span-2 bg-surface-container-low rounded-[2rem] border border-white/5 overflow-hidden flex flex-col">
+                
+                {/* Barra de Busca e Filtros da Configuração */}
+                <div className="p-4 bg-surface-container-medium border-b border-white/5 flex flex-wrap gap-3 items-center justify-between">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+                    <input
+                      type="text"
+                      placeholder={`Pesquisar por nome...`}
+                      value={buscaConfig}
+                      onChange={(e) => setBuscaConfig(e.target.value)}
+                      className="w-full bg-surface rounded-xl py-2.5 pl-9 pr-4 text-xs font-semibold outline-none border border-white/10 text-white"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    {subTabConfig === 'locais' && (
+                      <select
+                        value={filtroAndarConfig}
+                        onChange={(e) => setFiltroAndarConfig(e.target.value)}
+                        className="bg-surface rounded-xl px-3 py-2.5 text-xs font-semibold outline-none border border-white/10 text-white"
+                      >
+                        <option value="">Filtrar por Andar</option>
+                        {andares.map(a => (
+                          <option key={a.id} value={a.id}>{a.nome}</option>
                         ))}
-                      </tbody>
-                    </table>
+                      </select>
+                    )}
+                    <select
+                      value={filtroAtivoConfig}
+                      onChange={(e) => setFiltroAtivoConfig(e.target.value)}
+                      className="bg-surface rounded-xl px-3 py-2.5 text-xs font-semibold outline-none border border-white/10 text-white"
+                    >
+                      <option value="">Filtrar por Status</option>
+                      <option value="true">Ativos</option>
+                      <option value="false">Inativos</option>
+                    </select>
                   </div>
                 </div>
+
+                <div className="overflow-x-auto flex-1">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-white/5 text-[10px] text-on-surface-variant font-black uppercase tracking-wider bg-surface-container-medium">
+                        <th className="p-4">Ordem</th>
+                        <th className="p-4">Nome</th>
+                        {subTabConfig === 'locais' && <th className="p-4">Andar Vinculado</th>}
+                        <th className="p-4">Status</th>
+                        <th className="p-4 text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 text-sm text-on-surface-bright">
+                      {listaConfigFiltrada.map(item => (
+                        <tr key={item.id} className="hover:bg-surface-container-high transition-colors font-medium">
+                          <td className="p-4 font-bold text-primary">{item.ordem}</td>
+                          <td className="p-4 font-bold">{item.nome}</td>
+                          {subTabConfig === 'locais' && (
+                            <td className="p-4 text-xs text-on-surface-variant font-semibold">
+                              {andares.find(a => a.id === item.andar_id)?.nome || '—'}
+                            </td>
+                          )}
+                          <td className="p-4">
+                            <button
+                              onClick={() => handleToggleAtivoConfig(item)}
+                              className={cn(
+                                "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all",
+                                item.ativo
+                                  ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                  : "bg-red-500/10 text-red-500 border-red-500/20"
+                              )}
+                            >
+                                {item.ativo ? 'Ativo' : 'Inativo'}
+                            </button>
+                          </td>
+                          <td className="p-4 text-right flex justify-end gap-2">
+                            <button
+                              onClick={() => setEditandoConfig(item)}
+                              className="p-2 bg-surface hover:bg-surface-container-high border border-white/5 text-white rounded-lg transition-all"
+                              title="Editar"
+                            >
+                              <Pencil size={12} />
+                            </button>
+                            <button
+                              onClick={() => handleExcluirConfig(item.id, item.nome)}
+                              className="p-2 bg-red-500/15 hover:bg-red-500/25 border border-red-500/10 text-red-500 rounded-lg transition-all"
+                              title="Excluir"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            )}
+
+            </div>
           </motion.div>
         )}
 

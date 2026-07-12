@@ -6,7 +6,7 @@ import {
   DoorOpen, Users, BookOpen, Clock, Calendar, UserPlus,
   MapPin, FileSpreadsheet, ClipboardList, XCircle, FileText, Save,
   List, Printer, AlignLeft, ChevronDownSquare, CircleDot, CheckSquare, GraduationCap, RefreshCw,
-  ArrowUp, ArrowDown
+  ArrowUp, ArrowDown, Pencil, Key
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
@@ -2806,6 +2806,8 @@ function CampoGradePeriodos({ label, periodos, onSelect }: { label: string; peri
 function GestaoUsuarios() {
   const [perfis, setPerfis] = React.useState<any[]>([]);
   const [carregando, setCarregando] = React.useState(true);
+  const [editandoUsuario, setEditandoUsuario] = React.useState<any | null>(null);
+  const [salvandoUsuario, setSalvandoUsuario] = React.useState(false);
   const { profile: myProfile } = useAuth();
 
   const carregarPerfis = async () => {
@@ -2825,6 +2827,29 @@ function GestaoUsuarios() {
   const handleUpdateRole = async (id: string, role: string) => {
     const { error } = await supabase.from('profiles').update({ role }).eq('id', id);
     if (!error) carregarPerfis();
+  };
+
+  const handleSalvarUsuario = async () => {
+    if (!editandoUsuario) return;
+    setSalvandoUsuario(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: editandoUsuario.full_name,
+          role: editandoUsuario.role,
+          status: editandoUsuario.status
+        })
+        .eq('id', editandoUsuario.id);
+
+      if (error) throw error;
+      setEditandoUsuario(null);
+      await carregarPerfis();
+    } catch (err: any) {
+      alert('Erro ao salvar usuário: ' + err.message);
+    } finally {
+      setSalvandoUsuario(false);
+    }
   };
 
   if (carregando) return <div className="p-20 text-center"><div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto" /></div>;
@@ -2858,7 +2883,7 @@ function GestaoUsuarios() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {p.status === 'pending' && (
                 <>
                   <button onClick={() => handleUpdateStatus(p.id, 'approved')} className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-emerald-600 transition-all">
@@ -2875,22 +2900,81 @@ function GestaoUsuarios() {
                   <select 
                     value={p.role} 
                     onChange={(e) => handleUpdateRole(p.id, e.target.value)}
-                    className="bg-surface-container-high border-2 border-white/5 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-primary/30"
+                    className="bg-surface-container-high border-2 border-white/5 rounded-xl px-4 py-2 text-[10px] font-black uppercase outline-none focus:border-primary/30 text-white"
                   >
                     <option value="user">Usuário Comum</option>
                     <option value="monitor">Monitor</option>
                     <option value="professor">Professor</option>
                     <option value="admin">Administrador</option>
                   </select>
-                  <button onClick={() => handleUpdateStatus(p.id, 'rejected')} className="p-2 text-on-surface-variant hover:text-red-500 transition-colors">
+                  <button onClick={() => handleUpdateStatus(p.id, 'rejected')} className="p-2 text-on-surface-variant hover:text-red-500 transition-colors" title="Inativar/Bloquear">
                     <XCircle size={18} />
                   </button>
                 </div>
               )}
+
+              <button 
+                onClick={() => setEditandoUsuario(p)}
+                className="p-2 bg-surface-container-high hover:bg-surface-container-highest border border-white/5 text-white rounded-xl transition-all"
+                title="Editar Usuário Completo"
+              >
+                <Pencil size={14} />
+              </button>
             </div>
           </div>
         ))}
       </div>
+
+      <ModalForm 
+        aberto={!!editandoUsuario} 
+        onClose={() => setEditandoUsuario(null)}
+        titulo="Editar Usuário"
+        onSalvar={handleSalvarUsuario} 
+        carregando={salvandoUsuario}
+      >
+        {editandoUsuario && (
+          <div className="space-y-6">
+            <CampoTexto 
+              label="Nome Completo" 
+              value={editandoUsuario.full_name || ''} 
+              onChange={v => setEditandoUsuario({ ...editandoUsuario, full_name: v })} 
+            />
+            <CampoSelect 
+              label="Perfil / Cargo" 
+              value={editandoUsuario.role} 
+              options={['user', 'monitor', 'professor', 'admin', 'super_admin']} 
+              onChange={v => setEditandoUsuario({ ...editandoUsuario, role: v })} 
+            />
+            <CampoSelect 
+              label="Status de Acesso" 
+              value={editandoUsuario.status} 
+              options={['approved', 'pending', 'rejected']} 
+              onChange={v => setEditandoUsuario({ ...editandoUsuario, status: v })} 
+            />
+            
+            <div className="border-t border-white/5 pt-4">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (window.confirm(`Deseja enviar um e-mail de redefinição de senha para ${editandoUsuario.email}?`)) {
+                    const { error } = await supabase.auth.resetPasswordForEmail(editandoUsuario.email, {
+                      redirectTo: window.location.origin + '/login'
+                    });
+                    if (!error) {
+                      alert('E-mail de redefinição enviado com sucesso!');
+                    } else {
+                      alert('Erro ao enviar e-mail: ' + error.message);
+                    }
+                  }
+                }}
+                className="w-full py-3 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-2"
+              >
+                <Key size={14} /> Enviar E-mail de Redefinição de Senha
+              </button>
+            </div>
+          </div>
+        )}
+      </ModalForm>
     </Painel>
   );
 }
