@@ -85,6 +85,143 @@ interface Historico {
   created_at: string;
 }
 
+interface AutocompleteItem {
+  id: string;
+  nome: string;
+  detalhe?: string;
+}
+
+interface AutocompleteFieldProps {
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (id: string) => void;
+  items: AutocompleteItem[];
+  required?: boolean;
+}
+
+function AutocompleteField({ 
+  label, 
+  placeholder, 
+  value, 
+  onChange, 
+  items, 
+  required = false 
+}: AutocompleteFieldProps) {
+  const selectedItem = items.find(item => item.id === value);
+  const [busca, setBusca] = useState('');
+  const [aberto, setAberto] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (selectedItem) {
+      setBusca(selectedItem.nome);
+    } else {
+      setBusca('');
+    }
+  }, [value, selectedItem]);
+
+  useEffect(() => {
+    const handleClickFora = (e: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setAberto(false);
+        if (selectedItem) {
+          setBusca(selectedItem.nome);
+        } else {
+          setBusca('');
+        }
+      }
+    };
+    document.addEventListener('mousedown', handleClickFora);
+    document.addEventListener('touchstart', handleClickFora);
+    return () => {
+      document.removeEventListener('mousedown', handleClickFora);
+      document.removeEventListener('touchstart', handleClickFora);
+    };
+  }, [selectedItem]);
+
+  const filtrados = useMemo(() => {
+    if (!busca.trim()) return items;
+    return items.filter(item => 
+      item.nome.toLowerCase().includes(busca.toLowerCase()) ||
+      (item.detalhe && item.detalhe.toLowerCase().includes(busca.toLowerCase()))
+    );
+  }, [items, busca]);
+
+  return (
+    <div ref={containerRef} className="space-y-2 relative w-full">
+      <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block ml-1">{label} {required && '*'}</label>
+      <div className="relative">
+        <input 
+          type="text" 
+          value={busca} 
+          onChange={e => { 
+            setBusca(e.target.value); 
+            setAberto(true);
+            if (selectedItem && e.target.value !== selectedItem.nome) {
+              onChange(''); 
+            }
+          }}
+          onFocus={() => setAberto(true)}
+          placeholder={placeholder}
+          className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm font-semibold outline-none focus:border-primary text-white"
+          autoComplete="off"
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={() => {
+              onChange('');
+              setBusca('');
+            }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-white"
+          >
+            <X size={16} />
+          </button>
+        )}
+      </div>
+      
+      {aberto && (
+        <div className="absolute z-50 w-full mt-1 max-h-56 overflow-y-auto bg-surface-container-high border border-white/10 rounded-2xl shadow-2xl custom-scrollbar">
+          {filtrados.length === 0 ? (
+            <div className="px-5 py-4 text-xs font-semibold text-on-surface-variant">Nenhum resultado encontrado</div>
+          ) : (
+            filtrados.map(item => (
+              <button 
+                key={item.id} 
+                type="button" 
+                onClick={() => { 
+                  onChange(item.id); 
+                  setBusca(item.nome); 
+                  setAberto(false); 
+                }}
+                className={cn(
+                  "w-full text-left px-5 py-4 text-xs font-bold border-b border-white/[0.03] transition-all flex items-center justify-between",
+                  value === item.id 
+                    ? "bg-primary text-black" 
+                    : "text-white hover:bg-primary/20 hover:text-primary active:bg-primary/10"
+                )}
+              >
+                <span>{item.nome}</span>
+                {item.detalhe && (
+                  <span className={cn(
+                    "text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded",
+                    value === item.id 
+                      ? "bg-black/20 text-black font-black" 
+                      : "bg-surface-container-low text-on-surface-variant"
+                  )}>
+                    {item.detalhe}
+                  </span>
+                )}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ChamadosPage() {
   const { user, profile, isAdmin } = useAuth();
   
@@ -1715,87 +1852,57 @@ export default function ChamadosPage() {
 
               <form onSubmit={handleSalvarChamado} className="space-y-6">
                 
-                {/* Solicitante (Somente Leitura) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Solicitante</label>
-                    <input
-                      type="text"
-                      readOnly
-                      value={profile?.full_name || user?.email || 'Usuário Logado'}
-                      className="w-full bg-surface rounded-xl p-3 border border-white/5 text-sm font-semibold text-on-surface-variant outline-none cursor-not-allowed"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Data / Hora</label>
-                    <input
-                      type="text"
-                      readOnly
-                      value={new Date().toLocaleString()}
-                      className="w-full bg-surface rounded-xl p-3 border border-white/5 text-sm font-semibold text-on-surface-variant outline-none cursor-not-allowed"
-                    />
-                  </div>
+                {/* Solicitante (Somente Leitura - Sem Data/Hora) */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Solicitante</label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={profile?.full_name || user?.email || 'Usuário Logado'}
+                    className="w-full bg-surface rounded-xl p-3 border border-white/5 text-sm font-semibold text-on-surface-variant outline-none cursor-not-allowed"
+                  />
                 </div>
 
-                {/* Localização e Tipo */}
+                {/* Localização e Tipo (Autocomplete) */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Andar *</label>
-                    <select
-                      required
-                      value={andarId}
-                      onChange={(e) => {
-                        setAndarId(e.target.value);
-                        setLocalId(''); // reset local ao trocar de andar
-                      }}
-                      className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm font-semibold outline-none focus:border-primary text-white"
-                    >
-                      <option value="">Selecione...</option>
-                      {andares.filter(a => a.ativo).map(a => (
-                        <option key={a.id} value={a.id}>{a.nome}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <AutocompleteField
+                    label="Andar"
+                    placeholder="Buscar andar..."
+                    value={andarId}
+                    onChange={(id) => {
+                      setAndarId(id);
+                      setLocalId(''); // reset local ao trocar de andar
+                    }}
+                    items={andares.filter(a => a.ativo).map(a => ({ id: a.id, nome: a.nome }))}
+                    required
+                  />
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Local *</label>
-                    <select
-                      required
-                      value={localId}
-                      onChange={(e) => setLocalId(e.target.value)}
-                      className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm font-semibold outline-none focus:border-primary text-white"
-                    >
-                      <option value="">Selecione...</option>
-                      {locaisFiltradosParaForm.map(l => {
-                        const andarNome = andares.find(a => a.id === l.andar_id)?.nome;
-                        return (
-                          <option key={l.id} value={l.id}>
-                            {l.nome} {andarNome ? `(${andarNome})` : ''}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
+                  <AutocompleteField
+                    label="Local"
+                    placeholder="Buscar local..."
+                    value={localId}
+                    onChange={(id) => setLocalId(id)}
+                    items={locaisFiltradosParaForm.map(l => ({ 
+                      id: l.id, 
+                      nome: l.nome,
+                      detalhe: andares.find(a => a.id === l.andar_id)?.nome
+                    }))}
+                    required
+                  />
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Tipo do Chamado *</label>
-                    <select
-                      required
-                      value={tipoId}
-                      onChange={(e) => {
-                        setTipoId(e.target.value);
-                        if (e.target.value !== tipoOutroId) {
-                          setTipoOutroDescricao('');
-                        }
-                      }}
-                      className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm font-semibold outline-none focus:border-primary text-white"
-                    >
-                      <option value="">Selecione...</option>
-                      {tiposChamado.filter(t => t.ativo).map(t => (
-                        <option key={t.id} value={t.id}>{t.nome}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <AutocompleteField
+                    label="Tipo do Chamado"
+                    placeholder="Buscar tipo..."
+                    value={tipoId}
+                    onChange={(id) => {
+                      setTipoId(id);
+                      if (id !== tipoOutroId) {
+                        setTipoOutroDescricao('');
+                      }
+                    }}
+                    items={tiposChamado.filter(t => t.ativo).map(t => ({ id: t.id, nome: t.nome }))}
+                    required
+                  />
                 </div>
 
                 {/* Campo Tipo Especial "Outro" */}
