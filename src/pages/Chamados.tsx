@@ -47,7 +47,7 @@ interface Chamado {
   tipo_id: string;
   tipo_outro_descricao: string | null;
   descricao: string;
-  status: 'Aberto' | 'Em Atendimento' | 'Aguardando Validação' | 'Concluído' | 'Cancelado';
+  status: 'Aberto' | 'Em Espera' | 'Atendido' | 'Cancelado';
   created_at: string;
   updated_at: string;
   // Joins
@@ -655,7 +655,7 @@ export default function ChamadosPage() {
   // ---------------------------------------------------------------------------
   // Transições de Status e Validações
   // ---------------------------------------------------------------------------
-  const handleAlterarStatus = async (novoStatus: 'Em Atendimento' | 'Aguardando Validação' | 'Concluído' | 'Cancelado', recusaMotivo?: string) => {
+  const handleAlterarStatus = async (novoStatus: 'Aberto' | 'Em Espera' | 'Atendido' | 'Cancelado', recusaMotivo?: string) => {
     if (!chamadoSelecionado || !user) return;
 
     try {
@@ -675,26 +675,26 @@ export default function ChamadosPage() {
       let acao = '';
       const nomeOperador = profile?.full_name || 'Operador';
       
-      if (novoStatus === 'Em Atendimento') {
-        if (statusAnterior === 'Aguardando Validação') {
+      if (novoStatus === 'Em Espera') {
+        if (statusAnterior === 'Atendido') {
           acao = `${nomeOperador} informou que o problema não foi resolvido. Motivo: "${recusaMotivo}".`;
         } else {
-          acao = `${nomeOperador} alterou o status para Em Atendimento.`;
+          acao = `${nomeOperador} colocou o chamado em espera.`;
         }
-      } else if (novoStatus === 'Aguardando Validação') {
-        acao = `${nomeOperador} alterou o status para Aguardando Validação.`;
-      } else if (novoStatus === 'Concluído') {
-        acao = `${nomeOperador} informou que o problema foi resolvido. Status alterado para Concluído.`;
+      } else if (novoStatus === 'Atendido') {
+        acao = `${nomeOperador} marcou o chamado como atendido.`;
       } else if (novoStatus === 'Cancelado') {
         acao = `${nomeOperador} cancelou o chamado.`;
+      } else if (novoStatus === 'Aberto') {
+        acao = `${nomeOperador} reabriu o chamado como aberto.`;
       }
 
       // 3. Inserir comentário automático em caso de retorno (Problema Não Resolvido)
-      if (statusAnterior === 'Aguardando Validação' && novoStatus === 'Em Atendimento' && recusaMotivo) {
+      if (statusAnterior === 'Atendido' && novoStatus === 'Em Espera' && recusaMotivo) {
         await supabase.from('comentarios_chamado').insert({
           chamado_id: chamadoSelecionado.id,
           usuario_id: user.id,
-          comentario: `Retornado para Em Atendimento. Motivo: ${recusaMotivo}`
+          comentario: `Retornado para Em Espera. Motivo: ${recusaMotivo}`
         });
       }
 
@@ -1111,11 +1111,9 @@ export default function ChamadosPage() {
     switch (status) {
       case 'Aberto':
         return 'bg-blue-500/10 text-blue-500 border border-blue-500/20';
-      case 'Em Atendimento':
+      case 'Em Espera':
         return 'bg-amber-500/10 text-amber-500 border border-amber-500/20';
-      case 'Aguardando Validação':
-        return 'bg-purple-500/10 text-purple-500 border border-purple-500/20';
-      case 'Concluído':
+      case 'Atendido':
         return 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20';
       case 'Cancelado':
         return 'bg-red-500/10 text-red-500 border border-red-500/20';
@@ -1280,9 +1278,8 @@ export default function ChamadosPage() {
                   >
                     <option value="">Todos</option>
                     <option value="Aberto">Aberto</option>
-                    <option value="Em Atendimento">Em Atendimento</option>
-                    <option value="Aguardando Validação">Aguardando Validação</option>
-                    <option value="Concluído">Concluído</option>
+                    <option value="Em Espera">Em Espera</option>
+                    <option value="Atendido">Atendido</option>
                     <option value="Cancelado">Cancelado</option>
                   </select>
                 </div>
@@ -1572,25 +1569,41 @@ export default function ChamadosPage() {
                     {isAdmin && (
                       <>
                         {chamadoSelecionado.status === 'Aberto' && (
+                          <>
+                            <button
+                              onClick={() => handleAlterarStatus('Em Espera')}
+                              className="px-5 py-3 bg-amber-500 text-black font-black uppercase tracking-wider rounded-xl hover:opacity-90 active:scale-95 transition-all text-xs"
+                            >
+                              Colocar em Espera
+                            </button>
+                            <button
+                              onClick={() => handleAlterarStatus('Atendido')}
+                              className="px-5 py-3 bg-emerald-500 text-black font-black uppercase tracking-wider rounded-xl hover:opacity-90 active:scale-95 transition-all text-xs"
+                            >
+                              Marcar como Atendido
+                            </button>
+                          </>
+                        )}
+                        {chamadoSelecionado.status === 'Em Espera' && (
                           <button
-                            onClick={() => handleAlterarStatus('Em Atendimento')}
-                            className="px-5 py-3 bg-amber-500 text-black font-black uppercase tracking-wider rounded-xl hover:opacity-90 active:scale-95 transition-all text-xs flex items-center gap-2"
+                            onClick={() => handleAlterarStatus('Atendido')}
+                            className="px-5 py-3 bg-emerald-500 text-black font-black uppercase tracking-wider rounded-xl hover:opacity-90 active:scale-95 transition-all text-xs"
                           >
-                            Iniciar Atendimento
+                            Marcar como Atendido
                           </button>
                         )}
-                        {chamadoSelecionado.status === 'Em Atendimento' && (
+                        {chamadoSelecionado.status === 'Cancelado' && (
                           <button
-                            onClick={() => handleAlterarStatus('Aguardando Validação')}
-                            className="px-5 py-3 bg-indigo-600 text-white font-black uppercase tracking-wider rounded-xl hover:opacity-90 active:scale-95 transition-all text-xs flex items-center gap-2"
+                            onClick={() => handleAlterarStatus('Aberto')}
+                            className="px-5 py-3 bg-blue-500 text-white font-black uppercase tracking-wider rounded-xl hover:opacity-90 active:scale-95 transition-all text-xs"
                           >
-                            Concluir Serviço (Validar)
+                            Reabrir Chamado (Aberto)
                           </button>
                         )}
-                        {chamadoSelecionado.status !== 'Concluído' && chamadoSelecionado.status !== 'Cancelado' && (
+                        {chamadoSelecionado.status !== 'Cancelado' && chamadoSelecionado.status !== 'Atendido' && (
                           <button
                             onClick={() => handleAlterarStatus('Cancelado')}
-                            className="px-5 py-3 bg-red-600 text-white font-bold uppercase tracking-wider rounded-xl hover:bg-red-700 active:scale-95 transition-all text-xs flex items-center gap-2"
+                            className="px-5 py-3 bg-red-600 text-white font-bold uppercase tracking-wider rounded-xl hover:bg-red-700 active:scale-95 transition-all text-xs"
                           >
                             Cancelar Chamado
                           </button>
@@ -1599,21 +1612,13 @@ export default function ChamadosPage() {
                     )}
 
                     {/* Ações SOLICITANTE / CLIENTE */}
-                    {chamadoSelecionado.status === 'Aguardando Validação' && (chamadoSelecionado.usuario_id === user?.id || isAdmin) && (
-                      <>
-                        <button
-                          onClick={() => handleAlterarStatus('Concluído')}
-                          className="px-5 py-3 bg-emerald-500 text-black font-black uppercase tracking-wider rounded-xl hover:opacity-90 active:scale-95 transition-all text-xs flex items-center gap-2"
-                        >
-                          <Check size={16} /> Problema Resolvido (Concluir)
-                        </button>
-                        <button
-                          onClick={() => setMostrarMotivoRecusa(true)}
-                          className="px-5 py-3 bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 font-bold uppercase tracking-wider rounded-xl active:scale-95 transition-all text-xs flex items-center gap-2"
-                        >
-                          Problema Não Resolvido (Reabrir)
-                        </button>
-                      </>
+                    {chamadoSelecionado.status === 'Atendido' && (chamadoSelecionado.usuario_id === user?.id || isAdmin) && (
+                      <button
+                        onClick={() => setMostrarMotivoRecusa(true)}
+                        className="px-5 py-3 bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 font-bold uppercase tracking-wider rounded-xl active:scale-95 transition-all text-xs flex items-center gap-2"
+                      >
+                        Problema Não Resolvido (Reabrir em Espera)
+                      </button>
                     )}
                   </div>
 
@@ -1641,7 +1646,7 @@ export default function ChamadosPage() {
                               alert('Por favor, informe o motivo do chamado não ter sido resolvido.');
                               return;
                             }
-                            handleAlterarStatus('Em Atendimento', motivoRecusa);
+                            handleAlterarStatus('Em Espera', motivoRecusa);
                           }}
                           className="px-5 py-2.5 bg-red-600 text-white font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-red-700 transition-all"
                         >

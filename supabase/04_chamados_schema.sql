@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS chamados (
   tipo_id UUID REFERENCES tipos_chamado(id) ON DELETE SET NULL,
   tipo_outro_descricao TEXT,
   descricao VARCHAR(1000) NOT NULL,
-  status TEXT NOT NULL DEFAULT 'Aberto' CHECK (status IN ('Aberto', 'Em Atendimento', 'Aguardando Validação', 'Concluído', 'Cancelado')),
+  status TEXT NOT NULL DEFAULT 'Aberto' CHECK (status IN ('Aberto', 'Em Espera', 'Atendido', 'Cancelado')),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
