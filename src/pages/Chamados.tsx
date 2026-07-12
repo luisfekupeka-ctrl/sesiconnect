@@ -5,7 +5,8 @@ import {
   FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, 
   CheckCircle2, Copy, X, Printer, Trash2, AlertTriangle, ShieldAlert, Clock, Pencil, 
   Filter, Check, RefreshCw, ChevronLeft, ChevronRight, ArrowUpDown, ChevronDown, 
-  Settings, Image, Eye, Trash, ArrowDown, UserMinus, UserCheck, Shield, Key, EyeOff
+  Settings, Image, Eye, Trash, ArrowDown, UserMinus, UserCheck, Shield, Key, EyeOff,
+  Camera
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as XLSX from 'xlsx';
@@ -121,6 +122,7 @@ export default function ChamadosPage() {
   const [fotosUpload, setFotosUpload] = useState<File[]>([]);
   const [salvandoChamado, setSalvandoChamado] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Estados de Visualização / Edição de Chamado
   const [chamadoSelecionado, setChamadoSelecionado] = useState<Chamado | null>(null);
@@ -130,6 +132,7 @@ export default function ChamadosPage() {
   const [novoComentario, setNovoComentario] = useState('');
   const [fotosComentario, setFotosComentario] = useState<File[]>([]);
   const commentFileInputRef = useRef<HTMLInputElement>(null);
+  const commentCameraInputRef = useRef<HTMLInputElement>(null);
   const [enviandoComentario, setEnviandoComentario] = useState(false);
   const [motivoRecusa, setMotivoRecusa] = useState('');
   const [mostrarMotivoRecusa, setMostrarMotivoRecusa] = useState(false);
@@ -336,6 +339,7 @@ export default function ChamadosPage() {
       setDescricao('');
       setFotosUpload([]);
       if (fileInputRef.current) fileInputRef.current.value = '';
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
 
       // Atualizar lista e retornar
       await carregarChamados();
@@ -487,6 +491,7 @@ export default function ChamadosPage() {
       setNovoComentario('');
       setFotosComentario([]);
       if (commentFileInputRef.current) commentFileInputRef.current.value = '';
+      if (commentCameraInputRef.current) commentCameraInputRef.current.value = '';
 
       // Atualizar os detalhes do chamado exibidos na tela
       await selecionarChamado(chamadoSelecionado);
@@ -1412,13 +1417,35 @@ export default function ChamadosPage() {
                           ref={commentFileInputRef}
                           className="hidden"
                         />
-                        <button
-                          type="button"
-                          onClick={() => commentFileInputRef.current?.click()}
-                          className="px-4 py-2.5 bg-surface-container-high hover:bg-surface-container-highest border border-white/5 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2"
-                        >
-                          <Image size={14} className="text-primary" /> Anexar Fotos
-                        </button>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          multiple
+                          onChange={(e) => {
+                            if (e.target.files) {
+                              setFotosComentario(prev => [...prev, ...Array.from(e.target.files!)]);
+                            }
+                          }}
+                          ref={commentCameraInputRef}
+                          className="hidden"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => commentFileInputRef.current?.click()}
+                            className="px-4 py-2.5 bg-surface-container-high hover:bg-surface-container-highest border border-white/5 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+                          >
+                            <Image size={14} className="text-[#f1d86f]" /> Escolher Foto
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => commentCameraInputRef.current?.click()}
+                            className="px-4 py-2.5 bg-surface-container-high hover:bg-surface-container-highest border border-white/5 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+                          >
+                            <Camera size={14} className="text-primary" /> Tirar Foto
+                          </button>
+                        </div>
                       </div>
 
                       <button
@@ -1589,6 +1616,19 @@ export default function ChamadosPage() {
                     }}
                     className="hidden"
                   />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    multiple
+                    ref={cameraInputRef}
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        setFotosUpload(prev => [...prev, ...Array.from(e.target.files!)]);
+                      }
+                    }}
+                    className="hidden"
+                  />
 
                   <div className="flex flex-wrap gap-3 items-center">
                     <button
@@ -1596,7 +1636,14 @@ export default function ChamadosPage() {
                       onClick={() => fileInputRef.current?.click()}
                       className="px-5 py-3 bg-surface-container-high border border-white/5 rounded-xl text-xs font-bold text-white hover:bg-surface-container-highest transition-all flex items-center gap-2"
                     >
-                      <Image size={16} className="text-[#f1d86f]" /> Escolher Fotos
+                      <Image size={16} className="text-[#f1d86f]" /> Escolher Foto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="px-5 py-3 bg-surface-container-high border border-white/5 rounded-xl text-xs font-bold text-white hover:bg-surface-container-highest transition-all flex items-center gap-2"
+                    >
+                      <Camera size={16} className="text-primary" /> Tirar Foto
                     </button>
                     <span className="text-xs text-on-surface-variant font-semibold">Formatos aceitos: JPG, JPEG, PNG, WEBP</span>
                   </div>

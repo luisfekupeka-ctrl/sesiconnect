@@ -76,20 +76,14 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean; setIsOpen?: (
       </nav>
 
       <div className="p-4 space-y-3">
+        {isAdmin && (
           <NavLink
-            to={isAdmin ? "/admin" : "#"}
-            onClick={(e) => {
-              if (!isAdmin) {
-                e.preventDefault();
-                alert('Acesso negado: Somente administradores podem acessar o Painel ADM.');
-              } else {
-                setIsOpen?.(false);
-              }
-            }}
+            to="/admin"
+            onClick={() => setIsOpen?.(false)}
             className={({ isActive }) =>
               cn(
                 "flex items-center gap-4 px-5 py-5 rounded-2xl text-base font-bold transition-all border",
-                isActive && isAdmin
+                isActive
                   ? "bg-emerald-500 text-black border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
                   : "bg-surface-container-low text-on-surface-variant border-[#30363d] hover:border-emerald-500 hover:text-emerald-500"
               )
@@ -98,6 +92,7 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean; setIsOpen?: (
             <Shield size={22} />
             Painel Admin
           </NavLink>
+        )}
 
         <div className="bg-surface-container-low p-4 rounded-2xl border border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -136,7 +131,7 @@ export function BottomNav() {
     { to: '/rooms', icon: DoorOpen, label: 'Salas', visible: true },
     { to: '/teachers', icon: Users, label: 'Profs', visible: true },
     { to: '/ocorrencias', icon: ClipboardCheck, label: 'Reg. Diário', visible: isAdmin || isProfessor || isMonitor },
-    { to: '/admin', icon: Shield, label: 'Admin', visible: true },
+    { to: '/admin', icon: Shield, label: 'Admin', visible: isAdmin },
   ];
 
   const visibleItems = navItems.filter(item => item.visible).slice(0, 5);
