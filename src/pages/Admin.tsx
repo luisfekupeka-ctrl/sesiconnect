@@ -2808,6 +2808,7 @@ function GestaoUsuarios() {
   const [carregando, setCarregando] = React.useState(true);
   const [editandoUsuario, setEditandoUsuario] = React.useState<any | null>(null);
   const [salvandoUsuario, setSalvandoUsuario] = React.useState(false);
+  const [novaSenha, setNovaSenha] = React.useState('');
   const { profile: myProfile } = useAuth();
 
   const carregarPerfis = async () => {
@@ -2844,6 +2845,7 @@ function GestaoUsuarios() {
 
       if (error) throw error;
       setEditandoUsuario(null);
+      setNovaSenha('');
       await carregarPerfis();
     } catch (err: any) {
       alert('Erro ao salvar usuário: ' + err.message);
@@ -2906,6 +2908,7 @@ function GestaoUsuarios() {
                     <option value="monitor">Monitor</option>
                     <option value="professor">Professor</option>
                     <option value="admin">Administrador</option>
+                    <option value="super_admin">Super Administrador</option>
                   </select>
                   <button onClick={() => handleUpdateStatus(p.id, 'rejected')} className="p-2 text-on-surface-variant hover:text-red-500 transition-colors" title="Inativar/Bloquear">
                     <XCircle size={18} />
@@ -2914,12 +2917,35 @@ function GestaoUsuarios() {
               )}
 
               <button 
-                onClick={() => setEditandoUsuario(p)}
+                onClick={() => {
+                  setEditandoUsuario(p);
+                  setNovaSenha('');
+                }}
                 className="p-2 bg-surface-container-high hover:bg-surface-container-highest border border-white/5 text-white rounded-xl transition-all"
                 title="Editar Usuário Completo"
               >
                 <Pencil size={14} />
               </button>
+
+              {p.id !== myProfile?.id && (
+                <button
+                  onClick={async () => {
+                    if (window.confirm(`ATENÇÃO: Deseja realmente EXCLUIR permanentemente o usuário "${p.full_name}" (${p.email})? Esta ação excluirá seus dados de acesso.`)) {
+                      const { error } = await supabase.rpc('deletar_usuario', { user_id: p.id });
+                      if (!error) {
+                        alert('Usuário excluído com sucesso!');
+                        carregarPerfis();
+                      } else {
+                        alert('Erro ao excluir usuário: ' + error.message);
+                      }
+                    }
+                  }}
+                  className="p-2 bg-red-500/10 hover:bg-red-500/25 text-red-500 border border-red-500/10 rounded-xl transition-all"
+                  title="Excluir Usuário Permanentemente"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -2927,7 +2953,10 @@ function GestaoUsuarios() {
 
       <ModalForm 
         aberto={!!editandoUsuario} 
-        onClose={() => setEditandoUsuario(null)}
+        onClose={() => {
+          setEditandoUsuario(null);
+          setNovaSenha('');
+        }}
         titulo="Editar Usuário"
         onSalvar={handleSalvarUsuario} 
         carregando={salvandoUsuario}
@@ -2939,20 +2968,75 @@ function GestaoUsuarios() {
               value={editandoUsuario.full_name || ''} 
               onChange={v => setEditandoUsuario({ ...editandoUsuario, full_name: v })} 
             />
-            <CampoSelect 
-              label="Perfil / Cargo" 
-              value={editandoUsuario.role} 
-              options={['user', 'monitor', 'professor', 'admin', 'super_admin']} 
-              onChange={v => setEditandoUsuario({ ...editandoUsuario, role: v })} 
-            />
-            <CampoSelect 
-              label="Status de Acesso" 
-              value={editandoUsuario.status} 
-              options={['approved', 'pending', 'rejected']} 
-              onChange={v => setEditandoUsuario({ ...editandoUsuario, status: v })} 
-            />
             
-            <div className="border-t border-white/5 pt-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-white/40 uppercase tracking-widest block ml-2">Perfil / Cargo</label>
+              <select
+                value={editandoUsuario.role}
+                onChange={e => setEditandoUsuario({ ...editandoUsuario, role: e.target.value })}
+                className="campo-input w-full text-white"
+              >
+                <option value="user">Usuário Comum</option>
+                <option value="monitor">Monitor</option>
+                <option value="professor">Professor</option>
+                <option value="admin">Administrador</option>
+                <option value="super_admin">Super Administrador</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-white/40 uppercase tracking-widest block ml-2">Status de Acesso</label>
+              <select
+                value={editandoUsuario.status}
+                onChange={e => setEditandoUsuario({ ...editandoUsuario, status: e.target.value })}
+                className="campo-input w-full text-white"
+              >
+                <option value="approved">Aprovado</option>
+                <option value="pending">Pendente</option>
+                <option value="rejected">Rejeitado / Cancelado</option>
+              </select>
+            </div>
+            
+            <div className="border-t border-white/5 pt-4 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-black text-white/40 uppercase tracking-widest block ml-2">Definir Nova Senha Diretamente</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Digite a nova senha (mín. 6 caracteres)"
+                    value={novaSenha}
+                    onChange={e => setNovaSenha(e.target.value)}
+                    className="campo-input flex-1 text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!novaSenha || novaSenha.trim().length < 6) {
+                        alert('A senha deve ter pelo menos 6 caracteres.');
+                        return;
+                      }
+                      if (window.confirm(`Deseja alterar a senha de ${editandoUsuario.email} para "${novaSenha}" diretamente?`)) {
+                        const { error } = await supabase.rpc('redefinir_senha_usuario', { 
+                          user_id: editandoUsuario.id, 
+                          nova_senha: novaSenha.trim() 
+                        });
+                        if (!error) {
+                          alert('Senha redefinida com sucesso para o usuário!');
+                          setNovaSenha('');
+                        } else {
+                          alert('Erro ao redefinir senha: ' + error.message);
+                        }
+                      }
+                    }}
+                    className="px-4 py-2 bg-primary text-black rounded-xl text-xs font-black uppercase hover:opacity-90 active:scale-95 transition-all"
+                  >
+                    Alterar
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-2 text-center text-xs text-on-surface-variant font-bold">ou</div>
+
               <button
                 type="button"
                 onClick={async () => {
@@ -2969,7 +3053,7 @@ function GestaoUsuarios() {
                 }}
                 className="w-full py-3 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-2"
               >
-                <Key size={14} /> Enviar E-mail de Redefinição de Senha
+                <Key size={14} /> Enviar Link de Recuperação por E-mail
               </button>
             </div>
           </div>

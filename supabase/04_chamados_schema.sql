@@ -185,3 +185,34 @@ DROP POLICY IF EXISTS "Upload em fotos_chamados por logados" ON storage.objects;
 CREATE POLICY "Upload em fotos_chamados por logados" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'fotos_chamados' AND auth.role() = 'authenticated');
 DROP POLICY IF EXISTS "Exclusão em fotos_chamados por dono/admin" ON storage.objects;
 CREATE POLICY "Exclusão em fotos_chamados por dono/admin" ON storage.objects FOR DELETE USING (bucket_id = 'fotos_chamados' AND auth.role() = 'authenticated');
+
+-- 11. Funções de Suporte para Administração de Usuários
+CREATE OR REPLACE FUNCTION deletar_usuario(user_id UUID)
+RETURNS VOID AS $$
+DECLARE
+  caller_role TEXT;
+BEGIN
+  SELECT role INTO caller_role FROM public.profiles WHERE id = auth.uid();
+  IF caller_role NOT IN ('admin', 'super_admin') THEN
+    RAISE EXCEPTION 'Apenas administradores podem excluir usuários.';
+  END IF;
+
+  DELETE FROM auth.users WHERE id = user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION redefinir_senha_usuario(user_id UUID, nova_senha TEXT)
+RETURNS VOID AS $$
+DECLARE
+  caller_role TEXT;
+BEGIN
+  SELECT role INTO caller_role FROM public.profiles WHERE id = auth.uid();
+  IF caller_role NOT IN ('admin', 'super_admin') THEN
+    RAISE EXCEPTION 'Apenas administradores podem redefinir senhas.';
+  END IF;
+
+  UPDATE auth.users 
+  SET encrypted_password = crypt(nova_senha, gen_salt('bf'))
+  WHERE id = user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
