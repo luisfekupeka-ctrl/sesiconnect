@@ -21,6 +21,7 @@ const GestaoRealocacao = React.lazy(() => import('./pages/GestaoRealocacao'));
 const RelatorioDiario = React.lazy(() => import('./pages/RelatorioDiario'));
 const Occurrences = React.lazy(() => import('./pages/Occurrences').then(module => ({ default: module.Occurrences })));
 const PendingAtas = React.lazy(() => import('./pages/PendingAtas'));
+const ChamadosPage = React.lazy(() => import('./pages/Chamados'));
 
 // Componente de Proteção de Rota
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode; requiredRole?: string }) {
@@ -110,6 +111,7 @@ export default function App() {
                 <Route path="/monitores" element={<Monitores />} />
                 <Route path="/relatorio-diario" element={<RelatorioDiario />} />
                 <Route path="/ocorrencias" element={<Occurrences />} />
+                <Route path="/chamados" element={<ChamadosPage />} />
                 
                 {/* Áreas que exigem Login/Role ADMIN */}
                 <Route path="/atas-pendentes" element={<ProtectedRoute requiredRole="admin"><PendingAtas /></ProtectedRoute>} />

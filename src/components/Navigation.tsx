@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutGrid, Users, DoorOpen, Languages, Sparkles, 
   BookOpen, FileText, Shield, ClipboardCheck, RefreshCw, LogOut,
-  AlertTriangle
+  AlertTriangle, Wrench
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
@@ -29,6 +29,7 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean; setIsOpen?: (
     { to: '/ocorrencias', icon: ClipboardCheck, label: 'Reg. Diário', visible: isAdmin || isProfessor || isMonitor },
     { to: '/controle-faltas', icon: ClipboardCheck, label: 'Chamadas', visible: isAdmin || isProfessor },
     { to: '/realocacao', icon: RefreshCw, label: 'Realocação', visible: isAdmin },
+    { to: '/chamados', icon: Wrench, label: 'Chamados', visible: true },
   ];
 
   const visibleItems = allNavItems.filter(item => item.visible);
