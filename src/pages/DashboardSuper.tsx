@@ -122,6 +122,12 @@ export default function DashboardSuper() {
   // Controle de Visualização Temporal (Aba Geral)
   const [escalaTemporal, setEscalaTemporal] = useState<'dia' | 'semana' | 'mes'>('dia');
 
+  // Estados para a Aba de Evolução e Comparativos
+  const [tipoAnaliseEvolucao, setTipoAnaliseEvolucao] = useState<'individual' | 'comparativo'>('individual');
+  const [tipoEntidadeEvolucao, setTipoEntidadeEvolucao] = useState<'alunos' | 'funcionarios' | 'turmas' | 'series' | 'tipos'>('alunos');
+  const [entidadeEvolucaoA, setEntidadeEvolucaoA] = useState<string>('');
+  const [entidadeEvolucaoB, setEntidadeEvolucaoB] = useState<string>('');
+
   // Segurança: Redirecionar se não for super_admin
   useEffect(() => {
     if (!authLoading) {
@@ -232,6 +238,24 @@ export default function DashboardSuper() {
     if (listTiposRegistro.length > 0 && !tipoSelecionado) setTipoSelecionado(listTiposRegistro[0]);
   }, [listAlunos, listFuncionarios, listSeriesAnos, listTiposRegistro]);
 
+  // Set Inicial para Aba de Evolução
+  useEffect(() => {
+    let list: string[] = [];
+    if (tipoEntidadeEvolucao === 'alunos') list = listAlunos;
+    else if (tipoEntidadeEvolucao === 'funcionarios') list = listFuncionarios;
+    else if (tipoEntidadeEvolucao === 'turmas') list = listTurmas;
+    else if (tipoEntidadeEvolucao === 'series') list = listSeriesAnos;
+    else if (tipoEntidadeEvolucao === 'tipos') list = listTiposRegistro;
+
+    if (list.length > 0) {
+      setEntidadeEvolucaoA(list[0]);
+      setEntidadeEvolucaoB(list[1] || list[0]);
+    } else {
+      setEntidadeEvolucaoA('');
+      setEntidadeEvolucaoB('');
+    }
+  }, [tipoEntidadeEvolucao, listAlunos, listFuncionarios, listTurmas, listSeriesAnos, listTiposRegistro]);
+
   // ============================================================
   // FILTRAGEM GLOBAL (APLICA-SE A TODAS AS METRICAS)
   // ============================================================
@@ -271,6 +295,146 @@ export default function DashboardSuper() {
       return true;
     });
   }, [registros, alunosMap, filtroDataInicio, filtroDataFim, filtroAnoLetivo, filtroSerieAno, filtroTurma, filtroFuncionario, filtroAluno, filtroTipo]);
+
+  // ============================================================
+  // CÁLCULO DE ESTATÍSTICAS PARA A ABA DE EVOLUÇÃO E COMPARATIVOS
+  // ============================================================
+  const statsEvolucao = useMemo(() => {
+    // 1. Filtrar registros pertencentes a uma entidade genérica
+    const filtrarPorEntidade = (nomeEntidade: string) => {
+      if (!nomeEntidade) return [];
+      return registrosFiltrados.filter(r => {
+        if (tipoEntidadeEvolucao === 'alunos') {
+          return r.student_name.trim().toLowerCase() === nomeEntidade.trim().toLowerCase();
+        }
+        if (tipoEntidadeEvolucao === 'funcionarios') {
+          return r.created_by?.trim().toLowerCase() === nomeEntidade.trim().toLowerCase();
+        }
+        if (tipoEntidadeEvolucao === 'turmas') {
+          const alInfo = alunosMap.get(r.student_name.trim().toLowerCase());
+          return (alInfo?.turma || 'Sem Turma').toLowerCase() === nomeEntidade.toLowerCase();
+        }
+        if (tipoEntidadeEvolucao === 'series') {
+          const alInfo = alunosMap.get(r.student_name.trim().toLowerCase());
+          const serie = alInfo?.ano || r.school_year || 'Sem Ano';
+          return (serie).toLowerCase() === nomeEntidade.toLowerCase();
+        }
+        if (tipoEntidadeEvolucao === 'tipos') {
+          return r.occurrence_type?.trim().toLowerCase() === nomeEntidade.trim().toLowerCase();
+        }
+        return false;
+      });
+    };
+
+    const recordsA = filtrarPorEntidade(entidadeEvolucaoA);
+    const recordsB = filtrarPorEntidade(entidadeEvolucaoB);
+
+    // 2. Agrupamento por mês/ano para os gráficos de evolução
+    const agruparPorMesAno = (records: OcorrenciaRegistro[]) => {
+      const mesesMap = new Map<string, number>();
+      
+      const hoje = new Date();
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+        const chave = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+        mesesMap.set(chave, 0);
+      }
+
+      records.forEach(r => {
+        const dataStr = r.created_at ? r.created_at.split(/[\sT]/)[0] : '';
+        if (dataStr) {
+          const [ano, mes] = dataStr.split('-');
+          const chave = `${ano}-${mes}`;
+          if (mesesMap.has(chave)) {
+            mesesMap.set(chave, mesesMap.get(chave)! + 1);
+          }
+        }
+      });
+
+      const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      return Array.from(mesesMap.entries()).map(([chave, count]) => {
+        const [ano, mes] = chave.split('-');
+        const nomeMes = mesesNomes[parseInt(mes) - 1];
+        return {
+          periodo: `${nomeMes}/${ano.slice(2)}`,
+          count,
+          rawChave: chave
+        };
+      }).sort((a, b) => a.rawChave.localeCompare(b.rawChave));
+    };
+
+    const evolucaoA = agruparPorMesAno(recordsA);
+    const evolucaoB = agruparPorMesAno(recordsB);
+
+    // 3. Cálculo de Crescimento, Redução ou Estabilidade (30 dias recentes vs 30 dias anteriores)
+    const calcularMetricasEvolucao = (records: OcorrenciaRegistro[]) => {
+      const agora = new Date();
+      const trintaDiasAtras = new Date(agora.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const sessentaDiasAtras = new Date(agora.getTime() - 60 * 24 * 60 * 60 * 1000);
+
+      const countRecente = records.filter(r => {
+        const dataStr = r.created_at ? r.created_at.split(/[\sT]/)[0] : '';
+        if (!dataStr) return false;
+        return new Date(dataStr) >= trintaDiasAtras;
+      }).length;
+
+      const countAnterior = records.filter(r => {
+        const dataStr = r.created_at ? r.created_at.split(/[\sT]/)[0] : '';
+        if (!dataStr) return false;
+        const d = new Date(dataStr);
+        return d >= sessentaDiasAtras && d < trintaDiasAtras;
+      }).length;
+
+      const diff = countRecente - countAnterior;
+      const pct = countAnterior > 0 ? (diff / countAnterior) * 100 : (countRecente > 0 ? 100 : 0);
+      
+      let tendencia: 'Crescimento' | 'Redução' | 'Estabilidade' = 'Estabilidade';
+      if (pct > 5) tendencia = 'Crescimento';
+      else if (pct < -5) tendencia = 'Redução';
+
+      return {
+        total: records.length,
+        countRecente,
+        countAnterior,
+        diff,
+        pct,
+        tendencia
+      };
+    };
+
+    const metricasA = calcularMetricasEvolucao(recordsA);
+    const metricasB = calcularMetricasEvolucao(recordsB);
+
+    // 4. Ranking de Evolução (quem mais cresceu registros)
+    let listaEntidades: string[] = [];
+    if (tipoEntidadeEvolucao === 'alunos') listaEntidades = listAlunos;
+    else if (tipoEntidadeEvolucao === 'funcionarios') listaEntidades = listFuncionarios;
+    else if (tipoEntidadeEvolucao === 'turmas') listaEntidades = listTurmas;
+    else if (tipoEntidadeEvolucao === 'series') listaEntidades = listSeriesAnos;
+    else if (tipoEntidadeEvolucao === 'tipos') listaEntidades = listTiposRegistro;
+
+    const rankingEvolucao = listaEntidades.map(ent => {
+      const recs = filtrarPorEntidade(ent);
+      const metrics = calcularMetricasEvolucao(recs);
+      return {
+        nome: ent,
+        total: recs.length,
+        diff: metrics.diff,
+        pct: metrics.pct,
+        tendencia: metrics.tendencia
+      };
+    }).sort((a, b) => b.diff - a.diff);
+
+    return {
+      recordsA,
+      recordsB,
+      evolucaoA,
+      evolucaoB,
+      metricasA,
+      metricasB,
+      rankingEvolucao
+    };
+  }, [registrosFiltrados, tipoEntidadeEvolucao, entidadeEvolucaoA, entidadeEvolucaoB, listAlunos, listFuncionarios, listTurmas, listSeriesAnos, listTiposRegistro, alunosMap]);
 
   // ============================================================
   // ESTATISTICAS POR ABA
@@ -732,7 +896,8 @@ export default function DashboardSuper() {
           { id: 'alunos', label: 'Alunos', icon: Users, activeClass: "bg-emerald-500 text-black border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]" },
           { id: 'funcionarios', label: 'Funcionários', icon: Award, activeClass: "bg-purple-500 text-black border-purple-500 shadow-[0_0_15px_rgba(139,92,246,0.3)]" },
           { id: 'series', label: 'Anos / Séries', icon: BookOpen, activeClass: "bg-amber-500 text-black border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]" },
-          { id: 'tipos', label: 'Tipos de Ocorrência', icon: FileText, activeClass: "bg-rose-500 text-black border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.3)]" }
+          { id: 'tipos', label: 'Tipos de Ocorrência', icon: FileText, activeClass: "bg-rose-500 text-black border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.3)]" },
+          { id: 'evolucao', label: 'Evolução & Comparativos', icon: TrendingUp, activeClass: "bg-cyan-500 text-black border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)]" }
         ] as const).map(tab => {
           const Ativo = abaAtiva === tab.id;
           return (
@@ -1708,6 +1873,375 @@ export default function DashboardSuper() {
 
             </div>
           )}
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------
+          6. ABA: EVOLUÇÃO E COMPARATIVOS
+          ------------------------------------------------------------ */}
+      {abaAtiva === 'evolucao' && (
+        <div className="space-y-6">
+          
+          {/* Menu Superior da Aba */}
+          <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-6">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="space-y-1">
+                <h2 className="text-md font-black text-white uppercase tracking-wider flex items-center gap-2">
+                  <TrendingUp size={18} className="text-cyan-400" /> Evolução & Comparativos de Ocorrências
+                </h2>
+                <p className="text-xs text-on-surface-variant">Acompanhe tendências temporais e compare o desempenho de entidades em tempo real.</p>
+              </div>
+
+              {/* Botões de Tipo de Análise */}
+              <div className="flex bg-surface p-1 rounded-2xl border border-white/5 self-start lg:self-center">
+                {(['individual', 'comparativo'] as const).map(mode => (
+                  <button
+                    key={mode}
+                    onClick={() => setTipoAnaliseEvolucao(mode)}
+                    className={cn(
+                      "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all",
+                      tipoAnaliseEvolucao === mode
+                        ? "bg-cyan-500 text-black shadow-md shadow-cyan-500/20"
+                        : "text-on-surface-variant hover:text-white"
+                    )}
+                  >
+                    {mode === 'individual' ? 'Evolução Individual' : 'Comparação Lado a Lado'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Seletores Dinâmicos de Entidades */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-white/5">
+              
+              {/* 1. Tipo de Entidade */}
+              <div className="space-y-1.5">
+                <label className="text-[8px] font-black text-cyan-400 uppercase tracking-widest block">Analisar por:</label>
+                <select
+                  value={tipoEntidadeEvolucao}
+                  onChange={e => setTipoEntidadeEvolucao(e.target.value as any)}
+                  className="campo-input w-full text-white bg-surface"
+                >
+                  <option value="alunos">Alunos</option>
+                  <option value="funcionarios">Funcionários</option>
+                  <option value="turmas">Turmas</option>
+                  <option value="series">Anos / Séries</option>
+                  <option value="tipos">Tipos de Registro</option>
+                </select>
+              </div>
+
+              {/* 2. Selecionar Item A */}
+              <div className="space-y-1.5">
+                <label className="text-[8px] font-black text-cyan-400 uppercase tracking-widest block">
+                  {tipoAnaliseEvolucao === 'individual' ? 'Selecionar Item:' : 'Item A (Principal):'}
+                </label>
+                <select
+                  value={entidadeEvolucaoA}
+                  onChange={e => setEntidadeEvolucaoA(e.target.value)}
+                  className="campo-input w-full text-white bg-surface"
+                >
+                  {(() => {
+                    let list: string[] = [];
+                    if (tipoEntidadeEvolucao === 'alunos') list = listAlunos;
+                    else if (tipoEntidadeEvolucao === 'funcionarios') list = listFuncionarios;
+                    else if (tipoEntidadeEvolucao === 'turmas') list = listTurmas;
+                    else if (tipoEntidadeEvolucao === 'series') list = listSeriesAnos;
+                    else if (tipoEntidadeEvolucao === 'tipos') list = listTiposRegistro;
+                    return list.map(item => <option key={item} value={item}>{item}</option>);
+                  })()}
+                </select>
+              </div>
+
+              {/* 3. Selecionar Item B */}
+              {tipoAnaliseEvolucao === 'comparativo' && (
+                <div className="space-y-1.5">
+                  <label className="text-[8px] font-black text-cyan-400 uppercase tracking-widest block">Item B (Comparar com):</label>
+                  <select
+                    value={entidadeEvolucaoB}
+                    onChange={e => setEntidadeEvolucaoB(e.target.value)}
+                    className="campo-input w-full text-white bg-surface"
+                  >
+                    {(() => {
+                      let list: string[] = [];
+                      if (tipoEntidadeEvolucao === 'alunos') list = listAlunos;
+                      else if (tipoEntidadeEvolucao === 'funcionarios') list = listFuncionarios;
+                      else if (tipoEntidadeEvolucao === 'turmas') list = listTurmas;
+                      else if (tipoEntidadeEvolucao === 'series') list = listSeriesAnos;
+                      else if (tipoEntidadeEvolucao === 'tipos') list = listTiposRegistro;
+                      return list.map(item => <option key={item} value={item}>{item}</option>);
+                    })()}
+                  </select>
+                </div>
+              )}
+
+            </div>
+          </div>
+
+          {/* Área de Visualização */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Coluna Central */}
+            <div className="lg:col-span-2 space-y-6">
+              
+              {/* Gráfico */}
+              <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
+                <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                  <Activity size={14} className="text-cyan-400" /> Linha do Tempo de Ocorrências
+                </h3>
+
+                <div className="relative w-full h-56 pt-4">
+                  <svg className="w-full h-full overflow-visible" viewBox="0 0 500 200" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="stroke-evolucao-a" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#06B6D4" />
+                        <stop offset="100%" stopColor="#3B82F6" />
+                      </linearGradient>
+                      <linearGradient id="stroke-evolucao-b" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#F43F5E" />
+                        <stop offset="100%" stopColor="#EC4899" />
+                      </linearGradient>
+                    </defs>
+                    
+                    <line x1="0" y1="0" x2="500" y2="0" stroke="rgba(255,255,255,0.03)" strokeDasharray="3 3" />
+                    <line x1="0" y1="50" x2="500" y2="50" stroke="rgba(255,255,255,0.03)" strokeDasharray="3 3" />
+                    <line x1="0" y1="100" x2="500" y2="100" stroke="rgba(255,255,255,0.03)" strokeDasharray="3 3" />
+                    <line x1="0" y1="150" x2="500" y2="150" stroke="rgba(255,255,255,0.03)" strokeDasharray="3 3" />
+                    <line x1="0" y1="200" x2="500" y2="200" stroke="rgba(255,255,255,0.05)" />
+
+                    {(() => {
+                      const maxVal = Math.max(
+                        ...statsEvolucao.evolucaoA.map(d => d.count),
+                        ...(tipoAnaliseEvolucao === 'comparativo' ? statsEvolucao.evolucaoB.map(d => d.count) : []),
+                        1
+                      );
+                      const totalPoints = statsEvolucao.evolucaoA.length;
+                      
+                      const pontosA = statsEvolucao.evolucaoA.map((d, idx) => {
+                        const x = totalPoints > 1 ? (idx / (totalPoints - 1)) * 500 : 250;
+                        const y = 200 - (d.count / maxVal) * 160;
+                        return { x, y };
+                      });
+
+                      const pathDA = pontosA.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+
+                      const pontosB = statsEvolucao.evolucaoB.map((d, idx) => {
+                        const x = totalPoints > 1 ? (idx / (totalPoints - 1)) * 500 : 250;
+                        const y = 200 - (d.count / maxVal) * 160;
+                        return { x, y };
+                      });
+
+                      const pathDB = pontosB.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+
+                      return (
+                        <>
+                          {pontosA.length > 0 && <path d={pathDA} fill="none" stroke="url(#stroke-evolucao-a)" strokeWidth={3.5} strokeLinecap="round" />}
+                          {pontosA.map((p, i) => (
+                            <circle key={`a-${i}`} cx={p.x} cy={p.y} r={4.5} fill="#06B6D4" stroke="#121214" strokeWidth={2} />
+                          ))}
+
+                          {tipoAnaliseEvolucao === 'comparativo' && pontosB.length > 0 && (
+                            <>
+                              <path d={pathDB} fill="none" stroke="url(#stroke-evolucao-b)" strokeWidth={3.5} strokeLinecap="round" />
+                              {pontosB.map((p, i) => (
+                                <circle key={`b-${i}`} cx={p.x} cy={p.y} r={4.5} fill="#F43F5E" stroke="#121214" strokeWidth={2} />
+                              ))}
+                            </>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </svg>
+                </div>
+
+                <div className="flex justify-between text-[8px] font-black uppercase text-on-surface-variant tracking-wider pt-2 border-t border-white/5">
+                  {statsEvolucao.evolucaoA.map((d, i) => <span key={i}>{d.periodo}</span>)}
+                </div>
+
+                <div className="flex flex-wrap gap-4 pt-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-cyan-500" />
+                    <span className="text-[10px] font-bold text-white uppercase tracking-wider">{entidadeEvolucaoA} (Total: {statsEvolucao.metricasA.total})</span>
+                  </div>
+                  {tipoAnaliseEvolucao === 'comparativo' && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-rose-500" />
+                      <span className="text-[10px] font-bold text-white uppercase tracking-wider">{entidadeEvolucaoB} (Total: {statsEvolucao.metricasB.total})</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Tabela */}
+              <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
+                <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                  <Calendar size={14} className="text-cyan-400" /> Histórico de Registros por Mês
+                </h3>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead>
+                      <tr className="border-b border-white/10 text-on-surface-variant font-black uppercase tracking-wider pb-2">
+                        <th className="pb-2">Período</th>
+                        <th className="pb-2 text-cyan-400">{entidadeEvolucaoA}</th>
+                        {tipoAnaliseEvolucao === 'comparativo' && <th className="pb-2 text-rose-400">{entidadeEvolucaoB}</th>}
+                        {tipoAnaliseEvolucao === 'comparativo' && <th className="pb-2">Diferença Absoluta</th>}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {statsEvolucao.evolucaoA.map((ea, idx) => {
+                        const eb = statsEvolucao.evolucaoB[idx] || { count: 0 };
+                        const diff = ea.count - eb.count;
+                        return (
+                          <tr key={ea.rawChave} className="hover:bg-white/5">
+                            <td className="py-2.5 font-bold text-white">{ea.periodo}</td>
+                            <td className="py-2.5 font-black text-cyan-400">{ea.count} regs</td>
+                            {tipoAnaliseEvolucao === 'comparativo' && (
+                              <td className="py-2.5 font-black text-rose-400">{eb.count} regs</td>
+                            )}
+                            {tipoAnaliseEvolucao === 'comparativo' && (
+                              <td className="py-2.5 font-semibold">
+                                <span className={cn(
+                                  "px-2 py-0.5 rounded text-[10px] font-black",
+                                  diff > 0 ? "bg-cyan-500/10 text-cyan-400" : diff < 0 ? "bg-rose-500/10 text-rose-400" : "bg-white/5 text-white"
+                                )}>
+                                  {diff > 0 ? `+${diff}` : diff}
+                                </span>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Coluna Direita */}
+            <div className="space-y-6">
+              
+              <div className="bg-gradient-to-br from-cyan-500/10 via-cyan-500/5 to-transparent p-6 rounded-[2rem] border border-cyan-500/20 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black uppercase text-cyan-400 tracking-widest">Tendência de Ocorrências</span>
+                  <span className={cn(
+                    "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider",
+                    statsEvolucao.metricasA.tendencia === 'Crescimento' ? "bg-rose-500/20 text-rose-400" :
+                    statsEvolucao.metricasA.tendencia === 'Redução' ? "bg-emerald-500/20 text-emerald-400" :
+                    "bg-white/5 text-white"
+                  )}>
+                    {statsEvolucao.metricasA.tendencia}
+                  </span>
+                </div>
+                
+                <div className="space-y-2">
+                  <p className="text-[10px] text-on-surface-variant font-semibold">
+                    Últimos 30 dias: <span className="text-white font-bold">{statsEvolucao.metricasA.countRecente} ocorrências</span>
+                  </p>
+                  <p className="text-[10px] text-on-surface-variant font-semibold">
+                    30 dias anteriores: <span className="text-white font-bold">{statsEvolucao.metricasA.countAnterior} ocorrências</span>
+                  </p>
+                  
+                  <div className="flex items-baseline gap-2 pt-2">
+                    <h3 className={cn(
+                      "text-3xl font-black",
+                      statsEvolucao.metricasA.diff > 0 ? "text-rose-400" : statsEvolucao.metricasA.diff < 0 ? "text-emerald-400" : "text-white"
+                    )}>
+                      {statsEvolucao.metricasA.diff > 0 ? `+${statsEvolucao.metricasA.diff}` : statsEvolucao.metricasA.diff}
+                    </h3>
+                    <span className="text-xs text-on-surface-variant font-bold">
+                      ({statsEvolucao.metricasA.pct.toFixed(1)}% de variação)
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-on-surface-variant italic leading-relaxed pt-2 border-t border-white/5">
+                  Trendline: A entidade <span className="text-cyan-300 font-bold">{entidadeEvolucaoA}</span> apresentou {
+                    statsEvolucao.metricasA.diff > 0 ? 'um aumento' : statsEvolucao.metricasA.diff < 0 ? 'uma diminuição' : 'estabilidade'
+                  } no volume de ocorrências recentes em relação ao mês passado.
+                </p>
+              </div>
+
+              {tipoAnaliseEvolucao === 'comparativo' && (
+                <div className="bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-transparent p-6 rounded-[2rem] border border-rose-500/20 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase text-rose-400 tracking-widest">Tendência de Ocorrências B</span>
+                    <span className={cn(
+                      "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider",
+                      statsEvolucao.metricasB.tendencia === 'Crescimento' ? "bg-rose-500/20 text-rose-400" :
+                      statsEvolucao.metricasB.tendencia === 'Redução' ? "bg-emerald-500/20 text-emerald-400" :
+                      "bg-white/5 text-white"
+                    )}>
+                      {statsEvolucao.metricasB.tendencia}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-on-surface-variant font-semibold">
+                      Últimos 30 dias: <span className="text-white font-bold">{statsEvolucao.metricasB.countRecente} ocorrências</span>
+                    </p>
+                    <p className="text-[10px] text-on-surface-variant font-semibold">
+                      30 dias anteriores: <span className="text-white font-bold">{statsEvolucao.metricasB.countAnterior} ocorrências</span>
+                    </p>
+                    
+                    <div className="flex items-baseline gap-2 pt-2">
+                      <h3 className={cn(
+                        "text-3xl font-black",
+                        statsEvolucao.metricasB.diff > 0 ? "text-rose-400" : statsEvolucao.metricasB.diff < 0 ? "text-emerald-400" : "text-white"
+                      )}>
+                        {statsEvolucao.metricasB.diff > 0 ? `+${statsEvolucao.metricasB.diff}` : statsEvolucao.metricasB.diff}
+                      </h3>
+                      <span className="text-xs text-on-surface-variant font-bold">
+                        ({statsEvolucao.metricasB.pct.toFixed(1)}% de variação)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Ranking de Evolução */}
+              <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
+                <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2 border-b border-white/5 pb-2">
+                  <Award size={14} className="text-cyan-400" /> Ranking de Evolução Recente
+                </h3>
+                <p className="text-[9px] text-on-surface-variant">Classificação ordenada por variação de registros nos últimos 30 dias.</p>
+                
+                <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                  {statsEvolucao.rankingEvolucao.map((item, idx) => {
+                    const max = Math.max(...statsEvolucao.rankingEvolucao.map(i => Math.abs(i.diff)), 1);
+                    const pctBar = Math.min(100, (Math.abs(item.diff) / max) * 100);
+                    return (
+                      <div key={item.nome} className="space-y-1">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="font-bold text-white truncate max-w-[150px]">#{idx+1} {item.nome}</span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className={cn(
+                              "text-[10px] font-black",
+                              item.diff > 0 ? "text-rose-400" : item.diff < 0 ? "text-emerald-400" : "text-white"
+                            )}>
+                              {item.diff > 0 ? `+${item.diff}` : item.diff} reg
+                            </span>
+                          </div>
+                        </div>
+                        <div className="w-full bg-surface h-1.5 rounded-full overflow-hidden">
+                          <div 
+                            className={cn(
+                              "h-full transition-all",
+                              item.diff > 0 ? "bg-rose-500" : item.diff < 0 ? "bg-emerald-500" : "bg-white/20"
+                            )}
+                            style={{ width: `${pctBar}%` }} 
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
         </div>
       )}
 
