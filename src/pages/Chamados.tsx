@@ -296,9 +296,9 @@ export default function ChamadosPage() {
   const carregarDadosAuxiliares = async () => {
     try {
       const [resAndares, resLocais, resTipos] = await Promise.all([
-        supabase.from('andares').select('*').order('ordem', { ascending: true }),
-        supabase.from('locais').select('*').order('ordem', { ascending: true }),
-        supabase.from('tipos_chamado').select('*').order('ordem', { ascending: true }),
+        supabase.from('andares').select('*').order('nome', { ascending: true }),
+        supabase.from('locais').select('*').order('nome', { ascending: true }),
+        supabase.from('tipos_chamado').select('*').order('nome', { ascending: true }),
       ]);
 
       let andaresData = resAndares.data || [];
@@ -438,9 +438,9 @@ export default function ChamadosPage() {
 
     if (precisaRecarregar) {
       const [resAndares, resLocais, resTipos] = await Promise.all([
-        supabase.from('andares').select('*').order('ordem', { ascending: true }),
-        supabase.from('locais').select('*').order('ordem', { ascending: true }),
-        supabase.from('tipos_chamado').select('*').order('ordem', { ascending: true }),
+        supabase.from('andares').select('*').order('nome', { ascending: true }),
+        supabase.from('locais').select('*').order('nome', { ascending: true }),
+        supabase.from('tipos_chamado').select('*').order('nome', { ascending: true }),
       ]);
       if (resAndares.data) setAndares(resAndares.data);
       if (resLocais.data) setLocais(resLocais.data);
@@ -732,6 +732,7 @@ export default function ChamadosPage() {
   const handleEnviarComentario = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chamadoSelecionado || !novoComentario.trim() || !user) return;
+    if (!isAdmin && chamadoSelecionado.usuario_id !== user.id) return;
 
     setEnviandoComentario(true);
     try {
@@ -995,7 +996,7 @@ export default function ChamadosPage() {
         // Atualizar
         const payload: any = {
           nome: editandoConfig.nome.trim(),
-          ordem: editandoConfig.ordem,
+          ordem: editandoConfig.ordem || 0,
           ativo: editandoConfig.ativo,
           updated_at: new Date().toISOString()
         };
@@ -1014,7 +1015,7 @@ export default function ChamadosPage() {
         // Inserir
         const payload: any = {
           nome: editandoConfig.nome.trim(),
-          ordem: editandoConfig.ordem,
+          ordem: editandoConfig.ordem || 0,
           ativo: editandoConfig.ativo
         };
         if (tabela === 'locais') {
@@ -1774,87 +1775,93 @@ export default function ChamadosPage() {
                   </div>
 
                   {/* Form de Comentário */}
-                  <form onSubmit={handleEnviarComentario} className="space-y-4 pt-4 border-t border-white/5">
-                    <textarea
-                      value={novoComentario}
-                      onChange={(e) => setNovoComentario(e.target.value)}
-                      placeholder="Adicione um comentário para o atendimento..."
-                      rows={3}
-                      className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm outline-none focus:border-primary text-white"
-                    />
+                  {(isAdmin || chamadoSelecionado.usuario_id === user?.id) ? (
+                    <form onSubmit={handleEnviarComentario} className="space-y-4 pt-4 border-t border-white/5">
+                      <textarea
+                        value={novoComentario}
+                        onChange={(e) => setNovoComentario(e.target.value)}
+                        placeholder="Adicione um comentário para o atendimento..."
+                        rows={3}
+                        className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm outline-none focus:border-primary text-white"
+                      />
 
-                    {/* Preview de fotos selecionadas */}
-                    {fotosComentario.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {fotosComentario.map((f, idx) => (
-                          <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-white/10">
-                            <img src={URL.createObjectURL(f)} className="w-full h-full object-cover" alt="Preview" />
+                      {/* Preview de fotos selecionadas */}
+                      {fotosComentario.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {fotosComentario.map((f, idx) => (
+                            <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-white/10">
+                              <img src={URL.createObjectURL(f)} className="w-full h-full object-cover" alt="Preview" />
+                              <button
+                                type="button"
+                                onClick={() => setFotosComentario(prev => prev.filter((_, i) => i !== idx))}
+                                className="absolute top-0 right-0 p-1 bg-red-600 text-white rounded-bl-lg hover:bg-red-700 transition-colors"
+                              >
+                                <X size={10} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex justify-between items-center gap-3">
+                        <div>
+                          <input
+                            type="file"
+                            accept="image/png, image/jpeg, image/jpg, image/webp"
+                            multiple
+                            onChange={(e) => {
+                              if (e.target.files) {
+                                setFotosComentario(prev => [...prev, ...Array.from(e.target.files!)]);
+                              }
+                            }}
+                            ref={commentFileInputRef}
+                            className="hidden"
+                          />
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            multiple
+                            onChange={(e) => {
+                              if (e.target.files) {
+                                setFotosComentario(prev => [...prev, ...Array.from(e.target.files!)]);
+                              }
+                            }}
+                            ref={commentCameraInputRef}
+                            className="hidden"
+                          />
+                          <div className="flex gap-2">
                             <button
                               type="button"
-                              onClick={() => setFotosComentario(prev => prev.filter((_, i) => i !== idx))}
-                              className="absolute top-0 right-0 p-1 bg-red-600 text-white rounded-bl-lg hover:bg-red-700 transition-colors"
+                              onClick={() => commentFileInputRef.current?.click()}
+                              className="px-4 py-2.5 bg-surface-container-high hover:bg-surface-container-highest border border-white/5 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2"
                             >
-                              <X size={10} />
+                              <Image size={14} className="text-[#f1d86f]" /> Escolher Foto
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => commentCameraInputRef.current?.click()}
+                              className="px-4 py-2.5 bg-surface-container-high hover:bg-surface-container-highest border border-white/5 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+                            >
+                              <Camera size={14} className="text-primary" /> Tirar Foto
                             </button>
                           </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="flex justify-between items-center gap-3">
-                      <div>
-                        <input
-                          type="file"
-                          accept="image/png, image/jpeg, image/jpg, image/webp"
-                          multiple
-                          onChange={(e) => {
-                            if (e.target.files) {
-                              setFotosComentario(prev => [...prev, ...Array.from(e.target.files!)]);
-                            }
-                          }}
-                          ref={commentFileInputRef}
-                          className="hidden"
-                        />
-                        <input
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          multiple
-                          onChange={(e) => {
-                            if (e.target.files) {
-                              setFotosComentario(prev => [...prev, ...Array.from(e.target.files!)]);
-                            }
-                          }}
-                          ref={commentCameraInputRef}
-                          className="hidden"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => commentFileInputRef.current?.click()}
-                            className="px-4 py-2.5 bg-surface-container-high hover:bg-surface-container-highest border border-white/5 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2"
-                          >
-                            <Image size={14} className="text-[#f1d86f]" /> Escolher Foto
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => commentCameraInputRef.current?.click()}
-                            className="px-4 py-2.5 bg-surface-container-high hover:bg-surface-container-highest border border-white/5 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2"
-                          >
-                            <Camera size={14} className="text-primary" /> Tirar Foto
-                          </button>
                         </div>
-                      </div>
 
-                      <button
-                        type="submit"
-                        disabled={enviandoComentario || !novoComentario.trim()}
-                        className="px-6 py-3 bg-primary text-black rounded-xl text-xs font-black uppercase tracking-wider hover:opacity-90 active:scale-95 transition-all shadow-glow-yellow disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {enviandoComentario ? 'Enviando...' : 'Adicionar Comentário'}
-                      </button>
+                        <button
+                          type="submit"
+                          disabled={enviandoComentario || !novoComentario.trim()}
+                          className="px-6 py-3 bg-primary text-black rounded-xl text-xs font-black uppercase tracking-wider hover:opacity-90 active:scale-95 transition-all shadow-glow-yellow disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {enviandoComentario ? 'Enviando...' : 'Adicionar Comentário'}
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="pt-4 border-t border-white/5 text-center text-xs font-bold text-on-surface-variant">
+                      Somente administradores ou o criador do chamado podem adicionar comentários ou dar seguimento.
                     </div>
-                  </form>
+                  )}
                 </div>
               </div>
 
@@ -2155,15 +2162,7 @@ export default function ChamadosPage() {
                     </div>
                   )}
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Ordem de Exibição</label>
-                    <input
-                      type="number"
-                      value={editandoConfig?.ordem || 0}
-                      onChange={(e) => setEditandoConfig(prev => ({ ...prev, ordem: parseInt(e.target.value) || 0 } as any))}
-                      className="w-full bg-surface rounded-xl p-3 border border-white/10 text-sm outline-none focus:border-primary text-white font-semibold"
-                    />
-                  </div>
+
 
                   <div className="flex items-center gap-3 pt-2">
                     <input
@@ -2241,7 +2240,6 @@ export default function ChamadosPage() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-white/5 text-[10px] text-on-surface-variant font-black uppercase tracking-wider bg-surface-container-medium">
-                        <th className="p-4">Ordem</th>
                         <th className="p-4">Nome</th>
                         {subTabConfig === 'locais' && <th className="p-4">Andar Vinculado</th>}
                         <th className="p-4">Status</th>
@@ -2251,7 +2249,6 @@ export default function ChamadosPage() {
                     <tbody className="divide-y divide-white/5 text-sm text-on-surface-bright">
                       {listaConfigFiltrada.map(item => (
                         <tr key={item.id} className="hover:bg-surface-container-high transition-colors font-medium">
-                          <td className="p-4 font-bold text-primary">{item.ordem}</td>
                           <td className="p-4 font-bold">{item.nome}</td>
                           {subTabConfig === 'locais' && (
                             <td className="p-4 text-xs text-on-surface-variant font-semibold">

@@ -18,7 +18,7 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean; setIsOpen?: (
   const isMonitor = role === 'monitor';
 
   const allNavItems = [
-    { to: '/', icon: LayoutGrid, label: 'Agora', visible: true },
+    { to: '/', icon: LayoutGrid, label: 'Agora', visible: role === 'super_admin' },
     { to: '/rooms', icon: DoorOpen, label: 'Salas', visible: true },
     { to: '/teachers', icon: Users, label: 'Professores', visible: true },
     { to: '/monitores', icon: BookOpen, label: 'Monitores', visible: true },
@@ -145,7 +145,7 @@ export function BottomNav() {
   const isMonitor = role === 'monitor';
 
   const navItems = [
-    { to: '/', icon: LayoutGrid, label: 'Agora', visible: true },
+    { to: '/', icon: LayoutGrid, label: 'Agora', visible: role === 'super_admin' },
     { to: '/rooms', icon: DoorOpen, label: 'Salas', visible: true },
     { to: '/teachers', icon: Users, label: 'Profs', visible: true },
     { to: '/ocorrencias', icon: ClipboardCheck, label: 'Reg. Diário', visible: isAdmin || isProfessor || isMonitor },

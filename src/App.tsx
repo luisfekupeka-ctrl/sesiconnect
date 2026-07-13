@@ -84,11 +84,11 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode;
   }
 
   if (requiredRole === 'admin' && profile?.role !== 'admin' && profile?.role !== 'super_admin') {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/rooms" replace />;
   }
 
   if (requiredRole === 'super_admin' && profile?.role !== 'super_admin') {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/rooms" replace />;
   }
 
   return <>{children}</>;
@@ -114,7 +114,7 @@ export default function App() {
               {/* Rotas com Layout (Agora 100% Protegidas por Login e Aprovação) */}
               <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                 {/* Páginas Internas de Consulta */}
-                <Route path="/" element={<Dashboard />} />
+                <Route path="/" element={<ProtectedRoute requiredRole="super_admin"><Dashboard /></ProtectedRoute>} />
                 <Route path="/teachers" element={<TeachersPage />} />
                 <Route path="/rooms" element={<RoomsPage />} />
                 <Route path="/language-lab" element={<LanguageLab />} />

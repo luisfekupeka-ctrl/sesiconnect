@@ -128,6 +128,8 @@ export default function DashboardSuper() {
   const [entidadeEvolucaoA, setEntidadeEvolucaoA] = useState<string>('');
   const [entidadeEvolucaoB, setEntidadeEvolucaoB] = useState<string>('');
   const [granularidadeEvolucao, setGranularidadeEvolucao] = useState<'mes' | 'semana' | 'dia'>('mes');
+  const [periodoSelecionadoA, setPeriodoSelecionadoA] = useState<string>('');
+  const [periodoSelecionadoB, setPeriodoSelecionadoB] = useState<string>('');
 
   // Segurança: Redirecionar se não for super_admin
   useEffect(() => {
@@ -495,6 +497,60 @@ export default function DashboardSuper() {
     const detalhesA = calcularDetalhesEntidade(recordsA);
     const detalhesB = calcularDetalhesEntidade(recordsB);
 
+    // 3b. Filtrar records por rawChave de período
+    const getRecordRawChave = (r: OcorrenciaRegistro): string => {
+      const dataStr = r.created_at ? r.created_at.split(/[\sT]/)[0] : '';
+      if (!dataStr) return '';
+      if (granularidadeEvolucao === 'mes') {
+        const [ano, mes] = dataStr.split('-');
+        return `${ano}-${mes}`;
+      } else if (granularidadeEvolucao === 'semana') {
+        const { year, week } = getISOWeek(dataStr);
+        return `${year}-W${week.toString().padStart(2, '0')}`;
+      } else {
+        return dataStr;
+      }
+    };
+
+    // Chave do período atual
+    const hoje = new Date();
+    let periodoAtualChave = '';
+    if (granularidadeEvolucao === 'mes') {
+      periodoAtualChave = `${hoje.getFullYear()}-${(hoje.getMonth() + 1).toString().padStart(2, '0')}`;
+    } else if (granularidadeEvolucao === 'semana') {
+      const hojeStr = hoje.toISOString().split('T')[0];
+      const { year, week } = getISOWeek(hojeStr);
+      periodoAtualChave = `${year}-W${week.toString().padStart(2, '0')}`;
+    } else {
+      periodoAtualChave = hoje.toISOString().split('T')[0];
+    }
+
+    // Período selecionado para comparação (usa o state ou fallback para o anterior ao atual)
+    const periodosDisponiveis = evolucaoA.map(e => e.rawChave);
+    const idxAtual = periodosDisponiveis.indexOf(periodoAtualChave);
+    const periodoAnteriorChave = idxAtual > 0 ? periodosDisponiveis[idxAtual - 1] : (periodosDisponiveis[0] || '');
+
+    const periodoCompararA = periodoSelecionadoA || periodoAnteriorChave;
+    const periodoCompararB = periodoAtualChave;
+
+    // Filtrar records de A e B por período selecionado e período atual
+    const recordsAPeriodoSel = recordsA.filter(r => getRecordRawChave(r) === periodoCompararA);
+    const recordsAPeriodoAtual = recordsA.filter(r => getRecordRawChave(r) === periodoCompararB);
+    const recordsBPeriodoSel = recordsB.filter(r => getRecordRawChave(r) === periodoCompararA);
+    const recordsBPeriodoAtual = recordsB.filter(r => getRecordRawChave(r) === periodoCompararB);
+
+    // Calcular detalhes filtrados por período
+    const detalhesAPeriodoSel = calcularDetalhesEntidade(recordsAPeriodoSel);
+    const detalhesAPeriodoAtual = calcularDetalhesEntidade(recordsAPeriodoAtual);
+    const detalhesBPeriodoSel = calcularDetalhesEntidade(recordsBPeriodoSel);
+    const detalhesBPeriodoAtual = calcularDetalhesEntidade(recordsBPeriodoAtual);
+
+    // Obter label amigável para o período
+    const getLabelPeriodo = (rawChave: string): string => {
+      const found = evolucaoA.find(e => e.rawChave === rawChave);
+      return found ? found.periodo : rawChave;
+    };
+
     // 4. Cálculo de Crescimento, Redução ou Estabilidade (30 dias recentes vs 30 dias anteriores)
     const calcularMetricasEvolucao = (records: OcorrenciaRegistro[]) => {
       const agora = new Date();
@@ -563,9 +619,19 @@ export default function DashboardSuper() {
       metricasB,
       detalhesA,
       detalhesB,
+      // Período comparativo
+      periodoAtualChave,
+      periodoCompararA,
+      periodoCompararB,
+      labelPeriodoSel: getLabelPeriodo(periodoCompararA),
+      labelPeriodoAtual: getLabelPeriodo(periodoCompararB),
+      detalhesAPeriodoSel,
+      detalhesAPeriodoAtual,
+      detalhesBPeriodoSel,
+      detalhesBPeriodoAtual,
       rankingEvolucao
     };
-  }, [registrosFiltrados, tipoEntidadeEvolucao, entidadeEvolucaoA, entidadeEvolucaoB, granularidadeEvolucao, listAlunos, listFuncionarios, listTurmas, listSeriesAnos, listTiposRegistro, alunosMap]);
+  }, [registrosFiltrados, tipoEntidadeEvolucao, entidadeEvolucaoA, entidadeEvolucaoB, granularidadeEvolucao, periodoSelecionadoA, periodoSelecionadoB, listAlunos, listFuncionarios, listTurmas, listSeriesAnos, listTiposRegistro, alunosMap]);
 
   // ============================================================
   // ESTATISTICAS POR ABA
