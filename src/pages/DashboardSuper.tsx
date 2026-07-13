@@ -293,11 +293,12 @@ export default function DashboardSuperBI() {
     
     const arr = Array.from(mapa.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
     
-    // Média móvel simples (3 pontos) para A
-    arr.forEach((pt, i) => {
-      let sum = 0, count = 0;
-      for(let j=Math.max(0, i-2); j<=i; j++) { sum += arr[j].A; count++; }
-      (pt as any).MovelA = count > 0 ? Number((sum/count).toFixed(1)) : 0;
+    // Média Geral do Período para A
+    const totalA = arr.reduce((sum, pt) => sum + pt.A, 0);
+    const mediaGeralA = arr.length > 0 ? Number((totalA / arr.length).toFixed(1)) : 0;
+    
+    arr.forEach(pt => {
+      (pt as any).MovelA = mediaGeralA;
     });
     return arr;
   }, [regA, regB, comparacaoAtiva, perA, perB]);
@@ -494,8 +495,8 @@ export default function DashboardSuperBI() {
           <div className="lg:col-span-2 bg-[#111827] border border-[#2D3748] rounded-3xl p-6 shadow-xl">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h3 className="text-sm font-bold text-white flex items-center gap-2"><Activity size={16} className="text-blue-500"/> Evolução e Média Móvel</h3>
-                <p className="text-xs text-[#9CA3AF] mt-1">Análise temporal das ocorrências com linha de tendência de 3 dias.</p>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2"><Activity size={16} className="text-blue-500"/> Evolução e Média</h3>
+                <p className="text-xs text-[#9CA3AF] mt-1">Análise temporal das ocorrências comparadas com a média do período filtrado.</p>
               </div>
             </div>
             <div className="h-[300px] w-full">
@@ -521,7 +522,7 @@ export default function DashboardSuperBI() {
                   <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                   
                   <Area type="monotone" dataKey="A" name="Volume (A)" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorA)" />
-                  {!comparacaoAtiva && <Line type="monotone" dataKey="MovelA" name="Média Móvel (3d)" stroke="#F59E0B" strokeWidth={2} dot={false} strokeDasharray="4 4" />}
+                  {!comparacaoAtiva && <Line type="monotone" dataKey="MovelA" name="Média do Período" stroke="#F59E0B" strokeWidth={2} dot={false} strokeDasharray="4 4" />}
                   {comparacaoAtiva && <Area type="monotone" dataKey="B" name="Volume (B)" stroke="#8B5CF6" strokeWidth={3} fillOpacity={1} fill="url(#colorB)" />}
                 </ComposedChart>
               </ResponsiveContainer>
