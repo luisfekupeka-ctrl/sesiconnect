@@ -1,16 +1,27 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Users, Shield, Calendar, AlertTriangle, ArrowUpRight, 
-  TrendingUp, BarChart2, PieChart, Activity, Filter, 
-  RefreshCw, Award, BookOpen, Clock, AlertCircle, FileText,
-  UserCheck, ChevronRight, BarChart3, HelpCircle, Columns, ToggleLeft, ToggleRight,
-  Download
+  Users, Shield, Calendar, AlertTriangle, ArrowUpRight, ArrowDownRight,
+  TrendingUp, BarChart2, PieChart, Activity, Filter, RefreshCw, Award, 
+  BookOpen, Clock, FileText, UserCheck, ChevronRight, Zap, Target, 
+  Flame, Bell, Search, LayoutDashboard, Columns
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
+import { 
+  LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, 
+  Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, Cell, PieChart as RechartsPieChart, Pie, ComposedChart
+} from 'recharts';
+import { 
+  parseISO, isSameDay, isWithinInterval, startOfDay, endOfDay,
+  startOfWeek, endOfWeek, startOfMonth, endOfMonth, differenceInDays, 
+  subDays, subMonths, subYears, format, getDay, getHours, isValid, parse
+} from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
+// --- TYPES ---
 interface OcorrenciaRegistro {
   id: string;
   student_name: string;
@@ -21,876 +32,558 @@ interface OcorrenciaRegistro {
   tratada: boolean;
   created_by: string | null;
 }
-
-interface AlunoCMS {
-  nome: string;
-  turma: string;
-  ano: string;
-}
-
+interface AlunoCMS { nome: string; turma: string; ano: string; }
+type ContextoAnalise = 'Geral' | 'Aluno' | 'Turma' | 'Funcionário' | 'Tipo de Ocorrência';
 interface FiltroSet {
-  tipoPeriodo: 'dia' | 'semana' | 'mes' | 'ano' | 'personalizado' | 'tudo';
-  dataDia: string;            
-  dataSemana: string;         
-  dataMes: string;            
-  dataAno: string;            
-  dataInicio: string;         
-  dataFim: string;            
-  serieAno: string;           
-  turma: string;              
-  funcionario: string;        
-  aluno: string;              
-  tipoOcorrencia: string;     
-  anoLetivo: string;          
+  tipoPeriodo: 'hoje' | 'semana' | 'mes' | 'ano' | 'personalizado' | 'tudo';
+  dataInicio: string;
+  dataFim: string;
+  anoLetivo: string;
+  serieAno: string;
+  turma: string;
+  aluno: string;
+  funcionario: string;
+  tipoOcorrencia: string;
+  turno: string;
+  unidade: string;
 }
 
 const filtroInicial: FiltroSet = {
-  tipoPeriodo: 'tudo',
-  dataDia: new Date().toISOString().split('T')[0],
-  dataSemana: new Date().toISOString().split('T')[0],
-  dataMes: new Date().toISOString().slice(0, 7),
-  dataAno: new Date().getFullYear().toString(),
-  dataInicio: '',
-  dataFim: '',
+  tipoPeriodo: 'mes',
+  dataInicio: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
+  dataFim: format(endOfMonth(new Date()), 'yyyy-MM-dd'),
+  anoLetivo: 'Todos',
   serieAno: 'Todos',
   turma: 'Todos',
-  funcionario: 'Todos',
   aluno: 'Todos',
+  funcionario: 'Todos',
   tipoOcorrencia: 'Todos',
-  anoLetivo: 'Todos',
+  turno: 'Todos',
+  unidade: 'Todos',
 };
 
-function obterDatasFiltro(filtro: FiltroSet) {
-  let inicio = '';
-  let fim = '';
-
-  const formatarData = (d: Date) => {
-    const ano = d.getFullYear();
-    const mes = (d.getMonth() + 1).toString().padStart(2, '0');
-    const dia = d.getDate().toString().padStart(2, '0');
-    return `${ano}-${mes}-${dia}`;
-  };
-
-  switch (filtro.tipoPeriodo) {
-    case 'dia':
-      if (filtro.dataDia) {
-        inicio = filtro.dataDia;
-        fim = filtro.dataDia;
-      }
-      break;
-    case 'semana':
-      if (filtro.dataSemana) {
-        const ref = new Date(filtro.dataSemana + 'T12:00:00');
-        const diaSemana = ref.getDay();
-        const dom = new Date(ref);
-        dom.setDate(ref.getDate() - diaSemana);
-        const sab = new Date(ref);
-        sab.setDate(ref.getDate() + (6 - diaSemana));
-        inicio = formatarData(dom);
-        fim = formatarData(sab);
-      }
-      break;
-    case 'mes':
-      if (filtro.dataMes) {
-        const [ano, mes] = filtro.dataMes.split('-').map(Number);
-        if (ano && mes) {
-          const pDia = new Date(ano, mes - 1, 1);
-          const uDia = new Date(ano, mes, 0);
-          inicio = formatarData(pDia);
-          fim = formatarData(uDia);
-        }
-      }
-      break;
-    case 'ano':
-      if (filtro.dataAno) {
-        const ano = Number(filtro.dataAno);
-        if (ano) {
-          inicio = `${ano}-01-01`;
-          fim = `${ano}-12-31`;
-        }
-      }
-      break;
-    case 'personalizado':
-      inicio = filtro.dataInicio;
-      fim = filtro.dataFim;
-      break;
-    case 'tudo':
-    default:
-      inicio = '';
-      fim = '';
-      break;
+// --- DATA HELPERS ---
+const getPeriodoDatas = (tipo: string, inicioCustom: string, fimCustom: string) => {
+  const hoje = new Date();
+  let inicio = new Date(0);
+  let fim = new Date();
+  
+  if (tipo === 'hoje') {
+    inicio = startOfDay(hoje);
+    fim = endOfDay(hoje);
+  } else if (tipo === 'semana') {
+    inicio = startOfWeek(hoje, { weekStartsOn: 0 });
+    fim = endOfWeek(hoje, { weekStartsOn: 0 });
+  } else if (tipo === 'mes') {
+    inicio = startOfMonth(hoje);
+    fim = endOfMonth(hoje);
+  } else if (tipo === 'ano') {
+    inicio = new Date(hoje.getFullYear(), 0, 1);
+    fim = new Date(hoje.getFullYear(), 11, 31, 23, 59, 59);
+  } else if (tipo === 'personalizado' && inicioCustom && fimCustom) {
+    inicio = startOfDay(parseISO(inicioCustom));
+    fim = endOfDay(parseISO(fimCustom));
+  } else if (tipo === 'tudo') {
+    inicio = new Date(2000, 0, 1);
   }
-
   return { inicio, fim };
-}
+};
 
-function filtrarRegistros(registrosList: OcorrenciaRegistro[], alunosMap: Map<string, AlunoCMS>, filtro: FiltroSet) {
-  const { inicio, fim } = obterDatasFiltro(filtro);
-
-  return registrosList.filter(r => {
-    const dataStr = r.created_at ? r.created_at.split(/[\sT]/)[0] : '';
-    if (inicio && dataStr < inicio) return false;
-    if (fim && dataStr > fim) return false;
-
-    const alunoInfo = alunosMap.get(r.student_name.trim().toLowerCase());
-    const turmaAluno = alunoInfo?.turma || 'Sem Turma';
-    const anoAluno = alunoInfo?.ano || r.school_year || 'Sem Ano';
-
-    if (filtro.serieAno !== 'Todos' && anoAluno !== filtro.serieAno) return false;
-    if (filtro.turma !== 'Todos' && turmaAluno !== filtro.turma) return false;
-    if (filtro.funcionario !== 'Todos' && r.created_by?.trim() !== filtro.funcionario) return false;
-    if (filtro.aluno !== 'Todos' && r.student_name.trim() !== filtro.aluno) return false;
-    if (filtro.tipoOcorrencia !== 'Todos' && r.occurrence_type?.trim() !== filtro.tipoOcorrencia) return false;
-    
-    if (filtro.anoLetivo !== 'Todos') {
-      const anoMatch = anoAluno.toLowerCase().includes(filtro.anoLetivo.toLowerCase());
-      if (!anoMatch) return false;
-    }
-
-    return true;
-  });
-}
-
-function calcularStatsParaConjunto(registrosFiltrados: OcorrenciaRegistro[], alunosMap: Map<string, AlunoCMS>) {
-  const total = registrosFiltrados.length;
+const getPeriodoAnterior = (tipo: string, inicioAtual: Date, fimAtual: Date) => {
+  let prevInicio = new Date(inicioAtual);
+  let prevFim = new Date(fimAtual);
   
-  const alunosUnicos = new Set(
-    registrosFiltrados.map(r => r.student_name.trim().toLowerCase())
-  ).size;
-  
-  const funcionariosUnicos = new Set(
-    registrosFiltrados.filter(r => r.created_by).map(r => r.created_by!.trim().toLowerCase())
-  ).size;
-
-  const turmasEnvolvidas = new Set(
-    registrosFiltrados.map(r => {
-      const alunoInfo = alunosMap.get(r.student_name.trim().toLowerCase());
-      return alunoInfo?.turma || 'Sem Turma';
-    })
-  ).size;
-
-  const contagemTipos: { [tipo: string]: number } = {};
-  registrosFiltrados.forEach(r => {
-    if (r.occurrence_type) {
-      const t = r.occurrence_type.trim();
-      contagemTipos[t] = (contagemTipos[t] || 0) + 1;
-    }
-  });
-  const tiposBreakdown = Object.entries(contagemTipos)
-    .map(([tipo, count]) => ({ tipo, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-
-  const contagemAlunos: { [aluno: string]: number } = {};
-  registrosFiltrados.forEach(r => {
-    const a = r.student_name.trim();
-    contagemAlunos[a] = (contagemAlunos[a] || 0) + 1;
-  });
-  const alunosBreakdown = Object.entries(contagemAlunos)
-    .map(([nome, count]) => ({ nome, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-
-  const contagemFuncionarios: { [func: string]: number } = {};
-  registrosFiltrados.forEach(r => {
-    if (r.created_by) {
-      const f = r.created_by.trim();
-      contagemFuncionarios[f] = (contagemFuncionarios[f] || 0) + 1;
-    }
-  });
-  const funcionariosBreakdown = Object.entries(contagemFuncionarios)
-    .map(([nome, count]) => ({ nome, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-
-  const contagemTurmas: { [turma: string]: number } = {};
-  registrosFiltrados.forEach(r => {
-    const alunoInfo = alunosMap.get(r.student_name.trim().toLowerCase());
-    const t = alunoInfo?.turma || 'Sem Turma';
-    contagemTurmas[t] = (contagemTurmas[t] || 0) + 1;
-  });
-  const turmasBreakdown = Object.entries(contagemTurmas)
-    .map(([turma, count]) => ({ turma, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-
-  const contagemSeries: { [serie: string]: number } = {};
-  registrosFiltrados.forEach(r => {
-    const alunoInfo = alunosMap.get(r.student_name.trim().toLowerCase());
-    const s = alunoInfo?.ano || r.school_year || 'Sem Série';
-    contagemSeries[s] = (contagemSeries[s] || 0) + 1;
-  });
-  const seriesBreakdown = Object.entries(contagemSeries)
-    .map(([serie, count]) => ({ serie, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-
-  const recentRecords = [...registrosFiltrados]
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))
-    .slice(0, 10);
-
-  return {
-    total,
-    alunosUnicos,
-    funcionariosUnicos,
-    turmasEnvolvidas,
-    tiposBreakdown,
-    alunosBreakdown,
-    funcionariosBreakdown,
-    turmasBreakdown,
-    seriesBreakdown,
-    recentRecords
-  };
-}
-
-function obterPontosEvolucao(registrosFiltrados: OcorrenciaRegistro[], filtro: FiltroSet) {
-  const contagem: { [chave: string]: number } = {};
-
-  let formato: 'dia_mes' | 'dia_semana' | 'mes_ano' | 'data' | 'mes_ano_absoluto' = 'data';
-
-  if (filtro.tipoPeriodo === 'mes') {
-    formato = 'dia_mes'; 
-  } else if (filtro.tipoPeriodo === 'semana') {
-    formato = 'dia_semana'; 
-  } else if (filtro.tipoPeriodo === 'ano') {
-    formato = 'mes_ano'; 
-  } else if (filtro.tipoPeriodo === 'tudo') {
-    formato = 'mes_ano_absoluto';
+  if (tipo === 'hoje') {
+    prevInicio = subDays(inicioAtual, 1);
+    prevFim = subDays(fimAtual, 1);
+  } else if (tipo === 'semana') {
+    prevInicio = subDays(inicioAtual, 7);
+    prevFim = subDays(fimAtual, 7);
+  } else if (tipo === 'mes') {
+    prevInicio = subMonths(inicioAtual, 1);
+    prevFim = subMonths(fimAtual, 1);
+  } else if (tipo === 'ano') {
+    prevInicio = subYears(inicioAtual, 1);
+    prevFim = subYears(fimAtual, 1);
+  } else {
+    const diff = differenceInDays(fimAtual, inicioAtual);
+    prevInicio = subDays(inicioAtual, diff + 1);
+    prevFim = subDays(fimAtual, diff + 1);
   }
+  return { prevInicio, prevFim };
+};
 
-  registrosFiltrados.forEach(r => {
-    const dataObj = new Date(r.created_at);
-    let chave = '';
+const calculaVariacao = (atual: number, anterior: number) => {
+  if (anterior === 0) return atual > 0 ? 100 : 0;
+  return ((atual - anterior) / anterior) * 100;
+};
 
-    if (formato === 'dia_mes') {
-      chave = dataObj.getDate().toString().padStart(2, '0');
-    } else if (formato === 'dia_semana') {
-      const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-      chave = dias[dataObj.getDay()];
-    } else if (formato === 'mes_ano') {
-      chave = (dataObj.getMonth() + 1).toString().padStart(2, '0');
-    } else if (formato === 'mes_ano_absoluto') {
-      chave = `${dataObj.getFullYear()}-${(dataObj.getMonth() + 1).toString().padStart(2, '0')}`;
-    } else {
-      chave = dataObj.toISOString().split('T')[0];
-    }
-
-    contagem[chave] = (contagem[chave] || 0) + 1;
-  });
-
-  return Object.entries(contagem)
-    .map(([label, count]) => ({ label, count }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-}
-
-export default function DashboardSuper() {
+// --- COMPONENT ---
+export default function DashboardSuperBI() {
   const { profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
+  // Estados Base
   const [registros, setRegistros] = useState<OcorrenciaRegistro[]>([]);
   const [alunosMap, setAlunosMap] = useState<Map<string, AlunoCMS>>(new Map());
   const [perfis, setPerfis] = useState<any[]>([]);
   const [carregando, setCarregando] = useState(true);
-  const [atualizando, setAtualizando] = useState(false);
-
+  
+  // UI States
   const [comparacaoAtiva, setComparacaoAtiva] = useState(false);
+  const [contextoAnalise, setContextoAnalise] = useState<ContextoAnalise>('Geral');
   const [filtrosA, setFiltrosA] = useState<FiltroSet>(filtroInicial);
   const [filtrosB, setFiltrosB] = useState<FiltroSet>(filtroInicial);
 
   useEffect(() => {
     if (!authLoading && profile) {
-      if (profile.role !== 'super_admin') {
-        navigate('/');
-      } else {
-        carregarDados();
-      }
+      if (profile.role !== 'super_admin') navigate('/');
+      else carregarDados();
     }
   }, [profile, authLoading, navigate]);
 
   const carregarDados = async () => {
     try {
-      setAtualizando(true);
-
-      const { data: recs, error: errRecs } = await supabase
-        .from('daily_occurrence_records')
-        .select('*');
-      if (errRecs) throw errRecs;
-      setRegistros(recs || []);
-
-      const { data: profs, error: errProfs } = await supabase
-        .from('profiles')
-        .select('*');
-      if (errProfs) throw errProfs;
-      setPerfis(profs || []);
-
-      const { data: alunosData, error: errAlunos } = await supabase
-        .from('alunos_cms')
-        .select('nome, turma, ano');
-      if (errAlunos) throw errAlunos;
-
+      setCarregando(true);
+      const [recs, profs, alunos] = await Promise.all([
+        supabase.from('daily_occurrence_records').select('*'),
+        supabase.from('profiles').select('*'),
+        supabase.from('alunos_cms').select('nome, turma, ano')
+      ]);
+      setRegistros(recs.data || []);
+      setPerfis(profs.data || []);
+      
       const map = new Map<string, AlunoCMS>();
-      (alunosData || []).forEach(a => {
+      (alunos.data || []).forEach(a => {
         if (a.nome) map.set(a.nome.trim().toLowerCase(), a);
       });
       setAlunosMap(map);
-
-    } catch (err: any) {
-      console.error('Erro ao carregar dados:', err);
+    } catch (e) {
+      console.error(e);
     } finally {
       setCarregando(false);
-      setAtualizando(false);
     }
   };
 
+  // --- FILTRAGEM ---
   const listas = useMemo(() => {
-    const listAlunos = Array.from(new Set(registros.map(r => r.student_name.trim()))).sort();
-    
-    const listTurmasSet = new Set<string>();
-    const listSeriesAnosSet = new Set<string>();
-    const listAnoLetivoSet = new Set<string>();
+    const sAlunos = new Set<string>();
+    const sTurmas = new Set<string>();
+    const sSeries = new Set<string>();
+    const sAnosLet = new Set<string>();
+    const sTipos = new Set<string>();
     
     registros.forEach(r => {
-      const alunoInfo = alunosMap.get(r.student_name.trim().toLowerCase());
-      listTurmasSet.add(alunoInfo?.turma || 'Sem Turma');
-      const ano = alunoInfo?.ano || r.school_year || 'Sem Série';
-      listSeriesAnosSet.add(ano);
-      
-      const anoMatch = ano.match(/20\d{2}/);
-      if (anoMatch) {
-        listAnoLetivoSet.add(anoMatch[0]);
-      } else {
-        listAnoLetivoSet.add('Outros');
-      }
+      sAlunos.add(r.student_name.trim());
+      const inf = alunosMap.get(r.student_name.trim().toLowerCase());
+      sTurmas.add(inf?.turma || 'Sem Turma');
+      const ano = inf?.ano || r.school_year || 'Sem Série';
+      sSeries.add(ano);
+      const match = ano.match(/20\d{2}/);
+      sAnosLet.add(match ? match[0] : 'Outros');
+      if(r.occurrence_type) sTipos.add(r.occurrence_type.trim());
     });
-
-    const listFuncionariosSet = new Set<string>();
-    perfis.forEach(p => {
-      const isFunc = ['professor', 'monitor', 'admin', 'super_admin'].includes(p.role);
-      if (isFunc && p.full_name) {
-        listFuncionariosSet.add(p.full_name.trim());
-      }
-    });
-    registros.forEach(r => {
-      if (r.created_by) listFuncionariosSet.add(r.created_by.trim());
-    });
-
-    const listTiposRegistro = Array.from(new Set(registros.filter(r => r.occurrence_type).map(r => r.occurrence_type.trim()))).sort();
+    
+    const sFunc = new Set<string>();
+    perfis.forEach(p => p.full_name && sFunc.add(p.full_name.trim()));
+    registros.forEach(r => r.created_by && sFunc.add(r.created_by.trim()));
 
     return {
-      alunos: ['Todos', ...listAlunos],
-      turmas: ['Todos', ...Array.from(listTurmasSet).sort()],
-      seriesAnos: ['Todos', ...Array.from(listSeriesAnosSet).sort()],
-      anoLetivo: ['Todos', ...Array.from(listAnoLetivoSet).sort()],
-      funcionarios: ['Todos', ...Array.from(listFuncionariosSet).sort()],
-      tiposRegistro: ['Todos', ...listTiposRegistro],
+      alunos: ['Todos', ...Array.from(sAlunos).sort()],
+      turmas: ['Todos', ...Array.from(sTurmas).sort()],
+      series: ['Todos', ...Array.from(sSeries).sort()],
+      anosLetivos: ['Todos', ...Array.from(sAnosLet).sort()],
+      funcionarios: ['Todos', ...Array.from(sFunc).sort()],
+      tipos: ['Todos', ...Array.from(sTipos).sort()],
+      turnos: ['Todos', 'Manhã', 'Tarde', 'Noite'], // estático se n existir
+      unidades: ['Todos', 'Sede Principal'] // estático
     };
   }, [registros, alunosMap, perfis]);
 
-  const registrosFiltradosA = useMemo(() => filtrarRegistros(registros, alunosMap, filtrosA), [registros, alunosMap, filtrosA]);
-  const registrosFiltradosB = useMemo(() => comparacaoAtiva ? filtrarRegistros(registros, alunosMap, filtrosB) : [], [registros, alunosMap, filtrosB, comparacaoAtiva]);
-
-  const statsA = useMemo(() => calcularStatsParaConjunto(registrosFiltradosA, alunosMap), [registrosFiltradosA, alunosMap]);
-  const statsB = useMemo(() => calcularStatsParaConjunto(registrosFiltradosB, alunosMap), [registrosFiltradosB, alunosMap]);
-
-  const dadosGraficoComparativo = useMemo(() => {
-    const pontosA = obterPontosEvolucao(registrosFiltradosA, filtrosA);
-    const pontosB = comparacaoAtiva ? obterPontosEvolucao(registrosFiltradosB, filtrosB) : [];
-
-    const chavesSet = new Set<string>();
-    pontosA.forEach(p => chavesSet.add(p.label));
-    pontosB.forEach(p => chavesSet.add(p.label));
-    
-    const labelsOrdenados = Array.from(chavesSet).sort((a, b) => {
-      if (!isNaN(Number(a)) && !isNaN(Number(b))) {
-        return Number(a) - Number(b);
-      }
-      const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-      const idxA = dias.indexOf(a);
-      const idxB = dias.indexOf(b);
-      if (idxA !== -1 && idxB !== -1) {
-        return idxA - idxB;
-      }
-      return a.localeCompare(b);
+  const aplicarFiltro = (filtro: FiltroSet, targetPeriod: {inicio: Date, fim: Date}) => {
+    return registros.filter(r => {
+      const d = new Date(r.created_at);
+      if (d < targetPeriod.inicio || d > targetPeriod.fim) return false;
+      
+      const inf = alunosMap.get(r.student_name.trim().toLowerCase());
+      const turma = inf?.turma || 'Sem Turma';
+      const serie = inf?.ano || r.school_year || 'Sem Ano';
+      
+      if (filtro.serieAno !== 'Todos' && serie !== filtro.serieAno) return false;
+      if (filtro.turma !== 'Todos' && turma !== filtro.turma) return false;
+      if (filtro.aluno !== 'Todos' && r.student_name.trim() !== filtro.aluno) return false;
+      if (filtro.funcionario !== 'Todos' && r.created_by?.trim() !== filtro.funcionario) return false;
+      if (filtro.tipoOcorrencia !== 'Todos' && r.occurrence_type?.trim() !== filtro.tipoOcorrencia) return false;
+      if (filtro.anoLetivo !== 'Todos' && !serie.includes(filtro.anoLetivo)) return false;
+      
+      return true;
     });
-
-    return labelsOrdenados.map(label => {
-      const countA = pontosA.find(p => p.label === label)?.count || 0;
-      const countB = pontosB.find(p => p.label === label)?.count || 0;
-      return { label, countA, countB };
-    });
-  }, [registrosFiltradosA, registrosFiltradosB, filtrosA, filtrosB, comparacaoAtiva]);
-
-  const updateFiltro = (setFunc: React.Dispatch<React.SetStateAction<FiltroSet>>, key: keyof FiltroSet, value: any) => {
-    setFunc(prev => ({ ...prev, [key]: value }));
   };
 
-  const renderFiltrosColuna = (filtro: FiltroSet, setFiltro: React.Dispatch<React.SetStateAction<FiltroSet>>, titulo: string, corLabel: string) => (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div className={`text-sm font-black uppercase tracking-widest ${corLabel} flex items-center gap-2`}>
-          <Filter size={14} /> {titulo}
-        </div>
-        <button 
-          onClick={() => setFiltro(filtroInicial)}
-          className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant hover:text-white transition-colors flex items-center gap-1.5 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 rounded-lg active:scale-95"
-        >
-          <RefreshCw size={10} /> Limpar
-        </button>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Período</label>
-          <select 
-            value={filtro.tipoPeriodo} 
-            onChange={(e) => updateFiltro(setFiltro, 'tipoPeriodo', e.target.value)}
-            className="w-full bg-surface-container border border-white/5 rounded-xl px-3 py-2 text-sm text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all"
-          >
-            <option value="tudo">Todo o Período</option>
-            <option value="dia">Um Único Dia</option>
-            <option value="semana">Semana</option>
-            <option value="mes">Mês</option>
-            <option value="ano">Ano</option>
-            <option value="personalizado">Personalizado</option>
-          </select>
-        </div>
+  const perA = useMemo(() => getPeriodoDatas(filtrosA.tipoPeriodo, filtrosA.dataInicio, filtrosA.dataFim), [filtrosA]);
+  const perAPrev = useMemo(() => getPeriodoAnterior(filtrosA.tipoPeriodo, perA.inicio, perA.fim), [filtrosA, perA]);
+  const perB = useMemo(() => getPeriodoDatas(filtrosB.tipoPeriodo, filtrosB.dataInicio, filtrosB.dataFim), [filtrosB]);
 
-        {filtro.tipoPeriodo === 'dia' && (
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Data</label>
-            <input 
-              type="date" 
-              value={filtro.dataDia} 
-              onChange={(e) => updateFiltro(setFiltro, 'dataDia', e.target.value)}
-              className="w-full bg-surface-container border border-white/5 rounded-xl px-3 py-2 text-sm text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all [color-scheme:dark]"
-            />
-          </div>
-        )}
-        {filtro.tipoPeriodo === 'semana' && (
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Qualquer dia da Semana</label>
-            <input 
-              type="date" 
-              value={filtro.dataSemana} 
-              onChange={(e) => updateFiltro(setFiltro, 'dataSemana', e.target.value)}
-              className="w-full bg-surface-container border border-white/5 rounded-xl px-3 py-2 text-sm text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all [color-scheme:dark]"
-            />
-          </div>
-        )}
-        {filtro.tipoPeriodo === 'mes' && (
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Mês</label>
-            <input 
-              type="month" 
-              value={filtro.dataMes} 
-              onChange={(e) => updateFiltro(setFiltro, 'dataMes', e.target.value)}
-              className="w-full bg-surface-container border border-white/5 rounded-xl px-3 py-2 text-sm text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all [color-scheme:dark]"
-            />
-          </div>
-        )}
-        {filtro.tipoPeriodo === 'ano' && (
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Ano</label>
-            <input 
-              type="number" 
-              min="2000" max="2100"
-              value={filtro.dataAno} 
-              onChange={(e) => updateFiltro(setFiltro, 'dataAno', e.target.value)}
-              className="w-full bg-surface-container border border-white/5 rounded-xl px-3 py-2 text-sm text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all"
-            />
-          </div>
-        )}
-        {filtro.tipoPeriodo === 'personalizado' && (
-          <>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Início</label>
-              <input 
-                type="date" 
-                value={filtro.dataInicio} 
-                onChange={(e) => updateFiltro(setFiltro, 'dataInicio', e.target.value)}
-                className="w-full bg-surface-container border border-white/5 rounded-xl px-3 py-2 text-sm text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all [color-scheme:dark]"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Fim</label>
-              <input 
-                type="date" 
-                value={filtro.dataFim} 
-                onChange={(e) => updateFiltro(setFiltro, 'dataFim', e.target.value)}
-                className="w-full bg-surface-container border border-white/5 rounded-xl px-3 py-2 text-sm text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all [color-scheme:dark]"
-              />
-            </div>
-          </>
-        )}
+  const regA = useMemo(() => aplicarFiltro(filtrosA, perA), [registros, filtrosA, perA, alunosMap]);
+  const regAPrev = useMemo(() => aplicarFiltro(filtrosA, perAPrev), [registros, filtrosA, perAPrev, alunosMap]);
+  const regB = useMemo(() => comparacaoAtiva ? aplicarFiltro(filtrosB, perB) : [], [registros, filtrosB, perB, alunosMap, comparacaoAtiva]);
 
-        {/* Demais Filtros */}
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Ano Letivo</label>
-          <select value={filtro.anoLetivo} onChange={(e) => updateFiltro(setFiltro, 'anoLetivo', e.target.value)} className="w-full bg-surface-container border border-white/5 rounded-xl px-3 py-2 text-sm text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all">
-            {listas.anoLetivo.map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
+  // --- MOTOR DE DADOS (KPIs) ---
+  const calcularKPIs = (atuais: OcorrenciaRegistro[], passados: OcorrenciaRegistro[], diasDiff: number) => {
+    const total = atuais.length;
+    const prevTotal = passados.length;
+    const varTotal = calculaVariacao(total, prevTotal);
+    
+    const alunosSet = new Set(atuais.map(r => r.student_name.toLowerCase()));
+    const prevAlunos = new Set(passados.map(r => r.student_name.toLowerCase()));
+    const varAlunos = calculaVariacao(alunosSet.size, prevAlunos.size);
+
+    const funcSet = new Set(atuais.filter(r => r.created_by).map(r => r.created_by!.toLowerCase()));
+    const turmasSet = new Set(atuais.map(r => alunosMap.get(r.student_name.toLowerCase())?.turma || 'Sem Turma'));
+    
+    const resolvidas = atuais.filter(r => r.tratada).length;
+    const varResolvidas = calculaVariacao(resolvidas, passados.filter(r => r.tratada).length);
+
+    const reincidenciasCount = atuais.reduce((acc, r) => {
+      const nome = r.student_name.toLowerCase();
+      acc[nome] = (acc[nome] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    const reincidentes = Object.values(reincidenciasCount).filter(v => v > 1).length;
+
+    const mediaDia = total / Math.max(diasDiff, 1);
+    const mediaSemana = mediaDia * 7;
+
+    return { 
+      total, varTotal, alunosEnvolvidos: alunosSet.size, varAlunos,
+      funcEnvolvidos: funcSet.size, turmas: turmasSet.size,
+      resolvidas, varResolvidas, reincidentes, mediaDia, mediaSemana
+    };
+  };
+
+  const diasA = Math.max(differenceInDays(perA.fim, perA.inicio), 1);
+  const kpisA = useMemo(() => calcularKPIs(regA, regAPrev, diasA), [regA, regAPrev, diasA]);
+  
+  const diasB = Math.max(differenceInDays(perB.fim, perB.inicio), 1);
+  const kpisB = useMemo(() => calcularKPIs(regB, [], diasB), [regB, diasB]);
+
+  // --- COMPUTAÇÃO GRÁFICA ---
+  const graficoEvolucao = useMemo(() => {
+    // Agrupa dados temporalmente para o gráfico principal
+    const mapa = new Map<string, { label: string, date: Date, A: number, B: number }>();
+    
+    const preenche = (regs: OcorrenciaRegistro[], field: 'A'|'B', refPer: {inicio: Date, fim: Date}) => {
+      regs.forEach(r => {
+        const d = new Date(r.created_at);
+        let key = ''; let lbl = '';
+        if (differenceInDays(refPer.fim, refPer.inicio) <= 31) {
+          key = format(d, 'yyyy-MM-dd'); lbl = format(d, 'dd/MM');
+        } else if (differenceInDays(refPer.fim, refPer.inicio) <= 90) {
+          key = format(startOfWeek(d), 'yyyy-MM-dd'); lbl = 'Sem ' + format(startOfWeek(d), 'dd/MM');
+        } else {
+          key = format(d, 'yyyy-MM'); lbl = format(d, 'MMM/yy', {locale: ptBR});
+        }
+        if(!mapa.has(key)) mapa.set(key, { label: lbl, date: d, A: 0, B: 0 });
+        mapa.get(key)![field]++;
+      });
+    };
+    
+    preenche(regA, 'A', perA);
+    if(comparacaoAtiva) preenche(regB, 'B', perB);
+    
+    const arr = Array.from(mapa.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
+    
+    // Média móvel simples (3 pontos) para A
+    arr.forEach((pt, i) => {
+      let sum = 0, count = 0;
+      for(let j=Math.max(0, i-2); j<=i; j++) { sum += arr[j].A; count++; }
+      (pt as any).MovelA = count > 0 ? Number((sum/count).toFixed(1)) : 0;
+    });
+    return arr;
+  }, [regA, regB, comparacaoAtiva, perA, perB]);
+
+  const gerarRosca = (regs: OcorrenciaRegistro[], keyFn: (r: OcorrenciaRegistro)=>string) => {
+    const cont: Record<string, number> = {};
+    regs.forEach(r => { const k = keyFn(r); cont[k] = (cont[k] || 0) + 1; });
+    return Object.entries(cont).map(([name, value]) => ({name, value})).sort((a,b)=>b.value - a.value).slice(0, 5);
+  };
+  
+  const roscaTipos = useMemo(() => gerarRosca(regA, r => r.occurrence_type || 'N/A'), [regA]);
+  const roscaSeries = useMemo(() => gerarRosca(regA, r => alunosMap.get(r.student_name.toLowerCase())?.ano || r.school_year || 'N/A'), [regA, alunosMap]);
+  
+  // Heatmap: Dia da Semana x Turno (Manhã 6-12, Tarde 12-18, Noite 18-23)
+  const heatmapData = useMemo(() => {
+    const matrix = Array(7).fill(0).map(() => [0, 0, 0]); // 7 dias, 3 turnos
+    regA.forEach(r => {
+      const d = new Date(r.created_at);
+      const dia = getDay(d);
+      const hr = getHours(d);
+      let turno = hr < 12 ? 0 : hr < 18 ? 1 : 2;
+      matrix[dia][turno]++;
+    });
+    return matrix;
+  }, [regA]);
+
+  // --- INSIGHTS ---
+  const insights = useMemo(() => {
+    const msgs: { tipo: 'success'|'danger'|'warning'|'info', text: string }[] = [];
+    if (kpisA.varTotal > 20) msgs.push({ tipo: 'danger', text: `Crescimento alarmante de ${kpisA.varTotal.toFixed(0)}% no volume de ocorrências em relação ao período anterior.` });
+    if (kpisA.varTotal < -10) msgs.push({ tipo: 'success', text: `Excelente redução de ${Math.abs(kpisA.varTotal).toFixed(0)}% nas ocorrências no período atual.` });
+    
+    if (kpisA.reincidentes > (kpisA.alunosEnvolvidos * 0.3)) msgs.push({ tipo: 'warning', text: `Atenção: Mais de 30% dos alunos envolvidos são reincidentes.` });
+    
+    if (roscaTipos.length > 0) msgs.push({ tipo: 'info', text: `A ocorrência mais comum é '${roscaTipos[0].name}', representando a maior parte dos registros.` });
+    
+    return msgs;
+  }, [kpisA, roscaTipos]);
+
+  // --- RENDER HELPERS ---
+  const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#8B5CF6', '#EC4899', '#64748B'];
+
+  const renderKPI = (title: string, valA: number, varA: number, valB: number|null, icon: any, color: string) => {
+    const isPos = varA >= 0;
+    const isGood = color === 'green' ? isPos : !isPos; // depende da métrica
+    
+    return (
+      <div className="bg-[#111827] border border-[#2D3748] p-5 rounded-2xl hover:bg-[#1F2937] transition-all shadow-lg flex flex-col justify-between group">
+        <div className="flex justify-between items-start mb-2">
+          <p className="text-[#9CA3AF] text-[11px] font-bold uppercase tracking-wider">{title}</p>
+          <div className="p-2 bg-[#1F2937] rounded-lg text-white group-hover:scale-110 transition-transform">{icon}</div>
         </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Série / Ano</label>
-          <select value={filtro.serieAno} onChange={(e) => updateFiltro(setFiltro, 'serieAno', e.target.value)} className="w-full bg-surface-container border border-white/5 rounded-xl px-3 py-2 text-sm text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all">
-            {listas.seriesAnos.map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Turma</label>
-          <select value={filtro.turma} onChange={(e) => updateFiltro(setFiltro, 'turma', e.target.value)} className="w-full bg-surface-container border border-white/5 rounded-xl px-3 py-2 text-sm text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all">
-            {listas.turmas.map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Funcionário</label>
-          <select value={filtro.funcionario} onChange={(e) => updateFiltro(setFiltro, 'funcionario', e.target.value)} className="w-full bg-surface-container border border-white/5 rounded-xl px-3 py-2 text-sm text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all">
-            {listas.funcionarios.map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Aluno</label>
-          <select value={filtro.aluno} onChange={(e) => updateFiltro(setFiltro, 'aluno', e.target.value)} className="w-full bg-surface-container border border-white/5 rounded-xl px-3 py-2 text-sm text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all">
-            {listas.alunos.map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Tipo de Ocorrência</label>
-          <select value={filtro.tipoOcorrencia} onChange={(e) => updateFiltro(setFiltro, 'tipoOcorrencia', e.target.value)} className="w-full bg-surface-container border border-white/5 rounded-xl px-3 py-2 text-sm text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all">
-            {listas.tiposRegistro.map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
+        <div className="flex items-end justify-between">
+          <div>
+            <h3 className="text-3xl font-black text-white">{valA.toLocaleString('pt-BR')}</h3>
+            {valB !== null && (
+              <span className="text-xs text-[#8B5CF6] font-bold mt-1 block">vs {valB.toLocaleString()} (B)</span>
+            )}
+          </div>
+          {!comparacaoAtiva && (
+            <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${isGood ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+              {isPos ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>}
+              {Math.abs(varA).toFixed(1)}%
+            </div>
+          )}
         </div>
       </div>
+    );
+  };
+
+  const InputFilter = ({label, val, setFn, options}: any) => (
+    <div className="space-y-1">
+      <label className="text-[10px] text-[#9CA3AF] font-bold uppercase tracking-widest">{label}</label>
+      <select value={val} onChange={e => setFn(e.target.value)} className="w-full bg-[#111827] border border-[#2D3748] text-white text-xs px-3 py-2 rounded-xl focus:ring-1 focus:ring-blue-500 outline-none">
+        {options.map((o: string) => <option key={o} value={o}>{o}</option>)}
+      </select>
     </div>
   );
 
-  const renderMetricCard = (icon: React.ReactNode, label: string, valA: number, valB: number | null, colorClass: string) => {
-    const bgClass = colorClass.replace('text-', 'bg-');
-    return (
-      <div className={`bg-surface-container-low p-6 rounded-[2rem] border border-white/5 hover:border-${colorClass.split('-')[1]}-500/30 transition-all relative overflow-hidden group`}>
-        <div className={`absolute top-0 right-0 w-32 h-32 opacity-[0.05] rounded-full blur-3xl group-hover:opacity-15 transition-opacity ${bgClass}`} />
-        <div className={`absolute -bottom-4 -left-4 w-24 h-24 opacity-[0.03] rounded-full blur-2xl group-hover:opacity-10 transition-opacity ${bgClass}`} />
-        <div className="flex justify-between items-start mb-4 relative z-10">
-          <div className={`p-3.5 rounded-2xl ${bgClass.replace('400', '500/10')} text-white shadow-lg shadow-black/20`}>
-            {icon}
-          </div>
-        </div>
-        <div className="relative z-10">
-          <p className="text-[11px] font-black text-on-surface-variant uppercase tracking-widest mb-1">{label}</p>
-          <div className="flex items-end gap-3 mt-1">
-            <h3 className={`text-4xl font-black ${colorClass}`}>{valA.toLocaleString('pt-BR')}</h3>
-            {valB !== null && (
-              <div className="flex items-center gap-2 mb-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
-                <span className="text-xs font-bold text-on-surface-variant">vs</span>
-                <span className="text-lg font-bold text-amber-400">{valB.toLocaleString('pt-BR')}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderBreakdownList = (title: string, dataA: any[], dataB: any[] | null, labelKey: string, baseColor: 'cyan' | 'purple' | 'amber' | 'emerald' | 'rose' = 'cyan') => {
-    const colorMap = {
-      cyan: { text: 'text-cyan-400', bg: 'bg-cyan-400/10', borderHover: 'hover:border-cyan-500/30' },
-      purple: { text: 'text-purple-400', bg: 'bg-purple-400/10', borderHover: 'hover:border-purple-500/30' },
-      amber: { text: 'text-amber-400', bg: 'bg-amber-400/10', borderHover: 'hover:border-amber-500/30' },
-      emerald: { text: 'text-emerald-400', bg: 'bg-emerald-400/10', borderHover: 'hover:border-emerald-500/30' },
-      rose: { text: 'text-rose-400', bg: 'bg-rose-400/10', borderHover: 'hover:border-rose-500/30' }
-    };
-    const theme = colorMap[baseColor];
-
-    return (
-      <div className={`bg-surface-container-low p-5 rounded-[2rem] border border-white/5 ${theme.borderHover} transition-colors space-y-4 flex flex-col h-full relative overflow-hidden group`}>
-        <div className={`absolute top-0 right-0 w-32 h-32 opacity-[0.02] rounded-full blur-3xl group-hover:opacity-10 transition-opacity ${theme.bg.replace('/10', '')}`} />
-        <h3 className={`text-xs font-black text-white uppercase tracking-widest border-b border-white/5 pb-2 relative z-10`}>
-          {title}
-        </h3>
-        {comparacaoAtiva ? (
-          <div className="flex gap-4 flex-1 relative z-10">
-            <div className="flex-1 space-y-3">
-              <div className={`text-[10px] font-bold ${theme.text} uppercase tracking-widest mb-2`}>Filtros A</div>
-              {dataA.length === 0 ? <p className="text-xs text-on-surface-variant">Sem dados</p> : dataA.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center text-xs">
-                  <span className="text-white truncate pr-2 max-w-[120px]" title={item[labelKey]}>{item[labelKey]}</span>
-                  <span className={`font-bold ${theme.text} ${theme.bg} px-2 py-0.5 rounded-full`}>{item.count}</span>
-                </div>
-              ))}
+  return (
+    <div className="min-h-screen bg-[#0B0F14] text-white pb-20 font-sans selection:bg-blue-500/30">
+      
+      {/* HEADER & GLOBAL ACTIONS */}
+      <header className="border-b border-[#2D3748] bg-[#111827]/50 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-[1600px] mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Activity size={20} className="text-white" />
             </div>
-            <div className="w-px bg-white/5" />
-            <div className="flex-1 space-y-3">
-              <div className="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-2">Filtros B</div>
-              {dataB?.length === 0 ? <p className="text-xs text-on-surface-variant">Sem dados</p> : dataB?.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center text-xs">
-                  <span className="text-white truncate pr-2 max-w-[120px]" title={item[labelKey]}>{item[labelKey]}</span>
-                  <span className="font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">{item.count}</span>
-                </div>
-              ))}
+            <div>
+              <h1 className="text-xl font-black tracking-tight">Business Intelligence</h1>
+              <p className="text-xs text-[#9CA3AF]">Motor de Análise Avançada</p>
             </div>
           </div>
-        ) : (
-          <div className="space-y-3 flex-1 relative z-10">
-            {dataA.length === 0 ? <p className="text-xs text-on-surface-variant">Nenhum dado encontrado</p> : dataA.map((item, idx) => (
-              <div key={idx} className="flex justify-between items-center text-sm p-2 rounded-xl bg-surface-container/50 hover:bg-surface-container transition-colors">
-                <span className="text-white font-medium truncate pr-2">{item[labelKey]}</span>
-                <span className={`font-bold ${theme.text} ${theme.bg} px-3 py-1 rounded-full`}>{item.count} registros</span>
-              </div>
+          
+          <div className="flex items-center gap-3 bg-[#111827] p-1.5 rounded-xl border border-[#2D3748]">
+            {['Geral', 'Turma', 'Aluno', 'Funcionário', 'Tipo de Ocorrência'].map(ctx => (
+              <button 
+                key={ctx} 
+                onClick={() => setContextoAnalise(ctx as ContextoAnalise)}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${contextoAnalise === ctx ? 'bg-blue-600 text-white shadow-md' : 'text-[#9CA3AF] hover:text-white hover:bg-[#1F2937]'}`}
+              >
+                {ctx}
+              </button>
             ))}
           </div>
-        )}
-      </div>
-    );
-  };
-
-  if (carregando) {
-    return (
-      <div className="min-h-screen bg-surface flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-bold text-cyan-400 uppercase tracking-widest animate-pulse">Carregando Inteligência...</p>
         </div>
-      </div>
-    );
-  }
+      </header>
 
-  const maxCountGrafico = Math.max(...dadosGraficoComparativo.map(d => Math.max(d.countA, d.countB)), 1);
-
-  const formatLabel = (label: string) => {
-    if (label.match(/^\d{4}-\d{2}$/)) {
-      const [y, m] = label.split('-');
-      const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-      return `${meses[parseInt(m) - 1]} ${y.slice(2)}`;
-    }
-    return label;
-  };
-
-  return (
-    <div className="min-h-screen bg-surface pb-24 md:pb-6 relative overflow-x-hidden">
-      
-      {/* Header */}
-      <div className="relative pt-12 pb-6 px-6 md:px-12 border-b border-white/5">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[150%] bg-cyan-500/5 blur-[120px] rounded-full" />
-          <div className="absolute top-[20%] -right-[10%] w-[40%] h-[120%] bg-purple-500/5 blur-[120px] rounded-full" />
-        </div>
+      <main className="max-w-[1600px] mx-auto px-6 py-8 space-y-8">
         
-        <div className="relative max-w-7xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[10px] font-black uppercase tracking-widest mb-4">
-              <Activity size={12} /> Exclusivo Super Admin
+        {/* GLOBAL FILTERS PANEL */}
+        <section className="bg-[#111827] border border-[#2D3748] rounded-3xl p-5 shadow-2xl">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-sm font-bold flex items-center gap-2 text-[#E5E7EB]"><Filter size={16}/> Filtros Globais</h2>
+            <div className="flex gap-3">
+              <button onClick={() => setComparacaoAtiva(!comparacaoAtiva)} className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-bold border transition-colors ${comparacaoAtiva ? 'bg-[#8B5CF6]/20 border-[#8B5CF6]/50 text-[#C4B5FD]' : 'bg-[#1F2937] border-[#2D3748] text-[#9CA3AF] hover:text-white'}`}>
+                {comparacaoAtiva ? <Columns size={14}/> : <LayoutDashboard size={14}/>} 
+                Modo Comparação
+              </button>
+              <button onClick={() => {setFiltrosA(filtroInicial); setFiltrosB(filtroInicial);}} className="text-[#9CA3AF] hover:text-white text-xs font-bold px-3 py-1.5 rounded-xl hover:bg-[#1F2937] transition-all">Limpar</button>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
-              Dashboard de <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">Inteligência</span>
-            </h1>
-            <p className="text-on-surface-variant mt-2 max-w-2xl text-sm leading-relaxed">
-              Análise avançada, unificada e comparativa de todos os registros da instituição.
-            </p>
           </div>
-          
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={carregarDados}
-              disabled={atualizando}
-              className="px-5 py-3 rounded-2xl bg-surface-container-low hover:bg-surface-container border border-white/5 text-white text-sm font-bold flex items-center gap-2 transition-all active:scale-95 group"
-            >
-              <RefreshCw size={16} className={cn("text-cyan-400 group-hover:rotate-180 transition-transform duration-500", atualizando && "animate-spin")} />
-              {atualizando ? 'Atualizando...' : 'Atualizar'}
-            </button>
-          </div>
-        </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-12 py-8 space-y-8">
-        
-        {/* Painel de Filtros Unificado */}
-        <div className="bg-surface-container-low/50 backdrop-blur-xl border border-white/5 rounded-[2rem] p-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 pb-6 border-b border-white/5">
-            <div>
-              <h2 className="text-lg font-black text-white flex items-center gap-3">
-                <Filter className="text-cyan-400" size={20} /> Painel de Filtros
-              </h2>
-              <p className="text-xs text-on-surface-variant mt-1">Refine a busca ou ative a comparação de períodos e entidades.</p>
-            </div>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 relative">
+            {comparacaoAtiva && <div className="absolute left-1/2 top-0 bottom-0 w-px bg-[#2D3748] hidden xl:block -translate-x-1/2" />}
             
-            <button 
-              onClick={() => setComparacaoAtiva(!comparacaoAtiva)}
-              className={cn(
-                "px-6 py-3 rounded-2xl border text-sm font-bold flex items-center gap-3 transition-all",
-                comparacaoAtiva 
-                  ? "bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.1)]" 
-                  : "bg-surface-container border-white/10 text-on-surface-variant hover:bg-white/5"
-              )}
-            >
-              {comparacaoAtiva ? <ToggleRight size={20} className="animate-pulse" /> : <ToggleLeft size={20} />}
-              {comparacaoAtiva ? 'Comparação Ativada' : 'Ativar Comparação (A × B)'}
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 transition-all">
-            {/* Lado A */}
+            {/* LADO A */}
             <div className="space-y-4">
-              {renderFiltrosColuna(filtrosA, setFiltrosA, 'Análise Principal (A)', 'text-cyan-400')}
+              {comparacaoAtiva && <h3 className="text-xs font-bold text-blue-400 uppercase tracking-widest bg-blue-500/10 inline-block px-3 py-1 rounded-lg">Filtro A (Principal)</h3>}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <InputFilter label="Período" val={filtrosA.tipoPeriodo} setFn={(v:any)=>setFiltrosA({...filtrosA, tipoPeriodo: v})} options={['hoje','semana','mes','ano','tudo']}/>
+                <InputFilter label="Ano Let." val={filtrosA.anoLetivo} setFn={(v:any)=>setFiltrosA({...filtrosA, anoLetivo: v})} options={listas.anosLetivos}/>
+                <InputFilter label="Série/Ano" val={filtrosA.serieAno} setFn={(v:any)=>setFiltrosA({...filtrosA, serieAno: v})} options={listas.series}/>
+                <InputFilter label="Turma" val={filtrosA.turma} setFn={(v:any)=>setFiltrosA({...filtrosA, turma: v})} options={listas.turmas}/>
+                <InputFilter label="Aluno" val={filtrosA.aluno} setFn={(v:any)=>setFiltrosA({...filtrosA, aluno: v})} options={listas.alunos}/>
+                <InputFilter label="Funcionário" val={filtrosA.funcionario} setFn={(v:any)=>setFiltrosA({...filtrosA, funcionario: v})} options={listas.funcionarios}/>
+                <InputFilter label="Tipo Ocorrência" val={filtrosA.tipoOcorrencia} setFn={(v:any)=>setFiltrosA({...filtrosA, tipoOcorrencia: v})} options={listas.tipos}/>
+                <InputFilter label="Turno" val={filtrosA.turno} setFn={(v:any)=>setFiltrosA({...filtrosA, turno: v})} options={listas.turnos}/>
+              </div>
             </div>
 
-            {/* Lado B */}
+            {/* LADO B */}
             {comparacaoAtiva && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-right-8 duration-500">
-                {renderFiltrosColuna(filtrosB, setFiltrosB, 'Comparação (B)', 'text-amber-400')}
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold text-[#8B5CF6] uppercase tracking-widest bg-[#8B5CF6]/10 inline-block px-3 py-1 rounded-lg">Filtro B (Comparação)</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <InputFilter label="Período" val={filtrosB.tipoPeriodo} setFn={(v:any)=>setFiltrosB({...filtrosB, tipoPeriodo: v})} options={['hoje','semana','mes','ano','tudo']}/>
+                  <InputFilter label="Ano Let." val={filtrosB.anoLetivo} setFn={(v:any)=>setFiltrosB({...filtrosB, anoLetivo: v})} options={listas.anosLetivos}/>
+                  <InputFilter label="Série/Ano" val={filtrosB.serieAno} setFn={(v:any)=>setFiltrosB({...filtrosB, serieAno: v})} options={listas.series}/>
+                  <InputFilter label="Turma" val={filtrosB.turma} setFn={(v:any)=>setFiltrosB({...filtrosB, turma: v})} options={listas.turmas}/>
+                  <InputFilter label="Aluno" val={filtrosB.aluno} setFn={(v:any)=>setFiltrosB({...filtrosB, aluno: v})} options={listas.alunos}/>
+                  <InputFilter label="Funcionário" val={filtrosB.funcionario} setFn={(v:any)=>setFiltrosB({...filtrosB, funcionario: v})} options={listas.funcionarios}/>
+                  <InputFilter label="Tipo Ocorrência" val={filtrosB.tipoOcorrencia} setFn={(v:any)=>setFiltrosB({...filtrosB, tipoOcorrencia: v})} options={listas.tipos}/>
+                  <InputFilter label="Turno" val={filtrosB.turno} setFn={(v:any)=>setFiltrosB({...filtrosB, turno: v})} options={listas.turnos}/>
+                </div>
               </div>
             )}
           </div>
-        </div>
+        </section>
 
-        {/* Estatísticas Consolidadas */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {renderMetricCard(<FileText size={20} />, "Total de Registros", statsA.total, comparacaoAtiva ? statsB.total : null, "text-cyan-400")}
-          {renderMetricCard(<Users size={20} />, "Alunos Envolvidos", statsA.alunosUnicos, comparacaoAtiva ? statsB.alunosUnicos : null, "text-purple-400")}
-          {renderMetricCard(<UserCheck size={20} />, "Colaboradores", statsA.funcionariosUnicos, comparacaoAtiva ? statsB.funcionariosUnicos : null, "text-emerald-400")}
-          {renderMetricCard(<BookOpen size={20} />, "Turmas", statsA.turmasEnvolvidas, comparacaoAtiva ? statsB.turmasEnvolvidas : null, "text-rose-400")}
-        </div>
-
-        {/* Gráfico Temporal */}
-        <div className="bg-surface-container-low p-6 md:p-8 rounded-[2rem] border border-white/5">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-            <div>
-              <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-                <Activity size={16} className="text-cyan-400" /> Evolução Temporal
-              </h3>
-              <p className="text-xs text-on-surface-variant mt-1">Acompanhamento de registros com base no período selecionado.</p>
-            </div>
-            {comparacaoAtiva && (
-              <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest bg-surface-container px-4 py-2 rounded-full border border-white/5">
-                <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-cyan-400"></div> Filtros A</span>
-                <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-400"></div> Filtros B</span>
+        {/* INSIGHTS SMART PANEL */}
+        {insights.length > 0 && (
+          <section className="flex flex-col md:flex-row gap-4">
+            {insights.map((ins, i) => (
+              <div key={i} className={`flex-1 flex items-start gap-3 p-4 rounded-2xl border ${
+                ins.tipo === 'danger' ? 'bg-rose-500/5 border-rose-500/20 text-rose-300' :
+                ins.tipo === 'success' ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-300' :
+                ins.tipo === 'warning' ? 'bg-amber-500/5 border-amber-500/20 text-amber-300' :
+                'bg-blue-500/5 border-blue-500/20 text-blue-300'
+              }`}>
+                {ins.tipo === 'danger' && <Flame size={18} className="mt-0.5" />}
+                {ins.tipo === 'success' && <Target size={18} className="mt-0.5" />}
+                {ins.tipo === 'warning' && <AlertTriangle size={18} className="mt-0.5" />}
+                {ins.tipo === 'info' && <Zap size={18} className="mt-0.5" />}
+                <p className="text-sm font-medium leading-relaxed">{ins.text}</p>
               </div>
-            )}
+            ))}
+          </section>
+        )}
+
+        {/* KPIs */}
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          {renderKPI("Total Ocorrências", kpisA.total, kpisA.varTotal, comparacaoAtiva ? kpisB.total : null, <FileText size={18}/>, "red")}
+          {renderKPI("Alunos Envolvidos", kpisA.alunosEnvolvidos, kpisA.varAlunos, comparacaoAtiva ? kpisB.alunosEnvolvidos : null, <Users size={18}/>, "red")}
+          {renderKPI("Reincidências", kpisA.reincidentes, 0, comparacaoAtiva ? kpisB.reincidentes : null, <TrendingUp size={18}/>, "orange")}
+          {renderKPI("Ocorr. Resolvidas", kpisA.resolvidas, kpisA.varResolvidas, comparacaoAtiva ? kpisB.resolvidas : null, <Shield size={18}/>, "green")}
+        </section>
+
+        {/* CHARTS GRID */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* EVOLUTION CHART */}
+          <div className="lg:col-span-2 bg-[#111827] border border-[#2D3748] rounded-3xl p-6 shadow-xl">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2"><Activity size={16} className="text-blue-500"/> Evolução e Média Móvel</h3>
+                <p className="text-xs text-[#9CA3AF] mt-1">Análise temporal das ocorrências com linha de tendência de 3 dias.</p>
+              </div>
+            </div>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={graficoEvolucao} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorA" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorB" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" vertical={false} />
+                  <XAxis dataKey="label" stroke="#4B5563" fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                  <YAxis stroke="#4B5563" fontSize={10} tickLine={false} axisLine={false} />
+                  <RechartsTooltip 
+                    contentStyle={{ backgroundColor: '#111827', borderColor: '#2D3748', borderRadius: '12px', color: '#fff', fontSize: '12px' }}
+                    itemStyle={{ color: '#fff' }} cursor={{ stroke: '#374151', strokeWidth: 1, strokeDasharray: '4 4' }}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                  
+                  <Area type="monotone" dataKey="A" name="Volume (A)" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorA)" />
+                  {!comparacaoAtiva && <Line type="monotone" dataKey="MovelA" name="Média Móvel (3d)" stroke="#F59E0B" strokeWidth={2} dot={false} strokeDasharray="4 4" />}
+                  {comparacaoAtiva && <Area type="monotone" dataKey="B" name="Volume (B)" stroke="#8B5CF6" strokeWidth={3} fillOpacity={1} fill="url(#colorB)" />}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
-          <div className="w-full h-[300px] md:h-[400px] relative">
-            {dadosGraficoComparativo.length === 0 ? (
-              <div className="absolute inset-0 flex items-center justify-center text-sm text-on-surface-variant font-medium">
-                Nenhum dado encontrado para gerar o gráfico.
+          {/* DONUT CHART */}
+          <div className="bg-[#111827] border border-[#2D3748] rounded-3xl p-6 shadow-xl flex flex-col">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-2"><PieChart size={16} className="text-emerald-500"/> Distribuição</h3>
+            <p className="text-xs text-[#9CA3AF] mb-6">Proporção por Tipos de Ocorrência (Filtro A).</p>
+            <div className="flex-1 min-h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <Pie data={roscaTipos} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={5} dataKey="value" stroke="none">
+                    {roscaTipos.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                  </Pie>
+                  <RechartsTooltip contentStyle={{ backgroundColor: '#111827', borderColor: '#2D3748', borderRadius: '12px', fontSize: '12px' }} itemStyle={{ color: '#fff' }} />
+                  <Legend layout="vertical" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '11px', color: '#9CA3AF' }} />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* HEATMAP */}
+          <div className="lg:col-span-3 bg-[#111827] border border-[#2D3748] rounded-3xl p-6 shadow-xl">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2"><Calendar size={16} className="text-rose-500"/> Mapa de Calor (Dia x Turno)</h3>
+                <p className="text-xs text-[#9CA3AF] mt-1">Concentração de eventos por dia da semana e período do dia (Filtro A).</p>
               </div>
-            ) : (
-              <svg viewBox="0 0 1000 300" className="w-full h-auto overflow-visible drop-shadow-xl">
-                <defs>
-                  <linearGradient id="gradA" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.4" />
-                    <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
-                  </linearGradient>
-                  <linearGradient id="gradB" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.4" />
-                    <stop offset="100%" stopColor="#fbbf24" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-
-                {/* Eixo Y */}
-                <line x1="60" y1="20" x2="60" y2="260" stroke="currentColor" className="text-white/10" strokeWidth="2" />
-                {[0, 0.25, 0.5, 0.75, 1].map(pct => {
-                  const y = 20 + (pct * 240);
-                  return (
-                    <g key={pct}>
-                      <line x1="60" y1={y} x2="960" y2={y} stroke="currentColor" className="text-white/10" strokeDasharray="6 6" />
-                      <text x="50" y={y} fill="currentColor" className="text-on-surface-variant text-[12px] font-medium" textAnchor="end" dominantBaseline="middle">
-                        {Math.round((1 - pct) * maxCountGrafico)}
-                      </text>
-                    </g>
-                  );
-                })}
-
-                {/* Linhas de Dados */}
-                {(() => {
-                  const numPoints = Math.max(dadosGraficoComparativo.length - 1, 1);
-                  
-                  const ptsA = dadosGraficoComparativo.map((d, i) => {
-                    const x = 60 + (i / numPoints) * 900;
-                    const y = 20 + (1 - (d.countA / maxCountGrafico)) * 240;
-                    return `${x},${y}`;
-                  }).join(' ');
-                  
-                  const ptsB = comparacaoAtiva ? dadosGraficoComparativo.map((d, i) => {
-                    const x = 60 + (i / numPoints) * 900;
-                    const y = 20 + (1 - (d.countB / maxCountGrafico)) * 240;
-                    return `${x},${y}`;
-                  }).join(' ') : '';
-
-                  return (
-                    <>
-                      {/* Área e Linha A */}
-                      <polyline points={ptsA} fill="none" stroke="#22d3ee" strokeWidth="4" className="drop-shadow-[0_0_12px_rgba(34,211,238,0.6)]" strokeLinejoin="round" />
-                      <polygon points={`60,260 ${ptsA} 960,260`} fill="url(#gradA)" />
-                      
-                      {/* Pontos A */}
-                      {dadosGraficoComparativo.map((d, i) => {
-                        const cx = 60 + (i / numPoints) * 900;
-                        const cy = 20 + (1 - (d.countA / maxCountGrafico)) * 240;
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              <div className="text-[10px] font-bold text-[#9CA3AF] text-right pr-4 pt-8 space-y-4">
+                {['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'].map(d=><div key={d} className="h-10 flex items-center justify-end">{d}</div>)}
+              </div>
+              <div className="col-span-3">
+                <div className="grid grid-cols-3 gap-2 mb-2 text-center text-[10px] font-bold text-[#9CA3AF]">
+                  <div>Manhã (06-12)</div><div>Tarde (12-18)</div><div>Noite (18-23)</div>
+                </div>
+                <div className="grid gap-2">
+                  {heatmapData.map((dia, idx) => (
+                    <div key={idx} className="grid grid-cols-3 gap-2 h-10">
+                      {dia.map((val, jdx) => {
+                        const intensity = Math.min(100, val * 15);
                         return (
-                          <g key={`pt-a-${i}`} className="group/pt cursor-pointer">
-                            <circle cx={cx} cy={cy} r="6" fill="#22d3ee" stroke="#121214" strokeWidth="3" className="transition-all group-hover/pt:r-8 hover:fill-white" />
-                            <text x={cx} y={cy - 20} fill="#22d3ee" className="text-[14px] font-black opacity-0 group-hover/pt:opacity-100 transition-opacity" textAnchor="middle">{d.countA}</text>
-                            {/* Rótulo Eixo X */}
-                            <text x={cx} y={285} fill="currentColor" className="text-on-surface-variant text-[12px] font-bold" textAnchor="middle">{formatLabel(d.label)}</text>
-                          </g>
+                          <div key={jdx} className="rounded-lg relative group flex items-center justify-center border border-[#2D3748]/50 transition-all hover:border-rose-500" style={{ backgroundColor: `rgba(244, 63, 94, ${intensity/100 || 0.02})` }}>
+                            <span className={`text-xs font-bold ${intensity > 40 ? 'text-white' : 'text-[#9CA3AF]'}`}>{val > 0 ? val : ''}</span>
+                            <div className="absolute opacity-0 group-hover:opacity-100 bg-[#111827] border border-[#2D3748] text-white text-[10px] py-1 px-2 rounded-md -top-8 whitespace-nowrap z-10 transition-opacity">
+                              {val} registros
+                            </div>
+                          </div>
                         );
                       })}
-
-                      {/* Área e Linha B */}
-                      {comparacaoAtiva && (
-                        <>
-                          <polyline points={ptsB} fill="none" stroke="#fbbf24" strokeWidth="4" className="drop-shadow-[0_0_12px_rgba(251,191,36,0.6)]" strokeLinejoin="round" />
-                          <polygon points={`60,260 ${ptsB} 960,260`} fill="url(#gradB)" />
-                          {/* Pontos B */}
-                          {dadosGraficoComparativo.map((d, i) => {
-                            const cx = 60 + (i / numPoints) * 900;
-                            const cy = 20 + (1 - (d.countB / maxCountGrafico)) * 240;
-                            return (
-                              <g key={`pt-b-${i}`} className="group/pt cursor-pointer">
-                                <circle cx={cx} cy={cy} r="6" fill="#fbbf24" stroke="#121214" strokeWidth="3" className="transition-all group-hover/pt:r-8 hover:fill-white" />
-                                <text x={cx} y={cy - 20} fill="#fbbf24" className="text-[14px] font-black opacity-0 group-hover/pt:opacity-100 transition-opacity" textAnchor="middle">{d.countB}</text>
-                              </g>
-                            );
-                          })}
-                        </>
-                      )}
-                    </>
-                  );
-                })()}
-              </svg>
-            )}
-          </div>
-        </div>
-
-        {/* Breakdowns e Rankings Lado a Lado */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {renderBreakdownList('Top Tipos de Ocorrência', statsA.tiposBreakdown, comparacaoAtiva ? statsB.tiposBreakdown : null, 'tipo', 'cyan')}
-          {renderBreakdownList('Top Alunos', statsA.alunosBreakdown, comparacaoAtiva ? statsB.alunosBreakdown : null, 'nome', 'purple')}
-          {renderBreakdownList('Top Funcionários', statsA.funcionariosBreakdown, comparacaoAtiva ? statsB.funcionariosBreakdown : null, 'nome', 'amber')}
-          {renderBreakdownList('Top Turmas', statsA.turmasBreakdown, comparacaoAtiva ? statsB.turmasBreakdown : null, 'turma', 'emerald')}
-          {renderBreakdownList('Top Séries/Anos', statsA.seriesBreakdown, comparacaoAtiva ? statsB.seriesBreakdown : null, 'serie', 'rose')}
-          
-          {/* Ocorrências Recentes */}
-          <div className="bg-surface-container-low p-5 rounded-[2rem] border border-white/5 space-y-4 flex flex-col h-full">
-            <h3 className="text-xs font-black text-white uppercase tracking-widest border-b border-white/5 pb-2 flex items-center gap-2">
-              <Clock size={14} className="text-cyan-400" /> Recentes (Filtro A)
-            </h3>
-            <div className="space-y-3 flex-1 overflow-y-auto max-h-[250px] pr-2 custom-scrollbar">
-              {statsA.recentRecords.length === 0 ? <p className="text-xs text-on-surface-variant">Sem ocorrências recentes</p> : statsA.recentRecords.map(r => (
-                <div key={r.id} className="p-3 bg-surface-container rounded-xl space-y-2 border border-white/5 hover:border-cyan-500/30 transition-colors">
-                  <div className="flex justify-between items-start">
-                    <span className="text-xs font-bold text-white line-clamp-1">{r.student_name}</span>
-                    <span className="text-[9px] text-on-surface-variant shrink-0">{new Date(r.created_at).toLocaleDateString('pt-BR')}</span>
-                  </div>
-                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-surface text-[10px] text-cyan-400">
-                    <AlertTriangle size={10} /> {r.occurrence_type}
-                  </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
           </div>
-        </div>
 
-      </div>
+        </section>
+      </main>
     </div>
   );
 }
