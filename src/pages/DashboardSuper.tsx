@@ -246,7 +246,7 @@ function calcularStatsParaConjunto(registrosFiltrados: OcorrenciaRegistro[], alu
 function obterPontosEvolucao(registrosFiltrados: OcorrenciaRegistro[], filtro: FiltroSet) {
   const contagem: { [chave: string]: number } = {};
 
-  let formato: 'dia_mes' | 'dia_semana' | 'mes_ano' | 'data' = 'data';
+  let formato: 'dia_mes' | 'dia_semana' | 'mes_ano' | 'data' | 'mes_ano_absoluto' = 'data';
 
   if (filtro.tipoPeriodo === 'mes') {
     formato = 'dia_mes'; 
@@ -254,6 +254,8 @@ function obterPontosEvolucao(registrosFiltrados: OcorrenciaRegistro[], filtro: F
     formato = 'dia_semana'; 
   } else if (filtro.tipoPeriodo === 'ano') {
     formato = 'mes_ano'; 
+  } else if (filtro.tipoPeriodo === 'tudo') {
+    formato = 'mes_ano_absoluto';
   }
 
   registrosFiltrados.forEach(r => {
@@ -267,6 +269,8 @@ function obterPontosEvolucao(registrosFiltrados: OcorrenciaRegistro[], filtro: F
       chave = dias[dataObj.getDay()];
     } else if (formato === 'mes_ano') {
       chave = (dataObj.getMonth() + 1).toString().padStart(2, '0');
+    } else if (formato === 'mes_ano_absoluto') {
+      chave = `${dataObj.getFullYear()}-${(dataObj.getMonth() + 1).toString().padStart(2, '0')}`;
     } else {
       chave = dataObj.toISOString().split('T')[0];
     }
@@ -422,8 +426,16 @@ export default function DashboardSuper() {
 
   const renderFiltrosColuna = (filtro: FiltroSet, setFiltro: React.Dispatch<React.SetStateAction<FiltroSet>>, titulo: string, corLabel: string) => (
     <div className="space-y-4">
-      <div className={`text-sm font-black uppercase tracking-widest ${corLabel} flex items-center gap-2`}>
-        <Filter size={14} /> {titulo}
+      <div className="flex justify-between items-center">
+        <div className={`text-sm font-black uppercase tracking-widest ${corLabel} flex items-center gap-2`}>
+          <Filter size={14} /> {titulo}
+        </div>
+        <button 
+          onClick={() => setFiltro(filtroInicial)}
+          className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant hover:text-white transition-colors flex items-center gap-1.5 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 rounded-lg active:scale-95"
+        >
+          <RefreshCw size={10} /> Limpar
+        </button>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -553,22 +565,24 @@ export default function DashboardSuper() {
   );
 
   const renderMetricCard = (icon: React.ReactNode, label: string, valA: number, valB: number | null, colorClass: string) => {
+    const bgClass = colorClass.replace('text-', 'bg-');
     return (
-      <div className="bg-surface-container-low p-5 rounded-[2rem] border border-white/5 hover:bg-surface-container transition-all relative overflow-hidden group">
-        <div className={`absolute top-0 right-0 w-32 h-32 opacity-[0.03] rounded-full blur-3xl group-hover:opacity-10 transition-opacity ${colorClass.replace('text-', 'bg-')}`} />
-        <div className="flex justify-between items-start mb-4">
-          <div className={`p-3 rounded-2xl ${colorClass.replace('text-', 'bg-').replace('400', '500/10')} text-white`}>
+      <div className={`bg-surface-container-low p-6 rounded-[2rem] border border-white/5 hover:border-${colorClass.split('-')[1]}-500/30 transition-all relative overflow-hidden group`}>
+        <div className={`absolute top-0 right-0 w-32 h-32 opacity-[0.05] rounded-full blur-3xl group-hover:opacity-15 transition-opacity ${bgClass}`} />
+        <div className={`absolute -bottom-4 -left-4 w-24 h-24 opacity-[0.03] rounded-full blur-2xl group-hover:opacity-10 transition-opacity ${bgClass}`} />
+        <div className="flex justify-between items-start mb-4 relative z-10">
+          <div className={`p-3.5 rounded-2xl ${bgClass.replace('400', '500/10')} text-white shadow-lg shadow-black/20`}>
             {icon}
           </div>
         </div>
-        <div>
-          <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">{label}</p>
+        <div className="relative z-10">
+          <p className="text-[11px] font-black text-on-surface-variant uppercase tracking-widest mb-1">{label}</p>
           <div className="flex items-end gap-3 mt-1">
-            <h3 className="text-3xl font-black text-white">{valA.toLocaleString('pt-BR')}</h3>
+            <h3 className={`text-4xl font-black ${colorClass}`}>{valA.toLocaleString('pt-BR')}</h3>
             {valB !== null && (
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm font-bold text-on-surface-variant">vs</span>
-                <span className="text-xl font-bold text-amber-400">{valB.toLocaleString('pt-BR')}</span>
+              <div className="flex items-center gap-2 mb-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
+                <span className="text-xs font-bold text-on-surface-variant">vs</span>
+                <span className="text-lg font-bold text-amber-400">{valB.toLocaleString('pt-BR')}</span>
               </div>
             )}
           </div>
@@ -577,20 +591,30 @@ export default function DashboardSuper() {
     );
   };
 
-  const renderBreakdownList = (title: string, dataA: any[], dataB: any[] | null, labelKey: string) => {
+  const renderBreakdownList = (title: string, dataA: any[], dataB: any[] | null, labelKey: string, baseColor: 'cyan' | 'purple' | 'amber' | 'emerald' | 'rose' = 'cyan') => {
+    const colorMap = {
+      cyan: { text: 'text-cyan-400', bg: 'bg-cyan-400/10', borderHover: 'hover:border-cyan-500/30' },
+      purple: { text: 'text-purple-400', bg: 'bg-purple-400/10', borderHover: 'hover:border-purple-500/30' },
+      amber: { text: 'text-amber-400', bg: 'bg-amber-400/10', borderHover: 'hover:border-amber-500/30' },
+      emerald: { text: 'text-emerald-400', bg: 'bg-emerald-400/10', borderHover: 'hover:border-emerald-500/30' },
+      rose: { text: 'text-rose-400', bg: 'bg-rose-400/10', borderHover: 'hover:border-rose-500/30' }
+    };
+    const theme = colorMap[baseColor];
+
     return (
-      <div className="bg-surface-container-low p-5 rounded-[2rem] border border-white/5 space-y-4 flex flex-col h-full">
-        <h3 className="text-xs font-black text-white uppercase tracking-widest border-b border-white/5 pb-2">
+      <div className={`bg-surface-container-low p-5 rounded-[2rem] border border-white/5 ${theme.borderHover} transition-colors space-y-4 flex flex-col h-full relative overflow-hidden group`}>
+        <div className={`absolute top-0 right-0 w-32 h-32 opacity-[0.02] rounded-full blur-3xl group-hover:opacity-10 transition-opacity ${theme.bg.replace('/10', '')}`} />
+        <h3 className={`text-xs font-black text-white uppercase tracking-widest border-b border-white/5 pb-2 relative z-10`}>
           {title}
         </h3>
         {comparacaoAtiva ? (
-          <div className="flex gap-4 flex-1">
+          <div className="flex gap-4 flex-1 relative z-10">
             <div className="flex-1 space-y-3">
-              <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest mb-2">Filtros A</div>
+              <div className={`text-[10px] font-bold ${theme.text} uppercase tracking-widest mb-2`}>Filtros A</div>
               {dataA.length === 0 ? <p className="text-xs text-on-surface-variant">Sem dados</p> : dataA.map((item, idx) => (
                 <div key={idx} className="flex justify-between items-center text-xs">
                   <span className="text-white truncate pr-2 max-w-[120px]" title={item[labelKey]}>{item[labelKey]}</span>
-                  <span className="font-bold text-cyan-400 bg-cyan-400/10 px-2 py-0.5 rounded-full">{item.count}</span>
+                  <span className={`font-bold ${theme.text} ${theme.bg} px-2 py-0.5 rounded-full`}>{item.count}</span>
                 </div>
               ))}
             </div>
@@ -606,11 +630,11 @@ export default function DashboardSuper() {
             </div>
           </div>
         ) : (
-          <div className="space-y-3 flex-1">
+          <div className="space-y-3 flex-1 relative z-10">
             {dataA.length === 0 ? <p className="text-xs text-on-surface-variant">Nenhum dado encontrado</p> : dataA.map((item, idx) => (
               <div key={idx} className="flex justify-between items-center text-sm p-2 rounded-xl bg-surface-container/50 hover:bg-surface-container transition-colors">
                 <span className="text-white font-medium truncate pr-2">{item[labelKey]}</span>
-                <span className="font-bold text-cyan-400 bg-cyan-400/10 px-3 py-1 rounded-full">{item.count} registros</span>
+                <span className={`font-bold ${theme.text} ${theme.bg} px-3 py-1 rounded-full`}>{item.count} registros</span>
               </div>
             ))}
           </div>
@@ -631,6 +655,15 @@ export default function DashboardSuper() {
   }
 
   const maxCountGrafico = Math.max(...dadosGraficoComparativo.map(d => Math.max(d.countA, d.countB)), 1);
+
+  const formatLabel = (label: string) => {
+    if (label.match(/^\d{4}-\d{2}$/)) {
+      const [y, m] = label.split('-');
+      const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      return `${meses[parseInt(m) - 1]} ${y.slice(2)}`;
+    }
+    return label;
+  };
 
   return (
     <div className="min-h-screen bg-surface pb-24 md:pb-6 relative overflow-x-hidden">
@@ -740,7 +773,7 @@ export default function DashboardSuper() {
                 Nenhum dado encontrado para gerar o gráfico.
               </div>
             ) : (
-              <svg className="w-full h-full overflow-visible" preserveAspectRatio="none">
+              <svg viewBox="0 0 1000 300" className="w-full h-auto overflow-visible drop-shadow-xl">
                 <defs>
                   <linearGradient id="gradA" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.4" />
@@ -753,48 +786,51 @@ export default function DashboardSuper() {
                 </defs>
 
                 {/* Eixo Y */}
-                <line x1="40" y1="0" x2="40" y2="100%" stroke="currentColor" className="text-white/10" strokeWidth="1" />
-                {[0, 0.25, 0.5, 0.75, 1].map(pct => (
-                  <g key={pct}>
-                    <line x1="40" y1={`${pct * 100}%`} x2="100%" y2={`${pct * 100}%`} stroke="currentColor" className="text-white/5" strokeDasharray="4 4" />
-                    <text x="30" y={`${(1 - pct) * 100}%`} fill="currentColor" className="text-on-surface-variant text-[10px]" textAnchor="end" dominantBaseline="middle">
-                      {Math.round(pct * maxCountGrafico)}
-                    </text>
-                  </g>
-                ))}
+                <line x1="60" y1="20" x2="60" y2="260" stroke="currentColor" className="text-white/10" strokeWidth="2" />
+                {[0, 0.25, 0.5, 0.75, 1].map(pct => {
+                  const y = 20 + (pct * 240);
+                  return (
+                    <g key={pct}>
+                      <line x1="60" y1={y} x2="960" y2={y} stroke="currentColor" className="text-white/10" strokeDasharray="6 6" />
+                      <text x="50" y={y} fill="currentColor" className="text-on-surface-variant text-[12px] font-medium" textAnchor="end" dominantBaseline="middle">
+                        {Math.round((1 - pct) * maxCountGrafico)}
+                      </text>
+                    </g>
+                  );
+                })}
 
                 {/* Linhas de Dados */}
                 {(() => {
-                  const xStep = 100 / Math.max(dadosGraficoComparativo.length - 1, 1);
+                  const numPoints = Math.max(dadosGraficoComparativo.length - 1, 1);
                   
                   const ptsA = dadosGraficoComparativo.map((d, i) => {
-                    const x = 40 + (i * xStep * 0.96) + '%';
-                    const y = (1 - (d.countA / maxCountGrafico)) * 100 + '%';
+                    const x = 60 + (i / numPoints) * 900;
+                    const y = 20 + (1 - (d.countA / maxCountGrafico)) * 240;
                     return `${x},${y}`;
                   }).join(' ');
                   
                   const ptsB = comparacaoAtiva ? dadosGraficoComparativo.map((d, i) => {
-                    const x = 40 + (i * xStep * 0.96) + '%';
-                    const y = (1 - (d.countB / maxCountGrafico)) * 100 + '%';
+                    const x = 60 + (i / numPoints) * 900;
+                    const y = 20 + (1 - (d.countB / maxCountGrafico)) * 240;
                     return `${x},${y}`;
                   }).join(' ') : '';
 
                   return (
                     <>
                       {/* Área e Linha A */}
-                      <polyline points={ptsA} fill="none" stroke="#22d3ee" strokeWidth="3" className="drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" strokeLinejoin="round" />
-                      <polygon points={`40%,100% ${ptsA} 100%,100%`} fill="url(#gradA)" />
+                      <polyline points={ptsA} fill="none" stroke="#22d3ee" strokeWidth="4" className="drop-shadow-[0_0_12px_rgba(34,211,238,0.6)]" strokeLinejoin="round" />
+                      <polygon points={`60,260 ${ptsA} 960,260`} fill="url(#gradA)" />
                       
                       {/* Pontos A */}
                       {dadosGraficoComparativo.map((d, i) => {
-                        const cx = `calc(40% + ${i * xStep * 0.96}%)`;
-                        const cy = `${(1 - (d.countA / maxCountGrafico)) * 100}%`;
+                        const cx = 60 + (i / numPoints) * 900;
+                        const cy = 20 + (1 - (d.countA / maxCountGrafico)) * 240;
                         return (
-                          <g key={`pt-a-${i}`} className="group/pt">
-                            <circle cx={cx} cy={cy} r="4" fill="#22d3ee" stroke="#121214" strokeWidth="2" className="transition-all group-hover/pt:r-6" />
-                            <text x={cx} y={`calc(${cy} - 15px)`} fill="#22d3ee" className="text-[10px] font-bold opacity-0 group-hover/pt:opacity-100 transition-opacity" textAnchor="middle">{d.countA}</text>
+                          <g key={`pt-a-${i}`} className="group/pt cursor-pointer">
+                            <circle cx={cx} cy={cy} r="6" fill="#22d3ee" stroke="#121214" strokeWidth="3" className="transition-all group-hover/pt:r-8 hover:fill-white" />
+                            <text x={cx} y={cy - 20} fill="#22d3ee" className="text-[14px] font-black opacity-0 group-hover/pt:opacity-100 transition-opacity" textAnchor="middle">{d.countA}</text>
                             {/* Rótulo Eixo X */}
-                            <text x={cx} y="calc(100% + 20px)" fill="currentColor" className="text-on-surface-variant text-[10px]" textAnchor="middle">{d.label}</text>
+                            <text x={cx} y={285} fill="currentColor" className="text-on-surface-variant text-[12px] font-bold" textAnchor="middle">{formatLabel(d.label)}</text>
                           </g>
                         );
                       })}
@@ -802,16 +838,16 @@ export default function DashboardSuper() {
                       {/* Área e Linha B */}
                       {comparacaoAtiva && (
                         <>
-                          <polyline points={ptsB} fill="none" stroke="#fbbf24" strokeWidth="3" className="drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" strokeLinejoin="round" />
-                          <polygon points={`40%,100% ${ptsB} 100%,100%`} fill="url(#gradB)" />
+                          <polyline points={ptsB} fill="none" stroke="#fbbf24" strokeWidth="4" className="drop-shadow-[0_0_12px_rgba(251,191,36,0.6)]" strokeLinejoin="round" />
+                          <polygon points={`60,260 ${ptsB} 960,260`} fill="url(#gradB)" />
                           {/* Pontos B */}
                           {dadosGraficoComparativo.map((d, i) => {
-                            const cx = `calc(40% + ${i * xStep * 0.96}%)`;
-                            const cy = `${(1 - (d.countB / maxCountGrafico)) * 100}%`;
+                            const cx = 60 + (i / numPoints) * 900;
+                            const cy = 20 + (1 - (d.countB / maxCountGrafico)) * 240;
                             return (
-                              <g key={`pt-b-${i}`} className="group/pt">
-                                <circle cx={cx} cy={cy} r="4" fill="#fbbf24" stroke="#121214" strokeWidth="2" className="transition-all group-hover/pt:r-6" />
-                                <text x={cx} y={`calc(${cy} - 15px)`} fill="#fbbf24" className="text-[10px] font-bold opacity-0 group-hover/pt:opacity-100 transition-opacity" textAnchor="middle">{d.countB}</text>
+                              <g key={`pt-b-${i}`} className="group/pt cursor-pointer">
+                                <circle cx={cx} cy={cy} r="6" fill="#fbbf24" stroke="#121214" strokeWidth="3" className="transition-all group-hover/pt:r-8 hover:fill-white" />
+                                <text x={cx} y={cy - 20} fill="#fbbf24" className="text-[14px] font-black opacity-0 group-hover/pt:opacity-100 transition-opacity" textAnchor="middle">{d.countB}</text>
                               </g>
                             );
                           })}
@@ -826,12 +862,12 @@ export default function DashboardSuper() {
         </div>
 
         {/* Breakdowns e Rankings Lado a Lado */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {renderBreakdownList('Top Tipos de Ocorrência', statsA.tiposBreakdown, comparacaoAtiva ? statsB.tiposBreakdown : null, 'tipo')}
-          {renderBreakdownList('Top Alunos', statsA.alunosBreakdown, comparacaoAtiva ? statsB.alunosBreakdown : null, 'nome')}
-          {renderBreakdownList('Top Funcionários', statsA.funcionariosBreakdown, comparacaoAtiva ? statsB.funcionariosBreakdown : null, 'nome')}
-          {renderBreakdownList('Top Turmas', statsA.turmasBreakdown, comparacaoAtiva ? statsB.turmasBreakdown : null, 'turma')}
-          {renderBreakdownList('Top Séries/Anos', statsA.seriesBreakdown, comparacaoAtiva ? statsB.seriesBreakdown : null, 'serie')}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {renderBreakdownList('Top Tipos de Ocorrência', statsA.tiposBreakdown, comparacaoAtiva ? statsB.tiposBreakdown : null, 'tipo', 'cyan')}
+          {renderBreakdownList('Top Alunos', statsA.alunosBreakdown, comparacaoAtiva ? statsB.alunosBreakdown : null, 'nome', 'purple')}
+          {renderBreakdownList('Top Funcionários', statsA.funcionariosBreakdown, comparacaoAtiva ? statsB.funcionariosBreakdown : null, 'nome', 'amber')}
+          {renderBreakdownList('Top Turmas', statsA.turmasBreakdown, comparacaoAtiva ? statsB.turmasBreakdown : null, 'turma', 'emerald')}
+          {renderBreakdownList('Top Séries/Anos', statsA.seriesBreakdown, comparacaoAtiva ? statsB.seriesBreakdown : null, 'serie', 'rose')}
           
           {/* Ocorrências Recentes */}
           <div className="bg-surface-container-low p-5 rounded-[2rem] border border-white/5 space-y-4 flex flex-col h-full">
