@@ -127,6 +127,7 @@ export default function DashboardSuper() {
   const [tipoEntidadeEvolucao, setTipoEntidadeEvolucao] = useState<'alunos' | 'funcionarios' | 'turmas' | 'series' | 'tipos'>('alunos');
   const [entidadeEvolucaoA, setEntidadeEvolucaoA] = useState<string>('');
   const [entidadeEvolucaoB, setEntidadeEvolucaoB] = useState<string>('');
+  const [granularidadeEvolucao, setGranularidadeEvolucao] = useState<'mes' | 'semana' | 'dia'>('mes');
 
   // Segurança: Redirecionar se não for super_admin
   useEffect(() => {
@@ -329,44 +330,172 @@ export default function DashboardSuper() {
     const recordsA = filtrarPorEntidade(entidadeEvolucaoA);
     const recordsB = filtrarPorEntidade(entidadeEvolucaoB);
 
-    // 2. Agrupamento por mês/ano para os gráficos de evolução
-    const agruparPorMesAno = (records: OcorrenciaRegistro[]) => {
-      const mesesMap = new Map<string, number>();
-      
-      const hoje = new Date();
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-        const chave = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
-        mesesMap.set(chave, 0);
+    // 2. Agrupamento flexível baseado na granularidade selecionada
+    const getISOWeek = (dateStr: string): { year: number; week: number } => {
+      const d = new Date(dateStr + 'T00:00:00');
+      const dayNum = d.getUTCDay() || 7;
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+      const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+      return { year: d.getUTCFullYear(), week: weekNo };
+    };
+
+    const agruparPorGranularidade = (records: OcorrenciaRegistro[]) => {
+      const agrupado = new Map<string, number>();
+
+      if (granularidadeEvolucao === 'mes') {
+        // Últimos 6 meses
+        const hoje = new Date();
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+          const chave = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+          agrupado.set(chave, 0);
+        }
+        records.forEach(r => {
+          const dataStr = r.created_at ? r.created_at.split(/[\sT]/)[0] : '';
+          if (dataStr) {
+            const [ano, mes] = dataStr.split('-');
+            const chave = `${ano}-${mes}`;
+            if (agrupado.has(chave)) {
+              agrupado.set(chave, agrupado.get(chave)! + 1);
+            }
+          }
+        });
+      } else if (granularidadeEvolucao === 'semana') {
+        // Últimas 8 semanas
+        const hoje = new Date();
+        for (let i = 7; i >= 0; i--) {
+          const d = new Date(hoje.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+          const { year, week } = getISOWeek(d.toISOString().split('T')[0]);
+          const chave = `${year}-W${week.toString().padStart(2, '0')}`;
+          agrupado.set(chave, 0);
+        }
+        records.forEach(r => {
+          const dataStr = r.created_at ? r.created_at.split(/[\sT]/)[0] : '';
+          if (dataStr) {
+            const { year, week } = getISOWeek(dataStr);
+            const chave = `${year}-W${week.toString().padStart(2, '0')}`;
+            if (agrupado.has(chave)) {
+              agrupado.set(chave, agrupado.get(chave)! + 1);
+            }
+          }
+        });
+      } else {
+        // Últimos 14 dias
+        const hoje = new Date();
+        for (let i = 13; i >= 0; i--) {
+          const d = new Date(hoje.getTime() - i * 24 * 60 * 60 * 1000);
+          const chave = d.toISOString().split('T')[0];
+          agrupado.set(chave, 0);
+        }
+        records.forEach(r => {
+          const dataStr = r.created_at ? r.created_at.split(/[\sT]/)[0] : '';
+          if (dataStr && agrupado.has(dataStr)) {
+            agrupado.set(dataStr, agrupado.get(dataStr)! + 1);
+          }
+        });
       }
 
-      records.forEach(r => {
-        const dataStr = r.created_at ? r.created_at.split(/[\sT]/)[0] : '';
-        if (dataStr) {
-          const [ano, mes] = dataStr.split('-');
-          const chave = `${ano}-${mes}`;
-          if (mesesMap.has(chave)) {
-            mesesMap.set(chave, mesesMap.get(chave)! + 1);
-          }
-        }
-      });
-
       const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-      return Array.from(mesesMap.entries()).map(([chave, count]) => {
-        const [ano, mes] = chave.split('-');
-        const nomeMes = mesesNomes[parseInt(mes) - 1];
-        return {
-          periodo: `${nomeMes}/${ano.slice(2)}`,
-          count,
-          rawChave: chave
-        };
+      const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+      return Array.from(agrupado.entries()).map(([chave, count]) => {
+        let periodo = chave;
+        if (granularidadeEvolucao === 'mes') {
+          const [ano, mes] = chave.split('-');
+          periodo = `${mesesNomes[parseInt(mes) - 1]}/${ano.slice(2)}`;
+        } else if (granularidadeEvolucao === 'semana') {
+          const parts = chave.split('-W');
+          periodo = `Sem ${parts[1]}/${parts[0].slice(2)}`;
+        } else {
+          // dia
+          const d = new Date(chave + 'T00:00:00');
+          const dia = d.getDate().toString().padStart(2, '0');
+          const mes = mesesNomes[d.getMonth()];
+          const diaSem = diasSemana[d.getDay()];
+          periodo = `${diaSem} ${dia}/${mes}`;
+        }
+        return { periodo, count, rawChave: chave };
       }).sort((a, b) => a.rawChave.localeCompare(b.rawChave));
     };
 
-    const evolucaoA = agruparPorMesAno(recordsA);
-    const evolucaoB = agruparPorMesAno(recordsB);
+    const evolucaoA = agruparPorGranularidade(recordsA);
+    const evolucaoB = agruparPorGranularidade(recordsB);
 
-    // 3. Cálculo de Crescimento, Redução ou Estabilidade (30 dias recentes vs 30 dias anteriores)
+    // 3. Métricas detalhadas por entidade (top aluno, top ano, top hora, top funcionário, top tipo)
+    const calcularDetalhesEntidade = (records: OcorrenciaRegistro[]) => {
+      const alunoCount: { [k: string]: number } = {};
+      const anoCount: { [k: string]: number } = {};
+      const horaCount: { [k: string]: number } = {};
+      const funcCount: { [k: string]: number } = {};
+      const tipoCount: { [k: string]: number } = {};
+      const diaCount: { [k: string]: number } = {};
+
+      const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+      records.forEach(r => {
+        // Aluno
+        const aluno = r.student_name?.trim();
+        if (aluno) alunoCount[aluno] = (alunoCount[aluno] || 0) + 1;
+
+        // Ano/Série
+        const alunoInfo = alunosMap.get(r.student_name.trim().toLowerCase());
+        const ano = alunoInfo?.ano || r.school_year || 'Sem Série';
+        anoCount[ano] = (anoCount[ano] || 0) + 1;
+
+        // Hora
+        const dataStr = r.created_at || '';
+        const timeMatch = dataStr.match(/(\d{2}):\d{2}/);
+        if (timeMatch) {
+          const hora = `${timeMatch[1]}:00`;
+          horaCount[hora] = (horaCount[hora] || 0) + 1;
+        }
+
+        // Funcionário
+        const func = r.created_by?.trim();
+        if (func) funcCount[func] = (funcCount[func] || 0) + 1;
+
+        // Tipo
+        const tipo = r.occurrence_type?.trim();
+        if (tipo) tipoCount[tipo] = (tipoCount[tipo] || 0) + 1;
+
+        // Dia da Semana
+        const dataPart = r.created_at ? r.created_at.split(/[\sT]/)[0] : '';
+        if (dataPart) {
+          const d = new Date(dataPart + 'T00:00:00');
+          const diaSem = diasSemana[d.getDay()];
+          diaCount[diaSem] = (diaCount[diaSem] || 0) + 1;
+        }
+      });
+
+      const topOf = (obj: { [k: string]: number }) => {
+        const entries = Object.entries(obj).sort((a, b) => b[1] - a[1]);
+        return entries.length > 0 ? { nome: entries[0][0], count: entries[0][1] } : { nome: '—', count: 0 };
+      };
+
+      const allOf = (obj: { [k: string]: number }) =>
+        Object.entries(obj).map(([nome, count]) => ({ nome, count })).sort((a, b) => b.count - a.count).slice(0, 5);
+
+      return {
+        total: records.length,
+        topAluno: topOf(alunoCount),
+        topAno: topOf(anoCount),
+        topHora: topOf(horaCount),
+        topFuncionario: topOf(funcCount),
+        topTipo: topOf(tipoCount),
+        topDia: topOf(diaCount),
+        topAlunos: allOf(alunoCount),
+        topAnos: allOf(anoCount),
+        topHoras: allOf(horaCount),
+        topFuncionarios: allOf(funcCount),
+        topTipos: allOf(tipoCount),
+      };
+    };
+
+    const detalhesA = calcularDetalhesEntidade(recordsA);
+    const detalhesB = calcularDetalhesEntidade(recordsB);
+
+    // 4. Cálculo de Crescimento, Redução ou Estabilidade (30 dias recentes vs 30 dias anteriores)
     const calcularMetricasEvolucao = (records: OcorrenciaRegistro[]) => {
       const agora = new Date();
       const trintaDiasAtras = new Date(agora.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -405,7 +534,7 @@ export default function DashboardSuper() {
     const metricasA = calcularMetricasEvolucao(recordsA);
     const metricasB = calcularMetricasEvolucao(recordsB);
 
-    // 4. Ranking de Evolução (quem mais cresceu registros)
+    // 5. Ranking de Evolução (quem mais cresceu registros)
     let listaEntidades: string[] = [];
     if (tipoEntidadeEvolucao === 'alunos') listaEntidades = listAlunos;
     else if (tipoEntidadeEvolucao === 'funcionarios') listaEntidades = listFuncionarios;
@@ -432,9 +561,11 @@ export default function DashboardSuper() {
       evolucaoB,
       metricasA,
       metricasB,
+      detalhesA,
+      detalhesB,
       rankingEvolucao
     };
-  }, [registrosFiltrados, tipoEntidadeEvolucao, entidadeEvolucaoA, entidadeEvolucaoB, listAlunos, listFuncionarios, listTurmas, listSeriesAnos, listTiposRegistro, alunosMap]);
+  }, [registrosFiltrados, tipoEntidadeEvolucao, entidadeEvolucaoA, entidadeEvolucaoB, granularidadeEvolucao, listAlunos, listFuncionarios, listTurmas, listSeriesAnos, listTiposRegistro, alunosMap]);
 
   // ============================================================
   // ESTATISTICAS POR ABA
@@ -1976,16 +2107,39 @@ export default function DashboardSuper() {
               </div>
             </div>
 
+            {/* Granularidade Temporal */}
+            <div className="flex flex-wrap items-center gap-2 bg-surface/30 p-3 rounded-2xl border border-white/5">
+              <span className="text-[9px] font-black uppercase text-on-surface-variant tracking-widest mr-2">Granularidade:</span>
+              {([
+                { id: 'dia' as const, label: 'Dia a Dia (14d)', icon: '📅' },
+                { id: 'semana' as const, label: 'Semana a Semana (8s)', icon: '📆' },
+                { id: 'mes' as const, label: 'Mês a Mês (6m)', icon: '🗓️' },
+              ]).map(g => (
+                <button
+                  key={g.id}
+                  onClick={() => setGranularidadeEvolucao(g.id)}
+                  className={cn(
+                    "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border shrink-0",
+                    granularidadeEvolucao === g.id
+                      ? "bg-cyan-500 text-black border-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.3)]"
+                      : "bg-surface hover:bg-surface-container-high border-white/10 text-white hover:border-cyan-500/40 hover:text-cyan-300"
+                  )}
+                >
+                  {g.icon} {g.label}
+                </button>
+              ))}
+            </div>
+
             {/* Seletores Dinâmicos de Entidades */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-white/5">
               
               {/* 1. Tipo de Entidade */}
               <div className="space-y-1.5">
-                <label className="text-[8px] font-black text-cyan-400 uppercase tracking-widest block">Analisar por:</label>
+                <label className="text-[9px] font-black text-cyan-400 uppercase tracking-widest block">Analisar por:</label>
                 <select
                   value={tipoEntidadeEvolucao}
                   onChange={e => setTipoEntidadeEvolucao(e.target.value as any)}
-                  className="campo-input w-full text-white bg-surface"
+                  className="w-full bg-surface border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
                 >
                   <option value="alunos">Alunos</option>
                   <option value="funcionarios">Funcionários</option>
@@ -1997,13 +2151,13 @@ export default function DashboardSuper() {
 
               {/* 2. Selecionar Item A */}
               <div className="space-y-1.5">
-                <label className="text-[8px] font-black text-cyan-400 uppercase tracking-widest block">
+                <label className="text-[9px] font-black text-cyan-400 uppercase tracking-widest block">
                   {tipoAnaliseEvolucao === 'individual' ? 'Selecionar Item:' : 'Item A (Principal):'}
                 </label>
                 <select
                   value={entidadeEvolucaoA}
                   onChange={e => setEntidadeEvolucaoA(e.target.value)}
-                  className="campo-input w-full text-white bg-surface"
+                  className="w-full bg-surface border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
                 >
                   {(() => {
                     let list: string[] = [];
@@ -2020,11 +2174,11 @@ export default function DashboardSuper() {
               {/* 3. Selecionar Item B */}
               {tipoAnaliseEvolucao === 'comparativo' && (
                 <div className="space-y-1.5">
-                  <label className="text-[8px] font-black text-cyan-400 uppercase tracking-widest block">Item B (Comparar com):</label>
+                  <label className="text-[9px] font-black text-cyan-400 uppercase tracking-widest block">Item B (Comparar com):</label>
                   <select
                     value={entidadeEvolucaoB}
                     onChange={e => setEntidadeEvolucaoB(e.target.value)}
-                    className="campo-input w-full text-white bg-surface"
+                    className="w-full bg-surface border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20"
                   >
                     {(() => {
                       let list: string[] = [];
@@ -2051,7 +2205,7 @@ export default function DashboardSuper() {
               {/* Gráfico */}
               <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
                 <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
-                  <Activity size={14} className="text-cyan-400" /> Linha do Tempo de Ocorrências
+                  <Activity size={14} className="text-cyan-400" /> Linha do Tempo — {granularidadeEvolucao === 'dia' ? 'Dia a Dia' : granularidadeEvolucao === 'semana' ? 'Semana a Semana' : 'Mês a Mês'}
                 </h3>
 
                 <div className="relative w-full h-56 pt-4">
@@ -2118,8 +2272,8 @@ export default function DashboardSuper() {
                   </svg>
                 </div>
 
-                <div className="flex justify-between text-[8px] font-black uppercase text-on-surface-variant tracking-wider pt-2 border-t border-white/5">
-                  {statsEvolucao.evolucaoA.map((d, i) => <span key={i}>{d.periodo}</span>)}
+                <div className="flex justify-between text-[8px] font-black uppercase text-on-surface-variant tracking-wider pt-2 border-t border-white/5 overflow-x-auto gap-1">
+                  {statsEvolucao.evolucaoA.map((d, i) => <span key={i} className="shrink-0">{d.periodo}</span>)}
                 </div>
 
                 <div className="flex flex-wrap gap-4 pt-2">
@@ -2136,10 +2290,10 @@ export default function DashboardSuper() {
                 </div>
               </div>
 
-              {/* Tabela */}
+              {/* Tabela Detalhada por Período */}
               <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
                 <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
-                  <Calendar size={14} className="text-cyan-400" /> Histórico de Registros por Mês
+                  <Calendar size={14} className="text-cyan-400" /> Histórico de Registros — {granularidadeEvolucao === 'dia' ? 'Por Dia' : granularidadeEvolucao === 'semana' ? 'Por Semana' : 'Por Mês'}
                 </h3>
                 
                 <div className="overflow-x-auto">
@@ -2149,13 +2303,15 @@ export default function DashboardSuper() {
                         <th className="pb-2">Período</th>
                         <th className="pb-2 text-cyan-400">{entidadeEvolucaoA}</th>
                         {tipoAnaliseEvolucao === 'comparativo' && <th className="pb-2 text-rose-400">{entidadeEvolucaoB}</th>}
-                        {tipoAnaliseEvolucao === 'comparativo' && <th className="pb-2">Diferença Absoluta</th>}
+                        {tipoAnaliseEvolucao === 'comparativo' && <th className="pb-2">Diferença</th>}
+                        <th className="pb-2">Barra</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
                       {statsEvolucao.evolucaoA.map((ea, idx) => {
                         const eb = statsEvolucao.evolucaoB[idx] || { count: 0 };
                         const diff = ea.count - eb.count;
+                        const maxBar = Math.max(...statsEvolucao.evolucaoA.map(d => d.count), ...(tipoAnaliseEvolucao === 'comparativo' ? statsEvolucao.evolucaoB.map(d => d.count) : []), 1);
                         return (
                           <tr key={ea.rawChave} className="hover:bg-white/5">
                             <td className="py-2.5 font-bold text-white">{ea.periodo}</td>
@@ -2173,6 +2329,18 @@ export default function DashboardSuper() {
                                 </span>
                               </td>
                             )}
+                            <td className="py-2.5 w-32">
+                              <div className="flex gap-0.5 items-center">
+                                <div className="flex-1 bg-black/40 h-2 rounded-full overflow-hidden">
+                                  <div className="bg-cyan-500 h-full" style={{ width: `${(ea.count / maxBar) * 100}%` }} />
+                                </div>
+                                {tipoAnaliseEvolucao === 'comparativo' && (
+                                  <div className="flex-1 bg-black/40 h-2 rounded-full overflow-hidden">
+                                    <div className="bg-rose-500 h-full" style={{ width: `${(eb.count / maxBar) * 100}%` }} />
+                                  </div>
+                                )}
+                              </div>
+                            </td>
                           </tr>
                         );
                       })}
@@ -2180,6 +2348,208 @@ export default function DashboardSuper() {
                   </table>
                 </div>
               </div>
+
+              {/* Cards de Detalhes Comparativos */}
+              <div className={cn("grid gap-6", tipoAnaliseEvolucao === 'comparativo' ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
+                
+                {/* Detalhes Entidade A */}
+                <div className="bg-gradient-to-br from-cyan-500/10 via-cyan-500/5 to-transparent p-6 rounded-[2rem] border border-cyan-500/20 space-y-5 shadow-lg shadow-cyan-500/5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-black text-cyan-400 uppercase tracking-widest">📊 Detalhes — {entidadeEvolucaoA}</h3>
+                    <span className="text-2xl font-black text-cyan-300">{statsEvolucao.detalhesA.total} <span className="text-xs text-cyan-400/60">regs</span></span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-black/20 p-3 rounded-xl border border-white/5 space-y-1">
+                      <p className="text-[8px] font-black uppercase text-on-surface-variant tracking-widest">🎓 Aluno + Registrado</p>
+                      <p className="text-xs font-bold text-white truncate">{statsEvolucao.detalhesA.topAluno.nome}</p>
+                      <p className="text-[10px] text-cyan-400 font-black">{statsEvolucao.detalhesA.topAluno.count} regs</p>
+                    </div>
+                    <div className="bg-black/20 p-3 rounded-xl border border-white/5 space-y-1">
+                      <p className="text-[8px] font-black uppercase text-on-surface-variant tracking-widest">📚 Ano/Série + Registrado</p>
+                      <p className="text-xs font-bold text-white truncate">{statsEvolucao.detalhesA.topAno.nome}</p>
+                      <p className="text-[10px] text-cyan-400 font-black">{statsEvolucao.detalhesA.topAno.count} regs</p>
+                    </div>
+                    <div className="bg-black/20 p-3 rounded-xl border border-white/5 space-y-1">
+                      <p className="text-[8px] font-black uppercase text-on-surface-variant tracking-widest">⏰ Horário + Registrado</p>
+                      <p className="text-xs font-bold text-white">{statsEvolucao.detalhesA.topHora.nome}</p>
+                      <p className="text-[10px] text-cyan-400 font-black">{statsEvolucao.detalhesA.topHora.count} regs</p>
+                    </div>
+                    <div className="bg-black/20 p-3 rounded-xl border border-white/5 space-y-1">
+                      <p className="text-[8px] font-black uppercase text-on-surface-variant tracking-widest">👤 Funcionário + Ativo</p>
+                      <p className="text-xs font-bold text-white truncate">{statsEvolucao.detalhesA.topFuncionario.nome}</p>
+                      <p className="text-[10px] text-cyan-400 font-black">{statsEvolucao.detalhesA.topFuncionario.count} regs</p>
+                    </div>
+                    <div className="bg-black/20 p-3 rounded-xl border border-white/5 space-y-1">
+                      <p className="text-[8px] font-black uppercase text-on-surface-variant tracking-widest">📋 Tipo + Frequente</p>
+                      <p className="text-xs font-bold text-white truncate">{statsEvolucao.detalhesA.topTipo.nome}</p>
+                      <p className="text-[10px] text-cyan-400 font-black">{statsEvolucao.detalhesA.topTipo.count} regs</p>
+                    </div>
+                    <div className="bg-black/20 p-3 rounded-xl border border-white/5 space-y-1">
+                      <p className="text-[8px] font-black uppercase text-on-surface-variant tracking-widest">📅 Dia + Ativo</p>
+                      <p className="text-xs font-bold text-white">{statsEvolucao.detalhesA.topDia.nome}</p>
+                      <p className="text-[10px] text-cyan-400 font-black">{statsEvolucao.detalhesA.topDia.count} regs</p>
+                    </div>
+                  </div>
+
+                  {/* Top 5 lists */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <p className="text-[8px] font-black uppercase text-cyan-400/80 tracking-widest">Top 5 Alunos</p>
+                      {statsEvolucao.detalhesA.topAlunos.map((a, i) => (
+                        <div key={a.nome} className="flex justify-between text-[10px]">
+                          <span className="text-white truncate font-semibold">#{i+1} {a.nome}</span>
+                          <span className="text-cyan-400 font-black shrink-0 ml-1">{a.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-[8px] font-black uppercase text-cyan-400/80 tracking-widest">Top 5 Tipos</p>
+                      {statsEvolucao.detalhesA.topTipos.map((t, i) => (
+                        <div key={t.nome} className="flex justify-between text-[10px]">
+                          <span className="text-white truncate font-semibold">#{i+1} {t.nome}</span>
+                          <span className="text-cyan-400 font-black shrink-0 ml-1">{t.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Detalhes Entidade B (só no comparativo) */}
+                {tipoAnaliseEvolucao === 'comparativo' && (
+                  <div className="bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-transparent p-6 rounded-[2rem] border border-rose-500/20 space-y-5 shadow-lg shadow-rose-500/5">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-black text-rose-400 uppercase tracking-widest">📊 Detalhes — {entidadeEvolucaoB}</h3>
+                      <span className="text-2xl font-black text-rose-300">{statsEvolucao.detalhesB.total} <span className="text-xs text-rose-400/60">regs</span></span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-black/20 p-3 rounded-xl border border-white/5 space-y-1">
+                        <p className="text-[8px] font-black uppercase text-on-surface-variant tracking-widest">🎓 Aluno + Registrado</p>
+                        <p className="text-xs font-bold text-white truncate">{statsEvolucao.detalhesB.topAluno.nome}</p>
+                        <p className="text-[10px] text-rose-400 font-black">{statsEvolucao.detalhesB.topAluno.count} regs</p>
+                      </div>
+                      <div className="bg-black/20 p-3 rounded-xl border border-white/5 space-y-1">
+                        <p className="text-[8px] font-black uppercase text-on-surface-variant tracking-widest">📚 Ano/Série + Registrado</p>
+                        <p className="text-xs font-bold text-white truncate">{statsEvolucao.detalhesB.topAno.nome}</p>
+                        <p className="text-[10px] text-rose-400 font-black">{statsEvolucao.detalhesB.topAno.count} regs</p>
+                      </div>
+                      <div className="bg-black/20 p-3 rounded-xl border border-white/5 space-y-1">
+                        <p className="text-[8px] font-black uppercase text-on-surface-variant tracking-widest">⏰ Horário + Registrado</p>
+                        <p className="text-xs font-bold text-white">{statsEvolucao.detalhesB.topHora.nome}</p>
+                        <p className="text-[10px] text-rose-400 font-black">{statsEvolucao.detalhesB.topHora.count} regs</p>
+                      </div>
+                      <div className="bg-black/20 p-3 rounded-xl border border-white/5 space-y-1">
+                        <p className="text-[8px] font-black uppercase text-on-surface-variant tracking-widest">👤 Funcionário + Ativo</p>
+                        <p className="text-xs font-bold text-white truncate">{statsEvolucao.detalhesB.topFuncionario.nome}</p>
+                        <p className="text-[10px] text-rose-400 font-black">{statsEvolucao.detalhesB.topFuncionario.count} regs</p>
+                      </div>
+                      <div className="bg-black/20 p-3 rounded-xl border border-white/5 space-y-1">
+                        <p className="text-[8px] font-black uppercase text-on-surface-variant tracking-widest">📋 Tipo + Frequente</p>
+                        <p className="text-xs font-bold text-white truncate">{statsEvolucao.detalhesB.topTipo.nome}</p>
+                        <p className="text-[10px] text-rose-400 font-black">{statsEvolucao.detalhesB.topTipo.count} regs</p>
+                      </div>
+                      <div className="bg-black/20 p-3 rounded-xl border border-white/5 space-y-1">
+                        <p className="text-[8px] font-black uppercase text-on-surface-variant tracking-widest">📅 Dia + Ativo</p>
+                        <p className="text-xs font-bold text-white">{statsEvolucao.detalhesB.topDia.nome}</p>
+                        <p className="text-[10px] text-rose-400 font-black">{statsEvolucao.detalhesB.topDia.count} regs</p>
+                      </div>
+                    </div>
+
+                    {/* Top 5 lists */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <p className="text-[8px] font-black uppercase text-rose-400/80 tracking-widest">Top 5 Alunos</p>
+                        {statsEvolucao.detalhesB.topAlunos.map((a, i) => (
+                          <div key={a.nome} className="flex justify-between text-[10px]">
+                            <span className="text-white truncate font-semibold">#{i+1} {a.nome}</span>
+                            <span className="text-rose-400 font-black shrink-0 ml-1">{a.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-[8px] font-black uppercase text-rose-400/80 tracking-widest">Top 5 Tipos</p>
+                        {statsEvolucao.detalhesB.topTipos.map((t, i) => (
+                          <div key={t.nome} className="flex justify-between text-[10px]">
+                            <span className="text-white truncate font-semibold">#{i+1} {t.nome}</span>
+                            <span className="text-rose-400 font-black shrink-0 ml-1">{t.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Comparação Direta (só no comparativo) */}
+              {tipoAnaliseEvolucao === 'comparativo' && (
+                <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
+                  <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                    <BarChart2 size={14} className="text-amber-400" /> Comparação Direta: {entidadeEvolucaoA} vs {entidadeEvolucaoB}
+                  </h3>
+
+                  <div className="space-y-4">
+                    {/* Quantidade Total */}
+                    {(() => {
+                      const a = statsEvolucao.detalhesA.total;
+                      const b = statsEvolucao.detalhesB.total;
+                      const maxV = Math.max(a, b, 1);
+                      return (
+                        <div className="space-y-2">
+                          <p className="text-[9px] font-black uppercase text-on-surface-variant tracking-widest">Quantidade Total de Registros</p>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-black text-cyan-400 w-10 text-right">{a}</span>
+                            <div className="flex-1 flex gap-1">
+                              <div className="flex-1 bg-black/40 h-4 rounded-l-full overflow-hidden flex justify-end">
+                                <div className="bg-gradient-to-l from-cyan-500 to-cyan-600 h-full rounded-l-full transition-all" style={{ width: `${(a / maxV) * 100}%` }} />
+                              </div>
+                              <div className="flex-1 bg-black/40 h-4 rounded-r-full overflow-hidden">
+                                <div className="bg-gradient-to-r from-rose-500 to-rose-600 h-full rounded-r-full transition-all" style={{ width: `${(b / maxV) * 100}%` }} />
+                              </div>
+                            </div>
+                            <span className="text-xs font-black text-rose-400 w-10">{b}</span>
+                          </div>
+                          <div className="text-center">
+                            <span className={cn(
+                              "px-3 py-1 rounded-full text-[10px] font-black",
+                              a > b ? "bg-cyan-500/20 text-cyan-400" : a < b ? "bg-rose-500/20 text-rose-400" : "bg-white/10 text-white"
+                            )}>
+                              {a > b ? `${entidadeEvolucaoA} tem +${a - b} registros` : a < b ? `${entidadeEvolucaoB} tem +${b - a} registros` : 'Empate'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Comparação de métricas lado a lado */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-white/5">
+                      {[
+                        { label: 'Aluno + Registrado', aVal: statsEvolucao.detalhesA.topAluno, bVal: statsEvolucao.detalhesB.topAluno },
+                        { label: 'Ano/Série + Registrado', aVal: statsEvolucao.detalhesA.topAno, bVal: statsEvolucao.detalhesB.topAno },
+                        { label: 'Horário + Ativo', aVal: statsEvolucao.detalhesA.topHora, bVal: statsEvolucao.detalhesB.topHora },
+                        { label: 'Funcionário + Ativo', aVal: statsEvolucao.detalhesA.topFuncionario, bVal: statsEvolucao.detalhesB.topFuncionario },
+                        { label: 'Tipo + Frequente', aVal: statsEvolucao.detalhesA.topTipo, bVal: statsEvolucao.detalhesB.topTipo },
+                        { label: 'Dia + Ativo', aVal: statsEvolucao.detalhesA.topDia, bVal: statsEvolucao.detalhesB.topDia },
+                      ].map(metric => (
+                        <div key={metric.label} className="bg-black/20 p-3 rounded-xl border border-white/5 space-y-2">
+                          <p className="text-[8px] font-black uppercase text-on-surface-variant tracking-widest">{metric.label}</p>
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="text-left flex-1">
+                              <p className="text-[10px] text-cyan-400 font-bold truncate">{metric.aVal.nome}</p>
+                              <p className="text-[9px] text-cyan-400/70 font-black">{metric.aVal.count} regs</p>
+                            </div>
+                            <span className="text-on-surface-variant text-[10px] font-black pt-1">vs</span>
+                            <div className="text-right flex-1">
+                              <p className="text-[10px] text-rose-400 font-bold truncate">{metric.bVal.nome}</p>
+                              <p className="text-[9px] text-rose-400/70 font-black">{metric.bVal.count} regs</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
             </div>
 
