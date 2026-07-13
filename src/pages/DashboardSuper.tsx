@@ -405,7 +405,7 @@ export default function DashboardSuperBI() {
     
     if (contextoAnalise === 'Turma') propFn = r => alunosMap.get(r.student_name.toLowerCase())?.turma || 'Sem Turma';
     else if (contextoAnalise === 'Série') propFn = r => alunosMap.get(r.student_name.toLowerCase())?.ano || r.school_year || 'N/A';
-    else if (contextoAnalise === 'Funcionário') propFn = r => r.created_by || profile?.full_name || 'Administração';
+    else if (contextoAnalise === 'Funcionário') propFn = r => (r.created_by || '').trim() || profile?.full_name || 'Administração';
     else if (contextoAnalise === 'Tipo de Ocorrência') propFn = r => r.occurrence_type || 'N/A';
     
     regA.forEach(r => {
@@ -465,6 +465,8 @@ export default function DashboardSuperBI() {
   // Interatividade: Drill Down no clique do KPI
   const handleClickKPI = (alvoCtx: ContextoAnalise) => {
     setContextoAnalise(alvoCtx);
+    // Ao clicar no KPI, muda o período para "tudo" para mostrar todos os dados
+    setFiltrosA(prev => ({ ...prev, tipoPeriodo: 'tudo' as const }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
