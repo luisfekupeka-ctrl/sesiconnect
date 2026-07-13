@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { X, Check, XCircle, Clock, FileText, Save, Search } from 'lucide-react';
+import { X, Check, XCircle, Clock, FileText, Save, Search, AlertCircle } from 'lucide-react';
 import { EntradaGradeSala, Aluno, StatusPresenca } from '../types';
 import { useEscola } from '../context/ContextoEscola';
+import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
 import { salvarChamadas, buscarChamadas } from '../services/dataService';
 
@@ -12,83 +13,61 @@ interface ModalChamadaProps {
 }
 
 export default function ModalChamada({ aula, onClose }: ModalChamadaProps) {
-  const { alunos } = useEscola();
+  const { alunos, professores } = useEscola();
+  const { user, profile } = useAuth();
   const [presencas, setPresencas] = useState<Record<string, StatusPresenca>>({});
   const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
 
-  // Filtrar alunos desta aula de forma sincronizada com o ensalamento real
-  const alunosDaTurma = React.useMemo(() => {
-    // 1. Se a aula possuir uma lista nominal de alunos específica (ensalamento real da grade)
-    if (aula.listaAlunos && aula.listaAlunos.length > 0) {
-      const namesSet = new Set(aula.listaAlunos.map(name => String(name).trim().toLowerCase()));
-      return alunos.filter(a => namesSet.has(a.nome.trim().toLowerCase()))
-                   .sort((a, b) => a.nome.localeCompare(b.nome));
+  // Somente o professor responsável pela aula ou administrador pode realizar a chamada
+  const isDocenteResponsavel = useMemo(() => {
+    if (!profile) return false;
+    // Admins e Super Admins têm acesso total
+    if (profile.role === 'admin' || profile.role === 'super_admin') return true;
+    
+    // Se for professor, deve bater o user_id cadastrado na tabela de professores_cms
+    if (profile.role === 'professor') {
+      const meuProf = professores.find(p => p.user_id === user?.id);
+      return meuProf ? meuProf.nome === aula.nomeProfessor : false;
     }
 
-    // 2. Fallback: filtrar por número da sala se cadastrado
-    const porSala = alunos.filter(a => Number(a.numeroSala) === Number(aula.numeroSala));
-    if (porSala.length > 0) {
-      return porSala.sort((a, b) => a.nome.localeCompare(b.nome));
-    }
+    return false;
+  }, [profile, user, professores, aula]);
 
-    // 3. Fallback secundário: filtrar por turma
-    const porTurma = alunos.filter(a => {
-      if (aula.turma && aula.turma !== 'A DEFINIR' && aula.turma !== '—') {
-        // Tolerância para match parcial entre '1º Ano EM' e '1 EM A LCH'
-        const t1 = String(a.turma).toLowerCase().replace(/[^a-z0-9]/g, '');
-        const t2 = String(aula.turma).toLowerCase().replace(/[^a-z0-9]/g, '');
-        return t1.includes(t2) || t2.includes(t1);
-      }
-      return false;
-    });
-
-    if (porTurma.length > 0) {
-      return porTurma.sort((a, b) => a.nome.localeCompare(b.nome));
-    }
-
-    // 4. Último fallback: Retorna todos para o professor pesquisar
-    return alunos.sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [alunos, aula]);
+  // Carregar alunos da turma correspondente
+  const alunosDaTurma = useMemo(() => {
+    return alunos.filter(a => a.turma === aula.turma).sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [alunos, aula.turma]);
 
   useEffect(() => {
-    // Tenta carregar chamada existente para esta aula
-    const carregarChamada = async () => {
+    async function carregarFaltasExistentes() {
       setLoading(true);
       const dataHoje = new Date().toISOString().split('T')[0];
       const registros = await buscarChamadas({
         data: dataHoje,
-        sala: aula.numeroSala.toString(),
         horario: aula.horario,
+        sala: aula.numeroSala > 0 ? aula.numeroSala.toString() : aula.nomeSala
       });
 
-      if (registros.length > 0) {
-        const estadoInicial: Record<string, StatusPresenca> = {};
-        registros.forEach(r => {
-          estadoInicial[r.idAluno] = r.status;
-        });
-        setPresencas(estadoInicial);
-      } else {
-        // Se não houver chamada, marca todos como presente por padrão (facilita pro professor)
-        const estadoInicial: Record<string, StatusPresenca> = {};
-        alunosDaTurma.forEach(a => {
-          estadoInicial[a.id] = 'presente';
-        });
-        setPresencas(estadoInicial);
-      }
+      const mapaExistente: Record<string, StatusPresenca> = {};
+      registros.forEach(r => {
+        mapaExistente[r.idAluno] = r.status;
+      });
+      setPresencas(mapaExistente);
       setLoading(false);
-    };
-
-    carregarChamada();
+    }
+    carregarFaltasExistentes();
   }, [aula]);
 
   const marcar = (idAluno: string, status: StatusPresenca) => {
+    if (!isDocenteResponsavel) return; // Bloquear clique se não for o responsável
     setPresencas(prev => ({ ...prev, [idAluno]: status }));
   };
 
   const handleSalvar = async () => {
+    if (!isDocenteResponsavel) return;
     setSalvando(true);
     const dataHoje = new Date().toISOString().split('T')[0];
 
@@ -151,6 +130,14 @@ export default function ModalChamada({ aula, onClose }: ModalChamadaProps) {
           </button>
         </div>
 
+        {/* Alerta de Acesso Negado */}
+        {!isDocenteResponsavel && (
+          <div className="bg-rose-500/10 border-b border-rose-500/20 p-4 text-xs font-bold text-rose-400 flex items-center gap-2">
+            <AlertCircle size={16} />
+            <span>Apenas Visualização: Somente o professor responsável ({aula.nomeProfessor}) pode realizar ou editar esta chamada.</span>
+          </div>
+        )}
+
         {/* Search & Stats */}
         <div className="px-6 py-4 bg-surface-container-lowest border-b border-outline-variant/10 flex flex-col sm:flex-row gap-4 items-center justify-between">
           <div className="relative w-full sm:w-64">
@@ -196,7 +183,7 @@ export default function ModalChamada({ aula, onClose }: ModalChamadaProps) {
                   </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className={cn("flex gap-2", !isDocenteResponsavel && "opacity-50 pointer-events-none")}>
                   {botoesStatus.map(btn => {
                     const ativo = presencas[aluno.id] === btn.valor;
                     const Icone = btn.icone;
@@ -204,6 +191,7 @@ export default function ModalChamada({ aula, onClose }: ModalChamadaProps) {
                       <button
                         key={btn.valor}
                         onClick={() => marcar(aluno.id, btn.valor)}
+                        disabled={!isDocenteResponsavel}
                         className={cn(
                           "p-2 rounded-xl transition-all",
                           ativo ? `${btn.cor} text-white shadow-md` : `bg-surface-container-highest text-on-surface-variant ${btn.hover}`
@@ -224,11 +212,11 @@ export default function ModalChamada({ aula, onClose }: ModalChamadaProps) {
         <div className="p-6 border-t border-outline-variant/10 bg-surface-container-low flex justify-end">
           <button
             onClick={handleSalvar}
-            disabled={loading || salvando || alunosDaTurma.length === 0}
+            disabled={loading || salvando || alunosDaTurma.length === 0 || !isDocenteResponsavel}
             className={cn(
               "px-6 py-3 rounded-xl font-black transition-all flex items-center gap-2",
               salvo ? "bg-emerald-500 text-white" : "bg-primary text-on-primary hover:bg-primary/90",
-              (loading || salvando) && "opacity-50 cursor-not-allowed"
+              (loading || salvando || !isDocenteResponsavel) && "opacity-50 cursor-not-allowed"
             )}
           >
             {salvo ? (

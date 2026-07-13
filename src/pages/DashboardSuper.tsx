@@ -36,6 +36,7 @@ export default function DashboardSuper() {
   // Estados dos Dados
   const [registros, setRegistros] = useState<OcorrenciaRegistro[]>([]);
   const [alunosMap, setAlunosMap] = useState<Map<string, AlunoCMS>>(new Map());
+  const [perfis, setPerfis] = useState<any[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
 
@@ -86,6 +87,14 @@ export default function DashboardSuper() {
         map.set(aluno.nome.trim().toLowerCase(), aluno);
       });
       setAlunosMap(map);
+
+      // 3. Carregar todos os perfis (usuários/funcionários)
+      const { data: dataPerfis, error: errPerfis } = await supabase
+        .from('profiles')
+        .select('full_name, role, email');
+      
+      if (errPerfis) throw errPerfis;
+      setPerfis(dataPerfis || []);
 
     } catch (err) {
       console.error('Erro ao carregar dados do dashboard:', err);
@@ -260,6 +269,16 @@ export default function DashboardSuper() {
   // ============================================================
   const rankingFuncionarios = useMemo(() => {
     const contagem: { [nome: string]: number } = {};
+    
+    // Inicializa todos os perfis com cargo de funcionário e status de aprovados
+    perfis.forEach(p => {
+      const eCargoFuncionario = ['professor', 'monitor', 'admin', 'super_admin'].includes(p.role);
+      if (eCargoFuncionario && p.full_name) {
+        contagem[p.full_name.trim()] = 0;
+      }
+    });
+
+    // Contabiliza registros filtrados
     registrosFiltrados.forEach(r => {
       if (r.created_by) {
         const nome = r.created_by.trim();
@@ -269,9 +288,8 @@ export default function DashboardSuper() {
 
     return Object.entries(contagem)
       .map(([nome, count]) => ({ nome, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
-  }, [registrosFiltrados]);
+      .sort((a, b) => b.count - a.count);
+  }, [registrosFiltrados, perfis]);
 
   // ============================================================
   // TIPOS DE REGISTRO (Top 10 Utilizados)
@@ -965,7 +983,7 @@ export default function DashboardSuper() {
           {rankingFuncionarios.length === 0 ? (
             <p className="text-xs text-on-surface-variant text-center py-6">Sem registros criados por funcionários no período.</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
               {rankingFuncionarios.map((func, index) => {
                 const max = rankingFuncionarios[0]?.count || 1;
                 const perc = (func.count / max) * 100;

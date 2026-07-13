@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Clock, MapPin, ChevronRight, Search, ArrowLeft, CheckCircle2, AlertCircle, CheckCircle, ClipboardCheck } from 'lucide-react';
 import { useEscola } from '../context/ContextoEscola';
+import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
 import { obterDiaSemana, estaNoHorario, obterBlocosDeHorario } from '../services/motorEscolar';
 import { buscarRealocacoes } from '../services/motorRealocacao';
@@ -11,6 +12,7 @@ import { EntradaGradeSala, ResultadoRealocacao } from '../types';
 
 export default function ChamadaProfessor() {
   const { professores, horaAtual, gradeCompleta, salas } = useEscola();
+  const { user, profile } = useAuth();
   const [professorSelecionado, setProfessorSelecionado] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
   
@@ -21,6 +23,23 @@ export default function ChamadaProfessor() {
   const [aulaParaChamada, setAulaParaChamada] = useState<EntradaGradeSala | null>(null);
   const [substituicoes, setSubstituicoes] = useState<ResultadoRealocacao[]>([]);
   const [chamadasConcluidas, setChamadasConcluidas] = useState<Set<string>>(new Set());
+
+  // Encontrar se o usuário atual é professor e está vinculado
+  const professorVinculado = useMemo(() => {
+    if (profile?.role === 'professor') {
+      return professores.find(p => p.user_id === user?.id);
+    }
+    return null;
+  }, [profile, user, professores]);
+
+  // Efeito para forçar o professor selecionado se for perfil professor
+  useEffect(() => {
+    if (profile?.role === 'professor') {
+      if (professorVinculado) {
+        setProfessorSelecionado(professorVinculado.nome);
+      }
+    }
+  }, [profile, professorVinculado]);
 
   const carregarStatusChamadas = useCallback(async () => {
     if (!professorSelecionado) return;
@@ -35,12 +54,11 @@ export default function ChamadaProfessor() {
   useEffect(() => {
     async function carregarSubs() {
       const dados = await buscarRealocacoes();
-      // Apenas substituições efetivadas (confirmadas)
       setSubstituicoes(dados.filter(s => s.status === 'EFETIVADO'));
     }
     carregarSubs();
     carregarStatusChamadas();
-  }, [carregarStatusChamadas, aulaParaChamada]); // Recarrega ao fechar o modal ou mudar prof
+  }, [carregarStatusChamadas, aulaParaChamada]);
 
   const listaProfessores = professores.map(p => p.nome).sort();
   const filteredProfessores = listaProfessores.filter(p =>
@@ -49,12 +67,10 @@ export default function ChamadaProfessor() {
 
   const professor = professores.find(p => p.nome === professorSelecionado);
 
-  // Pegar a agenda do professor para o dia selecionado (usando a gradeCompleta que já vem processada e normalizada do contexto com ensalamento e substituições)
   const minhaAgenda = gradeCompleta.filter(g =>
     g.nomeProfessor === professorSelecionado && g.diaSemana === diaFiltro
   ).sort((a, b) => a.horario.localeCompare(b.horario));
 
-  // Calcular total de aulas (Regular + Subs confirmadas) para a barra de progresso
   const totalAulasHoje = obterBlocosDeHorario(gradeCompleta).filter(bloco => {
     const range = `${bloco.inicio} - ${bloco.fim}`;
     const temRegular = minhaAgenda.some(a => a.horario === range);
@@ -65,6 +81,27 @@ export default function ChamadaProfessor() {
     );
     return temRegular || temSub;
   }).length;
+
+  // Se o usuário logado for professor mas não estiver vinculado no CMS
+  if (profile?.role === 'professor' && !professorVinculado) {
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 max-w-md mx-auto">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="w-full bg-surface-container-lowest p-8 rounded-[3rem] editorial-shadow border border-outline-variant/10 text-center space-y-6">
+          <div className="w-20 h-20 bg-rose-500/10 rounded-3xl flex items-center justify-center text-rose-500 mx-auto">
+            <AlertCircle size={40} />
+          </div>
+          <h1 className="text-2xl font-black tracking-tighter">Vínculo Pendente</h1>
+          <p className="text-on-surface-variant text-sm">
+            Seu usuário está configurado como **Professor**, mas ainda não foi vinculado a nenhum professor no banco de dados. 
+          </p>
+          <p className="text-on-surface-variant text-xs opacity-80">
+            Solicite ao administrador para vincular seu perfil nas configurações de acesso no Painel Admin.
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
 
   if (!professorSelecionado) {
     return (
@@ -84,7 +121,7 @@ export default function ChamadaProfessor() {
               placeholder="Buscar seu nome..."
               value={busca}
               onChange={e => setBusca(e.target.value)}
-              className="w-full bg-surface-container-low border-2 border-transparent focus:border-primary rounded-2xl py-4 pl-12 pr-4 text-sm font-bold transition-all outline-none"
+              className="w-full bg-surface-container-low border-2 border-transparent focus:border-primary rounded-2xl py-4 pl-12 pr-4 text-sm font-bold transition-all outline-none text-white"
             />
           </div>
 
@@ -93,7 +130,7 @@ export default function ChamadaProfessor() {
               <button
                 key={nome}
                 onClick={() => setProfessorSelecionado(nome)}
-                className="w-full p-4 bg-surface-container-low hover:bg-primary/10 hover:text-primary rounded-xl text-left font-black text-sm transition-all flex items-center justify-between group"
+                className="w-full p-4 bg-surface-container-low hover:bg-primary/10 hover:text-primary rounded-xl text-left font-black text-sm transition-all flex items-center justify-between group text-white"
               >
                 {nome}
                 <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 transition-all" />
@@ -108,9 +145,11 @@ export default function ChamadaProfessor() {
   return (
     <div className="max-w-md mx-auto space-y-6 pb-20 pt-6 px-4">
       <header className="flex items-center gap-4 bg-surface-container-lowest p-6 rounded-[2.5rem] editorial-shadow border border-outline-variant/10">
-        <button onClick={() => setProfessorSelecionado(null)} className="p-2 bg-surface-container-low rounded-xl hover:bg-hover">
-          <ArrowLeft size={18} />
-        </button>
+        {profile?.role !== 'professor' && (
+          <button onClick={() => setProfessorSelecionado(null)} className="p-2 bg-surface-container-low rounded-xl hover:bg-hover">
+            <ArrowLeft size={18} />
+          </button>
+        )}
         <div>
           <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Professor(a)</p>
           <h2 className="text-xl font-black">{professorSelecionado}</h2>
@@ -149,7 +188,7 @@ export default function ChamadaProfessor() {
           </span>
         </div>
 
-        {/* Seletor de Dia da Semana (Opcional se quiser trocar de dia, mas manteremos o dia atual por padrão ou os botões de dia se houver espaço) */}
+        {/* Seletor de Dia da Semana */}
         <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6">
           {['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'].map(dia => (
             <button
@@ -165,7 +204,7 @@ export default function ChamadaProfessor() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3">
           {obterBlocosDeHorario(gradeCompleta).map(bloco => {
             const range = `${bloco.inicio} - ${bloco.fim}`;
 

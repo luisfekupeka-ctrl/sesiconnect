@@ -364,7 +364,8 @@ export async function buscarProfessoresCMS(): Promise<ProfessorCMS[]> {
     id: p.id,
     nome: p.nome,
     cor: p.cor,
-    especialidade: p.especialidade
+    especialidade: p.especialidade,
+    user_id: p.user_id
   }));
 }
 
@@ -375,6 +376,7 @@ export async function salvarProfessorCMS(prof: Partial<ProfessorCMS>): Promise<b
     nome: prof.nome.trim(),
     cor: prof.cor || '#3B82F6',
     especialidade: prof.especialidade || '',
+    user_id: prof.user_id || null,
   };
 
   if (prof.id && prof.id !== 'novo') {

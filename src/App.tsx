@@ -133,7 +133,7 @@ export default function App() {
                 <Route path="/dashboard-super" element={<ProtectedRoute requiredRole="super_admin"><DashboardSuper /></ProtectedRoute>} />
                 <Route path="/schedule-editor" element={<ProtectedRoute requiredRole="admin"><ScheduleEditor /></ProtectedRoute>} />
                 <Route path="/monitor-schedule" element={<ProtectedRoute requiredRole="admin"><MonitorScheduleEditor /></ProtectedRoute>} />
-                <Route path="/professor-chamada" element={<ProtectedRoute requiredRole="admin"><ChamadaProfessor /></ProtectedRoute>} />
+                <Route path="/professor-chamada" element={<ProtectedRoute><ChamadaProfessor /></ProtectedRoute>} />
               </Route>
             </Routes>
           </React.Suspense>

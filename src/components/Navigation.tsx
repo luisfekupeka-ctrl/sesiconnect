@@ -27,7 +27,7 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean; setIsOpen?: (
     { to: '/atas-pendentes', icon: AlertTriangle, label: 'Atas Pendentes', visible: isAdmin },
     { to: '/forms', icon: FileText, label: 'Ocorrências', visible: isAdmin },
     { to: '/ocorrencias', icon: ClipboardCheck, label: 'Reg. Diário', visible: isAdmin || isProfessor || isMonitor },
-    { to: '/controle-faltas', icon: ClipboardCheck, label: 'Chamadas', visible: isAdmin || isProfessor },
+    { to: isProfessor ? '/professor-chamada' : '/controle-faltas', icon: ClipboardCheck, label: 'Chamadas', visible: isAdmin || isProfessor },
     { to: '/realocacao', icon: RefreshCw, label: 'Realocação', visible: isAdmin },
     { to: '/chamados', icon: Wrench, label: 'Chamados', visible: true },
   ];

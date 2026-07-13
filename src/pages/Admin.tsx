@@ -2820,14 +2820,67 @@ function GestaoUsuarios() {
 
   React.useEffect(() => { carregarPerfis(); }, []);
 
+  const sincronizarVinculoProfessor = async (id: string, role: string, status: string, fullName: string) => {
+    try {
+      if (role === 'professor' && status === 'approved') {
+        const { data: profExistente } = await supabase
+          .from('professores_cms')
+          .select('id')
+          .eq('user_id', id);
+
+        if (!profExistente || profExistente.length === 0) {
+          const { data: profPorNome } = await supabase
+            .from('professores_cms')
+            .select('id')
+            .eq('nome', fullName);
+
+          if (profPorNome && profPorNome.length > 0) {
+            await supabase
+              .from('professores_cms')
+              .update({ user_id: id })
+              .eq('id', profPorNome[0].id);
+          } else {
+            await supabase
+              .from('professores_cms')
+              .insert({
+                nome: fullName,
+                user_id: id,
+                cor: '#3B82F6',
+                especialidade: 'Professor'
+              });
+          }
+        }
+      } else {
+        await supabase
+          .from('professores_cms')
+          .update({ user_id: null })
+          .eq('user_id', id);
+      }
+    } catch (err) {
+      console.error('Erro ao sincronizar vínculo de professor:', err);
+    }
+  };
+
   const handleUpdateStatus = async (id: string, status: string) => {
-    const { error } = await supabase.from('profiles').update({ status }).eq('id', id);
-    if (!error) carregarPerfis();
+    const { data: p } = await supabase.from('profiles').select('role, full_name').eq('id', id).single();
+    if (p) {
+      const { error } = await supabase.from('profiles').update({ status }).eq('id', id);
+      if (!error) {
+        await sincronizarVinculoProfessor(id, p.role, status, p.full_name);
+        carregarPerfis();
+      }
+    }
   };
 
   const handleUpdateRole = async (id: string, role: string) => {
-    const { error } = await supabase.from('profiles').update({ role }).eq('id', id);
-    if (!error) carregarPerfis();
+    const { data: p } = await supabase.from('profiles').select('status, full_name').eq('id', id).single();
+    if (p) {
+      const { error } = await supabase.from('profiles').update({ role }).eq('id', id);
+      if (!error) {
+        await sincronizarVinculoProfessor(id, role, p.status, p.full_name);
+        carregarPerfis();
+      }
+    }
   };
 
   const handleSalvarUsuario = async () => {
@@ -2844,6 +2897,14 @@ function GestaoUsuarios() {
         .eq('id', editandoUsuario.id);
 
       if (error) throw error;
+
+      await sincronizarVinculoProfessor(
+        editandoUsuario.id, 
+        editandoUsuario.role, 
+        editandoUsuario.status, 
+        editandoUsuario.full_name
+      );
+
       setEditandoUsuario(null);
       setNovaSenha('');
       await carregarPerfis();

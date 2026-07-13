@@ -166,6 +166,7 @@ export interface ProfessorCMS {
   nome: string;
   cor: string;
   especialidade?: string;
+  user_id?: string;
 }
 
 export interface LocalCMS {
