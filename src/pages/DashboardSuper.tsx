@@ -405,7 +405,7 @@ export default function DashboardSuperBI() {
     
     if (contextoAnalise === 'Turma') propFn = r => alunosMap.get(r.student_name.toLowerCase())?.turma || 'Sem Turma';
     else if (contextoAnalise === 'Série') propFn = r => alunosMap.get(r.student_name.toLowerCase())?.ano || r.school_year || 'N/A';
-    else if (contextoAnalise === 'Funcionário') propFn = r => r.created_by || 'Sistema';
+    else if (contextoAnalise === 'Funcionário') propFn = r => r.created_by || profile?.full_name || 'Administração';
     else if (contextoAnalise === 'Tipo de Ocorrência') propFn = r => r.occurrence_type || 'N/A';
     
     regA.forEach(r => {
@@ -821,7 +821,7 @@ export default function DashboardSuperBI() {
                     <span className="text-xs text-white font-bold truncate max-w-[150px]" title={r.student_name}>{r.student_name}</span>
                     <span className="text-[10px] text-[#9CA3AF] truncate max-w-[100px]" title={alunosMap.get(r.student_name.toLowerCase())?.turma || '—'}>{alunosMap.get(r.student_name.toLowerCase())?.turma || '—'}</span>
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-bold shrink-0">{r.occurrence_type || 'N/A'}</span>
-                    <span className="text-[10px] text-[#6B7280] truncate max-w-[120px]" title={r.created_by || 'Sistema'}>{r.created_by || 'Sistema'}</span>
+                    <span className="text-[10px] text-[#6B7280] truncate max-w-[120px]" title={r.created_by || profile?.full_name || 'Administração'}>{r.created_by || profile?.full_name || 'Administração'}</span>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ${r.tratada ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>{r.tratada ? 'Resolvida' : 'Pendente'}</span>
                   </div>
                 </div>
