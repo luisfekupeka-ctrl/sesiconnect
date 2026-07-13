@@ -523,14 +523,14 @@ export default function DashboardSuperBI() {
               <Activity size={20} className="text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-black tracking-tight">Business Intelligence</h1>
-              <p className="text-xs text-[#9CA3AF]">Motor Estatístico e Análise Preditiva</p>
+              <h1 className="text-xl font-black tracking-tight">Painel de Ocorrências</h1>
+              <p className="text-xs text-[#9CA3AF]">Dashboard Estatístico Escolar</p>
             </div>
           </div>
           
           <div className="flex flex-wrap items-center gap-1 bg-[#0B0F14] p-1.5 rounded-xl border border-[#2D3748] shadow-inner">
             <span className="text-[10px] uppercase font-bold text-[#9CA3AF] px-2">Analisar por:</span>
-            {['Geral', 'Período', 'Ano Letivo', 'Série', 'Turma', 'Aluno', 'Funcionário', 'Tipo de Ocorrência'].map(ctx => (
+            {['Geral', 'Período', 'Ano Letivo', 'Série', 'Aluno', 'Funcionário', 'Tipo de Ocorrência'].map(ctx => (
               <button 
                 key={ctx} 
                 onClick={() => setContextoAnalise(ctx as ContextoAnalise)}
@@ -641,7 +641,7 @@ export default function DashboardSuperBI() {
           )}
 
           {/* Contexto: Aluno */}
-          {(contextoAnalise === 'Aluno' || contextoAnalise === 'Série' || contextoAnalise === 'Turma') && (
+          {(contextoAnalise === 'Aluno' || contextoAnalise === 'Série') && (
             <>
               {renderKPI("Total Alunos", estatisticasA.alunos, estatisticasA.varAlunos, comparacaoAtiva ? estatisticasB?.alunos || 0 : null, <Users size={16}/>, "blue", "Aluno")}
               {renderKPI("Média por Aluno", estatisticasA.mediaAluno.toFixed(1), null, null, <Activity size={16}/>, "yellow", "Aluno")}
