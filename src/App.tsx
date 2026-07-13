@@ -28,6 +28,12 @@ const DashboardSuper = React.lazy(() => import('./pages/DashboardSuper'));
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode; requiredRole?: string }) {
   const { user, profile, loading, signOut } = useAuth();
 
+  // Se vier com hash de recuperação de senha no e-mail, redireciona para a tela de redefinir senha no login
+  const hash = window.location.hash;
+  if (hash && (hash.includes('type=recovery') || hash.includes('access_token='))) {
+    return <Navigate to={`/login${hash}`} replace />;
+  }
+
   if (loading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
