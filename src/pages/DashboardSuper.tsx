@@ -60,15 +60,14 @@ export default function DashboardSuper() {
   const [pesquisandoPeriodo, setPesquisandoPeriodo] = useState(false);
   const [pesquisaSucesso, setPesquisaSucesso] = useState(false);
 
-  const aplicarFiltroPeriodo = () => {
+  const aplicarFiltroPeriodo = async () => {
     setPesquisandoPeriodo(true);
-    setTimeout(() => {
-      setFiltroDataInicio(tempDataInicio);
-      setFiltroDataFim(tempDataFim);
-      setPesquisandoPeriodo(false);
-      setPesquisaSucesso(true);
-      setTimeout(() => setPesquisaSucesso(false), 1500);
-    }, 450);
+    setFiltroDataInicio(tempDataInicio);
+    setFiltroDataFim(tempDataFim);
+    await carregarDados();
+    setPesquisandoPeriodo(false);
+    setPesquisaSucesso(true);
+    setTimeout(() => setPesquisaSucesso(false), 1500);
   };
 
   const aplicarPresetPeriodo = (preset: 'hoje' | 'semana' | 'mes' | 'ano' | 'tudo') => {
@@ -239,14 +238,9 @@ export default function DashboardSuper() {
   const registrosFiltrados = useMemo(() => {
     return registros.filter(r => {
       // 1. Filtro Período
-      if (filtroDataInicio) {
-        const dInicio = new Date(filtroDataInicio + 'T00:00:00');
-        if (new Date(r.created_at) < dInicio) return false;
-      }
-      if (filtroDataFim) {
-        const dFim = new Date(filtroDataFim + 'T23:59:59');
-        if (new Date(r.created_at) > dFim) return false;
-      }
+      const dataRegistroStr = r.created_at ? r.created_at.split(/[\sT]/)[0] : '';
+      if (filtroDataInicio && dataRegistroStr < filtroDataInicio) return false;
+      if (filtroDataFim && dataRegistroStr > filtroDataFim) return false;
 
       // Resolvendo Turma / Ano do Aluno
       const alunoInfo = alunosMap.get(r.student_name.trim().toLowerCase());
@@ -793,7 +787,10 @@ export default function DashboardSuper() {
             <input 
               type="date" 
               value={tempDataInicio}
-              onChange={e => setTempDataInicio(e.target.value)}
+              onChange={e => {
+                setTempDataInicio(e.target.value);
+                setFiltroDataInicio(e.target.value);
+              }}
               className="w-full bg-surface border border-white/10 rounded-xl p-2.5 text-[10px] text-white outline-none focus:border-primary"
             />
           </div>
@@ -803,7 +800,10 @@ export default function DashboardSuper() {
             <input 
               type="date" 
               value={tempDataFim}
-              onChange={e => setTempDataFim(e.target.value)}
+              onChange={e => {
+                setTempDataFim(e.target.value);
+                setFiltroDataFim(e.target.value);
+              }}
               className="w-full bg-surface border border-white/10 rounded-xl p-2.5 text-[10px] text-white outline-none focus:border-primary"
             />
           </div>
