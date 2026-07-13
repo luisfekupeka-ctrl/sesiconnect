@@ -946,9 +946,9 @@ export default function DashboardSuper() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-9 gap-4 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end">
           <div className="space-y-1">
-            <label className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest block">Início</label>
+            <label className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest block">Início</label>
             <input 
               type="date" 
               value={tempDataInicio}
@@ -956,12 +956,12 @@ export default function DashboardSuper() {
                 setTempDataInicio(e.target.value);
                 setFiltroDataInicio(e.target.value);
               }}
-              className="w-full bg-surface border border-white/10 rounded-xl p-2.5 text-[10px] text-white outline-none focus:border-primary"
+              className="w-full bg-surface border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest block">Fim</label>
+            <label className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest block">Fim</label>
             <input 
               type="date" 
               value={tempDataFim}
@@ -969,7 +969,7 @@ export default function DashboardSuper() {
                 setTempDataFim(e.target.value);
                 setFiltroDataFim(e.target.value);
               }}
-              className="w-full bg-surface border border-white/10 rounded-xl p-2.5 text-[10px] text-white outline-none focus:border-primary"
+              className="w-full bg-surface border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
             />
           </div>
 
@@ -978,7 +978,7 @@ export default function DashboardSuper() {
               onClick={aplicarFiltroPeriodo}
               disabled={pesquisandoPeriodo}
               className={cn(
-                "w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                "w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
                 pesquisaSucesso 
                   ? "bg-emerald-500 text-black border border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]"
                   : "bg-primary text-black border border-primary hover:bg-primary/80 active:scale-95"
@@ -989,27 +989,29 @@ export default function DashboardSuper() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest block">Ano Letivo</label>
+            <label className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest block">Ano Letivo</label>
             <select 
               value={filtroAnoLetivo}
               onChange={e => setFiltroAnoLetivo(e.target.value)}
-              className="w-full bg-surface border border-white/10 rounded-xl p-2.5 text-[10px] text-white outline-none focus:border-primary"
+              className="w-full bg-surface border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
             >
               <option value="Todos">Todos</option>
               <option value="6º Ano">6º Ano</option>
               <option value="7º Ano">7º Ano</option>
               <option value="8º Ano">8º Ano</option>
               <option value="9º Ano">9º Ano</option>
-              <option value="EM">Ensino Médio</option>
+              <option value="1º Ano EM">1º Ano EM</option>
+              <option value="2º Ano EM">2º Ano EM</option>
+              <option value="3º Ano EM">3º Ano EM</option>
             </select>
           </div>
 
           <div className="space-y-1">
-            <label className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest block">Série/Ano</label>
+            <label className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest block">Série/Ano</label>
             <select 
               value={filtroSerieAno}
               onChange={e => setFiltroSerieAno(e.target.value)}
-              className="w-full bg-surface border border-white/10 rounded-xl p-2.5 text-[10px] text-white outline-none focus:border-primary"
+              className="w-full bg-surface border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
             >
               <option value="Todos">Todos</option>
               {listSeriesAnos.map(s => <option key={s} value={s}>{s}</option>)}
@@ -1017,11 +1019,11 @@ export default function DashboardSuper() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest block">Turma</label>
+            <label className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest block">Turma</label>
             <select 
               value={filtroTurma}
               onChange={e => setFiltroTurma(e.target.value)}
-              className="w-full bg-surface border border-white/10 rounded-xl p-2.5 text-[10px] text-white outline-none focus:border-primary"
+              className="w-full bg-surface border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
             >
               <option value="Todos">Todos</option>
               {listTurmas.map(t => <option key={t} value={t}>{t}</option>)}
@@ -1029,11 +1031,11 @@ export default function DashboardSuper() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest block">Funcionário</label>
+            <label className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest block">Funcionário</label>
             <select 
               value={filtroFuncionario}
               onChange={e => setFiltroFuncionario(e.target.value)}
-              className="w-full bg-surface border border-white/10 rounded-xl p-2.5 text-[10px] text-white outline-none focus:border-primary"
+              className="w-full bg-surface border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
             >
               <option value="Todos">Todos</option>
               {listFuncionarios.map(f => <option key={f} value={f}>{f}</option>)}
@@ -1041,11 +1043,11 @@ export default function DashboardSuper() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest block">Aluno</label>
+            <label className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest block">Aluno</label>
             <select 
               value={filtroAluno}
               onChange={e => setFiltroAluno(e.target.value)}
-              className="w-full bg-surface border border-white/10 rounded-xl p-2.5 text-[10px] text-white outline-none focus:border-primary"
+              className="w-full bg-surface border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
             >
               <option value="Todos">Todos</option>
               {listAlunos.map(a => <option key={a} value={a}>{a}</option>)}
@@ -1053,11 +1055,11 @@ export default function DashboardSuper() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest block">Tipo Ocorrência</label>
+            <label className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest block">Tipo Ocorrência</label>
             <select 
               value={filtroTipo}
               onChange={e => setFiltroTipo(e.target.value)}
-              className="w-full bg-surface border border-white/10 rounded-xl p-2.5 text-[10px] text-white outline-none focus:border-primary"
+              className="w-full bg-surface border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
             >
               <option value="Todos">Todos</option>
               {listTiposRegistro.map(t => <option key={t} value={t}>{t}</option>)}
@@ -1395,48 +1397,75 @@ export default function DashboardSuper() {
               <div className="space-y-6">
                 
                 {/* Indicador Único */}
-                <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5">
-                  <p className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest">Ocorrências do Aluno</p>
-                  <h3 className="text-4xl font-black text-white mt-2">{statsAluno.total}</h3>
+                <div className="bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent p-6 rounded-[2rem] border border-emerald-500/20 space-y-2 shadow-lg shadow-emerald-500/5 hover:border-emerald-500/30 transition-all">
+                  <p className="text-[10px] font-black uppercase text-emerald-400 tracking-widest">Ocorrências do Aluno</p>
+                  <h3 className="text-4xl font-black text-emerald-300 mt-2">{statsAluno.total}</h3>
                   <p className="text-[10px] text-on-surface-variant mt-2 font-semibold">Nome do Aluno: <span className="text-white">{alunoSelecionado}</span></p>
                 </div>
 
                 {/* Séries e Frequência do Aluno */}
                 <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
                   <h3 className="text-xs font-black uppercase text-white tracking-widest">Séries Envolvidas</h3>
-                  <div className="space-y-2">
-                    {statsAluno.series.map(s => (
-                      <div key={s.name} className="flex justify-between items-center text-xs">
-                        <span className="text-on-surface-variant font-semibold">{s.name}</span>
-                        <span className="text-white font-bold">{s.count} regs</span>
-                      </div>
-                    ))}
+                  <div className="space-y-3">
+                    {statsAluno.series.map(s => {
+                      const max = statsAluno.series[0]?.count || 1;
+                      const pct = (s.count / max) * 100;
+                      return (
+                        <div key={s.name} className="space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-on-surface-variant font-semibold">{s.name}</span>
+                            <span className="text-white font-bold">{s.count} regs</span>
+                          </div>
+                          <div className="w-full bg-black/40 border border-white/5 h-1.5 rounded-full overflow-hidden">
+                            <div className="bg-emerald-500 h-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
                 {/* Dias da semana com maior frequência */}
                 <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
                   <h3 className="text-xs font-black uppercase text-white tracking-widest">Frequência por Dia da Semana</h3>
-                  <div className="space-y-2">
-                    {statsAluno.dias.map(d => (
-                      <div key={d.name} className="flex justify-between items-center text-xs">
-                        <span className="text-on-surface-variant font-semibold">{d.name}</span>
-                        <span className="text-primary font-bold">{d.count} regs</span>
-                      </div>
-                    ))}
+                  <div className="space-y-3">
+                    {statsAluno.dias.map(d => {
+                      const max = Math.max(...statsAluno.dias.map(item => item.count), 1);
+                      const pct = (d.count / max) * 100;
+                      return (
+                        <div key={d.name} className="space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-on-surface-variant font-semibold">{d.name}</span>
+                            <span className="text-primary font-bold">{d.count} regs</span>
+                          </div>
+                          <div className="w-full bg-black/40 border border-white/5 h-1.5 rounded-full overflow-hidden">
+                            <div className="bg-primary h-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
                 {/* Horários com maior frequência */}
                 <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
                   <h3 className="text-xs font-black uppercase text-white tracking-widest">Frequência por Horário</h3>
-                  <div className="space-y-2">
-                    {statsAluno.horas.map(h => (
-                      <div key={h.name} className="flex justify-between items-center text-xs">
-                        <span className="text-on-surface-variant font-semibold">{h.name}</span>
-                        <span className="text-primary font-bold">{h.count} regs</span>
-                      </div>
-                    ))}
+                  <div className="space-y-3">
+                    {statsAluno.horas.map(h => {
+                      const max = Math.max(...statsAluno.horas.map(item => item.count), 1);
+                      const pct = (h.count / max) * 100;
+                      return (
+                        <div key={h.name} className="space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-on-surface-variant font-semibold">{h.name}</span>
+                            <span className="text-primary font-bold">{h.count} regs</span>
+                          </div>
+                          <div className="w-full bg-black/40 border border-white/5 h-1.5 rounded-full overflow-hidden">
+                            <div className="bg-primary h-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1557,10 +1586,10 @@ export default function DashboardSuper() {
               <div className="space-y-6">
                 
                 {/* Total e Comparação Média */}
-                <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
+                <div className="bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent p-6 rounded-[2rem] border border-purple-500/20 space-y-4 shadow-lg shadow-purple-500/5 hover:border-purple-500/30 transition-all">
                   <div>
-                    <p className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest">Ocorrências Registradas</p>
-                    <h3 className="text-4xl font-black text-white mt-2">{statsFuncionario.total}</h3>
+                    <p className="text-[10px] font-black uppercase text-purple-400 tracking-widest">Ocorrências Registradas</p>
+                    <h3 className="text-4xl font-black text-purple-300 mt-2">{statsFuncionario.total}</h3>
                     <p className="text-[10px] text-on-surface-variant mt-2 font-semibold">Nome: <span className="text-white">{funcionarioSelecionado}</span></p>
                   </div>
                   
@@ -1585,39 +1614,66 @@ export default function DashboardSuper() {
                 {/* Turmas Mais Envolvidas */}
                 <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
                   <h3 className="text-xs font-black uppercase text-white tracking-widest">Turmas Mais Registradas</h3>
-                  <div className="space-y-2">
-                    {statsFuncionario.turmas.map(t => (
-                      <div key={t.name} className="flex justify-between items-center text-xs">
-                        <span className="text-on-surface-variant font-semibold">{t.name}</span>
-                        <span className="text-white font-bold">{t.count} regs</span>
-                      </div>
-                    ))}
+                  <div className="space-y-3">
+                    {statsFuncionario.turmas.map(t => {
+                      const max = statsFuncionario.turmas[0]?.count || 1;
+                      const pct = (t.count / max) * 100;
+                      return (
+                        <div key={t.name} className="space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-on-surface-variant font-semibold">{t.name}</span>
+                            <span className="text-white font-bold">{t.count} regs</span>
+                          </div>
+                          <div className="w-full bg-black/40 border border-white/5 h-1.5 rounded-full overflow-hidden">
+                            <div className="bg-purple-500 h-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
                 {/* Horários Preferidos */}
                 <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
                   <h3 className="text-xs font-black uppercase text-white tracking-widest">Horários com Maior Atividade</h3>
-                  <div className="space-y-2">
-                    {statsFuncionario.horas.map(h => (
-                      <div key={h.name} className="flex justify-between items-center text-xs">
-                        <span className="text-on-surface-variant font-semibold">{h.name}</span>
-                        <span className="text-primary font-bold">{h.count} regs</span>
-                      </div>
-                    ))}
+                  <div className="space-y-3">
+                    {statsFuncionario.horas.map(h => {
+                      const max = Math.max(...statsFuncionario.horas.map(item => item.count), 1);
+                      const pct = (h.count / max) * 100;
+                      return (
+                        <div key={h.name} className="space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-on-surface-variant font-semibold">{h.name}</span>
+                            <span className="text-primary font-bold">{h.count} regs</span>
+                          </div>
+                          <div className="w-full bg-black/40 border border-white/5 h-1.5 rounded-full overflow-hidden">
+                            <div className="bg-primary h-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
                 {/* Dias de Atividade */}
                 <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
                   <h3 className="text-xs font-black uppercase text-white tracking-widest">Atividade por Dia da Semana</h3>
-                  <div className="space-y-2">
-                    {statsFuncionario.dias.map(d => (
-                      <div key={d.name} className="flex justify-between items-center text-xs">
-                        <span className="text-on-surface-variant font-semibold">{d.name}</span>
-                        <span className="text-primary font-bold">{d.count} regs</span>
-                      </div>
-                    ))}
+                  <div className="space-y-3">
+                    {statsFuncionario.dias.map(d => {
+                      const max = Math.max(...statsFuncionario.dias.map(item => item.count), 1);
+                      const pct = (d.count / max) * 100;
+                      return (
+                        <div key={d.name} className="space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-on-surface-variant font-semibold">{d.name}</span>
+                            <span className="text-primary font-bold">{d.count} regs</span>
+                          </div>
+                          <div className="w-full bg-black/40 border border-white/5 h-1.5 rounded-full overflow-hidden">
+                            <div className="bg-primary h-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1705,15 +1761,15 @@ export default function DashboardSuper() {
               {/* Estatísticas Rápidas */}
               <div className="space-y-6">
                 
-                <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-2">
-                  <p className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest font-bold">Total de Ocorrências</p>
-                  <h3 className="text-4xl font-black text-white mt-1">{statsSerie.total}</h3>
+                <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent p-6 rounded-[2rem] border border-amber-500/20 space-y-2 shadow-lg shadow-amber-500/5 hover:border-amber-500/30 transition-all">
+                  <p className="text-[10px] font-black uppercase text-amber-400 tracking-widest">Total de Ocorrências</p>
+                  <h3 className="text-4xl font-black text-amber-300 mt-1">{statsSerie.total}</h3>
                   <p className="text-[10px] text-on-surface-variant mt-2 font-semibold">Série selecionada: <span className="text-white">{serieSelecionada}</span></p>
                 </div>
 
-                <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-2">
-                  <p className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest font-bold font-bold">Alunos com Registro</p>
-                  <h3 className="text-4xl font-black text-white mt-1">{statsSerie.alunosEnvolvidos}</h3>
+                <div className="bg-gradient-to-br from-cyan-500/10 via-cyan-500/5 to-transparent p-6 rounded-[2rem] border border-cyan-500/20 space-y-2 shadow-lg shadow-cyan-500/5 hover:border-cyan-500/30 transition-all">
+                  <p className="text-[10px] font-black uppercase text-cyan-400 tracking-widest">Alunos com Registro</p>
+                  <h3 className="text-4xl font-black text-cyan-300 mt-1">{statsSerie.alunosEnvolvidos}</h3>
                   <p className="text-[10px] text-on-surface-variant mt-2">alunos únicos desta série</p>
                 </div>
 
@@ -1801,22 +1857,31 @@ export default function DashboardSuper() {
               {/* KPIs Laterais */}
               <div className="space-y-6">
                 
-                <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-2">
-                  <p className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest font-bold">Volume Total Registrado</p>
-                  <h3 className="text-4xl font-black text-white mt-1">{statsTipo.total}</h3>
+                <div className="bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-transparent p-6 rounded-[2rem] border border-rose-500/20 space-y-2 shadow-lg shadow-rose-500/5 hover:border-rose-500/30 transition-all">
+                  <p className="text-[10px] font-black uppercase text-rose-400 tracking-widest">Volume Total Registrado</p>
+                  <h3 className="text-4xl font-black text-rose-300 mt-1">{statsTipo.total}</h3>
                   <p className="text-[10px] text-on-surface-variant mt-2 font-semibold">Tipo: <span className="text-white">{tipoSelecionado}</span></p>
                 </div>
 
                 {/* Séries onde mais aparece */}
                 <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
                   <h3 className="text-xs font-black uppercase text-white tracking-widest">Frequência por Série/Ano</h3>
-                  <div className="space-y-2">
-                    {statsTipo.series.map(s => (
-                      <div key={s.name} className="flex justify-between items-center text-xs">
-                        <span className="text-on-surface-variant font-semibold">{s.name}</span>
-                        <span className="text-white font-bold">{s.count} regs</span>
-                      </div>
-                    ))}
+                  <div className="space-y-3">
+                    {statsTipo.series.map(s => {
+                      const max = statsTipo.series[0]?.count || 1;
+                      const pct = (s.count / max) * 100;
+                      return (
+                        <div key={s.name} className="space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-on-surface-variant font-semibold">{s.name}</span>
+                            <span className="text-white font-bold">{s.count} regs</span>
+                          </div>
+                          <div className="w-full bg-black/40 border border-white/5 h-1.5 rounded-full overflow-hidden">
+                            <div className="bg-rose-500 h-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
