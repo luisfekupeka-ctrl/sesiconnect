@@ -55,6 +55,64 @@ export default function DashboardSuper() {
   // Estados dos Filtros Globais
   const [filtroDataInicio, setFiltroDataInicio] = useState('');
   const [filtroDataFim, setFiltroDataFim] = useState('');
+  const [tempDataInicio, setTempDataInicio] = useState('');
+  const [tempDataFim, setTempDataFim] = useState('');
+  const [pesquisandoPeriodo, setPesquisandoPeriodo] = useState(false);
+  const [pesquisaSucesso, setPesquisaSucesso] = useState(false);
+
+  const aplicarFiltroPeriodo = () => {
+    setPesquisandoPeriodo(true);
+    setTimeout(() => {
+      setFiltroDataInicio(tempDataInicio);
+      setFiltroDataFim(tempDataFim);
+      setPesquisandoPeriodo(false);
+      setPesquisaSucesso(true);
+      setTimeout(() => setPesquisaSucesso(false), 1500);
+    }, 450);
+  };
+
+  const aplicarPresetPeriodo = (preset: 'hoje' | 'semana' | 'mes' | 'ano' | 'tudo') => {
+    const hoje = new Date();
+    let inicio = '';
+    let fim = '';
+
+    const formatarData = (d: Date) => {
+      const ano = d.getFullYear();
+      const mes = (d.getMonth() + 1).toString().padStart(2, '0');
+      const dia = d.getDate().toString().padStart(2, '0');
+      return `${ano}-${mes}-${dia}`;
+    };
+
+    if (preset === 'hoje') {
+      inicio = formatarData(hoje);
+      fim = formatarData(hoje);
+    } else if (preset === 'semana') {
+      const diaSemana = hoje.getDay();
+      const dom = new Date(hoje);
+      dom.setDate(hoje.getDate() - diaSemana);
+      const sab = new Date(hoje);
+      sab.setDate(hoje.getDate() + (6 - diaSemana));
+      inicio = formatarData(dom);
+      fim = formatarData(sab);
+    } else if (preset === 'mes') {
+      const pDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+      const uDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+      inicio = formatarData(pDia);
+      fim = formatarData(uDia);
+    } else if (preset === 'ano') {
+      inicio = `${hoje.getFullYear()}-01-01`;
+      fim = `${hoje.getFullYear()}-12-31`;
+    }
+
+    setTempDataInicio(inicio);
+    setTempDataFim(fim);
+    
+    setFiltroDataInicio(inicio);
+    setFiltroDataFim(fim);
+    setPesquisaSucesso(true);
+    setTimeout(() => setPesquisaSucesso(false), 1000);
+  };
+
   const [filtroAnoLetivo, setFiltroAnoLetivo] = useState('Todos');
   const [filtroSerieAno, setFiltroSerieAno] = useState('Todos');
   const [filtroTurma, setFiltroTurma] = useState('Todos');
@@ -622,6 +680,8 @@ export default function DashboardSuper() {
 
   // Limpar Filtros Globais
   const limparFiltros = () => {
+    setTempDataInicio('');
+    setTempDataFim('');
     setFiltroDataInicio('');
     setFiltroDataFim('');
     setFiltroAnoLetivo('Todos');
@@ -674,11 +734,11 @@ export default function DashboardSuper() {
           ============================================================ */}
       <div className="flex overflow-x-auto no-scrollbar gap-2 border-b border-white/5 pb-4">
         {([
-          { id: 'geral', label: 'Visão Geral', icon: Activity },
-          { id: 'alunos', label: 'Alunos', icon: Users },
-          { id: 'funcionarios', label: 'Funcionários', icon: Award },
-          { id: 'series', label: 'Anos / Séries', icon: BookOpen },
-          { id: 'tipos', label: 'Tipos de Ocorrência', icon: FileText }
+          { id: 'geral', label: 'Visão Geral', icon: Activity, activeClass: "bg-blue-500 text-black border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]" },
+          { id: 'alunos', label: 'Alunos', icon: Users, activeClass: "bg-emerald-500 text-black border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]" },
+          { id: 'funcionarios', label: 'Funcionários', icon: Award, activeClass: "bg-purple-500 text-black border-purple-500 shadow-[0_0_15px_rgba(139,92,246,0.3)]" },
+          { id: 'series', label: 'Anos / Séries', icon: BookOpen, activeClass: "bg-amber-500 text-black border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]" },
+          { id: 'tipos', label: 'Tipos de Ocorrência', icon: FileText, activeClass: "bg-rose-500 text-black border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.3)]" }
         ] as const).map(tab => {
           const Ativo = abaAtiva === tab.id;
           return (
@@ -688,7 +748,7 @@ export default function DashboardSuper() {
               className={cn(
                 "px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2.5 border shrink-0",
                 Ativo 
-                  ? "bg-primary text-black border-primary shadow-glow-yellow" 
+                  ? tab.activeClass 
                   : "bg-surface-container-low text-on-surface-variant border-white/5 hover:border-primary/20 hover:text-white"
               )}
             >
@@ -706,14 +766,34 @@ export default function DashboardSuper() {
         <h2 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
           <Filter size={14} className="text-primary" /> Filtros Dinâmicos
         </h2>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+
+        {/* Filtros de Tempo Rápidos */}
+        <div className="flex flex-wrap items-center gap-2 bg-surface/30 p-3 rounded-2xl border border-white/5">
+          <span className="text-[9px] font-black uppercase text-on-surface-variant tracking-widest mr-2">Tempo Rápido:</span>
+          {([
+            { id: 'hoje', label: 'Hoje' },
+            { id: 'semana', label: 'Esta Semana' },
+            { id: 'mes', label: 'Este Mês' },
+            { id: 'ano', label: 'Este Ano' },
+            { id: 'tudo', label: 'Ver Tudo' }
+          ] as const).map(p => (
+            <button
+              key={p.id}
+              onClick={() => aplicarPresetPeriodo(p.id)}
+              className="px-3 py-1.5 bg-surface hover:bg-surface-container-high border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-wider text-white hover:border-primary hover:text-primary transition-all active:scale-95 shrink-0"
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-9 gap-4 items-end">
           <div className="space-y-1">
             <label className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest block">Início</label>
             <input 
               type="date" 
-              value={filtroDataInicio}
-              onChange={e => setFiltroDataInicio(e.target.value)}
+              value={tempDataInicio}
+              onChange={e => setTempDataInicio(e.target.value)}
               className="w-full bg-surface border border-white/10 rounded-xl p-2.5 text-[10px] text-white outline-none focus:border-primary"
             />
           </div>
@@ -722,10 +802,25 @@ export default function DashboardSuper() {
             <label className="text-[8px] font-black text-on-surface-variant uppercase tracking-widest block">Fim</label>
             <input 
               type="date" 
-              value={filtroDataFim}
-              onChange={e => setFiltroDataFim(e.target.value)}
+              value={tempDataFim}
+              onChange={e => setTempDataFim(e.target.value)}
               className="w-full bg-surface border border-white/10 rounded-xl p-2.5 text-[10px] text-white outline-none focus:border-primary"
             />
+          </div>
+
+          <div className="space-y-1">
+            <button
+              onClick={aplicarFiltroPeriodo}
+              disabled={pesquisandoPeriodo}
+              className={cn(
+                "w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                pesquisaSucesso 
+                  ? "bg-emerald-500 text-black border border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]"
+                  : "bg-primary text-black border border-primary hover:bg-primary/80 active:scale-95"
+              )}
+            >
+              {pesquisandoPeriodo ? "Rodando..." : pesquisaSucesso ? "Pesquisado!" : "Filtrar Período"}
+            </button>
           </div>
 
           <div className="space-y-1">
@@ -805,12 +900,20 @@ export default function DashboardSuper() {
           </div>
         </div>
 
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-end gap-3 pt-2">
           <button 
             onClick={limparFiltros}
             className="px-4 py-2 border border-white/10 hover:border-red-500/30 text-[10px] font-black uppercase tracking-widest text-on-surface-variant hover:text-red-400 bg-surface rounded-xl active:scale-95 transition-all"
           >
             Limpar Filtros
+          </button>
+          <button 
+            onClick={carregarDados}
+            disabled={atualizando}
+            className="px-4 py-2 bg-surface-container-high hover:bg-hover border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white flex items-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+          >
+            <RefreshCw size={12} className={cn(atualizando && "animate-spin")} />
+            {atualizando ? "Atualizando..." : "Atualizar Dados"}
           </button>
         </div>
       </div>
@@ -826,25 +929,25 @@ export default function DashboardSuper() {
         <div className="space-y-6">
           {/* Cards de Métrica Geral */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-2">
-              <p className="text-[9px] font-black uppercase text-on-surface-variant tracking-widest">Total Registros (Período)</p>
-              <h3 className="text-3xl font-black text-white">{statsGeral.total}</h3>
+            <div className="bg-gradient-to-br from-blue-500/10 via-cyan-500/5 to-transparent p-6 rounded-[2rem] border border-blue-500/20 space-y-2 shadow-lg shadow-blue-500/5 hover:border-blue-500/30 transition-all">
+              <p className="text-[9px] font-black uppercase text-blue-400 tracking-widest">Total Registros (Período)</p>
+              <h3 className="text-3xl font-black text-blue-300">{statsGeral.total}</h3>
             </div>
-            <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-2">
-              <p className="text-[9px] font-black uppercase text-on-surface-variant tracking-widest">Total Registros Geral</p>
-              <h3 className="text-3xl font-black text-white">{registros.length}</h3>
+            <div className="bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-transparent p-6 rounded-[2rem] border border-purple-500/20 space-y-2 shadow-lg shadow-purple-500/5 hover:border-purple-500/30 transition-all">
+              <p className="text-[9px] font-black uppercase text-purple-400 tracking-widest">Total Registros Geral</p>
+              <h3 className="text-3xl font-black text-purple-300">{registros.length}</h3>
             </div>
-            <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-2">
-              <p className="text-[9px] font-black uppercase text-on-surface-variant tracking-widest">Alunos Envolvidos</p>
-              <h3 className="text-3xl font-black text-white">{statsGeral.alunosUnicos}</h3>
+            <div className="bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent p-6 rounded-[2rem] border border-emerald-500/20 space-y-2 shadow-lg shadow-emerald-500/5 hover:border-emerald-500/30 transition-all">
+              <p className="text-[9px] font-black uppercase text-emerald-400 tracking-widest">Alunos Envolvidos</p>
+              <h3 className="text-3xl font-black text-emerald-300">{statsGeral.alunosUnicos}</h3>
             </div>
-            <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-2">
-              <p className="text-[9px] font-black uppercase text-on-surface-variant tracking-widest">Funcionários Ativos</p>
-              <h3 className="text-3xl font-black text-white">{statsGeral.funcionariosUnicos}</h3>
+            <div className="bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent p-6 rounded-[2rem] border border-amber-500/20 space-y-2 shadow-lg shadow-amber-500/5 hover:border-amber-500/30 transition-all">
+              <p className="text-[9px] font-black uppercase text-amber-400 tracking-widest">Funcionários Ativos</p>
+              <h3 className="text-3xl font-black text-amber-300">{statsGeral.funcionariosUnicos}</h3>
             </div>
-            <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-2">
-              <p className="text-[9px] font-black uppercase text-on-surface-variant tracking-widest">Turmas Alcançadas</p>
-              <h3 className="text-3xl font-black text-white">{statsGeral.turmasEnvolvidas}</h3>
+            <div className="bg-gradient-to-br from-rose-500/10 via-red-500/5 to-transparent p-6 rounded-[2rem] border border-rose-500/20 space-y-2 shadow-lg shadow-rose-500/5 hover:border-rose-500/30 transition-all">
+              <p className="text-[9px] font-black uppercase text-rose-400 tracking-widest">Turmas Alcançadas</p>
+              <h3 className="text-3xl font-black text-rose-300">{statsGeral.turmasEnvolvidas}</h3>
             </div>
           </div>
 
@@ -881,9 +984,13 @@ export default function DashboardSuper() {
                   <div className="relative w-full h-48 pt-4">
                     <svg className="w-full h-full overflow-visible" viewBox="0 0 500 200" preserveAspectRatio="none">
                       <defs>
+                        <linearGradient id="stroke-grad" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#A855F7" />
+                          <stop offset="100%" stopColor="#3B82F6" />
+                        </linearGradient>
                         <linearGradient id="area-grad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#f1d86f" stopOpacity="0.2" />
-                          <stop offset="100%" stopColor="#f1d86f" stopOpacity="0" />
+                          <stop offset="0%" stopColor="#A855F7" stopOpacity="0.3" />
+                          <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
                         </linearGradient>
                       </defs>
                       <line x1="0" y1="0" x2="500" y2="0" stroke="rgba(255,255,255,0.03)" strokeDasharray="3 3" />
@@ -905,9 +1012,9 @@ export default function DashboardSuper() {
                         return (
                           <>
                             {pontos.length > 0 && <path d={areaD} fill="url(#area-grad)" />}
-                            {pontos.length > 0 && <path d={pathD} fill="none" stroke="#f1d86f" strokeWidth={3} />}
+                            {pontos.length > 0 && <path d={pathD} fill="none" stroke="url(#stroke-grad)" strokeWidth={3} />}
                             {pontos.map((p, i) => (
-                              <circle key={i} cx={p.x} cy={p.y} r={4} fill="#f1d86f" stroke="#121214" strokeWidth={1.5} />
+                              <circle key={i} cx={p.x} cy={p.y} r={4} fill="#3B82F6" stroke="#121214" strokeWidth={1.5} />
                             ))}
                           </>
                         );
