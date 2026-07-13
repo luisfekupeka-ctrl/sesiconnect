@@ -1,19 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Shield, Lock, User, ArrowRight, AlertCircle, UserPlus, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
-type AuthMode = 'login' | 'register' | 'success';
+type AuthMode = 'login' | 'register' | 'success' | 'reset';
 
 export default function LoginPage() {
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  const [senhaConfirmar, setSenhaConfirmar] = useState('');
   const [nome, setNome] = useState('');
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
   const navigate = useNavigate();
+
+  // Interceptar redirecionamento de redefinição de senha
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && (hash.includes('type=recovery') || hash.includes('access_token='))) {
+      setMode('reset');
+    }
+  }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +41,7 @@ export default function LoginPage() {
         } else {
           navigate('/');
         }
-      } else {
+      } else if (mode === 'register') {
         // Registro
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -45,7 +54,7 @@ export default function LoginPage() {
         if (error) {
           setErro(error.message);
         } else if (data.user) {
-          // Criar perfil pendente (Trigger do DB geralmente faz isso, mas garantimos aqui)
+          // Criar perfil pendente
           await supabase.from('profiles').insert({
             id: data.user.id,
             full_name: nome,
@@ -54,6 +63,26 @@ export default function LoginPage() {
             status: 'pending'
           });
           setMode('success');
+        }
+      } else if (mode === 'reset') {
+        // Redefinir Senha
+        if (senha !== senhaConfirmar) {
+          setErro('As senhas não coincidem.');
+          setCarregando(false);
+          return;
+        }
+        if (senha.length < 6) {
+          setErro('A senha deve ter pelo menos 6 caracteres.');
+          setCarregando(false);
+          return;
+        }
+
+        const { error } = await supabase.auth.updateUser({ password: senha });
+        if (error) {
+          setErro(error.message);
+        } else {
+          alert('Sua senha foi redefinida com sucesso! Redirecionando...');
+          navigate('/');
         }
       }
     } catch (err) {
@@ -95,10 +124,14 @@ export default function LoginPage() {
                   <Shield size={36} />
                 </div>
                 <h1 className="text-3xl font-black tracking-tight mb-2 text-on-surface-bright">
-                  {mode === 'login' ? 'SESI Connect' : 'Criar Conta'}
+                  {mode === 'login' ? 'SESI Connect' : mode === 'reset' ? 'Definir Senha' : 'Criar Conta'}
                 </h1>
                 <p className="text-on-surface-variant text-sm font-medium">
-                  {mode === 'login' ? 'Acesse o comando central da unidade.' : 'Solicite seu acesso ao sistema.'}
+                  {mode === 'login' 
+                    ? 'Acesse o comando central da unidade.' 
+                    : mode === 'reset' 
+                    ? 'Escolha sua nova senha de acesso.' 
+                    : 'Solicite seu acesso ao sistema.'}
                 </p>
               </div>
 
@@ -115,18 +148,22 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-primary uppercase tracking-widest ml-1">E-mail Institucional</label>
-                  <div className="relative">
-                    <User className="absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant/30" size={18} />
-                    <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                      className="w-full bg-surface-container-low border-2 border-white/5 focus:border-primary/50 rounded-2xl py-4 pl-14 pr-4 text-base font-medium transition-all outline-none text-on-surface"
-                      placeholder="seu@email.com" required />
+                {mode !== 'reset' && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-primary uppercase tracking-widest ml-1">E-mail Institucional</label>
+                    <div className="relative">
+                      <User className="absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant/30" size={18} />
+                      <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                        className="w-full bg-surface-container-low border-2 border-white/5 focus:border-primary/50 rounded-2xl py-4 pl-14 pr-4 text-base font-medium transition-all outline-none text-on-surface"
+                        placeholder="seu@email.com" required={mode !== 'reset'} />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-primary uppercase tracking-widest ml-1">Senha</label>
+                  <label className="text-[10px] font-black text-primary uppercase tracking-widest ml-1">
+                    {mode === 'reset' ? 'Nova Senha' : 'Senha'}
+                  </label>
                   <div className="relative">
                     <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant/30" size={18} />
                     <input type="password" value={senha} onChange={e => setSenha(e.target.value)}
@@ -134,6 +171,18 @@ export default function LoginPage() {
                       placeholder="••••••••" required />
                   </div>
                 </div>
+
+                {mode === 'reset' && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-primary uppercase tracking-widest ml-1">Confirmar Nova Senha</label>
+                    <div className="relative">
+                      <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant/30" size={18} />
+                      <input type="password" value={senhaConfirmar} onChange={e => setSenhaConfirmar(e.target.value)}
+                        className="w-full bg-surface-container-low border-2 border-white/5 focus:border-primary/50 rounded-2xl py-4 pl-14 pr-4 text-base font-medium transition-all outline-none text-on-surface"
+                        placeholder="••••••••" required />
+                    </div>
+                  </div>
+                )}
 
                 {erro && (
                   <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
@@ -143,16 +192,18 @@ export default function LoginPage() {
                 )}
 
                 <button type="submit" disabled={carregando} className="btn-primary w-full justify-center py-5">
-                  {carregando ? 'Processando...' : (mode === 'login' ? 'Entrar no Sistema' : 'Solicitar Acesso')}
+                  {carregando ? 'Processando...' : (mode === 'login' ? 'Entrar no Sistema' : mode === 'reset' ? 'Salvar Nova Senha' : 'Solicitar Acesso')}
                   {!carregando && <ArrowRight size={18} />}
                 </button>
 
-                <div className="pt-4 text-center">
-                  <button type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-                    className="text-xs font-black text-primary uppercase tracking-widest hover:underline decoration-2 underline-offset-4">
-                    {mode === 'login' ? 'Não tem conta? Solicite acesso' : 'Já tem conta? Faça login'}
-                  </button>
-                </div>
+                {mode !== 'reset' && (
+                  <div className="pt-4 text-center">
+                    <button type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+                      className="text-xs font-black text-primary uppercase tracking-widest hover:underline decoration-2 underline-offset-4">
+                      {mode === 'login' ? 'Não tem conta? Solicite acesso' : 'Já tem conta? Faça login'}
+                    </button>
+                  </div>
+                )}
               </form>
             </motion.div>
           )}
