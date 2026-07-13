@@ -76,6 +76,24 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean; setIsOpen?: (
       </nav>
 
       <div className="p-4 space-y-3">
+        {profile?.role === 'super_admin' && (
+          <NavLink
+            to="/dashboard-super"
+            onClick={() => setIsOpen?.(false)}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-4 px-5 py-5 rounded-2xl text-base font-bold transition-all border",
+                isActive
+                  ? "bg-indigo-600 text-white border-indigo-600 shadow-[0_0_20px_rgba(79,70,229,0.3)]"
+                  : "bg-surface-container-low text-on-surface-variant border-[#30363d] hover:border-indigo-500 hover:text-indigo-500"
+              )
+            }
+          >
+            <LayoutGrid size={22} />
+            Super Dashboard
+          </NavLink>
+        )}
+
         {isAdmin && (
           <NavLink
             to="/admin"

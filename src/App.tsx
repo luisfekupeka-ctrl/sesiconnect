@@ -22,6 +22,7 @@ const RelatorioDiario = React.lazy(() => import('./pages/RelatorioDiario'));
 const Occurrences = React.lazy(() => import('./pages/Occurrences').then(module => ({ default: module.Occurrences })));
 const PendingAtas = React.lazy(() => import('./pages/PendingAtas'));
 const ChamadosPage = React.lazy(() => import('./pages/Chamados'));
+const DashboardSuper = React.lazy(() => import('./pages/DashboardSuper'));
 
 // Componente de Proteção de Rota
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode; requiredRole?: string }) {
@@ -80,6 +81,10 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode;
     return <Navigate to="/" replace />;
   }
 
+  if (requiredRole === 'super_admin' && profile?.role !== 'super_admin') {
+    return <Navigate to="/" replace />;
+  }
+
   return <>{children}</>;
 }
 
@@ -119,6 +124,7 @@ export default function App() {
                 <Route path="/controle-faltas" element={<ProtectedRoute requiredRole="admin"><ControleFaltas /></ProtectedRoute>} />
                 <Route path="/realocacao" element={<ProtectedRoute requiredRole="admin"><GestaoRealocacao /></ProtectedRoute>} />
                 <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><Admin /></ProtectedRoute>} />
+                <Route path="/dashboard-super" element={<ProtectedRoute requiredRole="super_admin"><DashboardSuper /></ProtectedRoute>} />
                 <Route path="/schedule-editor" element={<ProtectedRoute requiredRole="admin"><ScheduleEditor /></ProtectedRoute>} />
                 <Route path="/monitor-schedule" element={<ProtectedRoute requiredRole="admin"><MonitorScheduleEditor /></ProtectedRoute>} />
                 <Route path="/professor-chamada" element={<ProtectedRoute requiredRole="admin"><ChamadaProfessor /></ProtectedRoute>} />
