@@ -49,9 +49,9 @@ interface FiltroSet {
 }
 
 const filtroInicial: FiltroSet = {
-  tipoPeriodo: 'mes',
-  dataInicio: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
-  dataFim: format(endOfMonth(new Date()), 'yyyy-MM-dd'),
+  tipoPeriodo: 'tudo',
+  dataInicio: '',
+  dataFim: '',
   anoLetivo: 'Todos',
   serieAno: 'Todos',
   turma: 'Todos',
@@ -455,9 +455,23 @@ export default function DashboardSuperBI() {
     else msgs.push({ tipo: 'info', text: `Desvio padrão diário baixo (${estatisticasA.dpDia.toFixed(1)}). Volume de ocorrências estável e previsível.` });
 
     if (rankingAtual.length > 0) msgs.push({ tipo: 'info', text: `Em '${contextoAnalise}', o item líder é '${rankingAtual[0].name}' com ${rankingAtual[0].value} registros.` });
+
+    // Panorama de tendência geral
+    if (graficoEvolucao.length >= 3) {
+      const metade = Math.floor(graficoEvolucao.length / 2);
+      const primMetade = graficoEvolucao.slice(0, metade).reduce((s, p) => s + p.A, 0);
+      const segMetade = graficoEvolucao.slice(metade).reduce((s, p) => s + p.A, 0);
+      if (segMetade > primMetade * 1.1) {
+        msgs.push({ tipo: 'danger', text: `Tendência de ALTA: a segunda metade do período tem ${((segMetade/Math.max(primMetade,1)-1)*100).toFixed(0)}% mais ocorrências que a primeira metade.` });
+      } else if (segMetade < primMetade * 0.9) {
+        msgs.push({ tipo: 'success', text: `Tendência de BAIXA: a segunda metade do período tem ${((1-segMetade/Math.max(primMetade,1))*100).toFixed(0)}% menos ocorrências que a primeira metade.` });
+      } else {
+        msgs.push({ tipo: 'info', text: `Tendência ESTÁVEL: o volume de ocorrências se manteve equilibrado ao longo do período.` });
+      }
+    }
     
     return msgs;
-  }, [estatisticasA, rankingAtual, contextoAnalise]);
+  }, [estatisticasA, rankingAtual, contextoAnalise, graficoEvolucao]);
 
   // --- RENDER HELPERS ---
   const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#8B5CF6', '#EC4899', '#64748B'];
@@ -465,8 +479,6 @@ export default function DashboardSuperBI() {
   // Interatividade: Drill Down no clique do KPI
   const handleClickKPI = (alvoCtx: ContextoAnalise) => {
     setContextoAnalise(alvoCtx);
-    // Ao clicar no KPI, muda o período para "tudo" para mostrar todos os dados
-    setFiltrosA(prev => ({ ...prev, tipoPeriodo: 'tudo' as const }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
