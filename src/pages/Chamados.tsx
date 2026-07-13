@@ -239,6 +239,7 @@ export default function ChamadosPage() {
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
 
   // Estados de Filtro (Consulta)
+  const [exibicaoLista, setExibicaoLista] = useState<'ativos' | 'atendidos' | 'cancelados'>('ativos');
   const [filtroNumero, setFiltroNumero] = useState('');
   const [filtroSolicitante, setFiltroSolicitante] = useState('');
   const [filtroAndar, setFiltroAndar] = useState('');
@@ -809,6 +810,11 @@ export default function ChamadosPage() {
   // ---------------------------------------------------------------------------
   const chamadosFiltrados = useMemo(() => {
     return chamados.filter(c => {
+      // Filtragem por categoria principal (ativos, atendidos, cancelados)
+      if (exibicaoLista === 'ativos' && c.status !== 'Aberto' && c.status !== 'Em Espera') return false;
+      if (exibicaoLista === 'atendidos' && c.status !== 'Atendido') return false;
+      if (exibicaoLista === 'cancelados' && c.status !== 'Cancelado') return false;
+
       const bateNumero = c.numero_chamado?.toLowerCase().includes(filtroNumero.toLowerCase());
       const bateSolicitante = c.solicitante?.toLowerCase().includes(filtroSolicitante.toLowerCase());
       const bateAndar = filtroAndar === '' || c.andar_id === filtroAndar;
@@ -829,7 +835,7 @@ export default function ChamadosPage() {
 
       return bateNumero && bateSolicitante && bateAndar && bateLocal && bateTipo && bateStatus && bateData;
     });
-  }, [chamados, filtroNumero, filtroSolicitante, filtroAndar, filtroLocal, filtroTipo, filtroStatus, filtroDataInicio, filtroDataFim]);
+  }, [chamados, exibicaoLista, filtroNumero, filtroSolicitante, filtroAndar, filtroLocal, filtroTipo, filtroStatus, filtroDataInicio, filtroDataFim]);
 
   const chamadosOrdenados = useMemo(() => {
     const dados = [...chamadosFiltrados];
@@ -1192,6 +1198,52 @@ export default function ChamadosPage() {
             exit={{ opacity: 0 }}
             className="space-y-6"
           >
+            {/* Seletor de Categoria de Lista */}
+            <div className="flex flex-wrap gap-2 border-b border-white/5 pb-4">
+              <button
+                onClick={() => {
+                  setExibicaoLista('ativos');
+                  setPaginaAtual(1);
+                }}
+                className={cn(
+                  "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border",
+                  exibicaoLista === 'ativos'
+                    ? "bg-primary text-black border-primary shadow-glow-yellow"
+                    : "bg-surface-container-low text-on-surface-variant border-[#30363d] hover:border-primary/50 hover:text-primary"
+                )}
+              >
+                Chamados Ativos ({chamados.filter(c => c.status === 'Aberto' || c.status === 'Em Espera').length})
+              </button>
+              <button
+                onClick={() => {
+                  setExibicaoLista('atendidos');
+                  setPaginaAtual(1);
+                }}
+                className={cn(
+                  "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border",
+                  exibicaoLista === 'atendidos'
+                    ? "bg-primary text-black border-primary shadow-glow-yellow"
+                    : "bg-surface-container-low text-on-surface-variant border-[#30363d] hover:border-primary/50 hover:text-primary"
+                )}
+              >
+                Chamados Atendidos ({chamados.filter(c => c.status === 'Atendido').length})
+              </button>
+              <button
+                onClick={() => {
+                  setExibicaoLista('cancelados');
+                  setPaginaAtual(1);
+                }}
+                className={cn(
+                  "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border",
+                  exibicaoLista === 'cancelados'
+                    ? "bg-primary text-black border-primary shadow-glow-yellow"
+                    : "bg-surface-container-low text-on-surface-variant border-[#30363d] hover:border-primary/50 hover:text-primary"
+                )}
+              >
+                Cancelados ({chamados.filter(c => c.status === 'Cancelado').length})
+              </button>
+            </div>
+
             {/* Filtros */}
             <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-6">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
