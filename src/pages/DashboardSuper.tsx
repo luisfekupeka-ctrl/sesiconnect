@@ -1285,27 +1285,45 @@ export default function DashboardSuper() {
                   
                   {/* Tipos Ocorrências */}
                   <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
-                    <h3 className="text-xs font-black uppercase text-white tracking-widest">Tipos Mais Frequentes</h3>
-                    <div className="space-y-3">
-                      {statsAluno.tipos.map(t => (
-                        <div key={t.name} className="flex justify-between items-center text-xs border-b border-white/5 pb-1">
-                          <span className="text-white truncate font-bold">{t.name}</span>
-                          <span className="text-primary shrink-0 font-black ml-2">{t.count} reg</span>
-                        </div>
-                      ))}
+                    <h3 className="text-xs font-black uppercase text-white tracking-widest border-b border-white/5 pb-2">Tipos Mais Frequentes</h3>
+                    <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                      {statsAluno.tipos.map((t, idx) => {
+                        const max = statsAluno.tipos[0]?.count || 1;
+                        const pct = (t.count / max) * 100;
+                        return (
+                          <div key={t.name} className="space-y-1">
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-white truncate font-bold">{t.name}</span>
+                              <span className="text-blue-400 shrink-0 font-black ml-2">{t.count} reg</span>
+                            </div>
+                            <div className="w-full bg-surface h-1.5 rounded-full overflow-hidden">
+                              <div className="bg-gradient-to-r from-blue-500 to-cyan-400 h-full transition-all" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
                   {/* Funcionários que Registraram */}
                   <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
-                    <h3 className="text-xs font-black uppercase text-white tracking-widest">Quem Registrou</h3>
-                    <div className="space-y-3">
-                      {statsAluno.funcionarios.map(f => (
-                        <div key={f.name} onClick={() => navegarParaFuncionario(f.name)} className="flex justify-between items-center text-xs border-b border-white/5 pb-1 cursor-pointer hover:text-primary transition-all">
-                          <span className="truncate font-bold">{f.name}</span>
-                          <span className="text-primary shrink-0 font-black ml-2">{f.count} reg</span>
-                        </div>
-                      ))}
+                    <h3 className="text-xs font-black uppercase text-white tracking-widest border-b border-white/5 pb-2">Quem Registrou</h3>
+                    <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                      {statsAluno.funcionarios.map((f, idx) => {
+                        const max = statsAluno.funcionarios[0]?.count || 1;
+                        const pct = (f.count / max) * 100;
+                        return (
+                          <div key={f.name} onClick={() => navegarParaFuncionario(f.name)} className="space-y-1 cursor-pointer hover:bg-white/5 p-1 rounded-xl transition-all">
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-white truncate font-bold">{f.name}</span>
+                              <span className="text-purple-400 shrink-0 font-black ml-2">{f.count} reg</span>
+                            </div>
+                            <div className="w-full bg-surface h-1.5 rounded-full overflow-hidden">
+                              <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-full transition-all" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -1441,31 +1459,49 @@ export default function DashboardSuper() {
               </div>
 
               {/* Tabelas de alunos e tipos deste funcionário */}
-              <div className="lg:col-span-2 space-y-6">
+              <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 
                 {/* Alunos mais auditados por ele */}
                 <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
-                  <h3 className="text-xs font-black uppercase text-white tracking-widest">Alunos Registrados por este Funcionário</h3>
-                  <div className="space-y-3">
-                    {statsFuncionario.alunos.map(a => (
-                      <div key={a.name} onClick={() => navegarParaAluno(a.name)} className="flex justify-between items-center text-xs border-b border-white/5 pb-1 cursor-pointer hover:text-primary transition-all">
-                        <span className="font-bold">{a.name}</span>
-                        <span className="text-primary font-black">{a.count} reg</span>
-                      </div>
-                    ))}
+                  <h3 className="text-xs font-black uppercase text-white tracking-widest border-b border-white/5 pb-2">Alunos Registrados por este Funcionário</h3>
+                  <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                    {statsFuncionario.alunos.map((a, idx) => {
+                      const max = statsFuncionario.alunos[0]?.count || 1;
+                      const pct = (a.count / max) * 100;
+                      return (
+                        <div key={a.name} onClick={() => navegarParaAluno(a.name)} className="space-y-1 cursor-pointer hover:bg-white/5 p-1 rounded-xl transition-all">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-white truncate font-bold">{a.name}</span>
+                            <span className="text-emerald-400 shrink-0 font-black ml-2">{a.count} reg</span>
+                          </div>
+                          <div className="w-full bg-surface h-1.5 rounded-full overflow-hidden">
+                            <div className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
                 {/* Tipos Ocorrência mais usados */}
                 <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
-                  <h3 className="text-xs font-black uppercase text-white tracking-widest">Tipos de Registro Mais Utilizados</h3>
-                  <div className="space-y-3">
-                    {statsFuncionario.tipos.map(t => (
-                      <div key={t.name} className="flex justify-between items-center text-xs border-b border-white/5 pb-1">
-                        <span className="text-white font-bold">{t.name}</span>
-                        <span className="text-primary font-black">{t.count} reg</span>
-                      </div>
-                    ))}
+                  <h3 className="text-xs font-black uppercase text-white tracking-widest border-b border-white/5 pb-2">Tipos de Registro Mais Utilizados</h3>
+                  <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                    {statsFuncionario.tipos.map((t, idx) => {
+                      const max = statsFuncionario.tipos[0]?.count || 1;
+                      const pct = (t.count / max) * 100;
+                      return (
+                        <div key={t.name} className="space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-white truncate font-bold">{t.name}</span>
+                            <span className="text-amber-400 shrink-0 font-black ml-2">{t.count} reg</span>
+                          </div>
+                          <div className="w-full bg-surface h-1.5 rounded-full overflow-hidden">
+                            <div className="bg-gradient-to-r from-amber-500 to-orange-400 h-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1519,31 +1555,49 @@ export default function DashboardSuper() {
               </div>
 
               {/* Gráficos e Tabelas */}
-              <div className="lg:col-span-2 space-y-6">
+              <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 
                 {/* Tipos Ocorrência na Série */}
                 <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
-                  <h3 className="text-xs font-black uppercase text-white tracking-widest">Tipos Mais Comuns nesta Série</h3>
-                  <div className="space-y-3">
-                    {statsSerie.tipos.map(t => (
-                      <div key={t.name} className="flex justify-between items-center text-xs border-b border-white/5 pb-1">
-                        <span className="text-white font-bold">{t.name}</span>
-                        <span className="text-primary font-black">{t.count} reg</span>
-                      </div>
-                    ))}
+                  <h3 className="text-xs font-black uppercase text-white tracking-widest border-b border-white/5 pb-2">Tipos Mais Comuns nesta Série</h3>
+                  <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                    {statsSerie.tipos.map((t, idx) => {
+                      const max = statsSerie.tipos[0]?.count || 1;
+                      const pct = (t.count / max) * 100;
+                      return (
+                        <div key={t.name} className="space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-white truncate font-bold">{t.name}</span>
+                            <span className="text-cyan-400 shrink-0 font-black ml-2">{t.count} reg</span>
+                          </div>
+                          <div className="w-full bg-surface h-1.5 rounded-full overflow-hidden">
+                            <div className="bg-gradient-to-r from-cyan-500 to-blue-500 h-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
                 {/* Funcionários que mais registram nessa série */}
                 <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
-                  <h3 className="text-xs font-black uppercase text-white tracking-widest">Funcionários que Mais Registram nesta Série</h3>
-                  <div className="space-y-3">
-                    {statsSerie.funcionarios.map(f => (
-                      <div key={f.name} onClick={() => navegarParaFuncionario(f.name)} className="flex justify-between items-center text-xs border-b border-white/5 pb-1 cursor-pointer hover:text-primary transition-all">
-                        <span className="font-bold">{f.name}</span>
-                        <span className="text-primary font-black">{f.count} reg</span>
-                      </div>
-                    ))}
+                  <h3 className="text-xs font-black uppercase text-white tracking-widest border-b border-white/5 pb-2">Funcionários que Mais Registram nesta Série</h3>
+                  <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                    {statsSerie.funcionarios.map((f, idx) => {
+                      const max = statsSerie.funcionarios[0]?.count || 1;
+                      const pct = (f.count / max) * 100;
+                      return (
+                        <div key={f.name} onClick={() => navegarParaFuncionario(f.name)} className="space-y-1 cursor-pointer hover:bg-white/5 p-1 rounded-xl transition-all">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-white truncate font-bold">{f.name}</span>
+                            <span className="text-pink-400 shrink-0 font-black ml-2">{f.count} reg</span>
+                          </div>
+                          <div className="w-full bg-surface h-1.5 rounded-full overflow-hidden">
+                            <div className="bg-gradient-to-r from-pink-500 to-purple-500 h-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1604,31 +1658,49 @@ export default function DashboardSuper() {
               </div>
 
               {/* Detalhes de Alunos e Funcionários vinculados */}
-              <div className="lg:col-span-2 space-y-6">
+              <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 
                 {/* Alunos que mais receberam esse tipo */}
                 <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
-                  <h3 className="text-xs font-black uppercase text-white tracking-widest">Top Alunos com este Tipo de Registro</h3>
-                  <div className="space-y-3">
-                    {statsTipo.alunos.map(a => (
-                      <div key={a.name} onClick={() => navegarParaAluno(a.name)} className="flex justify-between items-center text-xs border-b border-white/5 pb-1 cursor-pointer hover:text-primary transition-all">
-                        <span className="font-bold">{a.name}</span>
-                        <span className="text-primary font-black">{a.count} reg</span>
-                      </div>
-                    ))}
+                  <h3 className="text-xs font-black uppercase text-white tracking-widest border-b border-white/5 pb-2">Top Alunos com este Tipo</h3>
+                  <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                    {statsTipo.alunos.map((a, idx) => {
+                      const max = statsTipo.alunos[0]?.count || 1;
+                      const pct = (a.count / max) * 100;
+                      return (
+                        <div key={a.name} onClick={() => navegarParaAluno(a.name)} className="space-y-1 cursor-pointer hover:bg-white/5 p-1 rounded-xl transition-all">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-white truncate font-bold">{a.name}</span>
+                            <span className="text-emerald-400 shrink-0 font-black ml-2">{a.count} reg</span>
+                          </div>
+                          <div className="w-full bg-surface h-1.5 rounded-full overflow-hidden">
+                            <div className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
                 {/* Funcionários que mais aplicaram esse tipo */}
                 <div className="bg-surface-container-low p-6 rounded-[2rem] border border-white/5 space-y-4">
-                  <h3 className="text-xs font-black uppercase text-white tracking-widest">Funcionários que Mais Registraram este Tipo</h3>
-                  <div className="space-y-3">
-                    {statsTipo.funcionarios.map(f => (
-                      <div key={f.name} onClick={() => navegarParaFuncionario(f.name)} className="flex justify-between items-center text-xs border-b border-white/5 pb-1 cursor-pointer hover:text-primary transition-all">
-                        <span className="font-bold">{f.name}</span>
-                        <span className="text-primary font-black">{f.count} reg</span>
-                      </div>
-                    ))}
+                  <h3 className="text-xs font-black uppercase text-white tracking-widest border-b border-white/5 pb-2">Funcionários que Mais Registraram este Tipo</h3>
+                  <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                    {statsTipo.funcionarios.map((f, idx) => {
+                      const max = statsTipo.funcionarios[0]?.count || 1;
+                      const pct = (f.count / max) * 100;
+                      return (
+                        <div key={f.name} onClick={() => navegarParaFuncionario(f.name)} className="space-y-1 cursor-pointer hover:bg-white/5 p-1 rounded-xl transition-all">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-white truncate font-bold">{f.name}</span>
+                            <span className="text-rose-400 shrink-0 font-black ml-2">{f.count} reg</span>
+                          </div>
+                          <div className="w-full bg-surface h-1.5 rounded-full overflow-hidden">
+                            <div className="bg-gradient-to-r from-rose-500 to-red-500 h-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
