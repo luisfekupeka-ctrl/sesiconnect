@@ -415,6 +415,33 @@ export default function DashboardSuperBI() {
     
     return Object.entries(counts).map(([name, value]) => ({name, value})).sort((a,b)=>b.value - a.value).slice(0, 10);
   }, [regA, contextoAnalise, alunosMap]);
+
+  // Donut: Distribuição por Tipo de Ocorrência
+  const roscaTipos = useMemo(() => {
+    const cont: Record<string, number> = {};
+    regA.forEach(r => { const k = r.occurrence_type || 'N/A'; cont[k] = (cont[k] || 0) + 1; });
+    return Object.entries(cont).map(([name, value]) => ({name, value})).sort((a,b)=>b.value - a.value).slice(0, 6);
+  }, [regA]);
+
+  // Heatmap: Dia da Semana x Turno
+  const heatmapData = useMemo(() => {
+    const matrix = Array(7).fill(0).map(() => [0, 0, 0]);
+    regA.forEach(r => {
+      const d = new Date(r.created_at);
+      const dia = getDay(d);
+      const hr = getHours(d);
+      const turno = hr < 12 ? 0 : hr < 18 ? 1 : 2;
+      matrix[dia][turno]++;
+    });
+    return matrix;
+  }, [regA]);
+
+  const heatmapMax = useMemo(() => Math.max(...heatmapData.flat(), 1), [heatmapData]);
+
+  // Registros Recentes
+  const recentes = useMemo(() => {
+    return [...regA].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 8);
+  }, [regA]);
   
   // --- INSIGHTS ---
   const insights = useMemo(() => {
@@ -696,6 +723,113 @@ export default function DashboardSuperBI() {
             </div>
           </div>
         </section>
+
+        {/* STATISTICS + DONUT ROW */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* PAINEL ESTATÍSTICO DETALHADO */}
+          <div className="lg:col-span-1 bg-[#111827] border border-[#2D3748] rounded-3xl p-6 shadow-xl relative overflow-hidden">
+            <div className="absolute -top-10 -left-10 w-40 h-40 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+            <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-6 relative z-10"><BarChart2 size={16} className="text-amber-500"/> Estatísticas Avançadas</h3>
+            <div className="space-y-4 relative z-10">
+              {[
+                { label: 'Média Diária', value: estatisticasA.mediaDia.toFixed(1), color: 'text-blue-400' },
+                { label: 'Média Semanal', value: estatisticasA.mediaSemana.toFixed(1), color: 'text-blue-400' },
+                { label: 'Média Mensal', value: estatisticasA.mediaMes.toFixed(1), color: 'text-blue-400' },
+                { label: 'Mediana (Dia)', value: estatisticasA.medianaDia.toFixed(1), color: 'text-amber-400' },
+                { label: 'Moda (Dia)', value: String(estatisticasA.modaDia), color: 'text-amber-400' },
+                { label: 'Variância', value: estatisticasA.varDia.toFixed(2), color: 'text-purple-400' },
+                { label: 'Desvio Padrão', value: estatisticasA.dpDia.toFixed(2), color: 'text-purple-400' },
+                { label: 'Resolvidas', value: `${estatisticasA.pctResolvidas.toFixed(1)}%`, color: 'text-emerald-400' },
+                { label: 'Pendentes', value: `${estatisticasA.pctPendentes.toFixed(1)}%`, color: 'text-rose-400' },
+                { label: 'Reincidência', value: `${estatisticasA.pctReincidencia.toFixed(1)}%`, color: 'text-orange-400' },
+              ].map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center py-2 border-b border-[#2D3748]/50 last:border-0">
+                  <span className="text-xs text-[#9CA3AF] font-medium">{item.label}</span>
+                  <span className={`text-sm font-black ${item.color}`}>{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* DONUT CHART */}
+          <div className="bg-[#111827] border border-[#2D3748] rounded-3xl p-6 shadow-xl flex flex-col relative overflow-hidden">
+            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-pink-500/5 rounded-full blur-3xl pointer-events-none" />
+            <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-2 relative z-10"><PieChart size={16} className="text-pink-500"/> Distribuição por Tipo</h3>
+            <p className="text-xs text-[#9CA3AF] mb-4 relative z-10">Proporção dos tipos de ocorrência no período.</p>
+            <div className="flex-1 min-h-[280px] relative z-10">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <Pie data={roscaTipos} cx="50%" cy="45%" innerRadius={55} outerRadius={85} paddingAngle={4} dataKey="value" stroke="none" label={({name, percent}) => `${name.length > 12 ? name.substring(0,12)+'…' : name} (${(percent*100).toFixed(0)}%)`} labelLine={false}>
+                    {roscaTipos.map((_, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                  </Pie>
+                  <RechartsTooltip contentStyle={{ backgroundColor: '#111827', borderColor: '#2D3748', borderRadius: '12px', fontSize: '12px' }} itemStyle={{ color: '#fff' }} />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* HEATMAP */}
+          <div className="bg-[#111827] border border-[#2D3748] rounded-3xl p-6 shadow-xl relative overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-rose-500/5 rounded-full blur-3xl pointer-events-none" />
+            <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-2 relative z-10"><Calendar size={16} className="text-rose-500"/> Mapa de Calor</h3>
+            <p className="text-xs text-[#9CA3AF] mb-6 relative z-10">Dia da Semana × Turno do dia.</p>
+            <div className="relative z-10">
+              {/* Header */}
+              <div className="grid grid-cols-4 gap-2 mb-2">
+                <div />
+                {['Manhã', 'Tarde', 'Noite'].map(t => (
+                  <div key={t} className="text-center text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">{t}</div>
+                ))}
+              </div>
+              {/* Grid */}
+              {['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map((dia, idx) => (
+                <div key={dia} className="grid grid-cols-4 gap-2 mb-2">
+                  <div className="text-[11px] font-bold text-[#9CA3AF] flex items-center justify-end pr-2">{dia}</div>
+                  {heatmapData[idx].map((val, jdx) => {
+                    const intensity = heatmapMax > 0 ? val / heatmapMax : 0;
+                    return (
+                      <div key={jdx} className="h-9 rounded-lg flex items-center justify-center border border-[#2D3748]/30 transition-all hover:scale-105 hover:border-rose-500/50 group relative" style={{ backgroundColor: `rgba(244, 63, 94, ${Math.max(intensity * 0.85, 0.03)})` }}>
+                        <span className={`text-xs font-bold ${intensity > 0.4 ? 'text-white' : 'text-[#6B7280]'}`}>{val > 0 ? val : '—'}</span>
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 bg-[#0B0F14] border border-[#2D3748] text-white text-[10px] py-1 px-2 rounded-md whitespace-nowrap z-20 transition-opacity pointer-events-none shadow-xl">
+                          {val} registro{val !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* TIMELINE - REGISTROS RECENTES */}
+        <section className="bg-[#111827] border border-[#2D3748] rounded-3xl p-6 shadow-xl relative overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-60 h-60 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+          <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-6 relative z-10"><Clock size={16} className="text-cyan-500"/> Linha do Tempo — Registros Recentes</h3>
+          {recentes.length === 0 ? (
+            <p className="text-xs text-[#9CA3AF] relative z-10">Nenhum registro encontrado com os filtros aplicados.</p>
+          ) : (
+            <div className="relative z-10 space-y-0">
+              {/* Vertical line */}
+              <div className="absolute left-[18px] top-2 bottom-2 w-px bg-[#2D3748]" />
+              {recentes.map((r, i) => (
+                <div key={r.id} className="flex items-start gap-4 py-3 group">
+                  <div className="relative z-10 mt-1 w-[9px] h-[9px] rounded-full bg-cyan-500 ring-4 ring-[#111827] shrink-0 group-hover:ring-cyan-500/20 transition-all" />
+                  <div className="flex-1 flex flex-col md:flex-row md:items-center gap-2 md:gap-6 bg-[#0B0F14]/50 p-3 rounded-xl border border-[#2D3748]/50 hover:border-cyan-500/20 transition-colors">
+                    <span className="text-[10px] text-[#9CA3AF] font-bold shrink-0 w-[100px]">{format(new Date(r.created_at), 'dd/MM/yy HH:mm')}</span>
+                    <span className="text-xs text-white font-bold truncate max-w-[150px]" title={r.student_name}>{r.student_name}</span>
+                    <span className="text-[10px] text-[#9CA3AF] truncate max-w-[100px]" title={alunosMap.get(r.student_name.toLowerCase())?.turma || '—'}>{alunosMap.get(r.student_name.toLowerCase())?.turma || '—'}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-bold shrink-0">{r.occurrence_type || 'N/A'}</span>
+                    <span className="text-[10px] text-[#6B7280] truncate max-w-[120px]" title={r.created_by || 'Sistema'}>{r.created_by || 'Sistema'}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ${r.tratada ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>{r.tratada ? 'Resolvida' : 'Pendente'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
       </main>
     </div>
   );
