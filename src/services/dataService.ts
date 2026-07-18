@@ -433,9 +433,11 @@ export async function buscarAtividadesAfter(): Promise<AtividadeAfter[]> {
     quantidadeAlunos: item.lista_alunos ? item.lista_alunos.length : (item.quantidade_alunos || 0),
     grupoAlunos: item.grupo_alunos,
     vagas: item.vagas,
-    listaAlunos: item.lista_alunos || []
+    listaAlunos: item.lista_alunos || [],
+    segmentos: item.segmentos || []
   })).sort((a, b) => a.nome.localeCompare(b.nome));
 }
+
 
 export async function salvarAtividadeAfter(atividade: Partial<AtividadeAfter>): Promise<boolean> {
   const payload: any = {
@@ -450,7 +452,8 @@ export async function salvarAtividadeAfter(atividade: Partial<AtividadeAfter>): 
     quantidade_alunos: atividade.listaAlunos ? atividade.listaAlunos.length : (atividade.quantidadeAlunos || 0),
     grupo_alunos: atividade.grupoAlunos,
     vagas: atividade.vagas,
-    lista_alunos: atividade.listaAlunos || []
+    lista_alunos: atividade.listaAlunos || [],
+    segmentos: atividade.segmentos || []
   };
 
   if (atividade.id && atividade.id !== 'novo') {

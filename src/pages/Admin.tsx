@@ -1928,7 +1928,7 @@ export default function Admin() {
           {abaAtiva === 'after-school' && (
             <motion.div key="after" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
               <Painel titulo="Atividades After School" subtitulo="Gerencie as atividades extras, esportes e oficinas do contraturno."
-                acao={<button onClick={() => setEditandoAfter({ id: 'novo', nome: '', categoria: 'Esporte', horarioInicio: '16:00', horarioFim: '17:30', local: '', dias: ['SEGUNDA'], nomeProfessor: '', descricao: '', quantidadeAlunos: 0, grupoAlunos: '', vagas: 20 })} className="btn-primary"><Plus size={14} /> Nova Atividade</button>}>
+                acao={<button onClick={() => setEditandoAfter({ id: 'novo', nome: '', categoria: 'Esporte', horarioInicio: '16:00', horarioFim: '17:30', local: '', dias: ['SEGUNDA'], nomeProfessor: '', descricao: '', quantidadeAlunos: 0, grupoAlunos: '', vagas: 20, segmentos: [] })} className="btn-primary"><Plus size={14} /> Nova Atividade</button>}>
 
                 <div className="relative mb-6">
                   <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
@@ -1954,7 +1954,14 @@ export default function Admin() {
                         </div>
                         <h3 className="text-lg font-black text-white">{ativ.nome}</h3>
                         <p className="text-xs font-bold text-on-surface-variant mt-2 uppercase tracking-wide">{ativ.nomeProfessor} · {formatarLocalAfter(ativ.local)}</p>
-                        <div className="mt-6 flex flex-wrap gap-2">
+                        {(ativ.segmentos && ativ.segmentos.length > 0) && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest">
+                              {derivarSegmento(ativ.segmentos)}
+                            </span>
+                          </div>
+                        )}
+                        <div className="mt-4 flex flex-wrap gap-2">
                           {ativ.dias.map(d => (
                             <span key={d} className="px-3 py-1 bg-surface-container-high border border-white/5 rounded-lg text-[10px] font-black uppercase tracking-widest text-on-surface-variant">{d.slice(0, 3)}</span>
                           ))}
@@ -1963,6 +1970,7 @@ export default function Admin() {
                           <span className="text-amber-500">{ativ.horarioInicio} — {ativ.horarioFim}</span>
                           <span className="text-on-surface-variant/60">{(ativ.listaAlunos || []).length} Alunos</span>
                         </div>
+
                       </div>
                     ))}
                 </div>
@@ -2354,6 +2362,7 @@ export default function Admin() {
 
                 <CampoTexto label="Nome da Atividade" value={editandoAfter.nome} onChange={v => setEditandoAfter({ ...editandoAfter, nome: v })} />
                 <CampoSelect label="Categoria" value={editandoAfter.categoria} options={['Esporte', 'Arte', 'Dança', 'Música', 'Teatro', 'Robótica / Tecnologia', 'Idiomas', 'Ciências', 'Oficina', 'Reforço', 'Outro']} onChange={v => setEditandoAfter({ ...editandoAfter, categoria: v })} />
+                <CampoSegmentosAfter segmentos={editandoAfter.segmentos || []} onChange={v => setEditandoAfter({ ...editandoAfter, segmentos: v })} />
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <CampoAutocompleteProfessores label="Professor" value={editandoAfter.nomeProfessor} onChange={v => setEditandoAfter({ ...editandoAfter, nomeProfessor: v })} professores={professoresCMS} />
@@ -2526,6 +2535,129 @@ function CampoSelect({ label, value, options, onChange }: { label: string; value
       <select value={value || ''} onChange={e => onChange(e.target.value)} className="campo-input">
         {options.map(o => <option key={o} value={o}>{o || 'SELECIONE...'}</option>)}
       </select>
+    </div>
+  );
+}
+
+// -------------------------------------------------------
+// Componente: Seletor de Segmentos do After School
+// Permite multi-seleção com agrupamento automático
+// (6-9 = Fundamental II, 1-3 EM = Ensino Médio)
+// -------------------------------------------------------
+const ANOS_AFTER: { label: string; value: string; grupo: string }[] = [
+  { label: '6º Ano', value: '6º Ano', grupo: 'fund2' },
+  { label: '7º Ano', value: '7º Ano', grupo: 'fund2' },
+  { label: '8º Ano', value: '8º Ano', grupo: 'fund2' },
+  { label: '9º Ano', value: '9º Ano', grupo: 'fund2' },
+  { label: '1º EM',  value: '1º Ano EM', grupo: 'medio' },
+  { label: '2º EM',  value: '2º Ano EM', grupo: 'medio' },
+  { label: '3º EM',  value: '3º Ano EM', grupo: 'medio' },
+];
+
+const ANOS_FUND2  = ANOS_AFTER.filter(a => a.grupo === 'fund2').map(a => a.value);
+const ANOS_MEDIO  = ANOS_AFTER.filter(a => a.grupo === 'medio').map(a => a.value);
+
+function derivarSegmento(segs: string[]): string {
+  const temTodos = (lista: string[]) => lista.every(v => segs.includes(v));
+  if (temTodos(ANOS_FUND2) && temTodos(ANOS_MEDIO)) return 'Todos os Segmentos';
+  if (temTodos(ANOS_FUND2)) return 'Fundamental II';
+  if (temTodos(ANOS_MEDIO)) return 'Ensino Médio';
+  return segs.join(', ') || 'Nenhum';
+}
+
+function CampoSegmentosAfter({ segmentos, onChange }: { segmentos: string[]; onChange: (v: string[]) => void }) {
+  const toggle = (value: string) => {
+    if (segmentos.includes(value)) {
+      onChange(segmentos.filter(s => s !== value));
+    } else {
+      onChange([...segmentos, value]);
+    }
+  };
+
+  const toggleGrupo = (grupo: string) => {
+    const valores = ANOS_AFTER.filter(a => a.grupo === grupo).map(a => a.value);
+    const todosSelecionados = valores.every(v => segmentos.includes(v));
+    if (todosSelecionados) {
+      onChange(segmentos.filter(s => !valores.includes(s)));
+    } else {
+      const novos = [...segmentos];
+      valores.forEach(v => { if (!novos.includes(v)) novos.push(v); });
+      onChange(novos);
+    }
+  };
+
+  const fund2Todos = ANOS_FUND2.every(v => segmentos.includes(v));
+  const medioTodos = ANOS_MEDIO.every(v => segmentos.includes(v));
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-black text-white/40 uppercase tracking-widest ml-2">Segmentos Participantes</label>
+        {segmentos.length > 0 && (
+          <span className="text-[9px] font-black text-primary uppercase tracking-widest px-2 py-0.5 rounded-full bg-primary/10">
+            {derivarSegmento(segmentos)}
+          </span>
+        )}
+      </div>
+
+      {/* Botões de grupo rápido */}
+      <div className="flex gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={() => toggleGrupo('fund2')}
+          className={cn(
+            'px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all',
+            fund2Todos
+              ? 'bg-primary text-black border-primary'
+              : 'bg-white/5 text-white/50 border-white/10 hover:border-primary/40'
+          )}
+        >
+          {fund2Todos ? '✓ ' : ''}Fund. II (6-9)
+        </button>
+        <button
+          type="button"
+          onClick={() => toggleGrupo('medio')}
+          className={cn(
+            'px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all',
+            medioTodos
+              ? 'bg-indigo-500 text-white border-indigo-500'
+              : 'bg-white/5 text-white/50 border-white/10 hover:border-indigo-500/40'
+          )}
+        >
+          {medioTodos ? '✓ ' : ''}Ens. Médio (1-3)
+        </button>
+        {segmentos.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-red-500/20 text-red-400 bg-red-500/5 hover:bg-red-500/20 transition-all"
+          >
+            Limpar
+          </button>
+        )}
+      </div>
+
+      {/* Chips individuais */}
+      <div className="flex gap-2 flex-wrap">
+        {ANOS_AFTER.map(({ label, value, grupo }) => {
+          const ativo = segmentos.includes(value);
+          return (
+            <button
+              key={value}
+              type="button"
+              onClick={() => toggle(value)}
+              className={cn(
+                'px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all',
+                ativo && grupo === 'fund2' ? 'bg-primary/20 text-primary border-primary/50' :
+                ativo && grupo === 'medio' ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/50' :
+                'bg-black text-white/30 border-white/5 hover:border-white/20'
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

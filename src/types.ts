@@ -128,6 +128,7 @@ export interface AtividadeAfter {
   grupoAlunos: string;
   listaAlunos: string[];
   vagas?: number;
+  segmentos?: string[]; // Ex: ['6º Ano', '7º Ano'] — Fundamental II ou Ensino Médio
 }
 
 // --- Monitores ---
