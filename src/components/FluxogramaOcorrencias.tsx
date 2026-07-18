@@ -25,7 +25,7 @@ const PROTOCOLS: Record<string, string[]> = {
   "Incêndio, fumaça ou risco estrutural": [
     "Afastar imediatamente as pessoas da área de risco.",
     "Acionar brigada e liderança da unidade.",
-    "Não improvisar combate ao fogo sem treinamento e condições seguranças.",
+    "Não improvisar combate ao fogo sem treinamento e condições seguras.",
     "Seguir a rota de evacuação indicada e utilizar rota alternativa se necessário.",
     "Manter os estudantes juntos, acompanhados e sob contagem.",
     "Não permitir retorno ao local até liberação oficial.",
@@ -36,7 +36,7 @@ const PROTOCOLS: Record<string, string[]> = {
     "Não confrontar nem tentar retirar o objeto à força.",
     "Manter distância segura e afastar discretamente outras pessoas.",
     "Comunicar imediatamente a liderança e seguir a orientação institucional.",
-    "Se houver ameaça ativa, priorizar proteção e acionamento emergencial.",
+    "Se houver ameaça activa, priorizar proteção e acionamento emergencial.",
     "Preservar o local e evitar aglomeração.",
     "Não tocar em objetos abandonados ou suspeitos.",
     "Registrar somente fatos observados, localização, características e deslocamento."
@@ -154,19 +154,19 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
         {/* Step: OBSERVAR */}
         {currentStep === 'observar' && (
           <div className="space-y-4 my-auto">
-            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-slate-800 text-slate-400 px-3 py-1 rounded-full">Sem Ocorrência</span>
+            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-slate-800 text-slate-400 px-3 py-1 rounded-full">Sem ocorrência</span>
             <h4 className="text-xl font-bold text-white leading-tight">Manter observação preventiva</h4>
             <div className="space-y-3">
               <div className="bg-slate-900 border border-slate-850 p-4 rounded-xl text-sm text-slate-300 leading-relaxed">
-                Continue acompanhando o ambiente, os estudantes e os fluxos preventivamente.
+                Continue acompanhando o ambiente, os estudantes e os fluxos.
               </div>
               <div className="bg-slate-900 border border-slate-850 p-4 rounded-xl text-sm text-slate-300 leading-relaxed">
-                Se surgir perigo, mudança brusca de comportamento ou quebra de rotina, reinicie o fluxograma.
+                Se surgir perigo, mudança de comportamento ou quebra da rotina, retorne ao início.
               </div>
             </div>
             <div className="pt-4">
               <button onClick={handleReset} className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-sm transition-all shadow-lg shadow-blue-600/15">
-                Voltar ao Início
+                Voltar ao início
               </button>
             </div>
           </div>
@@ -178,11 +178,11 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
             <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 px-3 py-1 rounded-full">Etapa 2</span>
             <h4 className="text-xl font-bold text-white leading-tight">A situação se enquadra no Plano de Contingência?</h4>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Exemplos: acidente, emergência de saúde, calamidade, ameaça à vida, incêndio, suspeita de arma ou agressão física grave.
+              Exemplos: acidente, emergência de saúde, calamidade, ameaça à vida ou à integridade, incêndio, invasão, possível arma, agressão grave ou risco coletivo.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
               <button onClick={() => navigateTo('grave')} className="py-3.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-xl text-sm transition-all shadow-lg shadow-amber-600/10">
-                Sim — Grave (Contingência)
+                Sim — Grave
               </button>
               <button onClick={() => navigateTo('levePergunta')} className="py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-extrabold rounded-xl text-sm transition-all border border-slate-700/80">
                 Não
@@ -197,7 +197,7 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
             <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-purple-500/10 text-purple-400 px-3 py-1 rounded-full">Etapa 3</span>
             <h4 className="text-xl font-bold text-white leading-tight">Pode ser resolvida com orientação educativa?</h4>
             <p className="text-slate-400 text-sm leading-relaxed">
-              A situação está sob controle imediato, não há risco físico ou à integridade, e o aluno se mostra receptivo a ouvir?
+              A situação está controlada, sem risco imediato, e o estudante consegue ouvir e responder?
             </p>
             <div className="grid grid-cols-2 gap-4 pt-4">
               <button onClick={() => navigateTo('leve')} className="py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-sm transition-all shadow-lg shadow-blue-600/15">
@@ -213,22 +213,22 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
         {/* Step: LEVE */}
         {currentStep === 'leve' && (
           <div className="space-y-4 my-auto">
-            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-blue-500/15 text-blue-400 px-3 py-1 rounded-full">Ocorrência Leve</span>
+            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-blue-500/15 text-blue-400 px-3 py-1 rounded-full">Ocorrência leve</span>
             <h4 className="text-xl font-bold text-white leading-tight">Orientar, registrar no app e observar</h4>
             <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1 custom-scrollbar text-xs text-slate-300">
               <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">1.</strong> Aproxime-se com calma e descreva o comportamento observado.</div>
-              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">2.</strong> Escute o estudante e confirme se ele entendeu as regras.</div>
-              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">3.</strong> Esclareça a conduta correta esperada dele.</div>
-              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">4.</strong> Utilize questionamento socrático se julgar adequado.</div>
-              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">5.</strong> Registre no app institucional (Aba Registro Diário).</div>
-              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">6.</strong> Mantenha a observação da conduta no dia a dia.</div>
+              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">2.</strong> Escute o estudante e confirme o entendimento.</div>
+              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">3.</strong> Informe a regra e a conduta esperada.</div>
+              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">4.</strong> Use questionamento socrático apenas se a situação estiver controlada.</div>
+              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">5.</strong> Registre a ocorrência no app, na aba Registro Diário.</div>
+              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">6.</strong> Mantenha observação e acompanhamento da conduta.</div>
             </div>
             <div className="grid grid-cols-2 gap-4 pt-2">
               <button onClick={() => navigateTo('leveFim')} className="py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all">
-                Cumpriu Orientação
+                Cumpriu a orientação
               </button>
               <button onClick={() => navigateTo('media')} className="py-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all">
-                Recusou / Reincidiu
+                Recusou ou reincidiu
               </button>
             </div>
           </div>
@@ -237,17 +237,17 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
         {/* Step: LEVE FIM */}
         {currentStep === 'leveFim' && (
           <div className="space-y-4 my-auto">
-            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full">Encerramento Leve</span>
-            <h4 className="text-xl font-bold text-white leading-tight">Orientação registrada e conduta acompanhada</h4>
+            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full">Encerramento leve</span>
+            <h4 className="text-xl font-bold text-white leading-tight">Orientação registrada no app e situação acompanhada</h4>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Garanta que o registro no aplicativo SESI Connect tenha sido efetuado de forma neutra e puramente fatual. Continue supervisionando o ambiente.
+              Registre no app institucional de forma objetiva e continue observando a conduta.
             </p>
             <div className="pt-4 space-y-2">
               <button onClick={() => navigateTo('registroLeve')} className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-sm transition-all">
                 Como registrar no app
               </button>
               <button onClick={handleReset} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-extrabold rounded-xl text-xs uppercase tracking-wider border border-slate-700/80">
-                Voltar ao Início
+                Voltar ao início
               </button>
             </div>
           </div>
@@ -256,21 +256,23 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
         {/* Step: MEDIA */}
         {currentStep === 'media' && (
           <div className="space-y-4 my-auto">
-            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 px-3 py-1 rounded-full">Ocorrência Média</span>
+            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 px-3 py-1 rounded-full">Ocorrência média</span>
             <h4 className="text-xl font-bold text-white leading-tight">Encaminhar à coordenação para registro em ata</h4>
             <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1 custom-scrollbar text-xs text-slate-300">
-              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">1.</strong> Interrompa a conduta indesejada imediatamente com postura firme.</div>
-              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">2.</strong> Relembre a regra e confirme se o aluno está ciente da reincidência.</div>
-              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">3.</strong> Utilize escolhas controladas e validação emocional para acalmar.</div>
-              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">4.</strong> Leve o estudante até a sala da Coordenação de Turno.</div>
-              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">5.</strong> Repasse os fatos objetivos e solicite a elaboração de ata formal.</div>
+              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">1.</strong> Interrompa a conduta e mantenha postura calma e firme.</div>
+              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">2.</strong> Relembre a orientação anterior e confirme a reincidência.</div>
+              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">3.</strong> Use limite claro, validação emocional e escolhas controladas.</div>
+              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">4.</strong> Registre a reincidência no app institucional.</div>
+              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">5.</strong> Encaminhe à coordenação e repasse fatos, orientações e reação do estudante.</div>
+              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">6.</strong> Entregue o estudante e as informações à coordenação para elaboração da ata.</div>
+              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg"><strong className="text-white">7.</strong> Acompanhe o desfecho e as orientações recebidas.</div>
             </div>
             <div className="grid grid-cols-2 gap-4 pt-2">
               <button onClick={() => navigateTo('coordenacao')} className="py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all">
-                Como Encaminhar
+                Como encaminhar
               </button>
               <button onClick={() => navigateTo('grave')} className="py-3 bg-red-600 hover:bg-red-700 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all">
-                Passou a Oferecer Risco
+                Passou a oferecer risco
               </button>
             </div>
           </div>
@@ -279,10 +281,10 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
         {/* Step: GRAVE */}
         {currentStep === 'grave' && (
           <div className="space-y-4 my-auto">
-            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-red-500/10 text-red-400 px-3 py-1 rounded-full">Etapa Grave</span>
-            <h4 className="text-xl font-bold text-white leading-tight">Escolha o Protocolo do Plano de Contingência</h4>
+            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-red-500/10 text-red-400 px-3 py-1 rounded-full">Ocorrência grave</span>
+            <h4 className="text-xl font-bold text-white leading-tight">Aplicar o Plano de Contingência</h4>
             <p className="text-slate-400 text-xs">
-              Selecione a contingência abaixo para carregar as instruções obrigatórias da escola.
+              Escolha o tipo de ocorrência. Cada opção apresenta a conduta prevista no Plano de Contingência para aquela situação, do primeiro atendimento até a transferência, o registro e o encerramento.
             </p>
             <div className="grid grid-cols-2 gap-2 max-h-[190px] overflow-y-auto pr-1 custom-scrollbar text-xs">
               {Object.keys(PROTOCOLS).map(name => (
@@ -297,7 +299,7 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
         {/* Step: PROTOCOLO DETALHE */}
         {currentStep === 'protocolo' && selectedProtocol && (
           <div className="space-y-4 my-auto">
-            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-red-500/15 text-red-400 px-3 py-1 rounded-full">Plano de Contingência</span>
+            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-red-500/15 text-red-400 px-3 py-1 rounded-full">Ocorrência grave — Plano de Contingência</span>
             <h4 className="text-lg font-bold text-white leading-tight">{selectedProtocol}</h4>
             <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1 custom-scrollbar text-xs text-slate-350">
               {PROTOCOLS[selectedProtocol].map((step, i) => (
@@ -308,10 +310,10 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
             </div>
             <div className="grid grid-cols-2 gap-4 pt-2">
               <button onClick={() => navigateTo('registro')} className="py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider">
-                Registrar
+                Registrar conforme o protocolo
               </button>
               <button onClick={() => navigateTo('transferido')} className="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider">
-                Atendimento Concluído
+                Atendimento transferido
               </button>
             </div>
           </div>
@@ -320,14 +322,14 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
         {/* Step: TRANSFERIDO */}
         {currentStep === 'transferido' && (
           <div className="space-y-4 my-auto">
-            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full">Finalizado</span>
+            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full">Encerramento grave</span>
             <h4 className="text-xl font-bold text-white leading-tight">Atendimento transferido e registrado</h4>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Registre fatos, horários, medidas adotadas e profissionais ou familiares acionados. O atendimento é considerado encerrado apenas quando há transferência formal para a equipe especializada ou autoridade competente.
+              Registre fatos, horários, medidas adotadas e profissionais acionados. O atendimento só termina quando houver transferência formal, liberação oficial ou encerramento confirmado pela liderança.
             </p>
             <div className="pt-4">
               <button onClick={handleReset} className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-sm transition-all shadow-lg shadow-blue-600/15">
-                Voltar ao Início
+                Voltar ao início
               </button>
             </div>
           </div>
@@ -336,15 +338,20 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
         {/* Step: TECLADO TECNICAS */}
         {currentStep === 'tecnicas' && (
           <div className="space-y-4 my-auto">
-            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-purple-500/10 text-purple-400 px-3 py-1 rounded-full">Técnicas de Comunicação</span>
-            <h4 className="text-lg font-bold text-white">Consulta Rápida de Habilidades Sociais</h4>
+            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-purple-500/10 text-purple-400 px-3 py-1 rounded-full">Consulta rápida</span>
+            <h4 className="text-lg font-bold text-white">Técnicas de comunicação</h4>
             <div className="grid grid-cols-2 gap-2 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar text-[11px] text-slate-300">
-              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800"><b className="text-blue-400 block mb-1">Escuta ativa</b> Ouvir sem julgar ou formular respostas.</div>
-              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800"><b className="text-blue-400 block mb-1">Paráfrase</b> Repetir o que o aluno disse para alinhar.</div>
-              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800"><b className="text-blue-400 block mb-1">CNV</b> Descrever fatos objetivos, sentimentos e limites.</div>
-              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800"><b className="text-blue-400 block mb-1">Socrático</b> Provocar a auto-reflexão com perguntas abertas.</div>
-              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800"><b className="text-blue-400 block mb-1">Validação</b> Aceitar a emoção do aluno sem aceitar a má conduta.</div>
-              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800"><b className="text-blue-400 block mb-1">Desescalada</b> Controlar o próprio tom e usar frases curtas.</div>
+              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800"><b className="text-blue-400 block mb-1">Escuta ativa</b> Compreender o relato antes de concluir.</div>
+              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800"><b className="text-blue-400 block mb-1">Paráfrase</b> Repetir com outras palavras para confirmar.</div>
+              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800"><b className="text-blue-400 block mb-1">Comunicação não violenta</b> Descrever fato, impacto, regra e solicitação.</div>
+              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800"><b className="text-blue-400 block mb-1">Questionamento socrático</b> Promover reflexão quando a situação estiver controlada.</div>
+              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800"><b className="text-blue-400 block mb-1">Validação emocional</b> Reconhecer a emoção sem aceitar a conduta.</div>
+              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800"><b className="text-blue-400 block mb-1">Desescalada verbal</b> Reduzir tensão com voz calma e frases curtas.</div>
+              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-850"><b className="text-blue-400 block mb-1">Limite claro</b> Informar o que deve parar e o que deve acontecer.</div>
+              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-850"><b className="text-blue-400 block mb-1">Escolhas controladas</b> Oferecer opções permitidas sem retirar a regra.</div>
+            </div>
+            <div className="bg-slate-950 p-3 rounded-lg border border-slate-850 text-[10px] text-purple-400 mt-2 font-bold leading-normal">
+              Regra: primeiro proteger e estabilizar; depois ouvir, orientar e promover reflexão.
             </div>
             <button onClick={handleReset} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider">
               Voltar
@@ -356,11 +363,16 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
         {currentStep === 'coordenacao' && (
           <div className="space-y-4 my-auto">
             <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-400 px-3 py-1 rounded-full">Encaminhamento</span>
-            <h4 className="text-lg font-bold text-white">Como repassar dados para Ata</h4>
+            <h4 className="text-lg font-bold text-white">Como encaminhar à coordenação para ata</h4>
             <div className="space-y-2 text-xs text-slate-350">
-              <p className="bg-slate-900 p-3 rounded-lg border border-slate-800">1. Relate com clareza **o quê, quem, onde e quando**.</p>
-              <p className="bg-slate-900 p-3 rounded-lg border border-slate-800">2. Esclareça quais intervenções preventivas ou orientações já foram feitas anteriormente.</p>
-              <p className="bg-slate-900 p-3 rounded-lg border border-slate-800">3. Transfira a custódia do aluno apenas com a entrega destas informações consolidadas.</p>
+              <p className="bg-slate-900 p-3 rounded-lg border border-slate-800">O que aconteceu, quem estava envolvido, onde e quando.</p>
+              <p className="bg-slate-900 p-3 rounded-lg border border-slate-800">O que foi observado diretamente e o que foi relatado.</p>
+              <p className="bg-slate-900 p-3 rounded-lg border border-slate-800">Qual risco existia e quais técnicas foram utilizadas.</p>
+              <p className="bg-slate-900 p-3 rounded-lg border border-slate-800">Quais orientações foram dadas e como o estudante reagiu.</p>
+              <p className="bg-slate-900 p-3 rounded-lg border border-slate-800">Se houve reincidência e qual é a situação atual.</p>
+            </div>
+            <div className="bg-slate-950 p-3 rounded-lg border border-slate-850 text-[10px] text-amber-500 mt-2 font-bold leading-normal">
+              <strong>Ocorrência média:</strong> levar o estudante à coordenação, repassar o histórico da orientação e da reincidência e solicitar o registro em ata. Encaminhar não é apenas levar o estudante: é transferir também as informações e a responsabilidade.
             </div>
             <button onClick={handleReset} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider">
               Entendido
@@ -371,12 +383,18 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
         {/* Step: REGISTRO LEVE */}
         {currentStep === 'registroLeve' && (
           <div className="space-y-4 my-auto">
-            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full">Instrução de Registro</span>
-            <h4 className="text-lg font-bold text-white">Como cadastrar ocorrências</h4>
+            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full">Ocorrência leve</span>
+            <h4 className="text-lg font-bold text-white">Como registrar no app institucional</h4>
             <div className="space-y-2 text-xs text-slate-350">
-              <p className="bg-slate-900 p-3 rounded-lg">1. Abra o formulário de **Registro Diário**.</p>
-              <p className="bg-slate-900 p-3 rounded-lg">2. Selecione o aluno e classifique o comportamento.</p>
-              <p className="bg-slate-900 p-3 rounded-lg">3. Seja descritivo e puramente factual na caixa de texto.</p>
+              <p className="bg-slate-900 p-3 rounded-lg"><strong className="text-white">1.</strong> Abra o app.</p>
+              <p className="bg-slate-900 p-3 rounded-lg"><strong className="text-white">2.</strong> Acesse a aba <strong>Registro Diário</strong>.</p>
+              <p className="bg-slate-900 p-3 rounded-lg"><strong className="text-white">3.</strong> Selecione o nome do aluno.</p>
+              <p className="bg-slate-900 p-3 rounded-lg"><strong className="text-white">4.</strong> Selecione o tipo de ocorrência.</p>
+              <p className="bg-slate-900 p-3 rounded-lg"><strong className="text-white">5.</strong> Preencha as informações solicitadas de forma objetiva.</p>
+              <p className="bg-slate-900 p-3 rounded-lg"><strong className="text-white">6.</strong> Revise os dados e envie o registro.</p>
+            </div>
+            <div className="bg-slate-950 p-3 rounded-lg border border-slate-850 text-[10px] text-blue-400 mt-2 font-bold leading-normal">
+              <strong>Observação:</strong> caso o app indique reincidência, considerar a situação como <strong>ocorrência média</strong> e levar o estudante à coordenação para tratativa e registro em ata.
             </div>
             <button onClick={handleReset} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider">
               Voltar
@@ -387,15 +405,15 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
         {/* Step: REGISTRO GERAL */}
         {currentStep === 'registro' && (
           <div className="space-y-4 my-auto">
-            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full">Guia de Notas</span>
-            <h4 className="text-lg font-bold text-white">Redação Factual de Ocorrências</h4>
-            <div className="space-y-3 text-xs">
-              <div className="bg-emerald-950/20 border border-emerald-550/20 p-3 rounded-lg text-emerald-400">
-                <b>Correto (Fatos):</b> "Aluno elevou o tom de voz e recusou-se a entregar o aparelho celular."
-              </div>
-              <div className="bg-red-950/20 border border-red-550/20 p-3 rounded-lg text-red-400">
-                <b>Incorreto (Julgamento):</b> "Estudante é agressivo, bagunceiro e muito problemático."
-              </div>
+            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full">Registro por classificação</span>
+            <h4 className="text-lg font-bold text-white">Como registrar e encaminhar</h4>
+            <div className="space-y-2 text-xs text-slate-350">
+              <p className="bg-slate-900 p-3 rounded-lg"><strong className="text-blue-400">Leve:</strong> registrar no app pela aba Registro Diário, selecionar o aluno e o tipo de ocorrência, preencher as informações e enviar.</p>
+              <p className="bg-slate-900 p-3 rounded-lg"><strong className="text-blue-400">Média:</strong> registrar a reincidência no app, encaminhar à coordenação e solicitar elaboração de ata.</p>
+              <p className="bg-slate-900 p-3 rounded-lg"><strong className="text-blue-400">Grave:</strong> seguir o protocolo específico do Plano de Contingência, registrar fatos, horários, medidas adotadas e profissionais acionados.</p>
+            </div>
+            <div className="bg-slate-950 p-3 rounded-lg border border-slate-850 text-[10px] text-amber-500 mt-2 font-bold leading-normal">
+              <strong>Registrar fatos, não julgamentos.</strong><br/>Correto: “Elevou o tom de voz e recusou-se a retornar.”<br/>Incorreto: “É agressivo e problemático.”
             </div>
             <button onClick={handleReset} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider">
               Entendido
