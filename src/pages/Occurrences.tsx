@@ -8,7 +8,10 @@ import { useAuth } from '../context/AuthContext';
 import type { DailyOccurrenceRecord, RegistroOcorrencia } from '../types';
 import { generateWordOccurrence } from '../lib/wordGenerator';
 import FichaOcorrencia from '../components/FichaOcorrencia';
+import { FluxogramaOcorrencias } from '../components/FluxogramaOcorrencias';
+import { HelpCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
+
 import jsPDF from 'jspdf';
 
 interface Emprestimo {
@@ -122,8 +125,10 @@ export function Occurrences() {
 
   const [activeTab, setActiveTab] = useState<'registro' | 'consulta' | 'relatorios'>('registro');
   const [registroSubTab, setRegistroSubTab] = useState<'ocorrencia' | 'emprestimos'>('ocorrencia');
+  const [showFluxograma, setShowFluxograma] = useState(false);
   
   // Registration Form State
+
   const [studentName, setStudentName] = useState('');
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [schoolYear, setSchoolYear] = useState('');
@@ -607,7 +612,17 @@ Agradecemos a parceria.`;
             Módulo operacional leve para controle diário de alunos.
           </p>
         </div>
+        <div>
+          <button
+            onClick={() => setShowFluxograma(true)}
+            className="flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-blue-500/10 cursor-pointer"
+          >
+            <HelpCircle className="w-4 h-4" />
+            Fluxograma de Ocorrências
+          </button>
+        </div>
       </div>
+
 
       {/* Tabs */}
       <div className="flex space-x-1 p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl w-full max-w-md mx-auto md:mx-0 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50">
@@ -1617,6 +1632,23 @@ Agradecemos a parceria.`;
           </div>
         )}
       </AnimatePresence>
+
+      {/* Modal do Fluxograma de Ocorrências Interativo */}
+      <AnimatePresence>
+        {showFluxograma && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full flex justify-center"
+            >
+              <FluxogramaOcorrencias onClose={() => setShowFluxograma(false)} />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
+
   );
 }
