@@ -54,14 +54,18 @@ export default function LoginPage() {
         if (error) {
           setErro(error.message);
         } else if (data.user) {
-          // Criar perfil pendente
-          await supabase.from('profiles').insert({
+          // Criar/garantir perfil pendente (upsert para não conflitar com trigger automático do banco)
+          const { error: profileError } = await supabase.from('profiles').upsert({
             id: data.user.id,
             full_name: nome,
             email: email,
             role: 'user',
             status: 'pending'
-          });
+          }, { onConflict: 'id', ignoreDuplicates: true });
+
+          if (profileError) {
+            console.error('Aviso: erro ao criar perfil (o trigger do banco pode já tê-lo criado):', profileError.message);
+          }
           setMode('success');
         }
       } else if (mode === 'reset') {
