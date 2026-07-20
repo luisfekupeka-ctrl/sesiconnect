@@ -138,6 +138,7 @@ export function Occurrences() {
   const [schoolYear, setSchoolYear] = useState('');
   const [occurrenceType, setOccurrenceType] = useState(TIPOS_OCORRENCIA[0]);
   const [dynamicValue, setDynamicValue] = useState('');
+  const [showGraveModal, setShowGraveModal] = useState(false);
   const [motivoAtraso, setMotivoAtraso] = useState('');
   const [momentoAtraso, setMomentoAtraso] = useState('Chegada ao Colégio');
   const [customMomentoAtraso, setCustomMomentoAtraso] = useState('');
@@ -911,9 +912,22 @@ Coordenação Pedagógica / SESI`;
                             <select
                               value={occurrenceType}
                               onChange={(e) => {
-                                setOccurrenceType(e.target.value);
-                                setDynamicValue('');
-                              }}
+                                 const val = e.target.value;
+                                 setOccurrenceType(val);
+                                 setDynamicValue('');
+                                 const graves = [
+                                   'Bullying, cyberbullying e constrangimentos',
+                                   'Agressão física ou verbal',
+                                   'Saída da escola sem autorização',
+                                   'Dano intencional ou depredação',
+                                   'Falsificação ou adulteração de documentos',
+                                   'Porte ou uso de vape, cigarros, álcool e drogas',
+                                   'Porte de objeto perigoso, arma ou explosivo'
+                                 ];
+                                 if (graves.includes(val)) {
+                                   setShowGraveModal(true);
+                                 }
+                               }}
                               className="pl-10 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white appearance-none"
                             >
                               {TIPOS_OCORRENCIA.map(tipo => (
@@ -1739,6 +1753,64 @@ Coordenação Pedagógica / SESI`;
               className="w-full flex justify-center"
             >
               <FluxogramaOcorrencias onClose={() => setShowFluxograma(false)} />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Alerta Grave (Plano de Contingência) */}
+      <AnimatePresence>
+        {showGraveModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+              className="bg-slate-900 border border-red-500/30 text-slate-100 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl shadow-red-500/10 space-y-6 relative overflow-hidden select-none"
+            >
+              {/* Pulsing red warning top bar */}
+              <div className="absolute top-0 left-0 w-full h-1.5 bg-red-500 animate-pulse" />
+              
+              <div className="flex items-center gap-4 text-red-500 border-b border-slate-800 pb-4">
+                <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center font-bold shrink-0 animate-pulse">
+                  <ShieldAlert size={28} />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-lg text-white">⚠️ Alerta de Segurança</h3>
+                  <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">Ocorrência Grave ou Gravíssima</p>
+                </div>
+              </div>
+
+              <div className="space-y-4 py-2 leading-relaxed text-sm">
+                <p className="font-black text-red-500 text-base animate-pulse">
+                  Esta situação está prevista no Plano de Contingência!
+                </p>
+                <p className="font-bold text-slate-350 dark:text-slate-300">
+                  Priorize a segurança, colete apenas as informações iniciais, preserve possíveis evidências e comunique imediatamente à Coordenação.
+                </p>
+                <p className="text-slate-400 text-xs">
+                  Não faça o registro comum. Siga as orientações específicas da ocorrência e, em caso de dúvida, consulte o Fluxograma de Ocorrências.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    setShowGraveModal(false);
+                    setShowFluxograma(true);
+                  }}
+                  className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all text-center cursor-pointer shadow-lg shadow-red-600/10"
+                >
+                  Consultar Fluxograma
+                </button>
+                <button
+                  onClick={() => setShowGraveModal(false)}
+                  className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all text-center cursor-pointer"
+                >
+                  Entendido (Fechar)
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
