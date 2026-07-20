@@ -254,13 +254,32 @@ export default function FormsPage() {
     let defaultDescription = '';
 
     if (type === 'Uso indevido de celular' || type === 'Uso Indevido de Celular' || type === 'Uso Indevido de Celular / Eletrônicos' || type.toLowerCase().includes('celular') || type.toLowerCase().includes('aparelhos eletrônicos') || type.toLowerCase().includes('aparelhos eletronicos')) {
-      defaultDescription = `Em ${dateStr}, o(a) aluno(a) ${studentName}, da série ${schoolYear}, foi atendido(a) pela equipe escolar para registro e orientação em razão do uso indevido de aparelho eletrônico (celular) no ambiente escolar.
+      let listOcorrencias = '______';
+      if (records && records.length > 0) {
+        const formattedList = records.map(r => {
+          if (!r.created_at) return '__/__/____ às __:__';
+          const d = new Date(r.created_at);
+          const rDate = d.toLocaleDateString('pt-BR');
+          const rTime = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          return `${rDate} às ${rTime}`;
+        });
+        
+        if (formattedList.length === 1) {
+          listOcorrencias = formattedList[0];
+        } else {
+          listOcorrencias = formattedList.slice(0, -1).join(', ') + ' e ' + formattedList[formattedList.length - 1];
+        }
+      }
 
-Durante a tratativa, foram realizadas orientações acerca da importância do cumprimento das normas institucionais, da manutenção de uma postura adequada ao ambiente educacional e da colaboração para o bom desenvolvimento das atividades escolares.
+      defaultDescription = `Em ${dateStr}, o(a) aluno(a) ${studentName}, da série ${schoolYear}, foi atendido(a) pela equipe escolar para registro e orientação em razão do uso indevido de aparelho eletrônico, especificamente celular, no ambiente escolar.
 
-Foi esclarecido ao(à) estudante que a Lei Federal nº 15.100, de 13 de janeiro de 2025, em seu Art. 2º, restringe a utilização de aparelhos eletrônicos portáteis pessoais, incluindo telefones celulares, pelos estudantes da Educação Básica durante as aulas, recreios e intervalos, ressalvadas as exceções previstas na própria legislação para fins pedagógicos, de acessibilidade, inclusão ou necessidades de saúde.
+Durante a tratativa, foram realizadas orientações sobre a importância do cumprimento das normas institucionais, da manutenção de uma postura adequada ao ambiente educacional e da colaboração para o bom desenvolvimento das atividades escolares.
 
-O(A) aluno(a) declarou estar ciente das orientações recebidas, bem como da legislação vigente e das normas estabelecidas pela instituição, comprometendo-se a adequar sua conduta às regras escolares.`;
+Foi esclarecido ao(à) estudante que a Lei Federal nº 15.100, de 13 de janeiro de 2025, em seu Art. 2º, restringe a utilização de aparelhos eletrônicos portáteis pessoais, incluindo telefones celulares, pelos estudantes da Educação Básica durante as aulas, recreios e intervalos, ressalvadas as exceções previstas na legislação para fins pedagógicos, de acessibilidade, inclusão ou necessidades de saúde.
+
+A presente ata refere-se às ocorrências registradas nas seguintes datas e horários: ${listOcorrencias}.
+
+O(A) aluno(a) declarou estar ciente das ocorrências mencionadas, das orientações recebidas, da legislação vigente e das normas estabelecidas pela instituição, comprometendo-se a adequar sua conduta às regras escolares.`;
     } else if (type.toLowerCase().includes('atraso')) {
       let listLines = '';
       if (records && records.length > 0) {
