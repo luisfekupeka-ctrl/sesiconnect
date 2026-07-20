@@ -155,34 +155,7 @@ export default function Monitores() {
   const [acompanharTempoReal, setAcompanharTempoReal] = useState(true);
 
   const horariosDisponiveis = useMemo(() => {
-    let list: string[] = [];
-    if (periodos && periodos.length > 0) {
-      periodos.forEach(p => {
-        const start = p.horarioInicio.slice(0, 5);
-        const end = p.horarioFim.slice(0, 5);
-        const hStr = `${start} - ${end}`;
-        if (!list.includes(hStr)) {
-          list.push(hStr);
-        }
-      });
-    } else {
-      list = [
-        '07:30 - 08:20',
-        '08:20 - 09:10',
-        '09:10 - 10:00',
-        '10:00 - 10:20',
-        '10:20 - 11:10',
-        '11:10 - 12:00',
-        '12:00 - 13:00',
-        '13:00 - 13:50',
-        '13:50 - 14:40',
-        '14:40 - 15:30',
-        '15:30 - 15:50',
-        '15:50 - 16:40',
-        '16:40 - 17:30'
-      ];
-    }
-
+    const list: string[] = [];
     escalaDoDia.forEach(slot => {
       const start = slot.horarioInicio.slice(0, 5);
       const end = slot.horarioFim.slice(0, 5);
@@ -191,9 +164,8 @@ export default function Monitores() {
         list.push(hStr);
       }
     });
-
     return list.filter(Boolean).sort((a, b) => a.localeCompare(b));
-  }, [periodos, escalaDoDia]);
+  }, [escalaDoDia]);
 
   const horarioAtivoPorSetor = useMemo(() => {
     if (horariosDisponiveis.length === 0) return null;
