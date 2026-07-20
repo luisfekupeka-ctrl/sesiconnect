@@ -279,7 +279,9 @@ Foi esclarecido ao(à) estudante que a Lei Federal nº 15.100, de 13 de janeiro 
 
 A presente ata refere-se às ocorrências registradas nas seguintes datas e horários: ${listOcorrencias}.
 
-O(A) aluno(a) declarou estar ciente das ocorrências mencionadas, das orientações recebidas, da legislação vigente e das normas estabelecidas pela instituição, comprometendo-se a adequar sua conduta às regras escolares.`;
+O(A) aluno(a) declarou estar ciente das ocorrências mencionadas, das orientações recebidas, da legislação vigente e das normas estabelecidas pela instituição, comprometendo-se a adequar sua conduta às regras escolares.
+
+Os pais ou responsáveis serão comunicados sobre esta ata e sobre as ocorrências registradas pelos canais oficiais da instituição, para ciência e acompanhamento da conduta do(a) estudante.`;
     } else if (type.toLowerCase().includes('atraso')) {
       let listLines = '';
       if (records && records.length > 0) {
