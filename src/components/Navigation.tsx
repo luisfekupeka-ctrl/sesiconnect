@@ -22,7 +22,7 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean; setIsOpen?: (
     { to: '/rooms', icon: DoorOpen, label: 'Salas', visible: true },
     { to: '/teachers', icon: Users, label: 'Professores', visible: true },
     { to: '/monitores', icon: BookOpen, label: 'Monitores', visible: true },
-    { to: '/language-lab', icon: Languages, label: 'Idioma', visible: true },
+    { to: '/language-lab', icon: Languages, label: 'Language Lab', visible: true },
     { to: '/after', icon: Sparkles, label: 'After School', visible: true },
     { to: '/atas-pendentes', icon: AlertTriangle, label: 'Atas Pendentes', visible: isAdmin },
     { to: '/forms', icon: FileText, label: 'Ocorrências', visible: isAdmin },

@@ -500,7 +500,7 @@ export default function Admin() {
     { id: 'grade-professores', rotulo: 'Grade de Aulas', icone: Calendar },
     { id: 'gestao-monitores', rotulo: 'Monitores', icone: ClipboardList, badge: (monitores || []).length },
     { id: 'locais', rotulo: 'Salas', icone: MapPin, badge: (locaisCMS || []).length },
-    { id: 'language-lab', rotulo: 'Idioma', icone: BookOpen, badge: (languageLab || []).length },
+    { id: 'language-lab', rotulo: 'Language Lab', icone: BookOpen, badge: (languageLab || []).length },
     { id: 'after-school', rotulo: 'After School', icone: Clock, badge: (atividadesAfter || []).length },
     { id: 'formularios', rotulo: 'Ocorrências', icone: FileSpreadsheet, badge: (modelosFormulario || []).length },
     { id: 'prontuario', rotulo: 'Prontuário', icone: DoorOpen },
