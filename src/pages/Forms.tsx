@@ -337,6 +337,43 @@ Também foi esclarecido que os pais ou responsáveis serão comunicados sobre es
 O(A) aluno(a) declara estar ciente dos atrasos relacionados, das orientações recebidas e dos procedimentos que serão adotados em caso de novas ocorrências, comprometendo-se a cumprir os horários estabelecidos pela instituição.
 
 Registro realizado para acompanhamento pedagógico e institucional.`;
+    } else if (type.toLowerCase().includes('uniforme')) {
+      let listLines = '';
+      if (records && records.length > 0) {
+        listLines = records.slice(0, 4).map(r => {
+          const rDateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('pt-BR') : '__/__/____';
+          const rTimeStr = r.created_at ? new Date(r.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '__:__';
+          
+          let pecaStr = 'Não especificado';
+          const pecaMatch = (r.report || '').match(/\[Peça Faltando\/Inadequada:\s*([^\]]+)\]/i);
+          if (pecaMatch) {
+            pecaStr = pecaMatch[1].trim();
+          } else {
+            const firstLine = (r.report || '').split('\n')[0].replace(/\[[^\]]+\]/g, '').trim();
+            if (firstLine && firstLine.length < 50) pecaStr = firstLine;
+          }
+
+          return `* **${rDateStr}**, às **${rTimeStr}** – peça faltante ou inadequada: **${pecaStr}**`;
+        }).join(';\n') + '.';
+      } else {
+        listLines = `* **__/__/____**, às **______** – peça faltante ou inadequada: **_______________**;\n* **__/__/____**, às **______** – peça faltante ou inadequada: **_______________**;\n* **__/__/____**, às **______** – peça faltante ou inadequada: **_______________**;\n* **__/__/____**, às **______** – peça faltante ou inadequada: **____________________**.`;
+      }
+
+      defaultDescription = `Na presente data, foi atendido(a) o(a) aluno(a) ${studentName}, do ${schoolYear || '______ ano/série'}, em razão da recorrência de ocorrências relacionadas ao uso inadequado ou incompleto do uniforme escolar, conforme segue:
+
+${listLines}
+
+Durante o atendimento, o(a) aluno(a) foi orientado(a) de que, conforme o Regimento Escolar, o uso do uniforme completo e adequado é obrigatório durante sua permanência na instituição e nas atividades escolares.
+
+Foi esclarecido que o uniforme contribui para a identificação e a segurança dos estudantes, além de representar pertencimento institucional, responsabilidade, disciplina e respeito às normas de convivência e à organização do ambiente pedagógico.
+
+O(A) aluno(a) foi informado(a) de que, a partir desta formalização, cada nova ocorrência relacionada ao uso inadequado ou incompleto do uniforme será registrada em ata referente à conduta, para fins de acompanhamento pedagógico e institucional.
+
+Também foi esclarecido que os pais ou responsáveis serão comunicados sobre esta ata e sobre as futuras ocorrências pelos canais oficiais da instituição. A continuidade da conduta poderá resultar em convocação da família para reunião e na adoção de outras medidas educativas previstas no Regimento Escolar.
+
+O(A) aluno(a) declara estar ciente das ocorrências relacionadas, das orientações recebidas e dos procedimentos que serão adotados em caso de reincidência, comprometendo-se a comparecer às próximas atividades utilizando o uniforme completo e adequado.
+
+Registro realizado para acompanhamento pedagógico e institucional.`;
     } else {
       defaultDescription = `O(a) aluno(a) ${studentName} acumula ${count} ocorrências de "${type}" registradas recentemente. Considerando a reincidência, foi realizada esta ata de tratativa e encaminhamento pedagógico em ${dateStr}.`;
     }
