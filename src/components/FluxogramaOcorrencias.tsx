@@ -1,88 +1,259 @@
 import React, { useState } from 'react';
 import { ChevronRight, RefreshCw, HelpCircle } from 'lucide-react';
 
-const PROTOCOLS: Record<string, string[]> = {
-  "Acidente ou emergência de saúde": [
-    "Proteger a vítima e impedir nova exposição ao risco.",
-    "Avaliar rapidamente se há consciência, respiração e sinais de gravidade, sem realizar procedimento para o qual não esteja capacitado.",
-    "Acionar imediatamente o profissional treinado da unidade.",
-    "Acionar SAMU ou SIATE conforme a natureza e a gravidade da situação.",
-    "Não administrar medicamentos por iniciativa própria.",
-    "Manter curiosos afastados e preservar o acesso para o atendimento.",
-    "Comunicar à liderança apenas as informações necessárias.",
-    "Registrar horário, local, sinais observados, medidas adotadas e responsáveis acionados."
-  ],
-  "Agressão grave ou ameaça": [
-    "Solicitar apoio imediato e afastar os demais estudantes.",
-    "Interromper verbalmente apenas se houver segurança para fazê-lo.",
-    "Não se colocar sozinho entre envolvidos em situação de alto risco.",
-    "Separar os envolvidos quando for possível e seguro, conduzindo-os a locais distintos.",
-    "Verificar se há lesões e, se houver, abrir também o protocolo de saúde ou acidente.",
-    "Comunicar a liderança e preservar testemunhas e informações.",
-    "Evitar exposição pública, julgamentos ou discussão sobre culpa no local.",
-    "Registrar fatos observados, falas relevantes, lesões aparentes e providências."
-  ],
-  "Incêndio, fumaça ou risco estrutural": [
-    "Afastar imediatamente as pessoas da área de risco.",
-    "Acionar brigada e liderança da unidade.",
-    "Não improvisar combate ao fogo sem treinamento e condições seguras.",
-    "Seguir a rota de evacuação indicada e utilizar rota alternativa se necessário.",
-    "Manter os estudantes juntos, acompanhados e sob contagem.",
-    "Não permitir retorno ao local até liberação oficial.",
-    "Em problema estrutural grave, isolar a área e desviar o fluxo.",
-    "Registrar horários, local, acionamentos e medidas adotadas."
-  ],
-  "Objeto perigoso ou possível arma": [
-    "Não confrontar nem tentar retirar o objeto à força.",
-    "Manter distância segura e afastar discretamente outras pessoas.",
-    "Comunicar imediatamente a liderança e seguir a orientação institucional.",
-    "Se houver ameaça activa, priorizar proteção e acionamento emergencial.",
-    "Preservar o local e evitar aglomeração.",
-    "Não tocar em objetos abandonados ou suspeitos.",
-    "Registrar somente fatos observados, localização, características e deslocamento."
-  ],
-  "Invasão ou acesso indevido": [
-    "Não enfrentar a pessoa sozinho.",
-    "Informar localização, características, direção de deslocamento e comportamento observado.",
-    "Proteger estudantes próximos e restringir acessos apenas quando isso puder ser feito com segurança.",
-    "Acionar liderança e segurança.",
-    "Se houver comportamento ameaçador, aplicar o fluxo de ameaça à vida.",
-    "Manter acompanhamento visual sem aproximação arriscada.",
-    "Registrar horário, local, características e providências."
-  ],
-  "Crise emocional com risco": [
-    "Reduzir estímulos, afastar curiosos e manter o ambiente protegido.",
-    "Falar com voz calma, frases curtas e distância segura.",
-    "Não ameaçar, desafiar, pressionar ou discutir culpa.",
-    "Não deixar o estudante sozinho.",
-    "Se houver risco de autoagressão, agressão ou fuga, acionar apoio imediato e emergência conforme orientação institucional.",
-    "Utilizar desescalada verbal; questionamento reflexivo somente após estabilização.",
-    "Transferir o atendimento à equipe responsável.",
-    "Registrar comportamentos observados, falas relevantes e encaminhamento."
-  ],
-  "Calamidade": [
-    "Seguir a orientação institucional de evacuação ou abrigo.",
-    "Manter todos os estudantes acompanhados durante todo o deslocamento.",
-    "Não permitir que estudantes circulem sozinhos.",
-    "Organizar a conferência dos grupos e comunicar ausências imediatamente.",
-    "Permanecer no local seguro até nova orientação.",
-    "Não liberar estudantes sem autorização institucional.",
-    "Registrar medidas adotadas, horários e responsáveis."
-  ],
-  "Outra contingência": [
-    "Proteger as pessoas e controlar o acesso ao local.",
-    "Solicitar apoio imediato da liderança.",
-    "Não improvisar ações fora da própria capacitação.",
-    "Identificar se a situação envolve acidente, saúde, ameaça, calamidade, incêndio, invasão ou risco estrutural.",
-    "Acionar os recursos internos ou externos indicados.",
-    "Manter acompanhamento até a transferência formal.",
-    "Registrar fatos, horários, providências e pendências."
-  ]
+const CONTINGENCY_BLOCKS: Record<string, Record<string, string[]>> = {
+  "1. Acidentes": {
+    "Óbito dentro da instituição": [
+      "Não tocar ou movimentar a vítima.",
+      "Isolar o local e afastar curiosos.",
+      "Acionar Polícia (190) e SAMU (192).",
+      "Comunicar imediatamente à Coordenação e à gestão.",
+      "Preservar o local até a chegada das autoridades."
+    ],
+    "Acidente rodoviário com feridos ou vítima fatal": [
+      "Acionar SAMU (192) ou SIATE (193).",
+      "Verificar o local de encaminhamento da vítima.",
+      "Comunicar à Coordenação e aos responsáveis.",
+      "Garantir acompanhamento de menores.",
+      "Preservar informações da ocorrência."
+    ],
+    "Incêndio com vítimas ou necessidade de Bombeiros": [
+      "Comunicar a Brigada.",
+      "Acionar Bombeiros (193).",
+      "Seguir as rotas de fuga.",
+      "Levar os estudantes ao ponto de encontro.",
+      "Não retornar ao prédio sem autorização.",
+      "Acionar atendimento médico se houver vítimas."
+    ],
+    "Vazamento, explosão ou intoxicação por gás/produto químico": [
+      "Afastar as pessoas da área.",
+      "Não tocar no produto.",
+      "Acionar a Brigada.",
+      "Seguir a orientação de evacuação.",
+      "Acionar SAMU (192) ou SIATE (193) se houver vítimas.",
+      "Comunicar à Coordenação."
+    ],
+    "Acidente com lesão": [
+      "Não movimentar a vítima em caso de suspeita de lesão grave.",
+      "Chamar brigadista.",
+      "Acionar SAMU (192) ou SIATE (193).",
+      "Afastar curiosos.",
+      "Comunicar à Coordenação e aos responsáveis."
+    ],
+    "Ataque de animal peçonhento ou silvestre": [
+      "Afastar as pessoas.",
+      "Não tentar capturar o animal.",
+      "Acionar atendimento médico em caso de lesão.",
+      "Comunicar à Coordenação e aos órgãos ambientais, quando necessário."
+    ],
+    "Intoxicação, afogamento ou engasgamento": [
+      "Acionar imediatamente brigadista e atendimento de emergência.",
+      "Prestar primeiros socorros somente se estiver capacitado.",
+      "Identificar o possível agente causador.",
+      "Comunicar à Coordenação."
+    ]
+  },
+  "2. Calamidades": {
+    "Vendaval, tempestade, enchente, desmoronamento ou tremor de terra": [
+      "Comunicar a Coordenação e a Brigada.",
+      "Conduzir todos para local seguro.",
+      "Seguir as rotas de fuga quando determinado.",
+      "Conferir se todos os estudantes estão presentes.",
+      "Não deixar aluno sozinho."
+    ],
+    "Ausência permanente da alta gestão": [
+      "Comunicar à liderança imediatamente superior.",
+      "Seguir a cadeia institucional de substituição.",
+      "Preservar a continuidade das atividades e aguardar orientações oficiais."
+    ]
+  },
+  "3. Saúde": {
+    "Mal-estar, febre alta, crise alérgica ou dor aguda": [
+      "Levar o estudante a local seguro e acompanhado.",
+      "Comunicar à Coordenação.",
+      "Contatar os responsáveis.",
+      "Acionar SAMU (192) em caso de gravidade.",
+      "Não ministrar medicamento sem autorização e receita."
+    ],
+    "Doença infectocontagiosa, endêmica, epidêmica ou pandêmica": [
+      "Afastar o estudante do contato coletivo.",
+      "Comunicar à Coordenação e aos responsáveis.",
+      "Aplicar os protocolos sanitários vigentes.",
+      "Preservar a identidade do estudante."
+    ],
+    "Crise ou surto psiquiátrico": [
+      "Reduzir estímulos.",
+      "Afastar curiosos.",
+      "Falar calmamente.",
+      "Não realizar contenção física sem capacitação.",
+      "Retirar objetos perigosos quando for seguro.",
+      "Comunicar à Coordenação.",
+      "Acionar SAMU (192) quando necessário."
+    ]
+  },
+  "4. Atos infracionais ou indisciplinares": {
+    "Degradação da imagem ou reputação da instituição": [
+      "Preservar prints, vídeos ou publicações.",
+      "Não responder publicamente.",
+      "Comunicar à Coordenação.",
+      "Não dar declarações à imprensa ou redes sociais."
+    ],
+    "Declaração inapropriada de dirigente": [
+      "Preservar a manifestação.",
+      "Não divulgar ou comentar publicamente.",
+      "Comunicar à gestão para análise institucional."
+    ],
+    "Constrangimento, discriminação ou preconceito": [
+      "Acolher a vítima.",
+      "Conversar com os envolvidos separadamente e em local reservado.",
+      "Evitar exposição.",
+      "Preservar evidências.",
+      "Encaminhar imediatamente à Coordenação."
+    ],
+    "Impedimento de acesso à unidade": [
+      "Não enfrentar ou discutir com os responsáveis pelo bloqueio.",
+      "Manter estudantes e funcionários em local seguro.",
+      "Comunicar imediatamente à Coordenação e à gestão."
+    ],
+    "Tráfico de drogas": [
+      "Não confrontar ou investigar diretamente.",
+      "Não realizar revista.",
+      "Preservar a confidencialidade.",
+      "Reunir apenas as informações observadas.",
+      "Comunicar imediatamente à Coordenação."
+    ],
+    "Porte ou consumo de drogas, álcool, cigarros ou vape": [
+      "Abordar discretamente.",
+      "Não revistar.",
+      "Não manipular a substância.",
+      "Manter o estudante acompanhado.",
+      "Observar sinais de alteração.",
+      "Acionar SAMU (192) se houver mal-estar.",
+      "Encaminhar à Coordenação."
+    ],
+    "Dano intencional ao patrimônio": [
+      "Interromper a ação se for seguro.",
+      "Afastar o estudante.",
+      "Preservar o bem e o local.",
+      "Identificar envolvidos e testemunhas.",
+      "Encaminhar à Coordenação.",
+      "Registrar os danos para possível reparação."
+    ],
+    "Roubo ou furto": [
+      "Não acusar, confrontar ou revistar.",
+      "Preservar o local e as evidências.",
+      "Identificar envolvidos e testemunhas.",
+      "Comunicar imediatamente à Coordenação, que avaliará o acionamento policial."
+    ],
+    "Uso indevido das tecnologias da informação": [
+      "Não apagar arquivos ou históricos.",
+      "Não tentar investigar o equipamento.",
+      "Preservar o dispositivo.",
+      "Comunicar à Coordenação para acionamento do setor de Tecnologia da Informação."
+    ],
+    "Relação sexual nas dependências da instituição": [
+      "Preservar a privacidade.",
+      "Afastar curiosos.",
+      "Não realizar perguntas íntimas em público.",
+      "Manter os envolvidos separados e acompanhados.",
+      "Encaminhar à Coordenação."
+    ],
+    "Bullying ou cyberbullying": [
+      "Acolher a vítima.",
+      "Separar os envolvidos.",
+      "Verificar se há repetição.",
+      "Preservar prints, mensagens e testemunhos.",
+      "Não realizar confronto público.",
+      "Encaminhar à Coordenação."
+    ]
+  },
+  "5. Atentados contra a própria vida ou a de outros": {
+    "Explosão ou ameaça de bomba": [
+      "Não tocar ou movimentar objetos suspeitos.",
+      "Isolar a área e afastar as pessoas.",
+      "Comunicar à Coordenação e à Brigada.",
+      "Acionar Polícia (190) e Bombeiros (193).",
+      "Seguir o plano de evacuação."
+    ],
+    "Atentado coletivo": [
+      "Buscar abrigo seguro.",
+      "Trancar ou bloquear o ambiente quando possível.",
+      "Manter silêncio.",
+      "Afastar estudantes de portas e janelas.",
+      "Não procurar o agressor.",
+      "Acionar Polícia (190) quando for seguro."
+    ],
+    "Assalto à mão armada": [
+      "Não reagir.",
+      "Evitar movimentos bruscos.",
+      "Manter a calma.",
+      "Priorizar a preservação da vida.",
+      "Após a saída do autor, acionar Polícia (190) e atendimento médico se houver vítimas."
+    ],
+    "Sequestro": [
+      "Não realizar contato ou negociação por conta própria.",
+      "Comunicar imediatamente à Coordenação e à gestão.",
+      "Preservar todas as informações.",
+      "Aguardar orientação das autoridades."
+    ],
+    "Estupro ou violência sexual": [
+      "Proteger e acolher a vítima.",
+      "Não confrontar o possível autor.",
+      "Evitar perguntas repetidas.",
+      "Preservar roupas, objetos e evidências quando o fato for recente.",
+      "Comunicar imediatamente à Coordenação e acionar atendimento médico e autoridades."
+    ],
+    "Autolesão ou tentativa de suicídio": [
+      "Não deixar o estudante sozinho.",
+      "Afastar objetos de risco quando for seguro.",
+      "Falar sem julgamento.",
+      "Comunicar imediatamente à Coordenação.",
+      "Acionar SAMU (192) em caso de risco ou lesão."
+    ],
+    "Agressão física com lesão corporal": [
+      "Separar os envolvidos.",
+      "Verificar lesões.",
+      "Chamar brigadista.",
+      "Acionar SAMU (192) ou SIATE (193) quando necessário.",
+      "Manter os estudantes acompanhados.",
+      "Encaminhar à Coordenação."
+    ],
+    "Ameaça de morte": [
+      "Proteger a vítima.",
+      "Separar os envolvidos.",
+      "Preservar mensagens e testemunhos.",
+      "Não promover confronto.",
+      "Comunicar imediatamente à Coordenação e avaliar acionamento policial."
+    ],
+    "Porte de arma de fogo, arma branca, explosivo ou bomba": [
+      "Não confrontar nem tentar retirar o objeto.",
+      "Manter distância.",
+      "Afastar outras pessoas quando for seguro.",
+      "Não realizar revista.",
+      "Comunicar imediatamente à Coordenação e acionar Polícia (190)."
+    ]
+  },
+  "6. Retenções ou greves": {
+    "Prisão ou confisco de equipamentos": [
+      "Não impedir a atuação da autoridade.",
+      "Solicitar identificação e documentação.",
+      "Comunicar à Coordenação e à gestão.",
+      "Preservar cópia das informações e aguardar orientação jurídica."
+    ],
+    "Greve do transporte público": [
+      "Comunicar à Coordenação.",
+      "Acompanhar os estudantes que não puderem sair.",
+      "Contatar os responsáveis.",
+      "Organizar local seguro de espera.",
+      "Não liberar menor desacompanhado."
+    ]
+  }
 };
 
 export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
   const [currentStep, setCurrentStep] = useState<string>('inicio');
   const [history, setHistory] = useState<string[]>([]);
+  const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
   const [selectedProtocol, setSelectedProtocol] = useState<string | null>(null);
 
   const navigateTo = (nextStep: string) => {
@@ -101,6 +272,7 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
   const handleReset = () => {
     setCurrentStep('inicio');
     setHistory([]);
+    setSelectedBlock(null);
     setSelectedProtocol(null);
   };
 
@@ -284,12 +456,46 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
             <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-red-500/10 text-red-400 px-3 py-1 rounded-full">Ocorrência grave</span>
             <h4 className="text-xl font-bold text-white leading-tight">Aplicar o Plano de Contingência</h4>
             <p className="text-slate-400 text-xs">
-              Escolha o tipo de ocorrência. Cada opção apresenta a conduta prevista no Plano de Contingência para aquela situação, do primeiro atendimento até a transferência, o registro e o encerramento.
+              Escolha o bloco do Plano de Contingência correspondente à ocorrência:
             </p>
-            <div className="grid grid-cols-2 gap-2 max-h-[190px] overflow-y-auto pr-1 custom-scrollbar text-xs">
-              {Object.keys(PROTOCOLS).map(name => (
-                <button key={name} onClick={() => handleShowProtocol(name)} className="py-2.5 px-3 bg-slate-900 hover:bg-slate-850 hover:text-white rounded-lg border border-slate-800 text-left truncate text-[11px] font-bold text-slate-300">
-                  {name.replace(' ou ', ' / ').replace(' e ', ' / ')}
+            <div className="grid grid-cols-1 gap-2 max-h-[190px] overflow-y-auto pr-1 custom-scrollbar text-xs">
+              {Object.keys(CONTINGENCY_BLOCKS).map(blockName => (
+                <button
+                  key={blockName}
+                  onClick={() => {
+                    setSelectedBlock(blockName);
+                    navigateTo('bloco_ocorrencias');
+                  }}
+                  className="py-2.5 px-3 bg-slate-900 hover:bg-slate-850 hover:text-white rounded-lg border border-slate-800 text-left text-[11px] font-bold text-slate-350"
+                >
+                  {blockName}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Step: BLOCO OCORRENCIAS */}
+        {currentStep === 'bloco_ocorrencias' && selectedBlock && (
+          <div className="space-y-4 my-auto">
+            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-red-500/10 text-red-400 px-3 py-1 rounded-full">
+              {selectedBlock}
+            </span>
+            <h4 className="text-xl font-bold text-white leading-tight">Selecione a Ocorrência</h4>
+            <p className="text-slate-400 text-xs">
+              Selecione o tipo de situação específica para visualizar as condutas do Plano de Contingência:
+            </p>
+            <div className="grid grid-cols-1 gap-2 max-h-[195px] overflow-y-auto pr-1 custom-scrollbar text-xs">
+              {Object.keys(CONTINGENCY_BLOCKS[selectedBlock]).map(occName => (
+                <button
+                  key={occName}
+                  onClick={() => {
+                    setSelectedProtocol(occName);
+                    navigateTo('protocolo');
+                  }}
+                  className="py-2.5 px-3 bg-slate-900 hover:bg-slate-855 hover:text-white rounded-lg border border-slate-800 text-left text-[11px] font-bold text-slate-300 leading-normal"
+                >
+                  {occName}
                 </button>
               ))}
             </div>
@@ -297,12 +503,14 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
         )}
 
         {/* Step: PROTOCOLO DETALHE */}
-        {currentStep === 'protocolo' && selectedProtocol && (
+        {currentStep === 'protocolo' && selectedProtocol && selectedBlock && (
           <div className="space-y-4 my-auto">
-            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-red-500/15 text-red-400 px-3 py-1 rounded-full">Ocorrência grave — Plano de Contingência</span>
-            <h4 className="text-lg font-bold text-white leading-tight">{selectedProtocol}</h4>
+            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-wider bg-red-500/15 text-red-400 px-3 py-1 rounded-full">
+              {selectedBlock} — Contingência
+            </span>
+            <h4 className="text-md font-bold text-white leading-tight">{selectedProtocol}</h4>
             <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1 custom-scrollbar text-xs text-slate-350">
-              {PROTOCOLS[selectedProtocol].map((step, i) => (
+              {CONTINGENCY_BLOCKS[selectedBlock][selectedProtocol].map((step, i) => (
                 <div key={i} className="bg-slate-905 border border-slate-850/60 p-3 rounded-lg leading-relaxed">
                   <strong className="text-red-400">{i + 1}.</strong> {step}
                 </div>

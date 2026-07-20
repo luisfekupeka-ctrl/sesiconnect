@@ -929,15 +929,17 @@ Coordenação Pedagógica / SESI`;
                                 exit={{ opacity: 0, height: 0, marginTop: 0 }}
                                 className="overflow-hidden"
                               >
-                                <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-2xl flex gap-3 text-red-500">
-                                  <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5 text-red-500 animate-pulse" />
-                                  <div className="text-xs space-y-1">
-                                    <p className="font-black uppercase tracking-wider">⚠️ Atenção! Ocorrência grave ou gravíssima.</p>
-                                    <p className="font-bold text-red-400/90 leading-relaxed">
-                                      Não faça o registro comum. Encaminhe imediatamente à Coordenação.
+                                <div className="p-4 bg-red-500/10 border border-red-500/40 rounded-2xl flex gap-3 text-red-500 animate-pulse">
+                                  <ShieldAlert className="w-6 h-6 shrink-0 mt-0.5 text-red-500" />
+                                  <div className="text-xs space-y-2">
+                                    <p className="font-black uppercase tracking-wider text-sm flex items-center gap-1.5 text-red-550 dark:text-red-400">
+                                      ⚠️ Atenção! Esta situação está prevista no Plano de Contingência.
                                     </p>
-                                    <p className="text-[10px] font-bold text-red-400/60 italic">
-                                      Em caso de dúvida, consulte o Fluxograma de Ocorrências.
+                                    <p className="font-bold text-red-650 dark:text-red-350 leading-relaxed text-[11px]">
+                                      Priorize a segurança, colete apenas as informações iniciais, preserve possíveis evidências e comunique imediatamente à Coordenação.
+                                    </p>
+                                    <p className="text-[11px] font-bold text-red-500 dark:text-red-300 leading-relaxed">
+                                      Não faça o registro comum. Siga as orientações específicas da ocorrência e, em caso de dúvida, consulte o Fluxograma de Ocorrências.
                                     </p>
                                   </div>
                                 </div>
@@ -1056,11 +1058,20 @@ Coordenação Pedagógica / SESI`;
                       <div className="pt-4">
                         <button
                           type="submit"
-                          disabled={isSubmitting}
-                          className="w-full sm:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors shadow-sm shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          disabled={isSubmitting || isGraveOccurrence}
+                          className={`w-full sm:w-auto px-8 py-3 rounded-xl font-medium transition-colors shadow-sm disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                            isGraveOccurrence 
+                              ? 'bg-red-500/20 text-red-500 border border-red-500/30 cursor-not-allowed opacity-80' 
+                              : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20 disabled:opacity-50'
+                          }`}
                         >
                           {isSubmitting ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
+                          ) : isGraveOccurrence ? (
+                            <>
+                              <ShieldAlert className="w-5 h-5 text-red-500 animate-pulse" />
+                              Registro Bloqueado (Grave/Contingência)
+                            </>
                           ) : (
                             <>
                               <PlusCircle className="w-5 h-5" />
