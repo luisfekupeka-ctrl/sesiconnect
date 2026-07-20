@@ -135,6 +135,8 @@ export function Occurrences() {
   const [occurrenceType, setOccurrenceType] = useState(TIPOS_OCORRENCIA[0]);
   const [dynamicValue, setDynamicValue] = useState('');
   const [motivoAtraso, setMotivoAtraso] = useState('');
+  const [momentoAtraso, setMomentoAtraso] = useState('Chegada ao Colégio');
+  const [customMomentoAtraso, setCustomMomentoAtraso] = useState('');
   const [report, setReport] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -391,6 +393,8 @@ export function Occurrences() {
       setOccurrenceType(TIPOS_OCORRENCIA[0]);
       setDynamicValue('');
       setMotivoAtraso('');
+      setMomentoAtraso('Chegada ao Colégio');
+      setCustomMomentoAtraso('');
       setReport('');
 
       // Check for reoffending (recurrence) in the last 90 days (trimestre)
@@ -567,19 +571,33 @@ O(a) estudante declarou estar ciente das orientações recebidas e comprometeu-s
   };
 
   const getAtrasoReport = () => {
-    return `[Horário de Chegada: ${dynamicValue || 'Não informado'}]\nNa presente data, o(a) estudante foi atendido(a) em razão de atraso na chegada ao colégio. Como justificativa, relatou: ${motivoAtraso || '________________________________'}.\n\nO(a) estudante foi orientado(a) quanto à importância de cumprir os horários estabelecidos pela instituição, visando seu pleno aproveitamento acadêmico e a organização da rotina escolar. Declara estar ciente das orientações recebidas e comprometido(a) a evitar novos atrasos.\n\nRegistro realizado para acompanhamento.`;
+    const momentoTexto = momentoAtraso === 'Outro' ? (customMomentoAtraso || 'Outro') : momentoAtraso;
+    return `Na presente data, o(a) estudante ${studentName || '[NOME DO(A) ESTUDANTE]'}, do ${schoolYear || '[ANO/TURMA]'}, apresentou atraso às ${dynamicValue || '____'}, no momento de ${momentoTexto.toUpperCase()}.
+
+Ao ser questionado(a), apresentou a seguinte justificativa: ${motivoAtraso || '________________________________'}.
+
+O(a) estudante foi orientado(a) quanto à importância do cumprimento dos horários estabelecidos pela instituição, considerando que a pontualidade contribui para o pleno aproveitamento das atividades pedagógicas, para a organização da rotina escolar e para evitar interrupções no andamento das aulas e demais atividades.
+
+Também foi reforçada a necessidade de comparecer ou retornar aos espaços escolares nos horários determinados, demonstrando responsabilidade, comprometimento e respeito à organização coletiva da instituição.
+
+A ocorrência foi registrada para acompanhamento pedagógico e institucional. O(a) estudante declarou estar ciente das orientações recebidas e foi orientado(a) a evitar novos atrasos. Em caso de reincidência, os pais ou responsáveis poderão ser comunicados pelos canais oficiais da instituição.`;
   };
 
   const getAtrasoMessage = () => {
-    const today = new Date();
-    const dateStr = today.toLocaleDateString('pt-BR');
-    return `Prezados responsáveis pelo(a) estudante ${studentName || '[NOME DO ALUNO]'}, esperamos que estejam bem.
+    const momentoTexto = momentoAtraso === 'Outro' ? (customMomentoAtraso || 'Outro') : momentoAtraso;
+    return `Prezados(as) responsáveis,
 
-Registramos que o(a) estudante ${studentName || '[NOME DO ALUNO]'} chegou ao colégio com atraso no dia ${dateStr}, às ${dynamicValue || '____'}h. Como justificativa, informou: ${motivoAtraso || '________________________________'}.
+Informamos que, na presente data, o(a) estudante ${studentName || '[NOME DO(A) ESTUDANTE]'}, do ${schoolYear || '[ANO/TURMA]'}, apresentou atraso às ${dynamicValue || '____'}, no momento de ${momentoTexto.toUpperCase()}.
 
-Solicitamos o apoio da família para reforçar a importância da pontualidade e do cumprimento dos horários escolares, a fim de evitar novas ocorrências.
+O(a) estudante apresentou a seguinte justificativa: ${motivoAtraso || '________________________________'}.
 
-Agradecemos a parceria.`;
+Ele(a) foi orientado(a) quanto à importância do cumprimento dos horários estabelecidos pela instituição, considerando que a pontualidade contribui para o aproveitamento das atividades pedagógicas, para a organização da rotina escolar e para evitar interrupções no andamento das aulas.
+
+Solicitamos o apoio da família para reforçar a importância do cumprimento dos horários e prevenir novos atrasos.
+
+Atenciosamente,
+${emissorName || 'Responsável pelo Registro'}
+Coordenação Pedagógica / SESI`;
   };
 
   const copyUniformMessage = () => {
@@ -925,15 +943,46 @@ Agradecemos a parceria.`;
                           </div>
 
                           {occurrenceType === 'Atrasos e descumprimento de horários' && (
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Motivo do Atraso</label>
-                              <input
-                                type="text"
-                                value={motivoAtraso}
-                                onChange={(e) => setMotivoAtraso(e.target.value)}
-                                placeholder="Ex: Ônibus quebrou, consulta médica..."
-                                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
-                              />
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Momento do Atraso</label>
+                                <select
+                                  value={momentoAtraso}
+                                  onChange={(e) => setMomentoAtraso(e.target.value)}
+                                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                                >
+                                  <option value="Chegada ao Colégio">Chegada ao Colégio</option>
+                                  <option value="Retorno do Intervalo">Retorno do Intervalo</option>
+                                  <option value="Troca de Aula">Troca de Aula</option>
+                                  <option value="Retorno de Atividade Externa">Retorno de Atividade Externa</option>
+                                  <option value="Outro">Outro</option>
+                                </select>
+                              </div>
+
+                              {momentoAtraso === 'Outro' && (
+                                <div className="space-y-2">
+                                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Especifique o Momento</label>
+                                  <input
+                                    type="text"
+                                    required
+                                    value={customMomentoAtraso}
+                                    onChange={(e) => setCustomMomentoAtraso(e.target.value)}
+                                    placeholder="Ex: Entrada do auditório, etc."
+                                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                                  />
+                                </div>
+                              )}
+
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Motivo do Atraso</label>
+                                <input
+                                  type="text"
+                                  value={motivoAtraso}
+                                  onChange={(e) => setMotivoAtraso(e.target.value)}
+                                  placeholder="Ex: Ônibus quebrou, consulta médica..."
+                                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all dark:text-white"
+                                />
+                              </div>
                             </div>
                           )}
                         </motion.div>
