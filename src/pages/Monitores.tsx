@@ -157,10 +157,13 @@ export default function Monitores() {
   const horariosDisponiveis = useMemo(() => {
     let list: string[] = [];
     if (periodos && periodos.length > 0) {
-      list = periodos.map(p => {
+      periodos.forEach(p => {
         const start = p.horarioInicio.slice(0, 5);
         const end = p.horarioFim.slice(0, 5);
-        return `${start} - ${end}`;
+        const hStr = `${start} - ${end}`;
+        if (!list.includes(hStr)) {
+          list.push(hStr);
+        }
       });
     } else {
       list = [
@@ -181,13 +184,15 @@ export default function Monitores() {
     }
 
     escalaDoDia.forEach(slot => {
-      const hStr = `${slot.horarioInicio} - ${slot.horarioFim}`;
+      const start = slot.horarioInicio.slice(0, 5);
+      const end = slot.horarioFim.slice(0, 5);
+      const hStr = `${start} - ${end}`;
       if (!list.includes(hStr)) {
         list.push(hStr);
       }
     });
 
-    return (list.filter(Boolean) as string[]).sort((a, b) => a.localeCompare(b));
+    return list.filter(Boolean).sort((a, b) => a.localeCompare(b));
   }, [periodos, escalaDoDia]);
 
   const horarioAtivoPorSetor = useMemo(() => {
