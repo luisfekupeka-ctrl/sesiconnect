@@ -540,18 +540,15 @@ A ocorrência foi registrada para fins de acompanhamento pedagógico e instituci
   };
 
   const getCellPhoneMessage = () => {
-    return `Prezados responsáveis,
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('pt-BR');
+    return `Prezados responsáveis pelo(a) estudante ${studentName || '[NOME DO ALUNO]'}, esperamos que estejam bem.
 
-Informamos que o(a) aluno(a) ${studentName || '_____________________________'}, do ${schoolYear || '____ ano'}, foi orientado(a) nesta data quanto ao uso indevido de celular e aparelhos eletrônicos durante o período escolar, conforme as normas da instituição e a Lei Federal nº 15.100/2025.
+Informamos que, nesta data (${dateStr}), ${studentName || '[NOME DO ALUNO]'} foi orientado(a) devido ao uso de celular durante o período escolar, sem autorização para finalidade pedagógica. Conforme a Lei Federal nº 15.100/2025 e o Regimento Escolar, o uso de aparelhos eletrônicos pessoais é proibido durante o período letivo, salvo quando autorizado para fins pedagógicos ou em situações previstas em lei.
 
-Justificativa informada pelo(a) estudante: ${dynamicValue || '_____________________________'} .
+A ocorrência foi registrada para acompanhamento. Contamos com a parceria da família para reforçar essa orientação com ${studentName || '[NOME DO ALUNO]'}.
 
-Reforçamos que o uso de celular e aparelhos eletrônicos na escola é permitido apenas para fins pedagógicos, mediante autorização da equipe escolar, ou em situações específicas e locais previamente definidos pela instituição.
-
-Solicitamos o apoio da família para reforçar junto ao(à) estudante a importância do cumprimento das normas escolares e das orientações recebidas, contribuindo para um ambiente favorável à aprendizagem.
-
-Atenciosamente,
-${emissorName || '_____________________'}`;
+Agradecemos pela atenção e colaboração.`;
   };
 
   const getCellPhoneReport = () => {
