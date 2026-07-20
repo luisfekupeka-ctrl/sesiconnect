@@ -287,40 +287,56 @@ O(A) aluno(a) declarou estar ciente das ocorrências mencionadas, das orientaç�
           const rDateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('pt-BR') : '__/__/____';
           
           let timeStr = '______';
-          const timeMatch = (r.report || '').match(/\[Horário de Chegada:\s*([^\]]+)\]/);
-          if (timeMatch) timeStr = timeMatch[1];
+          const timeMatch1 = (r.report || '').match(/apresentou atraso às\s*([^\s,]+)/i);
+          const timeMatch2 = (r.report || '').match(/\[Horário de Chegada:\s*([^\]]+)\]/i);
+          const timeMatch3 = (r.report || '').match(/\b\d{2}:\d{2}\b/);
+          if (timeMatch1) {
+            timeStr = timeMatch1[1];
+          } else if (timeMatch2) {
+            timeStr = timeMatch2[1];
+          } else if (timeMatch3) {
+            timeStr = timeMatch3[0];
+          }
           
-          let motiveStr = '____________________';
-          const motiveMatch = (r.report || '').match(/Como justificativa, relatou:\s*([^.\n]+)/) || (r.report || '').match(/\[Motivo:\s*([^\]]+)\]/);
-          if (motiveMatch) {
-            motiveStr = motiveMatch[1].trim();
-          } else {
-            const firstLine = (r.report || '').split('\n')[0].replace(/\[[^\]]+\]/g, '').trim();
-            if (firstLine) motiveStr = firstLine;
+          let momentoStr = 'CHEGADA AO COLÉGIO';
+          const momentoMatch = (r.report || '').match(/no momento de\s*([^.,\n]+)/i);
+          if (momentoMatch) {
+            momentoStr = momentoMatch[1].trim();
+          }
+          
+          let motiveStr = 'Sem motivo';
+          const motiveMatch1 = (r.report || '').match(/apresentou a seguinte justificativa:\s*([^.\n]+)/i);
+          const motiveMatch2 = (r.report || '').match(/Como justificativa, relatou:\s*([^.\n]+)/i);
+          const motiveMatch3 = (r.report || '').match(/\[Motivo:\s*([^\]]+)\]/i);
+          if (motiveMatch1) {
+            motiveStr = motiveMatch1[1].trim();
+          } else if (motiveMatch2) {
+            motiveStr = motiveMatch2[1].trim();
+          } else if (motiveMatch3) {
+            motiveStr = motiveMatch3[1].trim();
           }
 
-          return `• ${rDateStr} – horário: ${timeStr} – local/situação: ${motiveStr}`;
+          return `* **${rDateStr}**, às **${timeStr}** – momento do atraso: **${momentoStr.toUpperCase()}** – justificativa apresentada: **${motiveStr}**`;
         }).join(';\n') + '.';
       } else {
-        listLines = `• __/__/____ – horário: ______ – local/situação: _______________;
-• __/__/____ – horário: ______ – local/situação: _______________;
-• __/__/____ – horário: ______ – local/situação: _______________;
-• __/__/____ – horário: ______ – local/situação: ____________________.`;
+        listLines = `* **__/__/____**, às **______** – momento do atraso: **CHEGADA AO COLÉGIO** – justificativa apresentada: **_______________**;\n* **__/__/____**, às **______** – momento do atraso: **CHEGADA AO COLÉGIO** – justificativa apresentada: **_______________**;\n* **__/__/____**, às **______** – momento do atraso: **CHEGADA AO COLÉGIO** – justificativa apresentada: **_______________**;\n* **__/__/____**, às **______** – momento do atraso: **CHEGADA AO COLÉGIO** – justificativa apresentada: **____________________**.`;
       }
 
-      defaultDescription = `ATA DE ATENDIMENTO PEDAGÓGICO – ATRASOS
-
-Na presente data, foi atendido o aluno ${studentName}, do ${schoolYear || '______ ano/série'}, em razão dos atrasos registrados durante a rotina escolar, conforme segue:
+      defaultDescription = `Na presente data, foi atendido(a) o(a) aluno(a) ${studentName}, do ${schoolYear || '______ ano/série'}, em razão da recorrência de atrasos registrados durante a rotina escolar, conforme segue:
 
 ${listLines}
 
-O aluno foi orientado quanto à importância da pontualidade e do cumprimento dos horários escolares. Foi esclarecido que a recorrência dos atrasos prejudica seu aproveitamento acadêmico, ocasionando perda de conteúdos e atividades, além de impactar sua frequência e acompanhamento escolar.
+Durante o atendimento, o(a) aluno(a) foi orientado(a) de que, conforme o Regimento Escolar, é dever do estudante comparecer pontualmente às aulas e às demais atividades escolares, cumprir os horários estabelecidos e realizar os deslocamentos para os locais determinados dentro do prazo previsto.
 
-Também foi informado que novas ocorrências poderão resultar em registros pedagógicos, comunicação aos responsáveis, convocação da família para reunião, acompanhamento pela equipe pedagógica e demais medidas educativas previstas pela instituição.
+Foi esclarecido que os atrasos recorrentes podem prejudicar sua participação nas atividades pedagógicas, ocasionar perda de orientações, conteúdos e atividades, além de interferir no acompanhamento adequado da rotina escolar.
 
-O aluno declara estar ciente das orientações recebidas e compromete-se a evitar novas ocorrências.
+O(A) aluno(a) foi informado(a) de que, a partir desta formalização, cada nova ocorrência de atraso será registrada em ata referente à conduta, para fins de acompanhamento pedagógico e institucional.
 
-Registro realizado para acompanhamento pedagógico.`;
+Também foi esclarecido que os pais ou responsáveis serão comunicados sobre esta ata e sobre as futuras ocorrências pelos canais oficiais da instituição. A continuidade da conduta poderá resultar em convocação da família para reunião e na adoção de outras medidas educativas e disciplinares previstas no Regimento Escolar.
+
+O(A) aluno(a) declara estar ciente dos atrasos relacionados, das orientações recebidas e dos procedimentos que serão adotados em caso de novas ocorrências, comprometendo-se a cumprir os horários estabelecidos pela instituição.
+
+Registro realizado para acompanhamento pedagógico e institucional.`;
     } else {
       defaultDescription = `O(a) aluno(a) ${studentName} acumula ${count} ocorrências de "${type}" registradas recentemente. Considerando a reincidência, foi realizada esta ata de tratativa e encaminhamento pedagógico em ${dateStr}.`;
     }
