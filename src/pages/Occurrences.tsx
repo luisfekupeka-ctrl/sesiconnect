@@ -351,6 +351,18 @@ export function Occurrences() {
 
   const isCellPhoneUse = occurrenceType === 'Uso indevido de celular e aparelhos eletrônicos';
   const isUniform = occurrenceType === 'Uso inadequado do uniforme escolar';
+  const isGraveOccurrence = useMemo(() => {
+    const graves = [
+      'Bullying, cyberbullying e constrangimentos',
+      'Agressão física ou verbal',
+      'Saída da escola sem autorização',
+      'Dano intencional ou depredação',
+      'Falsificação ou adulteração de documentos',
+      'Porte ou uso de vape, cigarros, álcool e drogas',
+      'Porte de objeto perigoso, arma ou explosivo'
+    ];
+    return graves.includes(occurrenceType);
+  }, [occurrenceType]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -909,6 +921,29 @@ Coordenação Pedagógica / SESI`;
                               ))}
                             </select>
                           </div>
+                          <AnimatePresence>
+                            {isGraveOccurrence && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                                animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
+                                exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-2xl flex gap-3 text-red-500">
+                                  <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5 text-red-500 animate-pulse" />
+                                  <div className="text-xs space-y-1">
+                                    <p className="font-black uppercase tracking-wider">⚠️ Atenção! Ocorrência grave ou gravíssima.</p>
+                                    <p className="font-bold text-red-400/90 leading-relaxed">
+                                      Não faça o registro comum. Encaminhe imediatamente à Coordenação.
+                                    </p>
+                                    <p className="text-[10px] font-bold text-red-400/60 italic">
+                                      Em caso de dúvida, consulte o Fluxograma de Ocorrências.
+                                    </p>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
 
                         <div className="space-y-2">
