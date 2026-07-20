@@ -155,16 +155,29 @@ export default function Monitores() {
   const [acompanharTempoReal, setAcompanharTempoReal] = useState(true);
 
   const horariosDisponiveis = useMemo(() => {
-    const list: string[] = [];
+    if (escalaDoDia.length === 0) return [];
+    
+    let minMinutos = 24 * 60;
+    let maxMinutos = 0;
     escalaDoDia.forEach(slot => {
-      const start = slot.horarioInicio.slice(0, 5);
-      const end = slot.horarioFim.slice(0, 5);
-      const hStr = `${start} - ${end}`;
-      if (!list.includes(hStr)) {
-        list.push(hStr);
-      }
+      const start = horaParaMinutos(slot.horarioInicio);
+      const end = horaParaMinutos(slot.horarioFim);
+      if (start < minMinutos) minMinutos = start;
+      if (end > maxMinutos) maxMinutos = end;
     });
-    return list.filter(Boolean).sort((a, b) => a.localeCompare(b));
+
+    // Round minMinutos down and maxMinutos up to nearest 30 mins
+    minMinutos = Math.floor(minMinutos / 30) * 30;
+    maxMinutos = Math.ceil(maxMinutos / 30) * 30;
+
+    const list: string[] = [];
+    for (let t = minMinutos; t < maxMinutos; t += 30) {
+      const hInicio = `${Math.floor(t / 60).toString().padStart(2, '0')}:${(t % 60).toString().padStart(2, '0')}`;
+      const tFim = t + 30;
+      const hFim = `${Math.floor(tFim / 60).toString().padStart(2, '0')}:${(tFim % 60).toString().padStart(2, '0')}`;
+      list.push(`${hInicio} - ${hFim}`);
+    }
+    return list;
   }, [escalaDoDia]);
 
   const horarioAtivoPorSetor = useMemo(() => {
