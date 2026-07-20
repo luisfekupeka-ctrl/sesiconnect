@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronUp, Calendar, Clock, User, CheckCircle2,
   BookOpen
 } from 'lucide-react';
-import { occurrenceService, getOccurrenceGroup, GROUP_FRIENDLY_NAMES } from '../services/occurrenceService';
+import { occurrenceService, getOccurrenceGroup, GROUP_FRIENDLY_NAMES, getMinimoParaAta } from '../services/occurrenceService';
 import type { DailyOccurrenceRecord } from '../types';
 import { cn } from '../lib/utils';
 
@@ -95,8 +95,12 @@ export default function PendingAtas() {
       }
     });
 
-    // Filtra apenas grupos com 4 ou mais ocorrências
-    return Object.values(groups).filter(g => g.count >= 4);
+    // Filtra com base nas regras de etapas/gravidade da tabela
+    return Object.values(groups).filter(g => {
+      if (g.records.length === 0) return false;
+      const groupKey = getOccurrenceGroup(g.records[0].occurrence_type);
+      return g.count >= getMinimoParaAta(groupKey);
+    });
   }, [dailyRecords]);
 
   // Lista dinâmica de Anos e Tipos para os dropdowns de filtro

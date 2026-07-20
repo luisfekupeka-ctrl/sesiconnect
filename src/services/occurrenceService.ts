@@ -7,16 +7,35 @@ export const GROUP_FRIENDLY_NAMES: Record<string, string> = {
   baderna_perturbacao: 'Baderna, gritaria e perturbação das aulas',
   bullying_constrangimentos: 'Bullying, cyberbullying e constrangimentos',
   agressao_fisica_verbal: 'Agressão física ou verbal',
-  saida_sem_autorizacao: 'Saída da sala ou da escola sem autorização',
+  saida_sala: 'Saída da sala sem autorização',
+  saida_escola: 'Saída da escola sem autorização',
   atraso: 'Atrasos e descumprimento de horários',
-  patrimonio: 'Danos ao patrimônio escolar ou pertences alheios',
-  cola_fraude: 'Cola, fraude e falsificação de documentos',
+  dano_leve: 'Danos leves ao patrimônio ou pertences alheios, sem intenção',
+  dano_intencional: 'Dano intencional ou depredação',
+  cola_fraude_atividade: 'Cola ou fraude em atividade escolar',
+  falsificacao_documentos: 'Falsificação ou adulteração de documentos',
   substancias_proibidas: 'Porte ou uso de vape, cigarros, álcool e drogas',
   uniforme: 'Uso inadequado do uniforme escolar',
-  porte_objetos: 'Porte de objetos ou materiais não autorizados',
+  porte_objetos_comuns: 'Porte de objetos ou materiais comuns não autorizados',
+  porte_objeto_perigoso: 'Porte de objeto perigoso, arma ou explosivo',
   comercio_vendas: 'Comércio, vendas ou arrecadações sem autorização',
-  descumprimento_orientacoes: 'Descumprimento de orientações da equipe escolar',
   conduta_incompativel: 'Conduta incompatível com o ambiente escolar'
+};
+
+export const getMinimoParaAta = (groupKey: string): number => {
+  const graves = [
+    'bullying_constrangimentos',
+    'agressao_fisica_verbal',
+    'saida_escola',
+    'dano_intencional',
+    'falsificacao_documentos',
+    'substancias_proibidas',
+    'porte_objeto_perigoso'
+  ];
+  if (graves.includes(groupKey)) {
+    return 1;
+  }
+  return 4;
 };
 
 export const getOccurrenceGroup = (type: string): string => {
@@ -40,11 +59,20 @@ export const getOccurrenceGroup = (type: string): string => {
   if (t.includes('desrespeito') || t.includes('ofensa') || t.includes('xingamento') || t.includes('ofender')) {
     return 'desrespeito';
   }
-  if (t.includes('patrimônio') || t.includes('patrimonio') || t.includes('danos') || t.includes('pertence') || t.includes('quebrar')) {
-    return 'patrimonio';
+  if (t.includes('dano leve') || (t.includes('patrimônio') && t.includes('leve')) || (t.includes('patrimonio') && t.includes('leve')) || (t.includes('danos') && t.includes('leve')) || (t.includes('danos') && !t.includes('intencional') && !t.includes('depredação') && !t.includes('depredacao'))) {
+    return 'dano_leve';
   }
-  if (t.includes('saída') || t.includes('saida')) {
-    return 'saida_sem_autorizacao';
+  if (t.includes('depredação') || t.includes('depredacao') || t.includes('intencional') || t.includes('dano intencional')) {
+    return 'dano_intencional';
+  }
+  if (t.includes('saída da sala ou da escola') || t.includes('saida da sala ou da escola') || (t.includes('saida') && t.includes('autorizacao') && !t.includes('sala') && !t.includes('escola'))) {
+    return 'saida_sala';
+  }
+  if (t.includes('saída da sala') || t.includes('saida da sala') || (t.includes('saida') && t.includes('sala'))) {
+    return 'saida_sala';
+  }
+  if (t.includes('saída da escola') || t.includes('saida da escola') || (t.includes('saida') && t.includes('escola'))) {
+    return 'saida_escola';
   }
   if (t.includes('vape') || t.includes('cigarro') || t.includes('álcool') || t.includes('alcool') || t.includes('droga') || t.includes('bebida')) {
     return 'substancias_proibidas';
@@ -52,11 +80,17 @@ export const getOccurrenceGroup = (type: string): string => {
   if (t.includes('baderna') || t.includes('gritaria') || t.includes('perturbação') || t.includes('perturbacao') || t.includes('bagunça') || t.includes('bagunca') || t.includes('barulho')) {
     return 'baderna_perturbacao';
   }
-  if ((t.includes('cola') && !t.includes('escolar')) || t.includes('fraude') || t.includes('falsificação') || t.includes('falsificacao')) {
-    return 'cola_fraude';
+  if (t.includes('cola') || t.includes('fraude') || t.includes('atividade')) {
+    return 'cola_fraude_atividade';
+  }
+  if (t.includes('falsificação') || t.includes('falsificacao') || t.includes('adulteração') || t.includes('adulteracao')) {
+    return 'falsificacao_documentos';
+  }
+  if (t.includes('perigoso') || t.includes('arma') || t.includes('explosivo')) {
+    return 'porte_objeto_perigoso';
   }
   if (t.includes('objeto') || t.includes('material') || t.includes('materiais')) {
-    return 'porte_objetos';
+    return 'porte_objetos_comuns';
   }
   if (t.includes('comércio') || t.includes('comercio') || t.includes('venda') || t.includes('arrecada')) {
     return 'comercio_vendas';

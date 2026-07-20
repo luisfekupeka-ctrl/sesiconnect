@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2, Copy, X, Printer, Trash2, AlertTriangle, ShieldAlert, Clock, Pencil } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { occurrenceService, getOccurrenceGroup, GROUP_FRIENDLY_NAMES } from '../services/occurrenceService';
+import { occurrenceService, getOccurrenceGroup, GROUP_FRIENDLY_NAMES, getMinimoParaAta } from '../services/occurrenceService';
 import { generateOccurrencesPDF, generateOccurrencesExcel, generateSingleOccurrencePDF } from '../lib/reportGenerator';
 import { useEscola } from '../context/ContextoEscola';
 import { useAuth } from '../context/AuthContext';
@@ -30,13 +30,17 @@ const TIPOS_OCORRENCIA = [
   'Baderna, gritaria e perturbação das aulas',
   'Bullying, cyberbullying e constrangimentos',
   'Agressão física ou verbal',
-  'Saída da sala ou da escola sem autorização',
+  'Saída da sala sem autorização',
+  'Saída da escola sem autorização',
   'Atrasos e descumprimento de horários',
-  'Danos ao patrimônio escolar ou pertences alheios',
-  'Cola, fraude e falsificação de documentos',
+  'Danos leves ao patrimônio ou pertences alheios, sem intenção',
+  'Dano intencional ou depredação',
+  'Cola ou fraude em atividade escolar',
+  'Falsificação ou adulteração de documentos',
   'Porte ou uso de vape, cigarros, álcool e drogas',
   'Uso inadequado do uniforme escolar',
-  'Porte de objetos ou materiais não autorizados',
+  'Porte de objetos ou materiais comuns não autorizados',
+  'Porte de objeto perigoso, arma ou explosivo',
   'Comércio, vendas ou arrecadações sem autorização',
   'Descumprimento de orientações da equipe escolar',
   'Conduta incompatível com o ambiente escolar'
@@ -413,7 +417,8 @@ export function Occurrences() {
           !r.tratada
         );
 
-        if (studentOccurrences.length >= 4) {
+        const minParaAta = getMinimoParaAta(targetGroup);
+        if (studentOccurrences.length >= minParaAta) {
           setReoffenderAlert({
             visible: true,
             studentName: registeredStudent,
@@ -422,8 +427,8 @@ export function Occurrences() {
             occurrences: studentOccurrences
           });
 
-          // Auto trigger download if it is the 4th occurrence
-          if (studentOccurrences.length === 4) {
+          // Auto trigger download if it reaches the exact limit for the minute
+          if (studentOccurrences.length === minParaAta) {
             await generateOccurrencesPDF(studentOccurrences, 'dossie_urgente', registeredStudent, studentOccurrences);
           }
         }
