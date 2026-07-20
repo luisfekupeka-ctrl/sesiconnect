@@ -62,7 +62,7 @@ export const getOccurrenceGroup = (type: string): string => {
     return 'comercio_vendas';
   }
   if (t.includes('orienta')) {
-    return 'descumprimento_orientacoes';
+    return 'conduta_incompativel';
   }
   if (t.includes('conduta') || t.includes('incompatível') || t.includes('incompativel') || t.includes('indisciplina') || t.includes('normas') || t.includes('regras') || t.includes('postura')) {
     return 'conduta_incompativel';
