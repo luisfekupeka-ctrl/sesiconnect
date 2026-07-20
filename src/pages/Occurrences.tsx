@@ -531,12 +531,14 @@ Agradecemos pela atenção e parceria.`;
   };
 
   const getUniformReport = () => {
-    const itemInfo = dynamicValue ? `[Peça Faltando/Inadequada: ${dynamicValue}]\n\n` : '';
-    return `${itemInfo}O(A) estudante ${studentName || '[NOME DO ALUNO]'}, do ${schoolYear || '[ANO/TURMA]'}, apresentou-se na instituição de ensino em desacordo com as normas estabelecidas para o uso do uniforme escolar. Conforme o Regimento Escolar, o uso do uniforme é obrigatório e constitui uma medida de organização e segurança, pois permite a identificação do estudante como integrante da instituição.
+    const defaultDetails = dynamicValue ? dynamicValue : 'em desacordo com as normas estabelecidas para o uso do uniforme escolar';
+    return `O(A) estudante ${studentName || '[NOME DO ALUNO]'}, do ${schoolYear || '[ANO/TURMA]'}, apresentou-se na instituição ${defaultDetails}, estando em desacordo com as normas estabelecidas para a permanência no ambiente escolar.
 
-O(A) estudante foi orientado(a) quanto à necessidade de utilizar corretamente o uniforme, mantendo-o limpo, conservado e adequado à apresentação pessoal no ambiente escolar. Também foi reforçada a importância do uniforme como elemento de identidade, pertencimento institucional, disciplina, segurança e respeito às normas de convivência da escola.
+O(A) estudante foi orientado(a) sobre a obrigatoriedade do uso completo e adequado do uniforme durante o período de aula e nas demais atividades promovidas pela instituição. Foi ressaltado que o uniforme contribui para a identificação dos estudantes, para a segurança da comunidade escolar e para a organização da rotina pedagógica.
 
-A ocorrência foi registrada para fins de acompanhamento pedagógico e institucional. O(A) estudante foi informado(a) de que, em caso de reincidência, os pais ou responsáveis poderão ser comunicados pelos canais oficiais da instituição, conforme os procedimentos previstos no Regimento Escolar.`;
+Também foi reforçado que o uso do uniforme representa o pertencimento à instituição e favorece um ambiente baseado na igualdade, na responsabilidade, na disciplina e no cumprimento das normas de convivência.
+
+A ocorrência foi registrada para acompanhamento pedagógico e institucional. O(A) estudante foi orientado(a) a comparecer às próximas atividades utilizando o uniforme completo. Em caso de reincidência, os pais ou responsáveis poderão ser comunicados pelos canais oficiais da instituição.`;
   };
 
   const getCellPhoneMessage = () => {
@@ -571,9 +573,9 @@ O(a) estudante declarou estar ciente das orientações recebidas e comprometeu-s
   const getAtrasoMessage = () => {
     const today = new Date();
     const dateStr = today.toLocaleDateString('pt-BR');
-    return `Prezados responsáveis,
+    return `Prezados responsáveis pelo(a) estudante ${studentName || '[NOME DO ALUNO]'}, esperamos que estejam bem.
 
-Registramos que o(a) estudante chegou ao colégio com atraso no dia ${dateStr}, às ${dynamicValue || '____'}h. Como justificativa, informou: ${motivoAtraso || '________________________________'}.
+Registramos que o(a) estudante ${studentName || '[NOME DO ALUNO]'} chegou ao colégio com atraso no dia ${dateStr}, às ${dynamicValue || '____'}h. Como justificativa, informou: ${motivoAtraso || '________________________________'}.
 
 Solicitamos o apoio da família para reforçar a importância da pontualidade e do cumprimento dos horários escolares, a fim de evitar novas ocorrências.
 
