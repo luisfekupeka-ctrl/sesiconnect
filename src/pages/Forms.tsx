@@ -230,8 +230,8 @@ export default function FormsPage() {
       } else if (normalizedType.includes('baderna') || normalizedType.includes('gritaria') || normalizedType.includes('perturbação') || normalizedType.includes('perturbacao') || normalizedType.includes('bagunça') || normalizedType.includes('bagunca') || normalizedType.includes('barulho')) {
         const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('baderna') || o.toLowerCase().includes('gritaria') || o.toLowerCase().includes('perturbação') || o.toLowerCase().includes('perturbacao'));
         tipoOcorrenciaMapped = found || 'Baderna, gritaria e perturbação das aulas';
-      } else if (normalizedType.includes('cola') || normalizedType.includes('fraude') || normalizedType.includes('falsificação') || normalizedType.includes('falsificacao')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('cola') || o.toLowerCase().includes('fraude') || o.toLowerCase().includes('falsificação') || o.toLowerCase().includes('falsificacao'));
+      } else if ((normalizedType.includes('cola') && !normalizedType.includes('escolar')) || normalizedType.includes('fraude') || normalizedType.includes('falsificação') || normalizedType.includes('falsificacao')) {
+        const found = opcoesDisponiveis.find(o => (o.toLowerCase().includes('cola') && !o.toLowerCase().includes('escolar')) || o.toLowerCase().includes('fraude') || o.toLowerCase().includes('falsificação') || o.toLowerCase().includes('falsificacao'));
         tipoOcorrenciaMapped = found || 'Cola, fraude e falsificação de documentos';
       } else if (normalizedType.includes('objeto') || normalizedType.includes('material') || normalizedType.includes('materiais')) {
         const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('objeto') || o.toLowerCase().includes('material'));

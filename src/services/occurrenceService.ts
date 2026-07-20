@@ -52,7 +52,7 @@ export const getOccurrenceGroup = (type: string): string => {
   if (t.includes('baderna') || t.includes('gritaria') || t.includes('perturbação') || t.includes('perturbacao') || t.includes('bagunça') || t.includes('bagunca') || t.includes('barulho')) {
     return 'baderna_perturbacao';
   }
-  if (t.includes('cola') || t.includes('fraude') || t.includes('falsificação') || t.includes('falsificacao')) {
+  if ((t.includes('cola') && !t.includes('escolar')) || t.includes('fraude') || t.includes('falsificação') || t.includes('falsificacao')) {
     return 'cola_fraude';
   }
   if (t.includes('objeto') || t.includes('material') || t.includes('materiais')) {
