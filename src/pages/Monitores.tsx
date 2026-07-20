@@ -41,6 +41,14 @@ function horaParaMinutos(hora: string): number {
   return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
 }
 
+function horariosSobrepoem(inicio1: string, fim1: string, inicio2: string, fim2: string): boolean {
+  const s1 = horaParaMinutos(inicio1);
+  const e1 = horaParaMinutos(fim1);
+  const s2 = horaParaMinutos(inicio2);
+  const e2 = horaParaMinutos(fim2);
+  return s1 < e2 && s2 < e1;
+}
+
 function obterMacroSetor(posto: string): string {
   const p = (posto || '').trim().toLowerCase();
   
@@ -95,7 +103,7 @@ function obterMacroSetor(posto: string): string {
 
 export default function Monitores() {
   const { isAdmin } = useAuth();
-  const { monitores, horaAtual, gradeMonitores } = useEscola();
+  const { monitores, horaAtual, gradeMonitores, periodos } = useEscola();
   const [busca, setBusca] = useState('');
   const [monitorSelecionadoId, setMonitorSelecionadoId] = useState<string | null>(null);
   const [diaFiltro, setDiaFiltro] = useState(() => {
@@ -143,6 +151,65 @@ export default function Monitores() {
   }, [gradeMonitores, diaFiltro]);
 
   const [viewMode, setViewMode] = useState<'monitor' | 'setor'>('monitor');
+  const [horarioSelecionado, setHorarioSelecionado] = useState<string | null>(null);
+  const [acompanharTempoReal, setAcompanharTempoReal] = useState(true);
+
+  const horariosDisponiveis = useMemo(() => {
+    let list: string[] = [];
+    if (periodos && periodos.length > 0) {
+      list = periodos.map(p => {
+        const start = p.horarioInicio.slice(0, 5);
+        const end = p.horarioFim.slice(0, 5);
+        return `${start} - ${end}`;
+      });
+    } else {
+      list = [
+        '07:30 - 08:20',
+        '08:20 - 09:10',
+        '09:10 - 10:00',
+        '10:00 - 10:20',
+        '10:20 - 11:10',
+        '11:10 - 12:00',
+        '12:00 - 13:00',
+        '13:00 - 13:50',
+        '13:50 - 14:40',
+        '14:40 - 15:30',
+        '15:30 - 15:50',
+        '15:50 - 16:40',
+        '16:40 - 17:30'
+      ];
+    }
+
+    escalaDoDia.forEach(slot => {
+      const hStr = `${slot.horarioInicio} - ${slot.horarioFim}`;
+      if (!list.includes(hStr)) {
+        list.push(hStr);
+      }
+    });
+
+    return (list.filter(Boolean) as string[]).sort((a, b) => a.localeCompare(b));
+  }, [periodos, escalaDoDia]);
+
+  const horarioAtivoPorSetor = useMemo(() => {
+    if (horariosDisponiveis.length === 0) return null;
+    if (!acompanharTempoReal && horarioSelecionado && horariosDisponiveis.includes(horarioSelecionado)) {
+      return horarioSelecionado;
+    }
+    const agoraMinutos = horaAtual.getHours() * 60 + horaAtual.getMinutes();
+    const ativoAgora = horariosDisponiveis.find(h => {
+      const [inicio, fim] = h.split(' - ');
+      return agoraMinutos >= horaParaMinutos(inicio) && agoraMinutos < horaParaMinutos(fim);
+    });
+    return ativoAgora || horariosDisponiveis[0];
+  }, [horariosDisponiveis, horarioSelecionado, acompanharTempoReal, horaAtual]);
+
+  const slotsNoHorario = useMemo(() => {
+    if (!horarioAtivoPorSetor) return [];
+    const [inicio, fim] = horarioAtivoPorSetor.split(' - ');
+    return escalaDoDia.filter(g => 
+      horariosSobrepoem(g.horarioInicio, g.horarioFim, inicio, fim)
+    );
+  }, [escalaDoDia, horarioAtivoPorSetor]);
 
   const handleExportarGeral = () => {
     generateEscalaGeralPDF(escalaDoDia, diaFiltro, monitores);
@@ -519,138 +586,152 @@ export default function Monitores() {
           </section>
         </>
       ) : (
-        /* ==================== VISÃO POR SETOR ==================== */
-        <div className="space-y-4">
-          {(() => {
-            if (escalaDoDia.length === 0) {
-              return (
-                <div className="py-16 text-center opacity-20 italic font-black text-sm border-2 border-dashed border-white/5 rounded-2xl">
-                  Nenhum posto agendado.
-                </div>
-              );
-            }
+        /* ==================== VISÃO POR SETOR (AGRUPADO POR HORÁRIO) ==================== */
+        <div className="space-y-6">
+          {/* Seletor de Horários */}
+          <div className="flex flex-col gap-3 bg-[#0a0a0a]/50 p-5 rounded-[1.5rem] border border-white/5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Clock size={14} className="text-[#fbbf24]" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#fbbf24]">Horários Disponíveis</span>
+              </div>
+              <button
+                onClick={() => {
+                  setAcompanharTempoReal(!acompanharTempoReal);
+                  if (!acompanharTempoReal) {
+                    setHorarioSelecionado(null);
+                  }
+                }}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg font-black text-[8px] uppercase tracking-widest transition-all flex items-center gap-1.5",
+                  acompanharTempoReal 
+                    ? "bg-[#fbbf24]/10 text-[#fbbf24] border border-[#fbbf24]/30" 
+                    : "bg-white/5 text-white/40 border border-white/5 hover:bg-white/10"
+                )}
+              >
+                <span className={cn("w-1.5 h-1.5 rounded-full", acompanharTempoReal ? "bg-[#fbbf24] animate-pulse" : "bg-white/30")} />
+                {acompanharTempoReal ? "Tempo Real Ativo" : "Fixar Tempo Real"}
+              </button>
+            </div>
+            
+            {horariosDisponiveis.length === 0 ? (
+              <div className="py-4 text-center opacity-20 italic font-black text-xs">
+                Nenhum horário na escala deste dia.
+              </div>
+            ) : (
+              <div className="flex gap-2 overflow-x-auto pb-2 pt-1 scroll-smooth custom-scrollbar no-scrollbar">
+                {horariosDisponiveis.map(h => {
+                  const isActive = horarioAtivoPorSetor === h;
+                  return (
+                    <button
+                      key={h}
+                      onClick={() => {
+                        setAcompanharTempoReal(false);
+                        setHorarioSelecionado(h);
+                      }}
+                      className={cn(
+                        "flex-shrink-0 px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all",
+                        isActive
+                          ? "bg-[#fbbf24] text-black shadow-md font-bold"
+                          : "bg-[#0d0d0d] text-white/45 hover:bg-white/5 hover:text-white border border-white/5"
+                      )}
+                    >
+                      {h}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
-            return MACRO_SETORES.map(macro => {
-              const postos = escalaDoDia
-                .filter(g => obterMacroSetor(g.posto) === macro)
-                .sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
+          {/* Grid Geral de Setores/Locais */}
+          {escalaDoDia.length === 0 ? (
+            <div className="py-16 text-center opacity-20 italic font-black text-sm border-2 border-dashed border-white/5 rounded-2xl">
+              Nenhum posto agendado.
+            </div>
+          ) : (
+            horarioAtivoPorSetor && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {MACRO_SETORES.map(macro => {
+                  // Filtrar slots para este macro setor no horário ativo selecionado
+                  const slotsNoSetor = slotsNoHorario.filter(slot => obterMacroSetor(slot.posto) === macro);
+                  
+                  const slotsFiltrados = slotsNoSetor.filter(slot => {
+                    if (!busca) return true;
+                    const b = busca.toLowerCase();
+                    return slot.monitorNome.toLowerCase().includes(b) ||
+                           slot.posto.toLowerCase().includes(b) ||
+                           (slot.funcao || '').toLowerCase().includes(b);
+                  });
 
-              const postosFiltrados = postos.filter(slot => {
-                if (!busca) return true;
-                const b = busca.toLowerCase();
-                return slot.monitorNome.toLowerCase().includes(b) ||
-                       slot.posto.toLowerCase().includes(b) ||
-                       (slot.funcao || '').toLowerCase().includes(b);
-              });
+                  if (busca && slotsFiltrados.length === 0) return null;
 
-              if (busca && postosFiltrados.length === 0) return null;
+                  const temMonitores = slotsFiltrados.length > 0;
 
-              return (
-                <div key={macro} className="bg-[#0a0a0a]/50 rounded-[1.5rem] border border-white/5 p-5 flex flex-col md:flex-row md:items-center gap-6 hover:border-white/10 transition-all">
-                  {/* Setor Profile Panel */}
-                  <div className="md:w-56 shrink-0 flex items-center gap-4 bg-black/30 p-3 rounded-2xl border border-white/5">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black shrink-0 bg-white/5 text-[#fbbf24]">
-                      {macro.split(' ')[0]}
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="text-sm font-black text-white truncate leading-tight tracking-tight italic">{macro.split(' ').slice(1).join(' ')}</h4>
-                      <p className="text-[9px] font-black uppercase mt-1 tracking-widest text-white/40">
-                        {postosFiltrados.length} {postosFiltrados.length === 1 ? 'Plantão' : 'Plantões'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Scrolling shifts list */}
-                  <div className="flex-1 flex gap-4 overflow-x-auto pb-2 pt-1 snap-x scroll-smooth custom-scrollbar">
-                    {postosFiltrados.length === 0 ? (
-                      <div className="flex-shrink-0 w-64 bg-black/10 rounded-2xl p-4 border border-dashed border-white/5 flex flex-col justify-center items-center min-h-[110px]">
-                        <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Sem Monitor</span>
-                      </div>
-                    ) : (
-                      (() => {
-                        const slotsByTime: { [key: string]: typeof postosFiltrados } = {};
-                        postosFiltrados.forEach(slot => {
-                          const key = `${slot.horarioInicio} - ${slot.horarioFim}`;
-                          if (!slotsByTime[key]) slotsByTime[key] = [];
-                          slotsByTime[key].push(slot);
-                        });
-                        const sortedKeys = Object.keys(slotsByTime).sort((a, b) => {
-                          const startA = a.split(' - ')[0];
-                          const startB = b.split(' - ')[0];
-                          return startA.localeCompare(startB);
-                        });
-                        return sortedKeys.map(timeKey => {
-                          const slots = slotsByTime[timeKey];
-                          return (
-                            <div key={timeKey} className="flex-shrink-0 w-64 flex flex-col gap-3 snap-start">
-                              {slots.map(slot => {
-                                const minInicio = horaParaMinutos(slot.horarioInicio);
-                                const minFim = horaParaMinutos(slot.horarioFim);
-                                const minutosAgora = new Date().getHours() * 60 + new Date().getMinutes();
-                                const estaAtivo = minutosAgora >= minInicio && minutosAgora < minFim;
+                  return (
+                    <div 
+                      key={macro} 
+                      className={cn(
+                        "bg-[#0a0a0a]/50 rounded-[1.5rem] border p-5 flex flex-col justify-between min-h-[150px] hover:border-white/10 transition-all",
+                        temMonitores ? "border-white/5" : "border-dashed border-white/5 opacity-40 bg-[#0d0d0d]/10"
+                      )}
+                    >
+                      <div className="flex flex-col h-full justify-between gap-4">
+                        {/* Setor Header */}
+                        <div>
+                          <span className="text-xs font-black text-white italic tracking-tight uppercase tracking-wider block mb-2">{macro}</span>
+                          
+                          {/* Monitores alocados */}
+                          {temMonitores ? (
+                            <div className="space-y-2">
+                              {slotsFiltrados.map(slot => {
                                 const cor = mapaCorMonitor[slot.monitorNome] || '#3B82F6';
-
                                 return (
-                                  <div
-                                    key={slot.id}
-                                    className={cn(
-                                      "w-full bg-[#0d0d0d] rounded-2xl p-4 border transition-all flex flex-col justify-between min-h-[110px] hover:bg-[#121212]",
-                                      estaAtivo ? "border-[#fbbf24]/50 shadow-[0_0_12px_rgba(251,191,36,0.15)] bg-[#141414]" : "border-white/5"
-                                    )}
-                                    style={{ borderLeft: `5px solid ${cor}` }}
+                                  <div 
+                                    key={slot.id} 
+                                    className="bg-[#0d0d0d] rounded-xl p-3 border border-white/5"
+                                    style={{ borderLeft: `4px solid ${cor}` }}
                                   >
-                                    <div className="flex flex-col gap-2">
-                                      {/* Horário */}
-                                      <div className="flex items-center justify-between gap-2">
-                                        <span className="text-[10px] font-black text-white/40 tracking-wider">
-                                          🕒 {slot.horarioInicio} - {slot.horarioFim}
-                                        </span>
-                                        {estaAtivo && (
-                                          <span className="px-2 py-0.5 bg-[#fbbf24]/10 text-[#fbbf24] border border-[#fbbf24]/20 rounded-md text-[8px] font-black uppercase tracking-wider animate-pulse">
-                                            Agora
-                                          </span>
-                                        )}
-                                      </div>
-
-                                      {/* Monitor */}
-                                      <h5 className="text-xs font-black text-white italic tracking-tight truncate leading-none mt-0.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-[11px] font-black text-white italic truncate">
                                         👤 {slot.monitorNome}
-                                      </h5>
-
-                                      {/* Posto específico se diferente do macro */}
-                                      {slot.posto && slot.posto !== macro && (
-                                        <p className="text-[9px] text-[#fbbf24] font-bold uppercase tracking-wider mt-0.5">
-                                          📍 {slot.posto}
-                                        </p>
-                                      )}
-
-                                      {/* Função */}
-                                      {slot.funcao && slot.funcao !== 'Monitoria Geral' && (
-                                        <p className="text-[9px] text-white/50 font-semibold italic truncate mt-0.5">
-                                          ⚙️ {slot.funcao}
-                                        </p>
-                                      )}
-
-                                      {/* Instruções se houver */}
-                                      {slot.instrucoes && (
-                                        <p className="text-[8px] text-white/30 italic mt-1 bg-white/[0.01] p-1.5 rounded-lg border border-white/[0.02] line-clamp-2 leading-relaxed">
-                                          {slot.instrucoes}
-                                        </p>
-                                      )}
+                                      </span>
                                     </div>
+                                    
+                                    {slot.posto && slot.posto !== macro && (
+                                      <p className="text-[8px] text-[#fbbf24] font-bold uppercase tracking-wider mt-1">
+                                        📍 {slot.posto}
+                                      </p>
+                                    )}
+
+                                    {slot.funcao && slot.funcao !== 'Monitoria Geral' && (
+                                      <p className="text-[9px] text-white/50 font-semibold italic truncate mt-1">
+                                        ⚙️ {slot.funcao}
+                                      </p>
+                                    )}
+
+                                    {slot.instrucoes && (
+                                      <p className="text-[8px] text-white/30 italic mt-1.5 bg-white/[0.01] p-1.5 rounded border border-white/[0.02] line-clamp-2 leading-relaxed">
+                                        {slot.instrucoes}
+                                      </p>
+                                    )}
                                   </div>
                                 );
                               })}
                             </div>
-                          );
-                        });
-                      })()
-                    )}
-                  </div>
-                </div>
-              );
-            });
-          })()}
+                          ) : (
+                            <div className="py-6 flex items-center justify-center text-[9px] font-black text-white/20 uppercase tracking-widest bg-black/20 rounded-xl border border-dashed border-white/5">
+                              Sem Monitor
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          )}
         </div>
       )}
 
