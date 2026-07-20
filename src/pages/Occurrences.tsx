@@ -344,11 +344,12 @@ export function Occurrences() {
   };
 
   const isCellPhoneUse = occurrenceType === 'Uso indevido de celular e aparelhos eletrônicos';
+  const isUniform = occurrenceType === 'Uso inadequado do uniforme escolar';
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     const isAtraso = occurrenceType === 'Atrasos e descumprimento de horários';
-    if (!studentName || !schoolYear || !occurrenceType || (!isCellPhoneUse && !isAtraso && !report)) return;
+    if (!studentName || !schoolYear || !occurrenceType || (!isCellPhoneUse && !isAtraso && !isUniform && !report)) return;
 
     setIsSubmitting(true);
     try {
@@ -357,6 +358,8 @@ export function Occurrences() {
         finalReport = getCellPhoneReport();
       } else if (isAtraso) {
         finalReport = getAtrasoReport();
+      } else if (isUniform) {
+        finalReport = getUniformReport();
       } else {
         const dynField = getDynamicField(occurrenceType);
         if (dynField && dynamicValue) {
@@ -520,31 +523,20 @@ export function Occurrences() {
   };
 
   const getUniformMessage = () => {
-    if (dynamicValue) {
-      return `Prezados responsáveis pelo(a) aluno(a) ${studentName || '[NOME DO ALUNO]'}, do ${schoolYear || '[ANO/TURMA]'},
+    return `Prezados responsáveis pelo(a) estudante ${studentName || '[NOME DO ALUNO]'}, esperamos que estejam bem.
 
-Informamos que o(a) estudante compareceu à unidade escolar sem o uso completo do uniforme.
+Informamos que, nesta data, o(a) estudante compareceu à escola sem o uniforme adequado. Reforçamos que seu uso é obrigatório e importante para a identificação e a segurança dos alunos. Contamos com a colaboração da família para que ele(a) venha devidamente uniformizado(a) nos próximos dias.
 
-Item não utilizado: ${dynamicValue}
+Agradecemos pela atenção e parceria.`;
+  };
 
-Solicitamos a colaboração da família para regularização da situação nos próximos dias, conforme as orientações e normas institucionais da escola.
+  const getUniformReport = () => {
+    const itemInfo = dynamicValue ? `[Peça Faltando/Inadequada: ${dynamicValue}]\n\n` : '';
+    return `${itemInfo}O(A) estudante ${studentName || '[NOME DO ALUNO]'}, do ${schoolYear || '[ANO/TURMA]'}, apresentou-se na instituição de ensino em desacordo com as normas estabelecidas para o uso do uniforme escolar. Conforme o Regimento Escolar, o uso do uniforme é obrigatório e constitui uma medida de organização e segurança, pois permite a identificação do estudante como integrante da instituição.
 
-Permanecemos à disposição em caso de dúvidas.
+O(A) estudante foi orientado(a) quanto à necessidade de utilizar corretamente o uniforme, mantendo-o limpo, conservado e adequado à apresentação pessoal no ambiente escolar. Também foi reforçada a importância do uniforme como elemento de identidade, pertencimento institucional, disciplina, segurança e respeito às normas de convivência da escola.
 
-Atenciosamente,
-${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
-    } else {
-      return `Prezados responsáveis pelo(a) aluno(a) ${studentName || '[NOME DO ALUNO]'}, do ${schoolYear || '[ANO/TURMA]'},
-
-Informamos que o(a) estudante compareceu à unidade escolar sem o uso completo do uniforme, em desacordo com as orientações e normas institucionais do colégio.
-
-Solicitamos a colaboração da família para que o uniforme seja utilizado de forma completa e adequada nos próximos dias, contribuindo para a organização, identificação e segurança no ambiente escolar.
-
-Em caso de dúvidas, permanecemos à disposição.
-
-Atenciosamente,
-${emissorName || '[NOME DE QUEM PREENCHEU]'}`;
-    }
+A ocorrência foi registrada para fins de acompanhamento pedagógico e institucional. O(A) estudante foi informado(a) de que, em caso de reincidência, os pais ou responsáveis poderão ser comunicados pelos canais oficiais da instituição, conforme os procedimentos previstos no Regimento Escolar.`;
   };
 
   const getCellPhoneMessage = () => {
@@ -948,11 +940,15 @@ Agradecemos a parceria.`;
                         </motion.div>
                       )}
 
-                      {isCellPhoneUse || occurrenceType === 'Atrasos e descumprimento de horários' ? (
+                      {isCellPhoneUse || occurrenceType === 'Atrasos e descumprimento de horários' || isUniform ? (
                         <div className="space-y-2 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
                           <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pré-visualização do Relato Diário (Será salvo automaticamente)</label>
                           <div className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-line font-medium leading-relaxed bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl">
-                            {occurrenceType === 'Atrasos e descumprimento de horários' ? getAtrasoReport() : getCellPhoneReport()}
+                            {occurrenceType === 'Atrasos e descumprimento de horários' 
+                              ? getAtrasoReport() 
+                              : isUniform
+                                ? getUniformReport()
+                                : getCellPhoneReport()}
                           </div>
                         </div>
                       ) : (
