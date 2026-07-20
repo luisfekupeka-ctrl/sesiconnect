@@ -727,7 +727,7 @@ Agradecemos a parceria.`;
                           setSubmittedRecord(null);
                           setGeneratedMessageAfterSubmit('');
                         }}
-                        className="flex-1 py-3 bg-slate-100 dark:bg-slate-750 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-white font-bold rounded-xl text-xs uppercase tracking-widest transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
+                        className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-white font-bold rounded-xl text-xs uppercase tracking-widest transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
                       >
                         Novo Registro
                       </button>

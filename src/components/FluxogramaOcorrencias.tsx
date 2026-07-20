@@ -427,7 +427,7 @@ export function FluxogramaOcorrencias({ onClose }: { onClose: () => void }) {
       <div className="flex gap-2 justify-between items-center border-t border-slate-800 pt-4 text-xs">
         <div className="flex gap-2">
           {history.length > 0 && (
-            <button onClick={handleBack} className="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold rounded-lg border border-slate-700 transition-colors">
+            <button onClick={handleBack} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-lg border border-slate-700 transition-colors">
               Voltar
             </button>
           )}
