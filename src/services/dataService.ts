@@ -316,14 +316,18 @@ export async function salvarAluno(aluno: Partial<Aluno>): Promise<boolean> {
   }
 
   // Evita duplicação comparando pelo nome exato (ilike)
-  const { data: existing } = await supabase
+  const { data: existingList, error: fetchError } = await supabase
     .from('alunos_cms')
     .select('id')
-    .ilike('nome', payload.nome)
-    .maybeSingle();
+    .ilike('nome', payload.nome);
 
-  if (existing) {
-    const { error } = await supabase.from('alunos_cms').update(payload).eq('id', existing.id);
+  if (fetchError) {
+    console.error('[DEBUG] Erro ao buscar aluno por nome:', fetchError);
+    return false;
+  }
+
+  if (existingList && existingList.length > 0) {
+    const { error } = await supabase.from('alunos_cms').update(payload).eq('id', existingList[0].id);
     if (error) console.error('[DEBUG] Erro ao atualizar aluno existente por Nome:', error);
     return !error;
   } else {
@@ -385,14 +389,18 @@ export async function salvarProfessorCMS(prof: Partial<ProfessorCMS>): Promise<b
     return !error;
   }
 
-  const { data: existing } = await supabase
+  const { data: existingList, error: fetchError } = await supabase
     .from('professores_cms')
     .select('id')
-    .eq('nome', payload.nome)
-    .maybeSingle();
+    .eq('nome', payload.nome);
 
-  if (existing) {
-    const { error } = await supabase.from('professores_cms').update(payload).eq('id', existing.id);
+  if (fetchError) {
+    console.error('[DEBUG] Erro ao buscar professor por nome:', fetchError);
+    return false;
+  }
+
+  if (existingList && existingList.length > 0) {
+    const { error } = await supabase.from('professores_cms').update(payload).eq('id', existingList[0].id);
     if (error) console.error('[DEBUG] Erro ao atualizar professor por Nome:', error);
     return !error;
   } else {
@@ -721,14 +729,18 @@ export async function salvarLocalCMS(local: Partial<LocalCMS>): Promise<boolean>
     return !error;
   }
 
-  const { data: existing } = await supabase
+  const { data: existingList, error: fetchError } = await supabase
     .from('locais_cms')
     .select('id')
-    .eq('nome', payload.nome)
-    .maybeSingle();
+    .eq('nome', payload.nome);
 
-  if (existing) {
-    const { error } = await supabase.from('locais_cms').update(payload).eq('id', existing.id);
+  if (fetchError) {
+    console.error('[DEBUG] Erro ao buscar local por nome:', fetchError);
+    return false;
+  }
+
+  if (existingList && existingList.length > 0) {
+    const { error } = await supabase.from('locais_cms').update(payload).eq('id', existingList[0].id);
     if (error) console.error('[DEBUG] Erro ao atualizar local por nome:', error);
     return !error;
   } else {
