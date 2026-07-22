@@ -354,7 +354,7 @@ export default function MonitorScheduleEditor() {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b border-white/5 bg-black/40">
-                  <th className="py-5 px-6 text-left text-[10px] font-black text-white/30 uppercase tracking-widest w-[220px]">
+                  <th className="py-5 px-6 text-left text-[10px] font-black text-white/30 uppercase tracking-widest w-[220px] sticky left-0 bg-[#0a0a0a] z-20 border-r border-white/5">
                     Monitor
                   </th>
                   {periodosMonitoria.map(p => (
@@ -380,7 +380,7 @@ export default function MonitorScheduleEditor() {
                     return (
                       <tr key={m.id} className="hover:bg-white/[0.01] transition-all">
                         {/* Monitor Profile Cell */}
-                        <td className="py-4 px-6 flex items-center gap-3">
+                        <td className="py-4 px-6 flex items-center gap-3 sticky left-0 bg-[#0a0a0a] z-10 border-r border-white/5 min-w-[220px]">
                           <div 
                             className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shrink-0 relative"
                             style={{ backgroundColor: `${cor}20`, color: cor, border: `1px solid ${cor}30` }}

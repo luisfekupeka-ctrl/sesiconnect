@@ -344,7 +344,7 @@ export default function Monitores() {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b border-white/5 bg-black/40">
-                    <th className="py-4 px-5 text-left text-[10px] font-black text-white/30 uppercase tracking-widest w-[200px]">
+                    <th className="py-4 px-5 text-left text-[10px] font-black text-white/30 uppercase tracking-widest w-[200px] sticky left-0 bg-[#0a0a0a] z-20 border-r border-white/5">
                       Macro Setor / Local
                     </th>
                     {periodosMonitoria.map(p => (
@@ -362,7 +362,7 @@ export default function Monitores() {
                     return (
                       <tr key={macro} className="hover:bg-white/[0.01] transition-all">
                         {/* Sector Name */}
-                        <td className="py-4 px-5 font-black text-xs text-white uppercase italic tracking-wider">
+                        <td className="py-4 px-5 font-black text-xs text-white uppercase italic tracking-wider sticky left-0 bg-[#0a0a0a] z-10 border-r border-white/5 min-w-[200px]">
                           {macro}
                         </td>
 
