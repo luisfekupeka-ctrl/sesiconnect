@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   UserCircle, Search, Clock, MapPin, ChevronLeft, ChevronRight, 
-  Users, Calendar, Shield, FileText, Printer, Coffee, Download, ChevronDown, ChevronUp 
+  Users, Calendar, Shield, FileText, Printer, Coffee, Download, X 
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useEscola } from '../context/ContextoEscola';
@@ -115,10 +115,10 @@ export default function Monitores() {
     return dias[horaAtual.getDay()] || 'SEGUNDA';
   });
 
-  const [expandedMonitorId, setExpandedMonitorId] = useState<string | null>(null);
+  const [monitorSelecionadoId, setMonitorSelecionadoId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'monitor' | 'setor'>('monitor');
 
-  // Mapa de cores: cada monitor recebe uma cor fixa
+  // Mapa de cores
   const mapaCorMonitor = useMemo(() => {
     const mapa: Record<string, string> = {};
     const nomes = Array.from(new Set([
@@ -137,6 +137,15 @@ export default function Monitores() {
     const b = busca.toLowerCase();
     return (m.nome?.toLowerCase() || '').includes(b) || (m.materia?.toLowerCase() || '').includes(b);
   });
+
+  const monitorAtivo = monitores.find(m => m.id === monitorSelecionadoId);
+
+  const gradeDoMonitorAtivo = useMemo(() => {
+    if (!monitorAtivo) return [];
+    return (gradeMonitores || [])
+      .filter(g => g.monitorNome === monitorAtivo.nome && g.diaSemana === diaFiltro)
+      .sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
+  }, [monitorAtivo, diaFiltro, gradeMonitores]);
 
   // Grade de todos os monitores do dia
   const escalaDoDia = useMemo(() => {
@@ -244,190 +253,81 @@ export default function Monitores() {
       </div>
 
       {viewMode === 'monitor' ? (
-        /* ====== ABA 1: POR MONITOR ====== */
-        <div className="space-y-8">
-          <section className="space-y-4">
-            <h2 className="text-xl font-black italic tracking-tighter text-white flex items-center gap-2">
-              <Users size={18} className="text-[#42a0f5]" /> Equipe
-            </h2>
-            <div className="flex flex-col gap-3">
-              {monitoresFiltrados.map((monitor) => {
+        /* ====== ABA 1: POR MONITOR (ESCALA DO DIA EM LINHAS E CLIQUE ABRE DETALHE EM LISTA) ====== */
+        <div className="space-y-4">
+          <h2 className="text-xl font-black italic tracking-tighter text-white flex items-center gap-2">
+            <Shield size={18} className="text-[#42a0f5]" /> Escala do Dia — {diaFiltro}
+          </h2>
+
+          {escalaDoDia.length === 0 ? (
+            <div className="py-16 text-center opacity-20 italic font-black text-sm border-2 border-dashed border-white/5 rounded-2xl">
+              Nenhum posto agendado.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {monitoresFiltrados.map(monitor => {
                 const cor = mapaCorMonitor[monitor.nome] || '#3B82F6';
-                const turnosMonitor = escalaDoDia.filter(g => g.monitorNome === monitor.nome);
-                const postosHoje = turnosMonitor.length;
-                const ativo = monitor.status === 'ativo';
-                const isExpanded = expandedMonitorId === monitor.id;
+                const turnos = escalaDoDia
+                  .filter(g => g.monitorNome === monitor.nome)
+                  .sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
 
                 return (
-                  <div key={monitor.id} className="flex flex-col bg-[#0d0d0d] rounded-2xl border-2 border-white/5 overflow-hidden transition-all"
-                    style={{ borderLeftWidth: '5px', borderLeftColor: cor }}>
-                    
-                    {/* Linha principal */}
+                  <div key={monitor.id} className="bg-[#0a0a0a]/50 rounded-xl border border-white/5 p-4 flex flex-col md:flex-row md:items-center gap-4">
+                    {/* Monitor Card (Left side, click opens detailed list) */}
                     <div 
-                      onClick={() => setExpandedMonitorId(isExpanded ? null : monitor.id)}
-                      className={cn("p-4 cursor-pointer hover:bg-white/[0.02] flex items-center justify-between transition-all",
-                        !ativo && "opacity-40"
-                      )}
+                      onClick={() => setMonitorSelecionadoId(monitor.id)}
+                      className="md:w-52 shrink-0 flex items-center gap-3 bg-black/30 p-2.5 rounded-lg border border-white/5 cursor-pointer hover:bg-white/[0.02] active:scale-[0.98] transition-all"
                     >
-                      <div className="flex items-center gap-5">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black transition-all"
-                          style={{ backgroundColor: `${cor}20`, color: cor }}>
-                          {(monitor.nome || 'M')[0]}
-                        </div>
-                        <div>
-                          <h3 className="text-base font-black text-white tracking-tighter leading-tight italic">{monitor.nome}</h3>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md"
-                              style={{ backgroundColor: `${cor}15`, color: cor }}>
-                              {monitor.tipo}
-                            </span>
-                            <span className="text-[8px] font-black text-white/30 uppercase tracking-widest">{monitor.turno}</span>
-                          </div>
-                        </div>
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black shrink-0 relative"
+                        style={{ backgroundColor: `${cor}20`, color: cor, border: `1.5px solid ${cor}40` }}>
+                        {monitor.nome.charAt(0)}
                       </div>
-
-                      <div className="flex items-center gap-6">
-                        <div className="hidden md:flex flex-col items-end">
-                          <p className="text-[10px] font-black text-white tracking-widest">{monitor.horarioInicio} — {monitor.horarioFim}</p>
-                          <p className="text-[9px] font-black uppercase" style={{ color: cor }}>{postosHoje} postos hoje</p>
-                        </div>
-                        {isExpanded ? <ChevronUp size={18} className="text-white/40" /> : <ChevronDown size={18} className="text-white/40" />}
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-black text-white truncate leading-tight italic hover:text-primary transition-all">
+                          {monitor.nome}
+                        </h4>
+                        <p className="text-[8px] font-black uppercase tracking-widest mt-0.5" style={{ color: cor }}>
+                          {turnos.length} Turnos
+                        </p>
                       </div>
                     </div>
 
-                    {/* Bloco expandido */}
-                    <AnimatePresence>
-                      {isExpanded && (
-                        <motion.div 
-                          initial={{ height: 0 }} 
-                          animate={{ height: 'auto' }} 
-                          exit={{ height: 0 }}
-                          className="overflow-hidden bg-[#070707] border-t border-white/5"
-                        >
-                          <div className="p-5 space-y-4">
-                            <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                              <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Turnos do Dia — {diaFiltro}</span>
-                              <button 
-                                onClick={() => handleExportarMonitorEspecifico(monitor)}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all text-primary border border-white/5"
-                              >
-                                <Download size={10} /> Baixar Escala Individual
-                              </button>
-                            </div>
+                    {/* Horizontal scroll shifts list */}
+                    <div className="flex-1 flex gap-3 overflow-x-auto pb-1.5 custom-scrollbar">
+                      {turnos.length === 0 ? (
+                        <span className="text-[9px] font-bold text-white/25 uppercase tracking-wider py-3 pl-2">Sem escala hoje</span>
+                      ) : (
+                        turnos.map(slot => {
+                          const ehAlmoco = slot.funcao === 'ALMOÇO' || slot.posto === 'ALMOÇO' || slot.posto === 'REFEITÓRIO';
+                          const blockColor = ehAlmoco ? '#fbbf24' : (slot.corEtiqueta || cor);
 
-                            {postosHoje === 0 ? (
-                              <div className="py-6 text-center opacity-30 italic text-xs">Sem escala programada para este dia.</div>
-                            ) : (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                                {turnosMonitor.map(t => {
-                                  const ehAlmoco = t.funcao === 'ALMOÇO' || t.posto === 'ALMOÇO' || t.posto === 'REFEITÓRIO';
-                                  const blockColor = ehAlmoco ? '#fbbf24' : (t.corEtiqueta || cor);
-
-                                  return (
-                                    <div 
-                                      key={t.id} 
-                                      className="p-3 rounded-md border flex flex-col justify-center min-h-[60px]"
-                                      style={{ 
-                                        backgroundColor: `${blockColor}15`, 
-                                        borderColor: `${blockColor}40`,
-                                        borderLeft: `4px solid ${blockColor}` 
-                                      }}
-                                    >
-                                      <div className="text-[10px] font-black text-white truncate uppercase flex items-center gap-1">
-                                        {ehAlmoco ? <Coffee size={10} className="text-amber-400 shrink-0" /> : <MapPin size={10} className="shrink-0" style={{ color: blockColor }} />}
-                                        {t.posto}
-                                      </div>
-                                      <div className="text-[8px] font-bold text-white/50 truncate uppercase mt-1">
-                                        {t.horarioInicio.slice(0, 5)} - {t.horarioFim.slice(0, 5)} · {t.funcao}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
+                          return (
+                            <div
+                              key={slot.id}
+                              className="flex-shrink-0 w-52 bg-[#0d0d0d] rounded-md p-3 border flex flex-col justify-center"
+                              style={{ 
+                                backgroundColor: `${blockColor}15`, 
+                                borderColor: `${blockColor}40`,
+                                borderLeft: `4px solid ${blockColor}` 
+                              }}
+                            >
+                              <div className="text-[10px] font-black text-white truncate flex items-center gap-1 uppercase tracking-tight">
+                                {ehAlmoco ? <Coffee size={10} className="text-amber-400 shrink-0" /> : <MapPin size={10} className="shrink-0" style={{ color: blockColor }} />}
+                                {slot.posto}
                               </div>
-                            )}
-                          </div>
-                        </motion.div>
+                              <div className="text-[8px] font-bold text-white/50 truncate mt-1">
+                                {slot.horarioInicio.slice(0, 5)} - {slot.horarioFim.slice(0, 5)} · {slot.funcao}
+                              </div>
+                            </div>
+                          );
+                        })
                       )}
-                    </AnimatePresence>
+                    </div>
                   </div>
                 );
               })}
             </div>
-          </section>
-
-          {/* ESCALA GERAL DO DIA (LAYOUT REORGANIZADO) */}
-          <section className="space-y-4">
-            <h2 className="text-xl font-black italic tracking-tighter text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Shield size={18} className="text-[#fbbf24]" /> Escala do Dia — {diaFiltro}
-              </div>
-            </h2>
-
-            {escalaDoDia.length === 0 ? (
-              <div className="py-16 text-center opacity-20 italic font-black text-sm border-2 border-dashed border-white/5 rounded-2xl">
-                Nenhum posto agendado.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {(() => {
-                  const monitoresNaEscala = Array.from(new Set<string>(escalaDoDia.map(g => g.monitorNome))).sort();
-
-                  return monitoresNaEscala.map(nome => {
-                    const cor = mapaCorMonitor[nome] || '#3B82F6';
-                    const postos = escalaDoDia
-                      .filter(g => g.monitorNome === nome)
-                      .sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
-
-                    return (
-                      <div key={nome} className="bg-[#0a0a0a]/50 rounded-xl border border-white/5 p-4 flex flex-col md:flex-row md:items-center gap-4">
-                        {/* Monitor Badge */}
-                        <div className="md:w-52 shrink-0 flex items-center gap-3 bg-black/30 p-2.5 rounded-lg border border-white/5">
-                          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black shrink-0"
-                            style={{ backgroundColor: `${cor}20`, color: cor }}>
-                            {nome.charAt(0)}
-                          </div>
-                          <div className="min-w-0">
-                            <h4 className="text-xs font-black text-white truncate leading-tight italic">{nome}</h4>
-                            <p className="text-[8px] font-black uppercase tracking-widest mt-0.5" style={{ color: cor }}>
-                              {postos.length} Turnos
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Shifts cards in row */}
-                        <div className="flex-1 flex gap-3 overflow-x-auto pb-1.5 custom-scrollbar">
-                          {postos.map(slot => {
-                            const ehAlmoco = slot.funcao === 'ALMOÇO' || slot.posto === 'ALMOÇO' || slot.posto === 'REFEITÓRIO';
-                            const blockColor = ehAlmoco ? '#fbbf24' : (slot.corEtiqueta || cor);
-
-                            return (
-                              <div
-                                key={slot.id}
-                                className="flex-shrink-0 w-52 bg-[#0d0d0d] rounded-md p-3 border transition-all flex flex-col justify-center"
-                                style={{ 
-                                  backgroundColor: `${blockColor}15`, 
-                                  borderColor: `${blockColor}40`,
-                                  borderLeft: `4px solid ${blockColor}` 
-                                }}
-                              >
-                                <div className="text-[10px] font-black text-white truncate flex items-center gap-1 uppercase tracking-tight">
-                                  {ehAlmoco ? <Coffee size={10} className="text-amber-400 shrink-0" /> : <MapPin size={10} className="shrink-0" style={{ color: blockColor }} />}
-                                  {slot.posto}
-                                </div>
-                                <div className="text-[8px] font-bold text-white/50 truncate mt-1">
-                                  {slot.horarioInicio.slice(0, 5)} - {slot.horarioFim.slice(0, 5)} · {slot.funcao}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            )}
-          </section>
+          )}
         </div>
       ) : (
         /* ==================== ABA 2: POR SETOR (REPLICA DA ESCALA DO ADM - LEITURA) ==================== */
@@ -468,7 +368,6 @@ export default function Monitores() {
 
                         {/* Monitor Cards for each time period slot */}
                         {periodosMonitoria.map(p => {
-                          // Find all monitors assigned to this macro sector in this specific time slot
                           const slotsAlocados = escalaDoDia.filter(g => 
                             obterMacroSetor(g.posto) === macro && 
                             g.horarioInicio.slice(0, 5) === p.horarioInicio.slice(0, 5)
@@ -521,6 +420,98 @@ export default function Monitores() {
           </div>
         </div>
       )}
+
+      {/* MODAL DETALHADO DO MONITOR ATIVO */}
+      <AnimatePresence>
+        {monitorAtivo && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
+              onClick={() => setMonitorSelecionadoId(null)} className="absolute inset-0 bg-black/95 backdrop-blur-md" />
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} 
+              className="relative w-full max-w-xl bg-surface-container-lowest border border-white/10 rounded-2xl p-6 md:p-8 shadow-3xl overflow-hidden flex flex-col max-h-[90vh]">
+              
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6 shrink-0" style={{ color: mapaCorMonitor[monitorAtivo.nome] || '#3B82F6' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-black flex items-center justify-center text-sm font-black shrink-0" 
+                    style={{ color: mapaCorMonitor[monitorAtivo.nome] || '#3B82F6', border: `1.5px solid ${mapaCorMonitor[monitorAtivo.nome] || '#3B82F6'}40` }}>
+                    {monitorAtivo.nome.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black italic uppercase tracking-tighter text-white">
+                      Escala de {monitorAtivo.nome}
+                    </h3>
+                    <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-0.5">
+                      Tipo: {monitorAtivo.tipo} | Turno: {monitorAtivo.turno}
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => setMonitorSelecionadoId(null)} 
+                  className="w-8 h-8 rounded-full bg-white/5 hover:bg-red-500/20 text-white/45 hover:text-red-500 flex items-center justify-center transition-all">
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Vertical list of shifts */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-1 mb-6">
+                <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                  <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Postos do dia — {diaFiltro}</span>
+                  <button 
+                    onClick={() => handleExportarMonitorEspecifico(monitorAtivo)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all text-primary border border-white/5"
+                  >
+                    <Download size={11} /> Baixar Escala Individual
+                  </button>
+                </div>
+
+                {gradeDoMonitorAtivo.length === 0 ? (
+                  <div className="py-12 text-center text-white/30 italic text-xs border-2 border-dashed border-white/5 rounded-xl">
+                    Sem postos alocados neste dia.
+                  </div>
+                ) : (
+                  gradeDoMonitorAtivo.map((slot, idx) => {
+                    const ehAlmoco = slot.funcao === 'ALMOÇO' || slot.posto === 'ALMOÇO' || slot.posto === 'REFEITÓRIO';
+                    const blockColor = ehAlmoco ? '#fbbf24' : (slot.corEtiqueta || mapaCorMonitor[monitorAtivo.nome] || '#3B82F6');
+
+                    return (
+                      <div 
+                        key={slot.id} 
+                        className="p-4 rounded-md border flex items-center gap-4 relative overflow-hidden"
+                        style={{ 
+                          backgroundColor: `${blockColor}15`, 
+                          borderColor: `${blockColor}40`,
+                          borderLeft: `5px solid ${blockColor}` 
+                        }}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center text-[10px] font-black shrink-0 text-white/40">
+                          #{idx + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[8.5px] font-black uppercase tracking-widest text-[#42a0f5] mb-0.5">
+                            {slot.horarioInicio.slice(0, 5)} — {slot.horarioFim.slice(0, 5)}
+                          </p>
+                          <h4 className="text-sm font-black text-white uppercase italic truncate tracking-tight">{slot.posto}</h4>
+                        </div>
+                        <span className="px-2.5 py-1 bg-black/30 rounded-lg text-[8px] font-black uppercase tracking-wider text-white/50 border border-white/5">
+                          {slot.funcao}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex border-t border-white/5 pt-4 shrink-0 justify-end">
+                <button onClick={() => setMonitorSelecionadoId(null)} className="px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-black uppercase text-white transition-all">
+                  Fechar
+                </button>
+              </div>
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </motion.div>
   );
