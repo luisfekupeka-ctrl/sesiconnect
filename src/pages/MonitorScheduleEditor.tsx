@@ -624,7 +624,7 @@ export default function MonitorScheduleEditor() {
                             novos[idx].horarioInicio = e.target.value;
                             setPeriodosEditaveis(novos.sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio)));
                           }} 
-                          className="bg-transparent text-xs font-black text-center text-white outline-none border-none w-14" />
+                          className="bg-transparent text-xs font-black text-center text-white outline-none border-none w-24" />
                         <span className="text-white/20">—</span>
                         <input type="time" value={p.horarioFim} 
                           onChange={e => {
@@ -632,7 +632,7 @@ export default function MonitorScheduleEditor() {
                             novos[idx].horarioFim = e.target.value;
                             setPeriodosEditaveis(novos);
                           }} 
-                          className="bg-transparent text-xs font-black text-center text-white outline-none border-none w-14" />
+                          className="bg-transparent text-xs font-black text-center text-white outline-none border-none w-24" />
                       </div>
 
                       {/* Nome do período */}
