@@ -12,18 +12,19 @@ import { useAuth } from '../context/AuthContext';
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
 const MACRO_SETORES = [
-  '🏫 Térreo',
-  '🌳 Pátio Lateral',
-  '🏢 1º Andar',
-  '🏢 2º Andar',
-  '🏢 3º Andar',
   '🚗 S1',
   '🚗 S2',
-  '🛡️ Volante 1',
-  '🛡️ Volante 2',
-  '🛡️ Monitoria',
+  '🌳 Gramado',
+  '🌳 Pátio Lateral',
+  '🏫 Térreo',
   '📚 Biblioteca',
   '🏥 Enfermaria',
+  '🏢 1º Andar',
+  '🏢 2º Andar',
+  '🛡️ Monitoria',
+  '🏢 3º Andar',
+  '🛡️ Volante 1',
+  '🛡️ Volante 2',
   '🍽️ Almoço'
 ];
 
@@ -53,6 +54,16 @@ function horaParaMinutos(hora: string): number {
   if (!hora || typeof hora !== 'string' || !hora.includes(':')) return 0;
   const parts = hora.split(':');
   return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+}
+
+function normalizarParaOrdenacao(str: string): string {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/º/g, "")
+    .replace(/ª/g, "")
+    .trim();
 }
 
 function obterMacroSetor(posto: string): string {
@@ -146,17 +157,19 @@ export default function Monitores() {
     'S1',
     'S2',
     'GRAMADO',
-    'PÁTIO LATERAL',
-    'TÉRREO',
+    'PATIO LATERAL',
+    'TERREO',
     'BIBLIOTECA',
-    '1º ANDAR',
-    '2º ANDAR',
-    '3º ANDAR'
+    'ENFERMARIA',
+    '1 ANDAR',
+    '2 ANDAR',
+    'MONITORIA',
+    '3 ANDAR'
   ], []);
 
   const obterPesoLocal = (posto: string): number => {
     if (!posto) return 999;
-    const p = posto.trim().toUpperCase();
+    const p = normalizarParaOrdenacao(posto);
     const idx = SEQUENCIA_LOCAIS.findIndex(loc => p.includes(loc) || loc.includes(p));
     return idx === -1 ? 900 : idx;
   };

@@ -12,6 +12,16 @@ import SeletorLocalPosto from '../components/SeletorLocalPosto';
 
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
+function normalizarParaOrdenacao(str: string): string {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/º/g, "")
+    .replace(/ª/g, "")
+    .trim();
+}
+
 const PERIODOS_FALLBACK = [
   { id: 'p1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: 'monitoria' },
   { id: 'p2', nome: '2ª Aula', horarioInicio: '08:20', horarioFim: '09:10', tipo: 'aula', segmento: 'monitoria' },
@@ -84,17 +94,19 @@ export default function MonitorScheduleEditor() {
     'S1',
     'S2',
     'GRAMADO',
-    'PÁTIO LATERAL',
-    'TÉRREO',
+    'PATIO LATERAL',
+    'TERREO',
     'BIBLIOTECA',
-    '1º ANDAR',
-    '2º ANDAR',
-    '3º ANDAR'
+    'ENFERMARIA',
+    '1 ANDAR',
+    '2 ANDAR',
+    'MONITORIA',
+    '3 ANDAR'
   ], []);
 
   const obterPesoLocal = (posto: string): number => {
     if (!posto) return 999;
-    const p = posto.trim().toUpperCase();
+    const p = normalizarParaOrdenacao(posto);
     const idx = SEQUENCIA_LOCAIS.findIndex(loc => p.includes(loc) || loc.includes(p));
     return idx === -1 ? 900 : idx;
   };
