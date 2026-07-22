@@ -349,7 +349,7 @@ export default function MonitorScheduleEditor() {
         </div>
 
         {/* Tabela de Grid de Cards */}
-        <main className="bg-surface-container-lowest rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl">
+        <main className="bg-surface-container-lowest rounded-2xl border border-white/5 overflow-hidden shadow-2xl">
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full border-collapse">
               <thead>
@@ -416,28 +416,27 @@ export default function MonitorScheduleEditor() {
                               {slot ? (
                                 <button
                                   onClick={() => abrirAlocacao(m, p)}
-                                  className={cn(
-                                    "w-full text-left p-3 rounded-xl border transition-all flex flex-col justify-center min-h-[60px] group/card",
-                                    ehAlmoco 
-                                      ? "bg-amber-500/10 border-amber-500/20 hover:border-amber-400" 
-                                      : "bg-[#0d0d0d] border-white/5 hover:border-primary/50"
-                                  )}
-                                  style={{ borderLeft: `4px solid ${blockColor}` }}
+                                  className="w-full text-left p-3 rounded-md border transition-all flex flex-col justify-center min-h-[60px] group/card hover:brightness-125"
+                                  style={{ 
+                                    backgroundColor: `${blockColor}22`,
+                                    borderColor: `${blockColor}50`,
+                                    borderLeft: `5px solid ${blockColor}`
+                                  }}
                                 >
-                                  <div className="text-[10px] font-black text-white group-hover/card:text-primary transition-all truncate uppercase flex items-center gap-1">
-                                    {ehAlmoco ? <Coffee size={10} className="text-amber-500 shrink-0" /> : <MapPin size={10} className="text-primary shrink-0" />}
+                                  <div className="text-[10px] font-black text-white group-hover/card:text-white transition-all truncate uppercase flex items-center gap-1">
+                                    {ehAlmoco ? <Coffee size={10} className="text-amber-400 shrink-0" /> : <MapPin size={10} className="shrink-0" style={{ color: blockColor }} />}
                                     {slot.posto}
                                   </div>
-                                  <div className="text-[8px] font-bold text-white/40 truncate uppercase mt-1">
+                                  <div className="text-[8px] font-bold text-white/70 truncate uppercase mt-1">
                                     {slot.funcao}
                                   </div>
                                 </button>
                               ) : (
                                 <button
                                   onClick={() => abrirAlocacao(m, p)}
-                                  className="w-full min-h-[60px] border border-dashed border-white/5 hover:border-primary/20 hover:bg-primary/[0.01] rounded-xl flex items-center justify-center transition-all group/empty"
+                                  className="w-full min-h-[60px] border border-dashed border-white/10 hover:border-primary/30 hover:bg-primary/[0.02] rounded-md flex items-center justify-center transition-all group/empty"
                                 >
-                                  <Plus size={14} className="text-white/10 group-hover/empty:text-primary/60 group-hover:rotate-90 transition-all" />
+                                  <Plus size={14} className="text-white/15 group-hover/empty:text-primary/60 group-hover:rotate-90 transition-all" />
                                 </button>
                               )}
                             </td>
@@ -460,7 +459,7 @@ export default function MonitorScheduleEditor() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
               onClick={() => setModalAlocacaoAberto(false)} className="absolute inset-0 bg-black/95 backdrop-blur-md" />
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} 
-              className="relative w-full max-w-lg bg-surface-container-lowest border border-white/10 rounded-[3rem] p-6 md:p-8 shadow-3xl overflow-hidden flex flex-col max-h-[90vh]">
+              className="relative w-full max-w-lg bg-surface-container-lowest border border-white/10 rounded-2xl p-6 md:p-8 shadow-3xl overflow-hidden flex flex-col max-h-[90vh]">
               
               <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6 shrink-0">
                 <div className="flex items-center gap-3">
@@ -584,7 +583,7 @@ export default function MonitorScheduleEditor() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
               onClick={() => setModalPeriodosAberto(false)} className="absolute inset-0 bg-black/95 backdrop-blur-md" />
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} 
-              className="relative w-full max-w-3xl bg-surface-container-lowest border border-white/10 rounded-[3rem] p-6 md:p-8 shadow-3xl overflow-hidden flex flex-col max-h-[90vh]">
+              className="relative w-full max-w-3xl bg-surface-container-lowest border border-white/10 rounded-2xl p-6 md:p-8 shadow-3xl overflow-hidden flex flex-col max-h-[90vh]">
               
               <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6 shrink-0">
                 <div className="flex items-center gap-3">
