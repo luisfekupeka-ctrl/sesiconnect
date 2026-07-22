@@ -191,11 +191,27 @@ export default function Monitores() {
     } else {
       return filtrados.sort((a, b) => {
         const turnosA = escalaDoDia
-          .filter(g => g.monitorNome === a.nome && g.posto && g.posto !== 'ALMOÇO' && g.posto !== 'REFEITÓRIO')
+          .filter(g => {
+            if (g.monitorNome !== a.nome) return false;
+            const p = normalizarParaOrdenacao(g.posto || '');
+            const f = normalizarParaOrdenacao(g.funcao || '');
+            return p && p !== 'ALMOCO' && p !== 'REFEITORIO' && f !== 'ALMOCO' && f !== 'REFEITORIO';
+          })
           .sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
+
         const turnosB = escalaDoDia
-          .filter(g => g.monitorNome === b.nome && g.posto && g.posto !== 'ALMOÇO' && g.posto !== 'REFEITÓRIO')
+          .filter(g => {
+            if (g.monitorNome !== b.nome) return false;
+            const p = normalizarParaOrdenacao(g.posto || '');
+            const f = normalizarParaOrdenacao(g.funcao || '');
+            return p && p !== 'ALMOCO' && p !== 'REFEITORIO' && f !== 'ALMOCO' && f !== 'REFEITORIO';
+          })
           .sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
+
+        const inicioA = turnosA[0]?.horarioInicio || '99:99';
+        const inicioB = turnosB[0]?.horarioInicio || '99:99';
+
+        if (inicioA !== inicioB) return inicioA.localeCompare(inicioB);
 
         const maxLen = Math.max(turnosA.length, turnosB.length);
         for (let i = 0; i < maxLen; i++) {
