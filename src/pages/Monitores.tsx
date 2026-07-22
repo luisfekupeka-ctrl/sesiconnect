@@ -204,10 +204,14 @@ export default function Monitores() {
     }
   }, [monitores, escalaDoDia, periodosMonitoria, ordenacao, busca]);
 
-  const setoresComAlocacao = useMemo(() => {
-    return MACRO_SETORES.filter(macro => {
+  const setoresOrdenadosPorAlocacao = useMemo(() => {
+    const comAlocacao = MACRO_SETORES.filter(macro => {
       return escalaDoDia.some(slot => obterMacroSetor(slot.posto) === macro);
     });
+    const semAlocacao = MACRO_SETORES.filter(macro => {
+      return !escalaDoDia.some(slot => obterMacroSetor(slot.posto) === macro);
+    });
+    return [...comAlocacao, ...semAlocacao];
   }, [escalaDoDia]);
 
   const monitorAtivo = monitores.find(m => m.id === monitorSelecionadoId);
@@ -426,7 +430,7 @@ export default function Monitores() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {setoresComAlocacao.map(macro => {
+                  {setoresOrdenadosPorAlocacao.map(macro => {
                     return (
                       <tr key={macro} className="hover:bg-white/[0.01] transition-all">
                         {/* Sector Name */}
