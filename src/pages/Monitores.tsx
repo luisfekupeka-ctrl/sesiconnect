@@ -190,13 +190,21 @@ export default function Monitores() {
       return filtrados.sort((a, b) => a.nome.localeCompare(b.nome));
     } else {
       return filtrados.sort((a, b) => {
-        for (const p of periodosMonitoria) {
-          const slotA = escalaDoDia.find(g => g.monitorNome === a.nome && g.horarioInicio.slice(0, 5) === p.horarioInicio.slice(0, 5));
-          const slotB = escalaDoDia.find(g => g.monitorNome === b.nome && g.horarioInicio.slice(0, 5) === p.horarioInicio.slice(0, 5));
-          
-          const pesoA = obterPesoLocal(slotA?.posto || '');
-          const pesoB = obterPesoLocal(slotB?.posto || '');
-          
+        const turnosA = escalaDoDia
+          .filter(g => g.monitorNome === a.nome && g.posto && g.posto !== 'ALMOÇO' && g.posto !== 'REFEITÓRIO')
+          .sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
+        const turnosB = escalaDoDia
+          .filter(g => g.monitorNome === b.nome && g.posto && g.posto !== 'ALMOÇO' && g.posto !== 'REFEITÓRIO')
+          .sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
+
+        const maxLen = Math.max(turnosA.length, turnosB.length);
+        for (let i = 0; i < maxLen; i++) {
+          const postoA = turnosA[i]?.posto || '';
+          const postoB = turnosB[i]?.posto || '';
+
+          const pesoA = obterPesoLocal(postoA);
+          const pesoB = obterPesoLocal(postoB);
+
           if (pesoA !== pesoB) return pesoA - pesoB;
         }
         return a.nome.localeCompare(b.nome);

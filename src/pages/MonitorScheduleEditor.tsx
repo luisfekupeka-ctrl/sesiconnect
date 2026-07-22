@@ -117,13 +117,21 @@ export default function MonitorScheduleEditor() {
       return lista.sort((a, b) => a.nome.localeCompare(b.nome));
     } else {
       return lista.sort((a, b) => {
-        for (const p of periodosMonitoria) {
-          const slotA = gradeMonitores.find(g => g.monitorNome === a.nome && g.diaSemana === diaSelecionado && g.horarioInicio.slice(0, 5) === p.horarioInicio.slice(0, 5));
-          const slotB = gradeMonitores.find(g => g.monitorNome === b.nome && g.diaSemana === diaSelecionado && g.horarioInicio.slice(0, 5) === p.horarioInicio.slice(0, 5));
-          
-          const pesoA = obterPesoLocal(slotA?.posto || '');
-          const pesoB = obterPesoLocal(slotB?.posto || '');
-          
+        const turnosA = gradeMonitores
+          .filter(g => g.monitorNome === a.nome && g.diaSemana === diaSelecionado && g.posto && g.posto !== 'ALMOÇO' && g.posto !== 'REFEITÓRIO')
+          .sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
+        const turnosB = gradeMonitores
+          .filter(g => g.monitorNome === b.nome && g.diaSemana === diaSelecionado && g.posto && g.posto !== 'ALMOÇO' && g.posto !== 'REFEITÓRIO')
+          .sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
+
+        const maxLen = Math.max(turnosA.length, turnosB.length);
+        for (let i = 0; i < maxLen; i++) {
+          const postoA = turnosA[i]?.posto || '';
+          const postoB = turnosB[i]?.posto || '';
+
+          const pesoA = obterPesoLocal(postoA);
+          const pesoB = obterPesoLocal(postoB);
+
           if (pesoA !== pesoB) return pesoA - pesoB;
         }
         return a.nome.localeCompare(b.nome);
