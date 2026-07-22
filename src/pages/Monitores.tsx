@@ -133,10 +133,58 @@ export default function Monitores() {
     return mapa;
   }, [monitores, gradeMonitores]);
 
-  const monitoresFiltrados = (monitores || []).filter(m => {
-    const b = busca.toLowerCase();
-    return (m.nome?.toLowerCase() || '').includes(b) || (m.materia?.toLowerCase() || '').includes(b);
-  });
+  // Grade de todos os monitores do dia
+  const escalaDoDia = useMemo(() => {
+    return (gradeMonitores || [])
+      .filter(g => g.diaSemana === diaFiltro)
+      .sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
+  }, [gradeMonitores, diaFiltro]);
+
+  const [ordenacao, setOrdenacao] = useState<'nome' | 'local'>('nome');
+
+  const SEQUENCIA_LOCAIS = useMemo(() => [
+    'S1',
+    'S2',
+    'GRAMADO',
+    'PÁTIO LATERAL',
+    'TÉRREO',
+    'BIBLIOTECA',
+    '1º ANDAR',
+    '2º ANDAR',
+    '3º ANDAR'
+  ], []);
+
+  const obterPesoLocal = (posto: string): number => {
+    if (!posto) return 999;
+    const p = posto.trim().toUpperCase();
+    const idx = SEQUENCIA_LOCAIS.findIndex(loc => p.includes(loc) || loc.includes(p));
+    return idx === -1 ? 900 : idx;
+  };
+
+  const monitoresOrdenados = useMemo(() => {
+    const filtrados = (monitores || []).filter(m => {
+      const b = busca.toLowerCase();
+      return (m.nome?.toLowerCase() || '').includes(b) || (m.materia?.toLowerCase() || '').includes(b);
+    });
+
+    if (ordenacao === 'nome') {
+      return filtrados.sort((a, b) => a.nome.localeCompare(b.nome));
+    } else {
+      return filtrados.sort((a, b) => {
+        const turnosA = escalaDoDia.filter(g => g.monitorNome === a.nome).sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
+        const turnosB = escalaDoDia.filter(g => g.monitorNome === b.nome).sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
+        
+        const postoA = turnosA[0]?.posto || '';
+        const postoB = turnosB[0]?.posto || '';
+        
+        const pesoA = obterPesoLocal(postoA);
+        const pesoB = obterPesoLocal(postoB);
+        
+        if (pesoA !== pesoB) return pesoA - pesoB;
+        return a.nome.localeCompare(b.nome);
+      });
+    }
+  }, [monitores, escalaDoDia, ordenacao, busca]);
 
   const monitorAtivo = monitores.find(m => m.id === monitorSelecionadoId);
 
@@ -146,13 +194,6 @@ export default function Monitores() {
       .filter(g => g.monitorNome === monitorAtivo.nome && g.diaSemana === diaFiltro)
       .sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
   }, [monitorAtivo, diaFiltro, gradeMonitores]);
-
-  // Grade de todos os monitores do dia
-  const escalaDoDia = useMemo(() => {
-    return (gradeMonitores || [])
-      .filter(g => g.diaSemana === diaFiltro)
-      .sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
-  }, [gradeMonitores, diaFiltro]);
 
   // Períodos de monitoria
   const periodosMonitoria = useMemo(() => {
@@ -255,9 +296,17 @@ export default function Monitores() {
       {viewMode === 'monitor' ? (
         /* ====== ABA 1: POR MONITOR (ESCALA DO DIA EM LINHAS E CLIQUE ABRE DETALHE EM LISTA) ====== */
         <div className="space-y-4">
-          <h2 className="text-xl font-black italic tracking-tighter text-white flex items-center gap-2">
-            <Shield size={18} className="text-[#42a0f5]" /> Escala do Dia — {diaFiltro}
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-black italic tracking-tighter text-white flex items-center gap-2">
+              <Shield size={18} className="text-[#42a0f5]" /> Escala do Dia — {diaFiltro}
+            </h2>
+            <button 
+              onClick={() => setOrdenacao(ordenacao === 'nome' ? 'local' : 'nome')} 
+              className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-white/5 border border-white/5 hover:bg-white/10 text-primary transition-all flex items-center gap-2"
+            >
+              <span>Filtro: {ordenacao === 'nome' ? 'Por Nome 👤' : 'Por Local 📍'}</span>
+            </button>
+          </div>
 
           {escalaDoDia.length === 0 ? (
             <div className="py-16 text-center opacity-20 italic font-black text-sm border-2 border-dashed border-white/5 rounded-2xl">
@@ -265,7 +314,7 @@ export default function Monitores() {
             </div>
           ) : (
             <div className="space-y-3">
-              {monitoresFiltrados.map(monitor => {
+              {monitoresOrdenados.map(monitor => {
                 const cor = mapaCorMonitor[monitor.nome] || '#3B82F6';
                 const turnos = escalaDoDia
                   .filter(g => g.monitorNome === monitor.nome)

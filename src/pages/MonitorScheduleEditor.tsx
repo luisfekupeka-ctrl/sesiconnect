@@ -58,6 +58,7 @@ export default function MonitorScheduleEditor() {
 
   // Lista local de períodos editáveis no modal
   const [periodosEditaveis, setPeriodosEditaveis] = useState<any[]>([]);
+  const [ordenacao, setOrdenacao] = useState<'nome' | 'local'>('nome');
 
   const CORES_MONITOR = useMemo(() => [
     '#3B82F6','#EF4444','#10B981','#F59E0B','#8B5CF6',
@@ -78,6 +79,46 @@ export default function MonitorScheduleEditor() {
     });
     return mapa;
   }, [monitores, gradeMonitores, CORES_MONITOR]);
+
+  const SEQUENCIA_LOCAIS = useMemo(() => [
+    'S1',
+    'S2',
+    'GRAMADO',
+    'PÁTIO LATERAL',
+    'TÉRREO',
+    'BIBLIOTECA',
+    '1º ANDAR',
+    '2º ANDAR',
+    '3º ANDAR'
+  ], []);
+
+  const obterPesoLocal = (posto: string): number => {
+    if (!posto) return 999;
+    const p = posto.trim().toUpperCase();
+    const idx = SEQUENCIA_LOCAIS.findIndex(loc => p.includes(loc) || loc.includes(p));
+    return idx === -1 ? 900 : idx;
+  };
+
+  const monitoresOrdenados = useMemo(() => {
+    const lista = [...(monitores || [])];
+    if (ordenacao === 'nome') {
+      return lista.sort((a, b) => a.nome.localeCompare(b.nome));
+    } else {
+      return lista.sort((a, b) => {
+        const turnosA = gradeMonitores.filter(g => g.monitorNome === a.nome && g.diaSemana === diaSelecionado).sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
+        const turnosB = gradeMonitores.filter(g => g.monitorNome === b.nome && g.diaSemana === diaSelecionado).sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
+        
+        const postoA = turnosA[0]?.posto || '';
+        const postoB = turnosB[0]?.posto || '';
+        
+        const pesoA = obterPesoLocal(postoA);
+        const pesoB = obterPesoLocal(postoB);
+        
+        if (pesoA !== pesoB) return pesoA - pesoB;
+        return a.nome.localeCompare(b.nome);
+      });
+    }
+  }, [monitores, gradeMonitores, diaSelecionado, ordenacao]);
 
 
   useEffect(() => {
@@ -307,6 +348,12 @@ export default function MonitorScheduleEditor() {
           </div>
           
           <div className="flex flex-wrap gap-3">
+            <button 
+              onClick={() => setOrdenacao(ordenacao === 'nome' ? 'local' : 'nome')} 
+              className="btn-secondary flex items-center gap-2 text-xs uppercase tracking-wider px-5 py-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10"
+            >
+              <span>Filtro: {ordenacao === 'nome' ? 'Por Nome 👤' : 'Por Local 📍'}</span>
+            </button>
             {mensagem && (
               <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} 
                 className={cn("px-4 py-2.5 rounded-xl flex items-center gap-2 text-xs font-black uppercase", 
@@ -368,14 +415,14 @@ export default function MonitorScheduleEditor() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {monitores.length === 0 ? (
+                {monitoresOrdenados.length === 0 ? (
                   <tr>
                     <td colSpan={periodosMonitoria.length + 1} className="py-20 text-center opacity-30 italic text-sm">
                       Nenhum monitor cadastrado no sistema.
                     </td>
                   </tr>
                 ) : (
-                  monitores.map(m => {
+                  monitoresOrdenados.map(m => {
                     const cor = mapaCorMonitor[m.nome] || '#3b82f6';
                     return (
                       <tr key={m.id} className="hover:bg-white/[0.01] transition-all">
