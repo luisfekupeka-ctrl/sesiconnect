@@ -1,120 +1,297 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Save, Calendar, User, Clock, 
-  Trash2, Copy, Check, RefreshCw, ChevronLeft, LayoutGrid,
-  Plus, Coffee, X, Palette, Search, MapPin, Briefcase
+  Save, Calendar, Clock, Trash2, Plus, Coffee, X, 
+  Settings, ChevronLeft, RefreshCw, Copy, Check, Info, MapPin, Briefcase
 } from 'lucide-react';
 import { useEscola } from '../context/ContextoEscola';
-import { salvarGradeMonitores } from '../services/dataService';
+import { salvarGradeMonitores, limparGradeMonitorDia, salvarPeriodos, buscarPeriodos } from '../services/dataService';
 import { cn } from '../lib/utils';
-import { Monitor, GradeMonitor } from '../types';
 import { useNavigate } from 'react-router-dom';
 import SeletorLocalPosto from '../components/SeletorLocalPosto';
 
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
-interface LinhaGradeMonitor {
-  id: string;
-  horarioInicio: string;
-  horarioFim: string;
-  posto: string;
-  funcao: string;
-  tipo: 'servico' | 'almoco';
-}
+const PERIODOS_FALLBACK = [
+  { id: 'p1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: 'monitoria' },
+  { id: 'p2', nome: '2ª Aula', horarioInicio: '08:20', horarioFim: '09:10', tipo: 'aula', segmento: 'monitoria' },
+  { id: 'p3', nome: '3ª Aula', horarioInicio: '09:10', horarioFim: '10:00', tipo: 'aula', segmento: 'monitoria' },
+  { id: 'p-int', nome: 'Intervalo', horarioInicio: '10:00', horarioFim: '10:20', tipo: 'intervalo', segmento: 'monitoria' },
+  { id: 'p4', nome: '4ª Aula', horarioInicio: '10:20', horarioFim: '11:10', tipo: 'aula', segmento: 'monitoria' },
+  { id: 'p5', nome: '5ª Aula', horarioInicio: '11:10', horarioFim: '12:00', tipo: 'aula', segmento: 'monitoria' },
+  { id: 'p-alm', nome: 'Almoço', horarioInicio: '12:00', horarioFim: '13:00', tipo: 'almoco', segmento: 'monitoria' },
+  { id: 'p6', nome: '6ª Aula', horarioInicio: '13:00', horarioFim: '13:50', tipo: 'aula', segmento: 'monitoria' },
+  { id: 'p7', nome: '7ª Aula', horarioInicio: '13:50', horarioFim: '14:40', tipo: 'aula', segmento: 'monitoria' },
+  { id: 'p8', nome: '8ª Aula', horarioInicio: '14:40', horarioFim: '15:30', tipo: 'aula', segmento: 'monitoria' },
+  { id: 'p9', nome: '9ª Aula', horarioInicio: '15:30', horarioFim: '16:20', tipo: 'aula', segmento: 'monitoria' },
+  { id: 'p10', nome: '10ª Aula', horarioInicio: '16:20', horarioFim: '17:10', tipo: 'aula', segmento: 'monitoria' },
+  { id: 'p11', nome: '11ª Aula', horarioInicio: '17:10', horarioFim: '18:00', tipo: 'aula', segmento: 'monitoria' }
+];
 
 export default function MonitorScheduleEditor() {
-  const { 
-    monitores, gradeMonitores, periodos, atualizar
-  } = useEscola();
+  const { monitores, gradeMonitores, periodos, atualizar } = useEscola();
   const navigate = useNavigate();
 
-  const [monitorSelecionado, setMonitorSelecionado] = useState<Monitor | null>(null);
-  const [linhas, setLinhas] = useState<LinhaGradeMonitor[]>([]);
+  const [diaSelecionado, setDiaSelecionado] = useState('SEGUNDA');
   const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
-  const [buscaMonitor, setBuscaMonitor] = useState('');
 
-  const periodosFallback = useMemo(() => [
-    { id: '1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula' },
-    { id: '2', nome: '2ª Aula', horarioInicio: '08:20', horarioFim: '09:10', tipo: 'aula' },
-    { id: '3', nome: '3ª Aula', horarioInicio: '09:10', horarioFim: '10:00', tipo: 'aula' },
-    { id: 'int', nome: 'Intervalo', horarioInicio: '10:00', horarioFim: '10:20', tipo: 'intervalo' },
-    { id: '4', nome: '4ª Aula', horarioInicio: '10:20', horarioFim: '11:10', tipo: 'aula' },
-    { id: '5', nome: '5ª Aula', horarioInicio: '11:10', horarioFim: '12:00', tipo: 'aula' },
-    { id: 'alm', nome: 'Almoço', horarioInicio: '12:00', horarioFim: '13:00', tipo: 'almoco' },
-    { id: '6', nome: '6ª Aula', horarioInicio: '13:00', horarioFim: '13:50', tipo: 'aula' },
+  // Estados dos Modais
+  const [modalAlocacaoAberto, setModalAlocacaoAberto] = useState(false);
+  const [modalPeriodosAberto, setModalPeriodosAberto] = useState(false);
+
+  // Alocação ativa no Modal
+  const [alocacaoEditando, setAlocacaoEditando] = useState<{
+    monitor: any;
+    periodo: any;
+    posto: string;
+    funcao: string;
+    corEtiqueta: string;
+    tipo: 'servico' | 'almoco';
+  } | null>(null);
+
+  // Lista local de períodos do segmento monitoria
+  const periodosMonitoria = useMemo(() => {
+    const filtrados = (periodos || []).filter(p => p.segmento === 'monitoria');
+    return filtrados.length > 0 ? filtrados : PERIODOS_FALLBACK;
+  }, [periodos]);
+
+  // Lista local de períodos editáveis no modal
+  const [periodosEditaveis, setPeriodosEditaveis] = useState<any[]>([]);
+
+  const CORES_MONITOR = useMemo(() => [
+    '#3B82F6','#EF4444','#10B981','#F59E0B','#8B5CF6',
+    '#EC4899','#06B6D4','#F97316','#14B8A6','#6366F1',
+    '#D946EF','#0EA5E9','#84CC16','#E11D48','#7C3AED',
   ], []);
 
-  // Sincronizar linhas quando monitor muda
+  const mapaCorMonitor = useMemo(() => {
+    const mapa: Record<string, string> = {};
+    const nomes = Array.from(new Set([
+      ...(monitores || []).map(m => m.nome),
+      ...(gradeMonitores || []).map(g => g.monitorNome),
+    ])).sort();
+    nomes.forEach((nome, i) => {
+      const monitor = (monitores || []).find(m => m.nome === nome);
+      const gradeEntry = (gradeMonitores || []).find(g => g.monitorNome === nome && g.corEtiqueta);
+      mapa[nome] = monitor?.cor || gradeEntry?.corEtiqueta || CORES_MONITOR[i % CORES_MONITOR.length];
+    });
+    return mapa;
+  }, [monitores, gradeMonitores, CORES_MONITOR]);
+
+
   useEffect(() => {
-    if (monitorSelecionado) {
-      // Buscar dados de SEGUNDA como base (já que é fixa)
-      const existentes = gradeMonitores.filter(
-        e => e.monitorNome === monitorSelecionado.nome && e.diaSemana === 'SEGUNDA'
-      ).sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
-
-      if (existentes.length > 0) {
-        const carregaExistente: LinhaGradeMonitor[] = existentes.map((e, i) => ({
-          id: `l-${i}-${Date.now()}`,
-          horarioInicio: e.horarioInicio.slice(0, 5),
-          horarioFim: e.horarioFim.slice(0, 5),
-          posto: e.posto || '',
-          funcao: e.funcao || 'Monitoria Geral',
-          tipo: (e.funcao === 'ALMOÇO' || e.funcao === 'INTERVALO') ? 'almoco' : 'servico'
-        }));
-        setLinhas(carregaExistente);
-      } else {
-        // Se não tiver nada, começa vazio para criação manual
-        setLinhas([]);
-      }
+    if (modalPeriodosAberto) {
+      setPeriodosEditaveis(periodosMonitoria.map(p => ({ ...p })));
     }
-  }, [monitorSelecionado, gradeMonitores]);
+  }, [modalPeriodosAberto, periodosMonitoria]);
 
-  const atualizarLinha = (id: string, campo: keyof LinhaGradeMonitor, valor: any) => {
-    setLinhas(prev => prev.map(l => l.id === id ? { ...l, [campo]: valor } : l));
+  // Função para abrir o modal de alocação de uma célula
+  const abrirAlocacao = (monitor: any, periodo: any) => {
+    const slotExistente = gradeMonitores.find(
+      g => g.monitorNome === monitor.nome && 
+           g.diaSemana === diaSelecionado &&
+           g.horarioInicio.slice(0, 5) === periodo.horarioInicio.slice(0, 5)
+    );
+
+    setAlocacaoEditando({
+      monitor,
+      periodo,
+      posto: slotExistente?.posto || 'TÉRREO',
+      funcao: slotExistente?.funcao || 'Monitoria Geral',
+      corEtiqueta: slotExistente?.corEtiqueta || monitor.cor || '#3b82f6',
+      tipo: (slotExistente?.funcao === 'ALMOÇO' || slotExistente?.posto === 'ALMOÇO') ? 'almoco' : 'servico'
+    });
+    setModalAlocacaoAberto(true);
   };
 
-  const toggleAlmoco = (id: string) => {
-    setLinhas(prev => prev.map(l => {
-      if (l.id !== id) return l;
-      if (l.tipo === 'servico') {
-        return { ...l, tipo: 'almoco', funcao: 'ALMOÇO', posto: 'Refeitório' };
-      } else {
-        return { ...l, tipo: 'servico', funcao: 'Monitoria Geral', posto: '' };
+  // Salvar uma alocação específica
+  const salvarAlocacao = async () => {
+    if (!alocacaoEditando) return;
+    setSalvando(true);
+    setMensagem(null);
+
+    const { monitor, periodo, posto, funcao, corEtiqueta } = alocacaoEditando;
+
+    try {
+      // 1. Pegar todos os turnos atuais do monitor no dia selecionado
+      const turnosAtuais = gradeMonitores
+        .filter(g => g.monitorNome === monitor.nome && g.diaSemana === diaSelecionado)
+        .map(g => ({
+          monitorNome: g.monitorNome,
+          diaSemana: g.diaSemana,
+          horarioInicio: g.horarioInicio.slice(0, 5),
+          horarioFim: g.horarioFim.slice(0, 5),
+          posto: g.posto,
+          funcao: g.funcao,
+          corEtiqueta: g.corEtiqueta
+        }));
+
+      // 2. Filtrar removendo o horário que estamos editando
+      const turnosAtualizados = turnosAtuais.filter(
+        t => t.horarioInicio !== periodo.horarioInicio.slice(0, 5)
+      );
+
+      // 3. Adicionar o novo slot se posto/funcao forem preenchidos
+      if (posto) {
+        turnosAtualizados.push({
+          monitorNome: monitor.nome,
+          diaSemana: diaSelecionado,
+          horarioInicio: periodo.horarioInicio.slice(0, 5),
+          horarioFim: periodo.horarioFim.slice(0, 5),
+          posto: posto,
+          funcao: funcao || 'Monitoria Geral',
+          corEtiqueta: corEtiqueta
+        });
       }
-    }));
+
+      // 4. Salvar no Banco
+      const ok = await salvarGradeMonitores(turnosAtualizados);
+      if (ok) {
+        setMensagem({ tipo: 'sucesso', texto: 'Escala atualizada!' });
+        atualizar();
+        setModalAlocacaoAberto(false);
+      } else {
+        setMensagem({ tipo: 'erro', texto: 'Erro ao salvar escala.' });
+      }
+    } catch (error) {
+      console.error(error);
+      setMensagem({ tipo: 'erro', texto: 'Erro de conexão.' });
+    } finally {
+      setSalvando(false);
+    }
   };
 
-  const handleSalvar = async () => {
-    if (!monitorSelecionado) return;
-    setSalvando(true); setMensagem(null);
-    
-    let sucessoTotal = true;
+  // Remover uma alocação específica
+  const removerAlocacao = async () => {
+    if (!alocacaoEditando) return;
+    setSalvando(true);
+    setMensagem(null);
 
-    // Salva a mesma escala para todos os dias da semana
-    for (const dia of DIAS_SEMANA) {
-        const entradas: Partial<GradeMonitor>[] = linhas.map(l => ({
-            monitorNome: monitorSelecionado.nome,
-            diaSemana: dia,
-            horarioInicio: l.horarioInicio,
-            horarioFim: l.horarioFim,
-            posto: l.posto || 'A DEFINIR',
-            funcao: l.funcao || 'Monitoria Geral',
-            corEtiqueta: monitorSelecionado.cor || '#fbbf24'
+    const { monitor, periodo } = alocacaoEditando;
+
+    try {
+      const turnosAtuais = gradeMonitores
+        .filter(g => g.monitorNome === monitor.nome && g.diaSemana === diaSelecionado)
+        .map(g => ({
+          monitorNome: g.monitorNome,
+          diaSemana: g.diaSemana,
+          horarioInicio: g.horarioInicio.slice(0, 5),
+          horarioFim: g.horarioFim.slice(0, 5),
+          posto: g.posto,
+          funcao: g.funcao,
+          corEtiqueta: g.corEtiqueta
         }));
-        const ok = await salvarGradeMonitores(entradas);
-        if (!ok) sucessoTotal = false;
-    }
 
-    setMensagem(sucessoTotal ? { tipo: 'sucesso', texto: 'Escala Semanal salva!' } : { tipo: 'erro', texto: 'Erro ao salvar.' });
-    if (sucessoTotal) atualizar();
-    setSalvando(false);
+      const turnosRestantes = turnosAtuais.filter(
+        t => t.horarioInicio !== periodo.horarioInicio.slice(0, 5)
+      );
+
+      // Se não sobrar nada, limpa o dia inteiro para esse monitor
+      if (turnosRestantes.length === 0) {
+        await limparGradeMonitorDia(monitor.nome, diaSelecionado);
+      } else {
+        await salvarGradeMonitores(turnosRestantes);
+      }
+
+      setMensagem({ tipo: 'sucesso', texto: 'Alocação removida!' });
+      atualizar();
+      setModalAlocacaoAberto(false);
+    } catch (e) {
+      console.error(e);
+      setMensagem({ tipo: 'erro', texto: 'Erro ao remover.' });
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  // Salvar Horários Padrões (Colunas)
+  const salvarPeriodosMonitoria = async () => {
+    setSalvando(true);
+    try {
+      const payloads = periodosEditaveis.map(p => ({
+        ...p,
+        segmento: 'monitoria'
+      }));
+      const ok = await salvarPeriodos(payloads);
+      if (ok) {
+        setMensagem({ tipo: 'sucesso', texto: 'Horários Padrões atualizados!' });
+        atualizar();
+        setModalPeriodosAberto(false);
+      } else {
+        setMensagem({ tipo: 'erro', texto: 'Erro ao salvar horários padrões.' });
+      }
+    } catch (e) {
+      console.error(e);
+      setMensagem({ tipo: 'erro', texto: 'Erro de conexão.' });
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  // Replicar escala inteira do dia para a semana
+  const replicarDiaSemana = async () => {
+    if (!confirm(`Deseja copiar toda a escala de ${diaSelecionado} para os outros dias da semana (Terça a Sexta)?`)) return;
+    setSalvando(true);
+    try {
+      const escalaOrigem = gradeMonitores.filter(g => g.diaSemana === diaSelecionado);
+      
+      for (const dia of DIAS_SEMANA) {
+        if (dia === diaSelecionado) continue;
+        
+        // Deleta e reinsere para cada dia
+        const payloads = escalaOrigem.map(item => ({
+          monitorNome: item.monitorNome,
+          diaSemana: dia,
+          horarioInicio: item.horarioInicio.slice(0, 5),
+          horarioFim: item.horarioFim.slice(0, 5),
+          posto: item.posto || 'TÉRREO',
+          funcao: item.funcao || 'Monitoria Geral',
+          corEtiqueta: item.corEtiqueta || '#3b82f6'
+        }));
+
+        // Limpa e salva para cada monitor correspondente
+        const nomesMonitores = Array.from(new Set(payloads.map(p => p.monitorNome)));
+        for (const nome of nomesMonitores) {
+          await limparGradeMonitorDia(nome as string, dia);
+        }
+        if (payloads.length > 0) {
+          await salvarGradeMonitores(payloads);
+        }
+      }
+
+      setMensagem({ tipo: 'sucesso', texto: 'Escala replicada para a semana inteira!' });
+      atualizar();
+    } catch (e) {
+      console.error(e);
+      setMensagem({ tipo: 'erro', texto: 'Erro ao replicar escala.' });
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  // Limpar escala do dia selecionado
+  const limparEscalaDia = async () => {
+    if (!confirm(`Deseja excluir TODA a escala de monitores do dia ${diaSelecionado}?`)) return;
+    setSalvando(true);
+    try {
+      const nomesMonitores = Array.from(new Set(monitores.map(m => m.nome)));
+      for (const nome of nomesMonitores) {
+        await limparGradeMonitorDia(nome as string, diaSelecionado);
+      }
+      setMensagem({ tipo: 'sucesso', texto: 'Escala do dia limpa com sucesso!' });
+      atualizar();
+    } catch (e) {
+      console.error(e);
+      setMensagem({ tipo: 'erro', texto: 'Erro ao limpar escala.' });
+    } finally {
+      setSalvando(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-4 md:p-8 lg:p-12 font-sans selection:bg-primary/30">
-      <div className="max-w-7xl mx-auto space-y-12">
+    <div className="min-h-screen bg-[#0a0a0a] text-white p-4 md:p-8 font-sans selection:bg-primary/30">
+      <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Header */}
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -122,185 +299,415 @@ export default function MonitorScheduleEditor() {
             <button onClick={() => navigate('/admin')} className="flex items-center gap-2 text-on-surface-variant hover:text-white transition-all text-xs font-black uppercase tracking-widest mb-4 group">
               <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Voltar ao Painel ADM
             </button>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/10 text-primary rounded-full mb-3 border border-primary/20">
-              <Calendar size={14} /><span className="text-[10px] font-black uppercase tracking-[0.2em]">Escala Fixa Semanal</span>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#a855f7]/10 text-[#a855f7] rounded-full mb-3 border border-[#a855f7]/20">
+              <Calendar size={14} /><span className="text-[10px] font-black uppercase tracking-[0.2em]">Montar Escala Diária</span>
             </div>
-            <h1 className="text-5xl font-black tracking-tighter italic">Gestão <span className="text-primary">de Monitores</span></h1>
-            <p className="text-on-surface-variant font-medium mt-2 text-sm opacity-60">Defina a escala única que será replicada para todos os dias da semana.</p>
+            <h1 className="text-5xl font-black tracking-tighter italic">Grade <span className="text-primary">de Escalas</span></h1>
+            <p className="text-on-surface-variant font-medium mt-2 text-sm opacity-60">Planeje e realoque os postos dos monitores clicando nos cartões de horário.</p>
           </div>
           
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             {mensagem && (
               <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} 
-                className={cn("px-6 py-4 rounded-2xl flex items-center gap-3 text-xs font-black uppercase", 
+                className={cn("px-4 py-2.5 rounded-xl flex items-center gap-2 text-xs font-black uppercase", 
                   mensagem.tipo === 'sucesso' ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" : "bg-red-500/10 text-red-500 border border-red-500/20")}>
-                {mensagem.tipo === 'sucesso' ? <Check size={18} /> : <X size={18} />}
+                {mensagem.tipo === 'sucesso' ? <Check size={16} /> : <X size={16} />}
                 {mensagem.texto}
               </motion.div>
             )}
-            <button onClick={handleSalvar} disabled={!monitorSelecionado || salvando}
-              className={cn("btn-primary shadow-2xl shadow-primary/30", (salvando || !monitorSelecionado) && "opacity-50 pointer-events-none")}>
-              {salvando ? <RefreshCw size={20} className="animate-spin" /> : <Save size={20} />}
-              {salvando ? 'Salvando...' : 'Salvar Escala Semanal'}
+            <button onClick={() => setModalPeriodosAberto(true)} className="btn-secondary flex items-center gap-2 text-xs uppercase tracking-wider px-5 py-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10">
+              <Settings size={16} className="text-[#a855f7]" />
+              Distribuir Horários Padrões
+            </button>
+            <button onClick={replicarDiaSemana} disabled={salvando} className="btn-secondary flex items-center gap-2 text-xs uppercase tracking-wider px-5 py-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10">
+              <Copy size={16} className="text-[#fbbf24]" />
+              Replicar para Semana
+            </button>
+            <button onClick={limparEscalaDia} disabled={salvando} className="btn-secondary flex items-center gap-2 text-xs uppercase tracking-wider px-5 py-3 rounded-2xl bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-400">
+              <Trash2 size={16} />
+              Limpar Dia
             </button>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8">
-          
-          {/* Sidebar de Seleção */}
-          <aside className="space-y-6">
-            <div className="bg-surface-container-lowest p-8 rounded-[3rem] border border-white/5 shadow-2xl space-y-8">
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant flex items-center gap-2 mb-6 ml-2">
-                    <User size={16} className="text-primary" /> Selecionar Monitor
-                </label>
-                <div className="relative mb-6">
-                  <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
-                  <input type="text" placeholder="Buscar monitor..." value={buscaMonitor} onChange={e => setBuscaMonitor(e.target.value)}
-                    className="w-full bg-surface-container-low border-white/5 border rounded-2xl py-4 pl-12 pr-5 text-sm font-bold outline-none focus:border-primary/50 transition-all" />
-                </div>
-                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                  {monitores.filter(m => !buscaMonitor || m.nome.toLowerCase().includes(buscaMonitor.toLowerCase())).map(m => (
-                    <button key={m.id} onClick={() => setMonitorSelecionado(m)}
-                      className={cn("w-full p-5 rounded-3xl flex items-center gap-5 transition-all border-2 text-left group",
-                        monitorSelecionado?.id === m.id ? "bg-primary/10 border-primary shadow-xl" : "bg-surface-container-low border-transparent hover:border-white/10")}>
-                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-inner" style={{ backgroundColor: `${m.cor}20`, color: m.cor }}>
-                        {m.nome.charAt(0)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-base font-black truncate text-white">{m.nome}</p>
-                        <p className={cn("text-[10px] font-bold uppercase tracking-widest", monitorSelecionado?.id === m.id ? "text-primary" : "text-on-surface-variant")}>{m.tipo}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/10">
-                <p className="text-[10px] font-black text-primary uppercase tracking-widest leading-relaxed">
-                    DICA: A escala configurada aqui será aplicada automaticamente de Segunda a Sexta para o monitor selecionado.
-                </p>
-              </div>
-            </div>
-          </aside>
-
-          {/* Grid de Edição */}
-          <main className="bg-surface-container-lowest rounded-[3.5rem] border border-white/5 overflow-hidden shadow-2xl">
-            {!monitorSelecionado ? (
-              <div className="p-40 text-center space-y-6 opacity-20">
-                <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto">
-                    <User size={48} />
-                </div>
-                <p className="text-2xl font-black italic tracking-tighter">Selecione um monitor para configurar a escala fixa</p>
-              </div>
-            ) : (
-              <div className="p-4 sm:p-10">
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 md:gap-8 mb-8 pb-6 border-b border-white/5 text-center sm:text-left">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center text-3xl sm:text-4xl font-black italic shadow-2xl shrink-0" 
-                    style={{ backgroundColor: monitorSelecionado.cor, color: '#000' }}>
-                    {monitorSelecionado.nome.charAt(0)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-2xl sm:text-4xl font-black italic leading-tight tracking-tighter text-white break-words">{monitorSelecionado.nome}</h2>
-                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-3">
-                      <span className="text-[10px] text-primary font-black uppercase tracking-[0.3em]">Escala Semanal Fixa</span>
-                      <span className="hidden sm:inline w-1.5 h-1.5 rounded-full bg-white/20" />
-                      <span className="text-[9px] font-black uppercase tracking-widest py-1 px-3 rounded-lg bg-white/5 text-on-surface-variant border border-white/5">{monitorSelecionado.tipo}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto pb-4 custom-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
-                  <div className="space-y-3 w-full">
-                  {linhas.map((linha, idx) => {
-                    const ehAlmoco = linha.tipo === 'almoco';
-                    const corBorda = ehAlmoco ? '#fbbf24' : (monitorSelecionado.cor || '#10b981');
-                    return (
-                      <motion.div key={linha.id}
-                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.03 }}
-                        className={cn("rounded-[2rem] transition-all border-2 group/row relative overflow-hidden shadow-premium",
-                          ehAlmoco ? "bg-amber-500/5 border-amber-500/10 hover:border-amber-500/30" : "bg-[#0d0d0d] border-white/5 hover:border-primary/20")}
-                        style={{ borderLeft: `8px solid ${corBorda}` }}
-                      >
-                        <div className="grid grid-cols-1 md:grid-cols-[60px_160px_1fr_1fr_100px] items-stretch md:items-center gap-4 md:gap-6 p-4 md:p-5">
-                          {/* Índice / Ícone */}
-                          <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-xs font-black shrink-0 shadow-inner mx-auto md:mx-0",
-                            ehAlmoco ? "bg-amber-500/20 text-amber-500" : "bg-surface-container-high text-on-surface-variant")}>
-                            {ehAlmoco ? <Coffee size={20} /> : idx + 1}
-                          </div>
-
-                          {/* Horário */}
-                          <div className="flex flex-col justify-center">
-                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest block mb-1 ml-1 md:hidden">Horário de Turno</span>
-                            <div className="flex items-center gap-3 bg-black/40 p-3 rounded-2xl border border-white/5">
-                              <input type="time" value={linha.horarioInicio} onChange={e => atualizarLinha(linha.id, 'horarioInicio', e.target.value)}
-                                className="bg-transparent border-none text-xs font-black text-center outline-none w-full text-primary" />
-                              <span className="text-xs opacity-20">/</span>
-                              <input type="time" value={linha.horarioFim} onChange={e => atualizarLinha(linha.id, 'horarioFim', e.target.value)}
-                                className="bg-transparent border-none text-xs font-black text-center outline-none w-full text-primary" />
-                            </div>
-                          </div>
-
-                          {/* Função */}
-                          <div className="relative">
-                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest block mb-1 ml-1 md:hidden">Função / Atividade</span>
-                            <div className="relative">
-                              <Briefcase size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#10b981]" />
-                              <input type="text" value={linha.funcao} placeholder="Ex: Monitoria Geral..."
-                                onChange={e => atualizarLinha(linha.id, 'funcao', e.target.value)}
-                                className="w-full bg-black/40 border border-white/5 rounded-2xl py-3.5 pl-11 pr-5 text-xs font-bold outline-none placeholder:opacity-20 focus:border-primary/30 transition-all uppercase text-white" />
-                            </div>
-                          </div>
-
-                          {/* Local / Posto */}
-                          <div className="relative">
-                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest block mb-1 ml-1 md:hidden">Local de Trabalho</span>
-                            <div className="relative">
-                              <MapPin size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#fbbf24] pointer-events-none" />
-                              <SeletorLocalPosto 
-                                value={linha.posto}
-                                onChange={v => atualizarLinha(linha.id, 'posto', v)}
-                                className="w-full bg-[#1a1a1a] border border-white/5 rounded-2xl py-3.5 pl-11 pr-8 text-xs font-bold outline-none focus:border-primary/30 transition-all uppercase text-white appearance-none cursor-pointer"
-                              />
-                              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/30 text-[9px]">
-                                ▼
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Botões de Ação */}
-                          <div className="flex justify-center md:justify-end gap-2 pt-4 md:pt-0 border-t border-white/5 md:border-t-0">
-                            <button onClick={() => toggleAlmoco(linha.id)} 
-                              title="Marcar como Almoço / Pausa"
-                              className={cn("p-3 rounded-xl transition-all",
-                                ehAlmoco ? "text-amber-500 bg-amber-500/10 shadow-lg" : "text-white/10 hover:text-amber-500 hover:bg-amber-500/5")}>
-                              <Coffee size={20} />
-                            </button>
-                            <button onClick={() => setLinhas(prev => prev.filter(p => p.id !== linha.id))} 
-                              title="Remover Horário"
-                              className="p-3 text-white/10 hover:text-red-500 hover:bg-red-500/5 rounded-xl transition-all">
-                              <Trash2 size={20} />
-                            </button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                  
-                  <div className="mt-8 flex justify-center">
-                    <button onClick={() => setLinhas(prev => [...prev, { id: `l-${Date.now()}`, horarioInicio: '00:00', horarioFim: '00:00', posto: '', funcao: 'Monitoria Geral', tipo: 'servico' }])}
-                      className="px-8 py-4 bg-white/5 border border-white/10 rounded-[2rem] text-xs font-black uppercase tracking-[0.2em] hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all flex items-center gap-3 group shadow-xl">
-                      <Plus size={20} className="group-hover:rotate-90 transition-transform" /> Adicionar Horário na Escala
-                    </button>
-                  </div>
-                </div>
-                </div>
-              </div>
-            )}
-          </main>
+        {/* Dia Selector */}
+        <div className="flex bg-[#0d0d0d] p-1 rounded-2xl border border-white/5 gap-1 w-fit">
+          {DIAS_SEMANA.map(dia => (
+            <button
+              key={dia}
+              onClick={() => setDiaSelecionado(dia)}
+              className={cn(
+                "px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all",
+                diaSelecionado === dia
+                  ? "bg-primary text-black font-bold shadow-md"
+                  : "text-white/45 hover:bg-white/5 hover:text-white"
+              )}
+            >
+              {dia}
+            </button>
+          ))}
         </div>
+
+        {/* Tabela de Grid de Cards */}
+        <main className="bg-surface-container-lowest rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-white/5 bg-black/40">
+                  <th className="py-5 px-6 text-left text-[10px] font-black text-white/30 uppercase tracking-widest w-[220px]">
+                    Monitor
+                  </th>
+                  {periodosMonitoria.map(p => (
+                    <th key={p.id} className="py-4 px-3 text-center border-l border-white/5 min-w-[140px]">
+                      <div className="text-[10px] font-black text-primary uppercase tracking-wider">{p.nome}</div>
+                      <div className="text-[9px] font-black text-white/40 tracking-widest mt-1">
+                        {p.horarioInicio.slice(0, 5)} - {p.horarioFim.slice(0, 5)}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {monitores.length === 0 ? (
+                  <tr>
+                    <td colSpan={periodosMonitoria.length + 1} className="py-20 text-center opacity-30 italic text-sm">
+                      Nenhum monitor cadastrado no sistema.
+                    </td>
+                  </tr>
+                ) : (
+                  monitores.map(m => {
+                    const cor = mapaCorMonitor[m.nome] || '#3b82f6';
+                    return (
+                      <tr key={m.id} className="hover:bg-white/[0.01] transition-all">
+                        {/* Monitor Profile Cell */}
+                        <td className="py-4 px-6 flex items-center gap-3">
+                          <div 
+                            className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shrink-0 relative"
+                            style={{ backgroundColor: `${cor}20`, color: cor, border: `1px solid ${cor}30` }}
+                          >
+                            {m.nome.charAt(0)}
+                            <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-[#0d0d0d] flex items-center justify-center border border-white/10">
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cor }} />
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-black text-white truncate leading-tight">
+                              {m.nome}
+                            </h4>
+                            <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mt-0.5">
+                              {m.tipo} · {m.turno}
+                            </p>
+                          </div>
+                        </td>
+
+                        {/* Slots Columns */}
+                        {periodosMonitoria.map(p => {
+                          const slot = gradeMonitores.find(
+                            g => g.monitorNome === m.nome && 
+                                 g.diaSemana === diaSelecionado &&
+                                 g.horarioInicio.slice(0, 5) === p.horarioInicio.slice(0, 5)
+                          );
+
+                          const ehAlmoco = slot?.funcao === 'ALMOÇO' || slot?.posto === 'ALMOÇO' || slot?.posto === 'REFEITÓRIO';
+                          const blockColor = ehAlmoco ? '#fbbf24' : (slot?.corEtiqueta || cor);
+
+                          return (
+                            <td key={p.id} className="p-2 border-l border-white/5 text-center align-middle">
+                              {slot ? (
+                                <button
+                                  onClick={() => abrirAlocacao(m, p)}
+                                  className={cn(
+                                    "w-full text-left p-3 rounded-xl border transition-all flex flex-col justify-center min-h-[60px] group/card",
+                                    ehAlmoco 
+                                      ? "bg-amber-500/10 border-amber-500/20 hover:border-amber-400" 
+                                      : "bg-[#0d0d0d] border-white/5 hover:border-primary/50"
+                                  )}
+                                  style={{ borderLeft: `4px solid ${blockColor}` }}
+                                >
+                                  <div className="text-[10px] font-black text-white group-hover/card:text-primary transition-all truncate uppercase flex items-center gap-1">
+                                    {ehAlmoco ? <Coffee size={10} className="text-amber-500 shrink-0" /> : <MapPin size={10} className="text-primary shrink-0" />}
+                                    {slot.posto}
+                                  </div>
+                                  <div className="text-[8px] font-bold text-white/40 truncate uppercase mt-1">
+                                    {slot.funcao}
+                                  </div>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => abrirAlocacao(m, p)}
+                                  className="w-full min-h-[60px] border border-dashed border-white/5 hover:border-primary/20 hover:bg-primary/[0.01] rounded-xl flex items-center justify-center transition-all group/empty"
+                                >
+                                  <Plus size={14} className="text-white/10 group-hover/empty:text-primary/60 group-hover:rotate-90 transition-all" />
+                                </button>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </main>
       </div>
+
+      {/* MODAL DE ALOCAÇÃO / REATRIBUIÇÃO DE CARDS */}
+      <AnimatePresence>
+        {modalAlocacaoAberto && alocacaoEditando && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
+              onClick={() => setModalAlocacaoAberto(false)} className="absolute inset-0 bg-black/95 backdrop-blur-md" />
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} 
+              className="relative w-full max-w-lg bg-surface-container-lowest border border-white/10 rounded-[3rem] p-6 md:p-8 shadow-3xl overflow-hidden flex flex-col max-h-[90vh]">
+              
+              <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6 shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shrink-0"
+                    style={{ backgroundColor: `${alocacaoEditando.monitor.cor || '#3b82f6'}20`, color: alocacaoEditando.monitor.cor || '#3b82f6' }}>
+                    {alocacaoEditando.monitor.nome.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black italic uppercase tracking-tighter text-white">
+                      Alocar Turno: {alocacaoEditando.monitor.nome}
+                    </h3>
+                    <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-0.5">
+                      Horário: {alocacaoEditando.periodo.nome} ({alocacaoEditando.periodo.horarioInicio} - {alocacaoEditando.periodo.horarioFim})
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => setModalAlocacaoAberto(false)} 
+                  className="w-8 h-8 rounded-full bg-white/5 hover:bg-red-500/20 text-white/40 hover:text-red-500 flex items-center justify-center transition-all">
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="space-y-5 flex-1 overflow-y-auto pr-1">
+                {/* Tipo de Turno */}
+                <div className="flex gap-2 bg-black/40 p-1.5 rounded-xl border border-white/5 w-fit">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setAlocacaoEditando({
+                        ...alocacaoEditando,
+                        tipo: 'servico',
+                        posto: 'TÉRREO',
+                        funcao: 'Monitoria Geral'
+                      });
+                    }}
+                    className={cn("px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all",
+                      alocacaoEditando.tipo === 'servico' ? "bg-primary text-black" : "text-white/40 hover:bg-white/5"
+                    )}
+                  >
+                    Serviço Ativo
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setAlocacaoEditando({
+                        ...alocacaoEditando,
+                        tipo: 'almoco',
+                        posto: 'ALMOÇO',
+                        funcao: 'ALMOÇO'
+                      });
+                    }}
+                    className={cn("px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all",
+                      alocacaoEditando.tipo === 'almoco' ? "bg-amber-500/20 text-amber-500" : "text-white/40 hover:bg-white/5"
+                    )}
+                  >
+                    <Coffee size={10} /> Pausa / Almoço
+                  </button>
+                </div>
+
+                {/* Local selector */}
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-wider text-white/40 block ml-1">Local / Posto</label>
+                  <div className="relative">
+                    <MapPin size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" />
+                    <SeletorLocalPosto 
+                      value={alocacaoEditando.posto}
+                      onChange={val => setAlocacaoEditando({ ...alocacaoEditando, posto: val })}
+                      className="w-full bg-[#161616] border border-white/5 rounded-xl py-3 px-10 text-xs font-bold text-white outline-none focus:border-primary/45 appearance-none cursor-pointer uppercase"
+                    />
+                  </div>
+                </div>
+
+                {/* Função input */}
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-wider text-white/40 block ml-1">Função / Observação</label>
+                  <div className="relative">
+                    <Briefcase size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" />
+                    <input 
+                      type="text" 
+                      value={alocacaoEditando.funcao} 
+                      placeholder="Ex: Monitoria Geral, Apoio no Portão..."
+                      onChange={e => setAlocacaoEditando({ ...alocacaoEditando, funcao: e.target.value })}
+                      className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-10 text-xs font-bold text-white outline-none focus:border-primary/45 placeholder:opacity-20 uppercase" 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex gap-2 border-t border-white/5 pt-6 mt-6 shrink-0 justify-between">
+                <button 
+                  onClick={removerAlocacao}
+                  className="px-5 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl text-xs font-black uppercase text-red-400 transition-all flex items-center gap-1.5"
+                >
+                  <Trash2 size={14} /> Remover
+                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={salvarAlocacao}
+                    disabled={salvando}
+                    className="btn-primary px-8 py-3 flex items-center justify-center gap-2"
+                  >
+                    {salvando ? <RefreshCw className="animate-spin" size={14} /> : <Save size={14} />}
+                    {salvando ? "Salvando..." : "Salvar"}
+                  </button>
+                  <button onClick={() => setModalAlocacaoAberto(false)} className="px-5 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-black uppercase text-white transition-all">
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DE CONFIGURAÇÃO DE HORÁRIOS PADRÕES */}
+      <AnimatePresence>
+        {modalPeriodosAberto && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
+              onClick={() => setModalPeriodosAberto(false)} className="absolute inset-0 bg-black/95 backdrop-blur-md" />
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} 
+              className="relative w-full max-w-3xl bg-surface-container-lowest border border-white/10 rounded-[3rem] p-6 md:p-8 shadow-3xl overflow-hidden flex flex-col max-h-[90vh]">
+              
+              <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6 shrink-0">
+                <div className="flex items-center gap-3">
+                  <Settings size={22} className="text-[#a855f7]" />
+                  <div>
+                    <h3 className="text-xl font-black italic uppercase tracking-tighter text-white">
+                      Configurar Distribuição de Horários
+                    </h3>
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">
+                      Defina as colunas de horário padrão para a escala de monitoria
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => setModalPeriodosAberto(false)} 
+                  className="w-10 h-10 rounded-full bg-white/5 hover:bg-red-500/20 text-white/40 hover:text-red-500 flex items-center justify-center transition-all">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2 mb-6">
+                {periodosEditaveis.length === 0 ? (
+                  <div className="py-12 text-center text-white/30 italic text-sm border-2 border-dashed border-white/5 rounded-3xl">
+                    Sem horários salvos. Adicione novos horários abaixo.
+                  </div>
+                ) : (
+                  periodosEditaveis.map((p, idx) => (
+                    <div key={p.id || idx} className="flex flex-col sm:flex-row items-center gap-3 bg-white/5 p-4 rounded-2xl border border-white/5 group">
+                      <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center text-[10px] font-black text-white/30 shrink-0">
+                        {idx + 1}
+                      </div>
+
+                      {/* Horário inputs */}
+                      <div className="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-lg border border-white/5 shrink-0">
+                        <input type="time" value={p.horarioInicio} 
+                          onChange={e => {
+                            const novos = [...periodosEditaveis];
+                            novos[idx].horarioInicio = e.target.value;
+                            setPeriodosEditaveis(novos.sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio)));
+                          }} 
+                          className="bg-transparent text-xs font-black text-center text-white outline-none border-none w-14" />
+                        <span className="text-white/20">—</span>
+                        <input type="time" value={p.horarioFim} 
+                          onChange={e => {
+                            const novos = [...periodosEditaveis];
+                            novos[idx].horarioFim = e.target.value;
+                            setPeriodosEditaveis(novos);
+                          }} 
+                          className="bg-transparent text-xs font-black text-center text-white outline-none border-none w-14" />
+                      </div>
+
+                      {/* Nome do período */}
+                      <div className="flex-1 w-full">
+                        <input type="text" value={p.nome} placeholder="NOME DO PERÍODO/AULA" 
+                          onChange={e => {
+                            const novos = [...periodosEditaveis];
+                            novos[idx].nome = e.target.value;
+                            setPeriodosEditaveis(novos);
+                          }} 
+                          className="w-full bg-black/40 border border-white/5 rounded-lg py-1.5 px-3 text-xs font-bold text-primary outline-none focus:border-primary/30 uppercase text-white" />
+                      </div>
+
+                      {/* Tipo do período */}
+                      <div className="shrink-0 w-full sm:w-36">
+                        <select
+                          value={p.tipo || 'aula'}
+                          onChange={e => {
+                            const novos = [...periodosEditaveis];
+                            novos[idx].tipo = e.target.value as any;
+                            setPeriodosEditaveis(novos);
+                          }}
+                          className="w-full bg-[#121212] border border-white/5 rounded-lg py-1.5 px-2 text-xs font-semibold text-white outline-none cursor-pointer"
+                        >
+                          <option value="aula">Aula / Turno</option>
+                          <option value="intervalo">Intervalo / Recreio</option>
+                          <option value="almoco">Almoço</option>
+                        </select>
+                      </div>
+
+                      {/* Delete */}
+                      <button onClick={() => setPeriodosEditaveis(periodosEditaveis.filter((_, i) => i !== idx))} 
+                        className="p-2 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all self-end sm:self-auto">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))
+                )}
+
+                <button 
+                  onClick={() => setPeriodosEditaveis([...periodosEditaveis, {
+                    id: `novo-per-${Date.now()}`,
+                    horarioInicio: '08:00',
+                    horarioFim: '08:45',
+                    nome: 'NOVA AULA / TURNO',
+                    segmento: 'monitoria',
+                    tipo: 'aula'
+                  }])}
+                  className="w-full py-4 border-2 border-dashed border-white/5 rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black uppercase text-white/30 hover:text-primary hover:border-primary/30 transition-all"
+                >
+                  <Plus size={16} /> Adicionar Novo Período Modelo
+                </button>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex gap-2 border-t border-white/5 pt-6 shrink-0 justify-end">
+                <button 
+                  onClick={salvarPeriodosMonitoria} 
+                  disabled={salvando}
+                  className="btn-primary px-8 py-3 flex items-center gap-2 text-white"
+                  style={{ backgroundColor: '#a855f7' }}
+                >
+                  {salvando ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}
+                  {salvando ? "Salvando..." : "Salvar Distribuição"}
+                </button>
+                <button onClick={() => setModalPeriodosAberto(false)} className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-black uppercase text-white transition-all">
+                  Cancelar
+                </button>
+              </div>
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }
