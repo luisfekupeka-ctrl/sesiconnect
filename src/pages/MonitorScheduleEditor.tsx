@@ -58,7 +58,7 @@ export default function MonitorScheduleEditor() {
 
   // Lista local de períodos editáveis no modal
   const [periodosEditaveis, setPeriodosEditaveis] = useState<any[]>([]);
-  const [ordenacao, setOrdenacao] = useState<'nome' | 'local'>('nome');
+  const [ordenacao, setOrdenacao] = useState<'nome' | 'local'>('local');
 
   const CORES_MONITOR = useMemo(() => [
     '#3B82F6','#EF4444','#10B981','#F59E0B','#8B5CF6',

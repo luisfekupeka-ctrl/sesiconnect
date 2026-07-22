@@ -140,7 +140,7 @@ export default function Monitores() {
       .sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
   }, [gradeMonitores, diaFiltro]);
 
-  const [ordenacao, setOrdenacao] = useState<'nome' | 'local'>('nome');
+  const [ordenacao, setOrdenacao] = useState<'nome' | 'local'>('local');
 
   const SEQUENCIA_LOCAIS = useMemo(() => [
     'S1',
