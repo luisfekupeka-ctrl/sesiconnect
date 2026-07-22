@@ -151,6 +151,12 @@ export default function Monitores() {
       .sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
   }, [gradeMonitores, diaFiltro]);
 
+  // Períodos de monitoria
+  const periodosMonitoria = useMemo(() => {
+    const filtrados = (periodos || []).filter(p => p.segmento === 'monitoria');
+    return filtrados.length > 0 ? filtrados : PERIODOS_FALLBACK;
+  }, [periodos]);
+
   const [ordenacao, setOrdenacao] = useState<'nome' | 'local'>('local');
 
   const SEQUENCIA_LOCAIS = useMemo(() => [
@@ -184,20 +190,25 @@ export default function Monitores() {
       return filtrados.sort((a, b) => a.nome.localeCompare(b.nome));
     } else {
       return filtrados.sort((a, b) => {
-        const turnosA = escalaDoDia.filter(g => g.monitorNome === a.nome).sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
-        const turnosB = escalaDoDia.filter(g => g.monitorNome === b.nome).sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
-        
-        const postoA = turnosA[0]?.posto || '';
-        const postoB = turnosB[0]?.posto || '';
-        
-        const pesoA = obterPesoLocal(postoA);
-        const pesoB = obterPesoLocal(postoB);
-        
-        if (pesoA !== pesoB) return pesoA - pesoB;
+        for (const p of periodosMonitoria) {
+          const slotA = escalaDoDia.find(g => g.monitorNome === a.nome && g.horarioInicio.slice(0, 5) === p.horarioInicio.slice(0, 5));
+          const slotB = escalaDoDia.find(g => g.monitorNome === b.nome && g.horarioInicio.slice(0, 5) === p.horarioInicio.slice(0, 5));
+          
+          const pesoA = obterPesoLocal(slotA?.posto || '');
+          const pesoB = obterPesoLocal(slotB?.posto || '');
+          
+          if (pesoA !== pesoB) return pesoA - pesoB;
+        }
         return a.nome.localeCompare(b.nome);
       });
     }
-  }, [monitores, escalaDoDia, ordenacao, busca]);
+  }, [monitores, escalaDoDia, periodosMonitoria, ordenacao, busca]);
+
+  const setoresComAlocacao = useMemo(() => {
+    return MACRO_SETORES.filter(macro => {
+      return escalaDoDia.some(slot => obterMacroSetor(slot.posto) === macro);
+    });
+  }, [escalaDoDia]);
 
   const monitorAtivo = monitores.find(m => m.id === monitorSelecionadoId);
 
@@ -208,11 +219,6 @@ export default function Monitores() {
       .sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
   }, [monitorAtivo, diaFiltro, gradeMonitores]);
 
-  // Períodos de monitoria
-  const periodosMonitoria = useMemo(() => {
-    const filtrados = (periodos || []).filter(p => p.segmento === 'monitoria');
-    return filtrados.length > 0 ? filtrados : PERIODOS_FALLBACK;
-  }, [periodos]);
 
   const handleExportarGeral = () => {
     generateEscalaGeralPDF(escalaDoDia, diaFiltro, monitores);
@@ -420,7 +426,7 @@ export default function Monitores() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {MACRO_SETORES.map(macro => {
+                  {setoresComAlocacao.map(macro => {
                     return (
                       <tr key={macro} className="hover:bg-white/[0.01] transition-all">
                         {/* Sector Name */}

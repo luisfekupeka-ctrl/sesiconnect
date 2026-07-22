@@ -117,20 +117,19 @@ export default function MonitorScheduleEditor() {
       return lista.sort((a, b) => a.nome.localeCompare(b.nome));
     } else {
       return lista.sort((a, b) => {
-        const turnosA = gradeMonitores.filter(g => g.monitorNome === a.nome && g.diaSemana === diaSelecionado).sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
-        const turnosB = gradeMonitores.filter(g => g.monitorNome === b.nome && g.diaSemana === diaSelecionado).sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
-        
-        const postoA = turnosA[0]?.posto || '';
-        const postoB = turnosB[0]?.posto || '';
-        
-        const pesoA = obterPesoLocal(postoA);
-        const pesoB = obterPesoLocal(postoB);
-        
-        if (pesoA !== pesoB) return pesoA - pesoB;
+        for (const p of periodosMonitoria) {
+          const slotA = gradeMonitores.find(g => g.monitorNome === a.nome && g.diaSemana === diaSelecionado && g.horarioInicio.slice(0, 5) === p.horarioInicio.slice(0, 5));
+          const slotB = gradeMonitores.find(g => g.monitorNome === b.nome && g.diaSemana === diaSelecionado && g.horarioInicio.slice(0, 5) === p.horarioInicio.slice(0, 5));
+          
+          const pesoA = obterPesoLocal(slotA?.posto || '');
+          const pesoB = obterPesoLocal(slotB?.posto || '');
+          
+          if (pesoA !== pesoB) return pesoA - pesoB;
+        }
         return a.nome.localeCompare(b.nome);
       });
     }
-  }, [monitores, gradeMonitores, diaSelecionado, ordenacao]);
+  }, [monitores, gradeMonitores, diaSelecionado, periodosMonitoria, ordenacao]);
 
 
   useEffect(() => {
