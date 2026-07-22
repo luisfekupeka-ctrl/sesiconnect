@@ -197,11 +197,6 @@ export default function Monitores() {
           .filter(g => g.monitorNome === b.nome && g.posto && g.posto !== 'ALMOÇO' && g.posto !== 'REFEITÓRIO')
           .sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
 
-        const inicioA = turnosA[0]?.horarioInicio || '99:99';
-        const inicioB = turnosB[0]?.horarioInicio || '99:99';
-
-        if (inicioA !== inicioB) return inicioA.localeCompare(inicioB);
-
         const maxLen = Math.max(turnosA.length, turnosB.length);
         for (let i = 0; i < maxLen; i++) {
           const postoA = turnosA[i]?.posto || '';
