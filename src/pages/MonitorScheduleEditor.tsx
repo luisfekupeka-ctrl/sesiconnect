@@ -157,7 +157,7 @@ export default function MonitorScheduleEditor() {
       const count = (gradeMonitores || []).filter(
         g => g.diaSemana === diaSelecionado && g.horarioInicio.slice(0, 5) === p.horarioInicio.slice(0, 5)
       ).length;
-      if (count + 2 > max) max = count + 2;
+      if (count + 1 > max) max = count + 1;
     }
     return max;
   }, [gradeMonitores, diaSelecionado, periodosMonitoria, monitores]);
@@ -534,7 +534,7 @@ export default function MonitorScheduleEditor() {
                             );
                           }
 
-                          if (rowIndex === turnosPeriodo.length) {
+                          if (rowIndex >= turnosPeriodo.length) {
                             return (
                               <td key={p.id} className="p-2 border-l border-white/5 text-center align-middle">
                                 <button
