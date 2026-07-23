@@ -207,6 +207,12 @@ export default function MonitorScheduleEditor() {
 
     const { monitor, periodo, posto, funcao, corEtiqueta } = alocacaoEditando;
 
+    if (!monitor) {
+      setMensagem({ tipo: 'erro', texto: 'Selecione um monitor antes de salvar.' });
+      setSalvando(false);
+      return;
+    }
+
     try {
       // 1. Pegar todos os turnos atuais do monitor no dia selecionado
       const turnosAtuais = gradeMonitores
@@ -629,12 +635,12 @@ export default function MonitorScheduleEditor() {
               <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6 shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shrink-0"
-                    style={{ backgroundColor: `${alocacaoEditando.monitor.cor || '#3b82f6'}20`, color: alocacaoEditando.monitor.cor || '#3b82f6' }}>
-                    {alocacaoEditando.monitor.nome.charAt(0)}
+                    style={{ backgroundColor: `${alocacaoEditando.monitor?.cor || '#3b82f6'}20`, color: alocacaoEditando.monitor?.cor || '#3b82f6' }}>
+                    {alocacaoEditando.monitor ? alocacaoEditando.monitor.nome.charAt(0) : '+'}
                   </div>
                   <div>
                     <h3 className="text-lg font-black italic uppercase tracking-tighter text-white">
-                      Alocar Turno: {alocacaoEditando.monitor.nome}
+                      {alocacaoEditando.monitor ? `Alocar Turno: ${alocacaoEditando.monitor.nome}` : 'Novo Horário'}
                     </h3>
                     <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-0.5">
                       Horário: {alocacaoEditando.periodo.nome} ({alocacaoEditando.periodo.horarioInicio} - {alocacaoEditando.periodo.horarioFim})
@@ -648,6 +654,25 @@ export default function MonitorScheduleEditor() {
               </div>
 
               <div className="space-y-5 flex-1 overflow-y-auto pr-1">
+                {/* Seletor de monitor quando slot é novo */}
+                {!alocacaoEditando.monitor && (
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-wider text-white/40 block ml-1">Monitor</label>
+                    <select
+                      className="w-full bg-[#161616] border border-white/5 rounded-xl py-3 px-4 text-xs font-bold text-white outline-none focus:border-primary/45 uppercase cursor-pointer"
+                      value=""
+                      onChange={e => {
+                        const mon = (monitores || []).find(m => m.nome === e.target.value);
+                        if (mon) setAlocacaoEditando({ ...alocacaoEditando, monitor: mon, corEtiqueta: mapaCorMonitor[mon.nome] || mon.cor || '#3b82f6' });
+                      }}
+                    >
+                      <option value="" disabled>Selecione um monitor...</option>
+                      {monitoresOrdenados.map(m => (
+                        <option key={m.id} value={m.nome}>{m.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 {/* Tipo de Turno */}
                 <div className="flex gap-2 bg-black/40 p-1.5 rounded-xl border border-white/5 w-fit">
                   <button 
