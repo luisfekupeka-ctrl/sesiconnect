@@ -91,19 +91,17 @@ export default function MonitorScheduleEditor() {
   }, [monitores, gradeMonitores, CORES_MONITOR]);
 
   const SEQUENCIA_LOCAIS = useMemo(() => [
-    'TERREO',
-    '1 ANDAR',
-    '2 ANDAR',
-    '3 ANDAR',
     'S1',
     'S2',
-    'BIBLIOTECA',
-    'PATIO LATERAL',
     'GRAMADO',
-    'VOLANTE 1',
-    'VOLANTE 2',
+    'PATIO LATERAL',
+    'TERREO',
+    'BIBLIOTECA',
+    'ENFERMARIA',
+    '1 ANDAR',
+    '2 ANDAR',
     'MONITORIA',
-    'ENFERMARIA'
+    '3 ANDAR'
   ], []);
 
   const obterPesoLocal = (posto: string): number => {
@@ -124,7 +122,7 @@ export default function MonitorScheduleEditor() {
             if (g.monitorNome !== a.nome || g.diaSemana !== diaSelecionado) return false;
             const p = normalizarParaOrdenacao(g.posto || '');
             const f = normalizarParaOrdenacao(g.funcao || '');
-            return p && p !== 'ALMOCO' && p !== 'REFEITORIO' && f !== 'ALMOCO' && f !== 'REFEITORIO';
+            return p && p !== 'ALMOCO' && p !== 'REFEITORIO' && f !== 'ALMOCO' && f !== 'REFEITORIO' && !p.includes('ALMOC');
           })
           .sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
 
@@ -133,14 +131,9 @@ export default function MonitorScheduleEditor() {
             if (g.monitorNome !== b.nome || g.diaSemana !== diaSelecionado) return false;
             const p = normalizarParaOrdenacao(g.posto || '');
             const f = normalizarParaOrdenacao(g.funcao || '');
-            return p && p !== 'ALMOCO' && p !== 'REFEITORIO' && f !== 'ALMOCO' && f !== 'REFEITORIO';
+            return p && p !== 'ALMOCO' && p !== 'REFEITORIO' && f !== 'ALMOCO' && f !== 'REFEITORIO' && !p.includes('ALMOC');
           })
           .sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
-
-        const inicioA = turnosA[0]?.horarioInicio || '99:99';
-        const inicioB = turnosB[0]?.horarioInicio || '99:99';
-
-        if (inicioA !== inicioB) return inicioA.localeCompare(inicioB);
 
         const maxLen = Math.max(turnosA.length, turnosB.length);
         for (let i = 0; i < maxLen; i++) {
