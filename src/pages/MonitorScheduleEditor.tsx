@@ -479,21 +479,13 @@ export default function MonitorScheduleEditor() {
                     return (
                       <tr key={m.id} className="hover:bg-white/[0.01] transition-all">
                         {/* Monitor Profile Cell */}
-                        <td className="py-4 px-6 flex items-center gap-3 sticky left-0 bg-[#0a0a0a] z-10 border-r border-white/5 min-w-[220px]">
-                          <div 
-                            className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shrink-0 relative"
-                            style={{ backgroundColor: `${cor}20`, color: cor, border: `1px solid ${cor}30` }}
-                          >
-                            {m.nome.charAt(0)}
-                            <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-[#0d0d0d] flex items-center justify-center border border-white/10">
-                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cor }} />
-                            </span>
-                          </div>
+                        <td className="py-4 px-6 sticky left-0 bg-[#0a0a0a] z-10 border-r border-white/5 min-w-[200px]">
                           <div className="min-w-0">
-                            <h4 className="text-xs font-black text-white truncate leading-tight">
+                            <h4 className="text-xs font-black text-white truncate leading-tight uppercase flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cor }} />
                               {m.nome}
                             </h4>
-                            <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mt-0.5">
+                            <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mt-1 pl-4">
                               {m.tipo} · {m.turno}
                             </p>
                           </div>

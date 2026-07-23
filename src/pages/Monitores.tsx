@@ -367,14 +367,11 @@ export default function Monitores() {
                     {/* Monitor Card (Left side, click opens detailed list) */}
                     <div 
                       onClick={() => setMonitorSelecionadoId(monitor.id)}
-                      className="md:w-52 shrink-0 flex items-center gap-3 bg-black/30 p-2.5 rounded-lg border border-white/5 cursor-pointer hover:bg-white/[0.02] active:scale-[0.98] transition-all"
+                      className="md:w-52 shrink-0 flex items-center gap-2.5 bg-black/30 p-3 rounded-lg border border-white/5 cursor-pointer hover:bg-white/[0.02] active:scale-[0.98] transition-all"
                     >
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black shrink-0 relative"
-                        style={{ backgroundColor: `${cor}20`, color: cor, border: `1.5px solid ${cor}40` }}>
-                        {monitor.nome.charAt(0)}
-                      </div>
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cor }} />
                       <div className="min-w-0">
-                        <h4 className="text-xs font-black text-white truncate leading-tight italic hover:text-primary transition-all">
+                        <h4 className="text-xs font-black text-white truncate leading-tight uppercase hover:text-primary transition-all">
                           {monitor.nome}
                         </h4>
                         <p className="text-[8px] font-black uppercase tracking-widest mt-0.5" style={{ color: cor }}>
