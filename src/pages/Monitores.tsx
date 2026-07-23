@@ -208,6 +208,13 @@ export default function Monitores() {
           })
           .sort((x, y) => x.horarioInicio.localeCompare(y.horarioInicio));
 
+        // 1. Monitores sem horário preenchido ficam na parte de baixo
+        const inicioA = turnosA[0]?.horarioInicio || '99:99';
+        const inicioB = turnosB[0]?.horarioInicio || '99:99';
+
+        if (inicioA !== inicioB) return inicioA.localeCompare(inicioB);
+
+        // 2. Com horário preenchido, ordena estritamente pela sequência de locais
         const maxLen = Math.max(turnosA.length, turnosB.length);
         for (let i = 0; i < maxLen; i++) {
           const postoA = turnosA[i]?.posto || '';
