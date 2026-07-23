@@ -455,7 +455,7 @@ export default function MonitorScheduleEditor() {
               <thead>
                 <tr className="border-b border-white/5 bg-black/40">
                   <th className="py-5 px-6 text-left text-[10px] font-black text-white/30 uppercase tracking-widest w-[220px] sticky left-0 bg-[#0a0a0a] z-20 border-r border-white/5">
-                    {ordenacao === 'nome' ? 'Monitor' : '#'}
+                    Monitor
                   </th>
                   {periodosMonitoria.map(p => (
                     <th key={p.id} className="py-4 px-3 text-center border-l border-white/5 min-w-[150px]">
@@ -469,11 +469,28 @@ export default function MonitorScheduleEditor() {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {ordenacao === 'local' ? (
-                  Array.from({ length: maxLinhasPorLocal }).map((_, rowIndex) => (
-                    <tr key={rowIndex} className="hover:bg-white/[0.01] transition-all">
-                      <td className="py-4 px-6 text-[10px] font-black text-white/20 sticky left-0 bg-[#0a0a0a] z-10 border-r border-white/5 text-center min-w-[220px]">
-                        #{rowIndex + 1}
-                      </td>
+                  Array.from({ length: maxLinhasPorLocal }).map((_, rowIndex) => {
+                    const m = monitoresOrdenados[rowIndex];
+                    const cor = m ? (mapaCorMonitor[m.nome] || '#3b82f6') : '#3b82f6';
+                    return (
+                      <tr key={rowIndex} className="hover:bg-white/[0.01] transition-all">
+                        <td className="py-4 px-6 sticky left-0 bg-[#0a0a0a] z-10 border-r border-white/5 min-w-[200px]">
+                          {m ? (
+                            <div className="min-w-0">
+                              <h4 className="text-xs font-black text-white truncate leading-tight uppercase flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cor }} />
+                                {m.nome}
+                              </h4>
+                              <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mt-1 pl-4">
+                                {m.tipo} · {m.turno}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="text-[10px] font-black text-white/20 text-center">
+                              #{rowIndex + 1}
+                            </div>
+                          )}
+                        </td>
                       {periodosMonitoria.map(p => {
                         const turnosPeriodo = (gradeMonitores || [])
                           .filter(g => g.diaSemana === diaSelecionado && g.horarioInicio.slice(0, 5) === p.horarioInicio.slice(0, 5))
@@ -538,7 +555,8 @@ export default function MonitorScheduleEditor() {
                         );
                       })}
                     </tr>
-                  ))
+                  );
+                })
                 ) : monitoresOrdenados.length === 0 ? (
                   <tr>
                     <td colSpan={periodosMonitoria.length + 1} className="py-20 text-center opacity-30 italic text-sm">
