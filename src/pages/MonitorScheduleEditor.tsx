@@ -475,7 +475,7 @@ export default function MonitorScheduleEditor() {
                     <span className="hidden md:inline">Monitor</span>
                   </th>
                   {periodosMonitoria.map(p => (
-                    <th key={p.id} className="py-3 md:py-4 px-1.5 md:px-3 text-center border-l border-white/5 min-w-[110px] md:min-w-[150px]">
+                    <th key={p.id} className="py-3 md:py-4 px-1.5 md:px-3 text-center border-l border-white/5 min-w-[130px] md:min-w-[150px]">
                       <div className="text-[9px] md:text-[10px] font-black text-primary uppercase tracking-wider">{p.nome}</div>
                       <div className="text-[8px] md:text-[9px] font-black text-white/40 tracking-widest mt-0.5">
                         {p.horarioInicio.slice(0, 5)}
@@ -511,24 +511,24 @@ export default function MonitorScheduleEditor() {
                             const blockColor = ehAlmoco ? '#fbbf24' : (slot.corEtiqueta || mObj.cor || '#3b82f6');
 
                             return (
-                              <td key={p.id} className="p-1 md:p-2 border-l border-white/5 text-center align-middle">
+                              <td key={p.id} className="p-1.5 md:p-2 border-l border-white/5 text-center align-middle">
                                 <button
                                   onClick={() => abrirAlocacao(slot, p)}
-                                  className="w-full text-left p-2 md:p-3 rounded-md border transition-all flex flex-col justify-center min-h-[52px] md:min-h-[60px] group/card hover:brightness-125"
+                                  className="w-full text-left px-2 py-2.5 md:p-3 rounded-md border transition-all flex flex-col justify-center min-h-[64px] md:min-h-[60px] group/card hover:brightness-125"
                                   style={{ 
                                     backgroundColor: `${blockColor}22`,
                                     borderColor: `${blockColor}50`,
                                     borderLeft: `4px solid ${blockColor}`
                                   }}
                                 >
-                                  <div className="text-[9px] md:text-[10px] font-black text-white group-hover/card:text-white transition-all truncate uppercase flex items-center gap-0.5">
+                                  <div className="text-[9px] font-black text-white group-hover/card:text-white transition-all truncate uppercase flex items-center gap-0.5 leading-tight">
                                     {ehAlmoco ? <Coffee size={9} className="text-amber-400 shrink-0" /> : <MapPin size={9} className="shrink-0" style={{ color: blockColor }} />}
                                     <span className="truncate">{slot.posto}</span>
                                   </div>
-                                  <div className="text-[8px] font-bold text-white/90 truncate uppercase mt-0.5">
+                                  <div className="text-[9px] font-bold text-white/80 truncate uppercase mt-1 leading-tight">
                                     {slot.monitorNome.split(' ')[0]}
                                   </div>
-                                  <div className="text-[7px] md:text-[8px] font-bold text-white/40 truncate uppercase mt-0.5 hidden md:block">
+                                  <div className="text-[7px] font-bold text-white/40 truncate uppercase mt-0.5 hidden md:block">
                                     {slot.funcao}
                                   </div>
                                 </button>
@@ -596,18 +596,18 @@ export default function MonitorScheduleEditor() {
                           const blockColor = ehAlmoco ? '#fbbf24' : (slot?.corEtiqueta || cor);
 
                           return (
-                            <td key={p.id} className="p-1 md:p-2 border-l border-white/5 text-center align-middle">
+                              <td key={p.id} className="p-1.5 md:p-2 border-l border-white/5 text-center align-middle">
                               {slot ? (
                                 <button
                                   onClick={() => abrirAlocacao(m, p)}
-                                  className="w-full text-left p-2 md:p-3 rounded-md border transition-all flex flex-col justify-center min-h-[52px] md:min-h-[60px] group/card hover:brightness-125"
+                                  className="w-full text-left px-2 py-2.5 md:p-3 rounded-md border transition-all flex flex-col justify-center min-h-[64px] md:min-h-[60px] group/card hover:brightness-125"
                                   style={{ 
                                     backgroundColor: `${blockColor}22`,
                                     borderColor: `${blockColor}50`,
                                     borderLeft: `4px solid ${blockColor}`
                                   }}
                                 >
-                                  <div className="text-[9px] md:text-[10px] font-black text-white group-hover/card:text-white transition-all truncate uppercase flex items-center gap-0.5">
+                                  <div className="text-[9px] font-black text-white group-hover/card:text-white transition-all truncate uppercase flex items-center gap-0.5 leading-tight">
                                     {ehAlmoco ? <Coffee size={9} className="text-amber-400 shrink-0" /> : <MapPin size={9} className="shrink-0" style={{ color: blockColor }} />}
                                     <span className="truncate">{slot.posto}</span>
                                   </div>
@@ -618,7 +618,7 @@ export default function MonitorScheduleEditor() {
                               ) : (
                                 <button
                                   onClick={() => abrirAlocacao(m, p)}
-                                  className="w-full h-6 md:h-7 border border-dashed border-white/5 hover:border-primary/40 hover:bg-primary/[0.02] rounded-md flex items-center justify-center transition-all group/empty opacity-20 hover:opacity-100"
+                                  className="w-full h-8 md:h-7 border border-dashed border-white/5 hover:border-primary/40 hover:bg-primary/[0.02] rounded-md flex items-center justify-center transition-all group/empty opacity-20 hover:opacity-100"
                                 >
                                   <Plus size={10} className="text-white/15 group-hover/empty:text-primary/60 group-hover:rotate-90 transition-all" />
                                 </button>
