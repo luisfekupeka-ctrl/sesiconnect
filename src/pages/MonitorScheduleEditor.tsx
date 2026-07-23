@@ -470,26 +470,10 @@ export default function MonitorScheduleEditor() {
               <tbody className="divide-y divide-white/5">
                 {ordenacao === 'local' ? (
                   Array.from({ length: maxLinhasPorLocal }).map((_, rowIndex) => {
-                    const m = monitoresOrdenados[rowIndex];
-                    const cor = m ? (mapaCorMonitor[m.nome] || '#3b82f6') : '#3b82f6';
                     return (
                       <tr key={rowIndex} className="hover:bg-white/[0.01] transition-all">
-                        <td className="py-4 px-6 sticky left-0 bg-[#0a0a0a] z-10 border-r border-white/5 min-w-[200px]">
-                          {m ? (
-                            <div className="min-w-0">
-                              <h4 className="text-xs font-black text-white truncate leading-tight uppercase flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cor }} />
-                                {m.nome}
-                              </h4>
-                              <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mt-1 pl-4">
-                                {m.tipo} · {m.turno}
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="text-[10px] font-black text-white/20 text-center">
-                              #{rowIndex + 1}
-                            </div>
-                          )}
+                        <td className="py-4 px-6 text-[10px] font-black text-white/20 sticky left-0 bg-[#0a0a0a] z-10 border-r border-white/5 text-center min-w-[220px]">
+                          #{rowIndex + 1}
                         </td>
                         {periodosMonitoria.map(p => {
                           const turnosPeriodo = (gradeMonitores || [])
