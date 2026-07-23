@@ -526,9 +526,10 @@ export default function MonitorScheduleEditor() {
                               ) : (
                                 <button
                                   onClick={() => abrirAlocacao(m, p)}
-                                  className="w-full min-h-[60px] border border-dashed border-white/10 hover:border-primary/30 hover:bg-primary/[0.02] rounded-md flex items-center justify-center transition-all group/empty"
+                                  className="w-full h-7 border border-dashed border-white/5 hover:border-primary/40 hover:bg-primary/[0.05] rounded-md flex items-center justify-center transition-all group/empty opacity-20 hover:opacity-100"
+                                  title="Adicionar Horário"
                                 >
-                                  <Plus size={14} className="text-white/15 group-hover/empty:text-primary/60 group-hover:rotate-90 transition-all" />
+                                  <Plus size={11} className="text-white/40 group-hover/empty:text-primary group-hover:rotate-90 transition-all" />
                                 </button>
                               )}
                             </td>
