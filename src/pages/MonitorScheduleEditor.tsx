@@ -454,7 +454,7 @@ export default function MonitorScheduleEditor() {
               <thead>
                 <tr className="border-b border-white/5 bg-black/40">
                   <th className="py-5 px-6 text-left text-[10px] font-black text-white/30 uppercase tracking-widest w-[220px] sticky left-0 bg-[#0a0a0a] z-20 border-r border-white/5">
-                    {ordenacao === 'nome' ? 'Monitor' : '#'}
+                    Monitor
                   </th>
                   {periodosMonitoria.map(p => (
                     <th key={p.id} className="py-4 px-3 text-center border-l border-white/5 min-w-[150px]">
@@ -467,83 +467,13 @@ export default function MonitorScheduleEditor() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {ordenacao === 'local' ?
-                  Array.from({ length: maxLinhasPorLocal }).map((_, rowIndex) => (
-                    <tr key={rowIndex} className="hover:bg-white/[0.01] transition-all">
-                      <td className="py-4 px-6 text-[10px] font-black text-white/20 sticky left-0 bg-[#0a0a0a] z-10 border-r border-white/5 text-center min-w-[220px]">
-                        #{rowIndex + 1}
-                      </td>
-                      {periodosMonitoria.map(p => {
-                        const turnosPeriodo = (gradeMonitores || [])
-                          .filter(g => g.diaSemana === diaSelecionado && g.horarioInicio.slice(0, 5) === p.horarioInicio.slice(0, 5))
-                          .sort((a, b) => {
-                            const pesoA = obterPesoLocal(a.posto);
-                            const pesoB = obterPesoLocal(b.posto);
-                            if (pesoA !== pesoB) return pesoA - pesoB;
-                            return a.monitorNome.localeCompare(b.monitorNome);
-                          });
-
-                        const slot = turnosPeriodo[rowIndex];
-
-                        if (slot) {
-                          const mObj = (monitores || []).find(m => m.nome === slot.monitorNome) || { nome: slot.monitorNome, cor: slot.corEtiqueta || '#3b82f6' };
-                          const ehAlmoco = slot.funcao === 'ALMOÇO' || slot.posto === 'ALMOÇO' || slot.posto === 'REFEITÓRIO';
-                          const blockColor = ehAlmoco ? '#fbbf24' : (slot.corEtiqueta || mObj.cor || '#3b82f6');
-
-                          return (
-                            <td key={p.id} className="p-2 border-l border-white/5 text-center align-middle">
-                              <button
-                                onClick={() => abrirAlocacao(slot, p)}
-                                className="w-full text-left p-3 rounded-md border transition-all flex flex-col justify-center min-h-[60px] group/card hover:brightness-125"
-                                style={{ 
-                                  backgroundColor: `${blockColor}22`,
-                                  borderColor: `${blockColor}50`,
-                                  borderLeft: `5px solid ${blockColor}`
-                                }}
-                              >
-                                <div className="text-[10px] font-black text-white group-hover/card:text-white transition-all truncate uppercase flex items-center gap-1">
-                                  {ehAlmoco ? <Coffee size={10} className="text-amber-400 shrink-0" /> : <MapPin size={10} className="shrink-0" style={{ color: blockColor }} />}
-                                  {slot.posto}
-                                </div>
-                                <div className="text-[9px] font-bold text-white/90 truncate uppercase mt-0.5">
-                                  {slot.monitorNome}
-                                </div>
-                                <div className="text-[8px] font-bold text-white/40 truncate uppercase mt-0.5">
-                                  {slot.funcao}
-                                </div>
-                              </button>
-                            </td>
-                          );
-                        }
-
-                        if (rowIndex === turnosPeriodo.length) {
-                          return (
-                            <td key={p.id} className="p-2 border-l border-white/5 text-center align-middle">
-                              <button
-                                onClick={() => abrirAlocacao(null, p)}
-                                className="w-full min-h-[60px] border border-dashed border-white/10 hover:border-primary/30 hover:bg-primary/[0.02] rounded-md flex items-center justify-center transition-all group/empty"
-                              >
-                                <Plus size={14} className="text-white/15 group-hover/empty:text-primary/60 group-hover:rotate-90 transition-all" />
-                              </button>
-                            </td>
-                          );
-                        }
-
-                        return (
-                          <td key={p.id} className="p-2 border-l border-white/5 text-center align-middle">
-                            <div className="min-h-[60px]" />
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))
-                : monitoresOrdenados.length === 0 ?
+                {monitoresOrdenados.length === 0 ? (
                   <tr>
                     <td colSpan={periodosMonitoria.length + 1} className="py-20 text-center opacity-30 italic text-sm">
                       Nenhum monitor cadastrado no sistema.
                     </td>
                   </tr>
-                :
+                ) : (
                   monitoresOrdenados.map(m => {
                     const cor = mapaCorMonitor[m.nome] || '#3b82f6';
                     return (
@@ -614,7 +544,7 @@ export default function MonitorScheduleEditor() {
                       </tr>
                     );
                   })
-                }
+                )}
               </tbody>
             </table>
           </div>
