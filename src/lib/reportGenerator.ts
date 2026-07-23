@@ -635,7 +635,29 @@ export const generateEscalaGeralPDF = async (
     
     currentY += 14;
 
-    const tableData = escalaDoDia.map(slot => [
+    const SEQUENCIA_LOCAIS = [
+      'S1', 'S2', 'GRAMADO', 'PATIO LATERAL', 'TERREO',
+      'BIBLIOTECA', 'ENFERMARIA', '1 ANDAR', '2 ANDAR', 'MONITORIA', '3 ANDAR'
+    ];
+
+    const normalizar = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/º/g, "").replace(/ª/g, "").trim();
+
+    const obterPesoLocal = (posto: string): number => {
+      if (!posto) return 999;
+      const p = normalizar(posto);
+      const idx = SEQUENCIA_LOCAIS.findIndex(loc => p.includes(loc) || loc.includes(p));
+      return idx === -1 ? 900 : idx;
+    };
+
+    const escalaOrdenada = [...escalaDoDia].sort((a, b) => {
+      if (a.horarioInicio !== b.horarioInicio) return a.horarioInicio.localeCompare(b.horarioInicio);
+      const pesoA = obterPesoLocal(a.posto);
+      const pesoB = obterPesoLocal(b.posto);
+      if (pesoA !== pesoB) return pesoA - pesoB;
+      return a.monitorNome.localeCompare(b.monitorNome);
+    });
+
+    const tableData = escalaOrdenada.map(slot => [
       `${slot.horarioInicio} - ${slot.horarioFim}`,
       slot.monitorNome,
       slot.posto,
