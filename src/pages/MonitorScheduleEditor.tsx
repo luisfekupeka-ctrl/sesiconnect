@@ -655,24 +655,41 @@ export default function MonitorScheduleEditor() {
 
               <div className="space-y-5 flex-1 overflow-y-auto pr-1">
                 {/* Seletor de monitor quando slot é novo */}
-                {!alocacaoEditando.monitor && (
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black uppercase tracking-wider text-white/40 block ml-1">Monitor</label>
-                    <select
-                      className="w-full bg-[#161616] border border-white/5 rounded-xl py-3 px-4 text-xs font-bold text-white outline-none focus:border-primary/45 uppercase cursor-pointer"
-                      value=""
-                      onChange={e => {
-                        const mon = (monitores || []).find(m => m.nome === e.target.value);
-                        if (mon) setAlocacaoEditando({ ...alocacaoEditando, monitor: mon, corEtiqueta: mapaCorMonitor[mon.nome] || mon.cor || '#3b82f6' });
-                      }}
-                    >
-                      <option value="" disabled>Selecione um monitor...</option>
-                      {monitoresOrdenados.map(m => (
-                        <option key={m.id} value={m.nome}>{m.nome}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                {!alocacaoEditando.monitor && (() => {
+                  const monitoresJaAlocados = new Set(
+                    (gradeMonitores || [])
+                      .filter(g =>
+                        g.diaSemana === diaSelecionado &&
+                        g.horarioInicio.slice(0, 5) === alocacaoEditando.periodo.horarioInicio.slice(0, 5)
+                      )
+                      .map(g => g.monitorNome)
+                  );
+                  const monitoresDisponiveis = monitoresOrdenados.filter(m => !monitoresJaAlocados.has(m.nome));
+                  return (
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-black uppercase tracking-wider text-white/40 block ml-1">
+                        Monitor disponível
+                        <span className="ml-2 text-primary/70">({monitoresDisponiveis.length} sem escala neste horário)</span>
+                      </label>
+                      <select
+                        className="w-full bg-[#161616] border border-white/5 rounded-xl py-3 px-4 text-xs font-bold text-white outline-none focus:border-primary/45 uppercase cursor-pointer"
+                        value=""
+                        onChange={e => {
+                          const mon = (monitores || []).find(m => m.nome === e.target.value);
+                          if (mon) setAlocacaoEditando({ ...alocacaoEditando, monitor: mon, corEtiqueta: mapaCorMonitor[mon.nome] || mon.cor || '#3b82f6' });
+                        }}
+                      >
+                        <option value="" disabled>Selecione um monitor...</option>
+                        {monitoresDisponiveis.map(m => (
+                          <option key={m.id} value={m.nome}>{m.nome}</option>
+                        ))}
+                        {monitoresDisponiveis.length === 0 && (
+                          <option value="" disabled>Todos os monitores já estão alocados neste horário</option>
+                        )}
+                      </select>
+                    </div>
+                  );
+                })()}
                 {/* Tipo de Turno */}
                 <div className="flex gap-2 bg-black/40 p-1.5 rounded-xl border border-white/5 w-fit">
                   <button 
