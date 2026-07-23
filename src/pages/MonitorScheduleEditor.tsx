@@ -390,84 +390,96 @@ export default function MonitorScheduleEditor() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-4 md:p-8 font-sans selection:bg-primary/30">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-[#0a0a0a] text-white p-3 md:p-8 font-sans selection:bg-primary/30">
+      <div className="max-w-7xl mx-auto space-y-5 md:space-y-8">
         
         {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
           <div>
-            <button onClick={() => navigate('/admin')} className="flex items-center gap-2 text-on-surface-variant hover:text-white transition-all text-xs font-black uppercase tracking-widest mb-4 group">
+            <button onClick={() => navigate('/admin')} className="flex items-center gap-2 text-on-surface-variant hover:text-white transition-all text-xs font-black uppercase tracking-widest mb-3 group">
               <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Voltar ao Painel ADM
             </button>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#a855f7]/10 text-[#a855f7] rounded-full mb-3 border border-[#a855f7]/20">
-              <Calendar size={14} /><span className="text-[10px] font-black uppercase tracking-[0.2em]">Montar Escala Diária</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#a855f7]/10 text-[#a855f7] rounded-full mb-2 border border-[#a855f7]/20">
+              <Calendar size={12} /><span className="text-[10px] font-black uppercase tracking-[0.2em]">Montar Escala Diária</span>
             </div>
-            <h1 className="text-5xl font-black tracking-tighter italic">Grade <span className="text-primary">de Escalas</span></h1>
-            <p className="text-on-surface-variant font-medium mt-2 text-sm opacity-60">Planeje e realoque os postos dos monitores clicando nos cartões de horário.</p>
+            <h1 className="text-3xl md:text-5xl font-black tracking-tighter italic">Grade <span className="text-primary">de Escalas</span></h1>
+            <p className="text-on-surface-variant font-medium mt-1 text-xs md:text-sm opacity-60 hidden md:block">Planeje e realoque os postos dos monitores clicando nos cartões de horário.</p>
           </div>
           
-          <div className="flex flex-wrap gap-3">
+          {/* Action buttons — colapsados no mobile */}
+          <div className="flex flex-wrap gap-2">
             <button 
               onClick={() => setOrdenacao(ordenacao === 'nome' ? 'local' : 'nome')} 
-              className="btn-secondary flex items-center gap-2 text-xs uppercase tracking-wider px-5 py-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10"
+              className="btn-secondary flex items-center gap-2 text-[10px] uppercase tracking-wider px-3 py-2.5 md:px-5 md:py-3 rounded-xl md:rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10"
             >
-              <span>Filtro: {ordenacao === 'nome' ? 'Por Nome 👤' : 'Por Local 📍'}</span>
+              <span className="hidden sm:inline">Filtro: </span>{ordenacao === 'nome' ? 'Por Nome 👤' : 'Por Local 📍'}
             </button>
             {mensagem && (
               <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} 
-                className={cn("px-4 py-2.5 rounded-xl flex items-center gap-2 text-xs font-black uppercase", 
+                className={cn("px-3 py-2 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase", 
                   mensagem.tipo === 'sucesso' ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" : "bg-red-500/10 text-red-500 border border-red-500/20")}>
-                {mensagem.tipo === 'sucesso' ? <Check size={16} /> : <X size={16} />}
+                {mensagem.tipo === 'sucesso' ? <Check size={14} /> : <X size={14} />}
                 {mensagem.texto}
               </motion.div>
             )}
-            <button onClick={() => setModalPeriodosAberto(true)} className="btn-secondary flex items-center gap-2 text-xs uppercase tracking-wider px-5 py-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10">
-              <Settings size={16} className="text-[#a855f7]" />
-              Distribuir Horários Padrões
+            <button onClick={() => setModalPeriodosAberto(true)} className="btn-secondary flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-3 py-2.5 md:px-5 md:py-3 rounded-xl md:rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10">
+              <Settings size={13} className="text-[#a855f7]" />
+              <span className="hidden sm:inline">Distribuir </span>Horários
             </button>
-            <button onClick={replicarDiaSemana} disabled={salvando} className="btn-secondary flex items-center gap-2 text-xs uppercase tracking-wider px-5 py-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10">
-              <Copy size={16} className="text-[#fbbf24]" />
-              Replicar para Semana
+            <button onClick={replicarDiaSemana} disabled={salvando} className="btn-secondary flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-3 py-2.5 md:px-5 md:py-3 rounded-xl md:rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10">
+              <Copy size={13} className="text-[#fbbf24]" />
+              <span className="hidden sm:inline">Replicar para </span>Semana
             </button>
-            <button onClick={limparEscalaDia} disabled={salvando} className="btn-secondary flex items-center gap-2 text-xs uppercase tracking-wider px-5 py-3 rounded-2xl bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-400">
-              <Trash2 size={16} />
-              Limpar Dia
+            <button onClick={limparEscalaDia} disabled={salvando} className="btn-secondary flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-3 py-2.5 md:px-5 md:py-3 rounded-xl md:rounded-2xl bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-400">
+              <Trash2 size={13} />
+              <span className="hidden sm:inline">Limpar </span>Dia
             </button>
           </div>
         </header>
 
-        {/* Dia Selector */}
-        <div className="flex bg-[#0d0d0d] p-1 rounded-2xl border border-white/5 gap-1 w-fit">
-          {DIAS_SEMANA.map(dia => (
-            <button
-              key={dia}
-              onClick={() => setDiaSelecionado(dia)}
-              className={cn(
-                "px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all",
-                diaSelecionado === dia
-                  ? "bg-primary text-black font-bold shadow-md"
-                  : "text-white/45 hover:bg-white/5 hover:text-white"
-              )}
-            >
-              {dia}
-            </button>
-          ))}
+        {/* Dia Selector — scrollável no mobile */}
+        <div className="overflow-x-auto custom-scrollbar -mx-3 px-3 md:mx-0 md:px-0">
+          <div className="flex bg-[#0d0d0d] p-1 rounded-2xl border border-white/5 gap-1 w-fit min-w-full md:min-w-0">
+            {DIAS_SEMANA.map(dia => (
+              <button
+                key={dia}
+                onClick={() => setDiaSelecionado(dia)}
+                className={cn(
+                  "flex-1 md:flex-initial px-3 md:px-5 py-2.5 rounded-xl font-black text-[9px] md:text-[10px] uppercase tracking-wider transition-all whitespace-nowrap",
+                  diaSelecionado === dia
+                    ? "bg-primary text-black font-bold shadow-md"
+                    : "text-white/45 hover:bg-white/5 hover:text-white"
+                )}
+              >
+                <span className="hidden sm:inline">{dia}</span>
+                <span className="sm:hidden">{dia.slice(0, 3)}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Tabela de Grid de Cards */}
         <main className="bg-surface-container-lowest rounded-2xl border border-white/5 overflow-hidden shadow-2xl">
+          {/* Dica de scroll mobile */}
+          <div className="flex items-center gap-2 px-4 py-2 bg-white/[0.02] border-b border-white/5 md:hidden">
+            <Info size={11} className="text-white/25 shrink-0" />
+            <span className="text-[9px] font-bold text-white/25 uppercase tracking-widest">Deslize para ver os horários</span>
+          </div>
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b border-white/5 bg-black/40">
-                  <th className="py-5 px-6 text-left text-[10px] font-black text-white/30 uppercase tracking-widest w-[220px] sticky left-0 bg-[#0a0a0a] z-20 border-r border-white/5">
-                    Monitor
+                  {/* Coluna sticky: 100px mobile / 220px desktop */}
+                  <th className="py-3 md:py-5 px-2 md:px-6 text-left text-[9px] md:text-[10px] font-black text-white/30 uppercase tracking-widest w-[100px] md:w-[220px] sticky left-0 bg-[#0a0a0a] z-20 border-r border-white/5">
+                    <span className="md:hidden">Monitor</span>
+                    <span className="hidden md:inline">Monitor</span>
                   </th>
                   {periodosMonitoria.map(p => (
-                    <th key={p.id} className="py-4 px-3 text-center border-l border-white/5 min-w-[150px]">
-                      <div className="text-[10px] font-black text-primary uppercase tracking-wider">{p.nome}</div>
-                      <div className="text-[9px] font-black text-white/40 tracking-widest mt-1">
-                        {p.horarioInicio.slice(0, 5)} - {p.horarioFim.slice(0, 5)}
+                    <th key={p.id} className="py-3 md:py-4 px-1.5 md:px-3 text-center border-l border-white/5 min-w-[110px] md:min-w-[150px]">
+                      <div className="text-[9px] md:text-[10px] font-black text-primary uppercase tracking-wider">{p.nome}</div>
+                      <div className="text-[8px] md:text-[9px] font-black text-white/40 tracking-widest mt-0.5">
+                        {p.horarioInicio.slice(0, 5)}
+                        <span className="hidden md:inline"> - {p.horarioFim.slice(0, 5)}</span>
                       </div>
                     </th>
                   ))}
@@ -478,7 +490,7 @@ export default function MonitorScheduleEditor() {
                   Array.from({ length: maxLinhasPorLocal }).map((_, rowIndex) => {
                     return (
                       <tr key={rowIndex} className="hover:bg-white/[0.01] transition-all">
-                        <td className="py-4 px-6 text-[10px] font-black text-white/20 sticky left-0 bg-[#0a0a0a] z-10 border-r border-white/5 text-center min-w-[220px]">
+                        <td className="py-3 md:py-4 px-1 md:px-6 text-[9px] md:text-[10px] font-black text-white/20 sticky left-0 bg-[#0a0a0a] z-10 border-r border-white/5 text-center min-w-[100px] md:min-w-[220px]">
                           #{rowIndex + 1}
                         </td>
                         {periodosMonitoria.map(p => {
@@ -499,24 +511,24 @@ export default function MonitorScheduleEditor() {
                             const blockColor = ehAlmoco ? '#fbbf24' : (slot.corEtiqueta || mObj.cor || '#3b82f6');
 
                             return (
-                              <td key={p.id} className="p-2 border-l border-white/5 text-center align-middle">
+                              <td key={p.id} className="p-1 md:p-2 border-l border-white/5 text-center align-middle">
                                 <button
                                   onClick={() => abrirAlocacao(slot, p)}
-                                  className="w-full text-left p-3 rounded-md border transition-all flex flex-col justify-center min-h-[60px] group/card hover:brightness-125"
+                                  className="w-full text-left p-2 md:p-3 rounded-md border transition-all flex flex-col justify-center min-h-[52px] md:min-h-[60px] group/card hover:brightness-125"
                                   style={{ 
                                     backgroundColor: `${blockColor}22`,
                                     borderColor: `${blockColor}50`,
-                                    borderLeft: `5px solid ${blockColor}`
+                                    borderLeft: `4px solid ${blockColor}`
                                   }}
                                 >
-                                  <div className="text-[10px] font-black text-white group-hover/card:text-white transition-all truncate uppercase flex items-center gap-1">
-                                    {ehAlmoco ? <Coffee size={10} className="text-amber-400 shrink-0" /> : <MapPin size={10} className="shrink-0" style={{ color: blockColor }} />}
-                                    {slot.posto}
+                                  <div className="text-[9px] md:text-[10px] font-black text-white group-hover/card:text-white transition-all truncate uppercase flex items-center gap-0.5">
+                                    {ehAlmoco ? <Coffee size={9} className="text-amber-400 shrink-0" /> : <MapPin size={9} className="shrink-0" style={{ color: blockColor }} />}
+                                    <span className="truncate">{slot.posto}</span>
                                   </div>
-                                  <div className="text-[9px] font-bold text-white/90 truncate uppercase mt-0.5">
-                                    {slot.monitorNome}
+                                  <div className="text-[8px] font-bold text-white/90 truncate uppercase mt-0.5">
+                                    {slot.monitorNome.split(' ')[0]}
                                   </div>
-                                  <div className="text-[8px] font-bold text-white/40 truncate uppercase mt-0.5">
+                                  <div className="text-[7px] md:text-[8px] font-bold text-white/40 truncate uppercase mt-0.5 hidden md:block">
                                     {slot.funcao}
                                   </div>
                                 </button>
@@ -526,13 +538,13 @@ export default function MonitorScheduleEditor() {
 
                           if (rowIndex >= turnosPeriodo.length) {
                             return (
-                              <td key={p.id} className="p-2 border-l border-white/5 text-center align-middle">
+                              <td key={p.id} className="p-1 md:p-2 border-l border-white/5 text-center align-middle">
                                 <button
                                   onClick={() => abrirAlocacao(null, p)}
                                   className="w-full h-7 border border-dashed border-white/5 hover:border-primary/40 hover:bg-primary/[0.05] rounded-md flex items-center justify-center transition-all group/empty opacity-20 hover:opacity-100"
                                   title="Adicionar Horário"
                                 >
-                                  <Plus size={11} className="text-white/40 group-hover/empty:text-primary group-hover:rotate-90 transition-all" />
+                                  <Plus size={10} className="text-white/40 group-hover/empty:text-primary group-hover:rotate-90 transition-all" />
                                 </button>
                               </td>
                             );
@@ -558,14 +570,15 @@ export default function MonitorScheduleEditor() {
                     const cor = mapaCorMonitor[m.nome] || '#3b82f6';
                     return (
                       <tr key={m.id} className="hover:bg-white/[0.01] transition-all">
-                        {/* Monitor Profile Cell */}
-                        <td className="py-4 px-6 sticky left-0 bg-[#0a0a0a] z-10 border-r border-white/5 min-w-[200px]">
+                        {/* Monitor Profile Cell — compacto no mobile */}
+                        <td className="py-2.5 md:py-4 px-1.5 md:px-6 sticky left-0 bg-[#0a0a0a] z-10 border-r border-white/5 min-w-[100px] md:min-w-[200px]">
                           <div className="min-w-0">
-                            <h4 className="text-xs font-black text-white truncate leading-tight uppercase flex items-center gap-2">
-                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cor }} />
-                              {m.nome}
+                            <h4 className="text-[9px] md:text-xs font-black text-white truncate leading-tight uppercase flex items-center gap-1 md:gap-2">
+                              <span className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full shrink-0" style={{ backgroundColor: cor }} />
+                              <span className="truncate">{m.nome.split(' ')[0]}</span>
+                              <span className="hidden md:inline truncate">{m.nome.split(' ').slice(1).join(' ')}</span>
                             </h4>
-                            <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mt-1 pl-4">
+                            <p className="text-[7px] md:text-[8px] font-bold text-white/40 uppercase tracking-widest mt-0.5 pl-3 md:pl-4 hidden md:block">
                               {m.tipo} · {m.turno}
                             </p>
                           </div>
@@ -583,31 +596,31 @@ export default function MonitorScheduleEditor() {
                           const blockColor = ehAlmoco ? '#fbbf24' : (slot?.corEtiqueta || cor);
 
                           return (
-                            <td key={p.id} className="p-2 border-l border-white/5 text-center align-middle">
+                            <td key={p.id} className="p-1 md:p-2 border-l border-white/5 text-center align-middle">
                               {slot ? (
                                 <button
                                   onClick={() => abrirAlocacao(m, p)}
-                                  className="w-full text-left p-3 rounded-md border transition-all flex flex-col justify-center min-h-[60px] group/card hover:brightness-125"
+                                  className="w-full text-left p-2 md:p-3 rounded-md border transition-all flex flex-col justify-center min-h-[52px] md:min-h-[60px] group/card hover:brightness-125"
                                   style={{ 
                                     backgroundColor: `${blockColor}22`,
                                     borderColor: `${blockColor}50`,
-                                    borderLeft: `5px solid ${blockColor}`
+                                    borderLeft: `4px solid ${blockColor}`
                                   }}
                                 >
-                                  <div className="text-[10px] font-black text-white group-hover/card:text-white transition-all truncate uppercase flex items-center gap-1">
-                                    {ehAlmoco ? <Coffee size={10} className="text-amber-400 shrink-0" /> : <MapPin size={10} className="shrink-0" style={{ color: blockColor }} />}
-                                    {slot.posto}
+                                  <div className="text-[9px] md:text-[10px] font-black text-white group-hover/card:text-white transition-all truncate uppercase flex items-center gap-0.5">
+                                    {ehAlmoco ? <Coffee size={9} className="text-amber-400 shrink-0" /> : <MapPin size={9} className="shrink-0" style={{ color: blockColor }} />}
+                                    <span className="truncate">{slot.posto}</span>
                                   </div>
-                                  <div className="text-[8px] font-bold text-white/70 truncate uppercase mt-1">
+                                  <div className="text-[7px] md:text-[8px] font-bold text-white/70 truncate uppercase mt-0.5 hidden md:block">
                                     {slot.funcao}
                                   </div>
                                 </button>
                               ) : (
                                 <button
                                   onClick={() => abrirAlocacao(m, p)}
-                                  className="w-full h-7 border border-dashed border-white/5 hover:border-primary/40 hover:bg-primary/[0.02] rounded-md flex items-center justify-center transition-all group/empty opacity-20 hover:opacity-100"
+                                  className="w-full h-6 md:h-7 border border-dashed border-white/5 hover:border-primary/40 hover:bg-primary/[0.02] rounded-md flex items-center justify-center transition-all group/empty opacity-20 hover:opacity-100"
                                 >
-                                  <Plus size={11} className="text-white/15 group-hover/empty:text-primary/60 group-hover:rotate-90 transition-all" />
+                                  <Plus size={10} className="text-white/15 group-hover/empty:text-primary/60 group-hover:rotate-90 transition-all" />
                                 </button>
                               )}
                             </td>

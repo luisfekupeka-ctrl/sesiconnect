@@ -420,27 +420,36 @@ export default function Monitores() {
         </div>
       ) : (
         /* ==================== ABA 2: POR SETOR (REPLICA DA ESCALA DO ADM - LEITURA) ==================== */
-        <div className="bg-[#0a0a0a] rounded-2xl border border-white/5 p-6 shadow-2xl overflow-hidden">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-black italic tracking-tighter text-white flex items-center gap-2">
-              <Calendar size={18} className="text-[#fbbf24]" /> Escala Macro por Setor — {diaFiltro}
+        <div className="bg-[#0a0a0a] rounded-2xl border border-white/5 p-3 md:p-6 shadow-2xl overflow-hidden">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <h3 className="text-lg md:text-xl font-black italic tracking-tighter text-white flex items-center gap-2">
+              <Calendar size={16} className="text-[#fbbf24]" />
+              <span className="hidden sm:inline">Escala Macro por Setor — {diaFiltro}</span>
+              <span className="sm:hidden">Setor — {diaFiltro}</span>
             </h3>
-            <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Modo Leitura</span>
+            <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest hidden sm:block">Modo Leitura</span>
+          </div>
+
+          {/* Dica de scroll mobile */}
+          <div className="flex items-center gap-2 mb-3 md:hidden">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/20 shrink-0"><path d="M9 18l6-6-6-6"/></svg>
+            <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">Deslize para ver todos os horários</span>
           </div>
 
           <div className="overflow-x-auto custom-scrollbar">
-            <div className="min-w-[900px] relative pb-4">
+            <div className="min-w-[600px] md:min-w-[900px] relative pb-4">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b border-white/5 bg-black/40">
-                    <th className="py-4 px-5 text-left text-[10px] font-black text-white/30 uppercase tracking-widest w-[200px] sticky left-0 bg-[#0a0a0a] z-20 border-r border-white/5">
-                      Macro Setor / Local
+                    <th className="py-3 md:py-4 px-2 md:px-5 text-left text-[9px] md:text-[10px] font-black text-white/30 uppercase tracking-widest w-[120px] md:w-[200px] sticky left-0 bg-[#0a0a0a] z-20 border-r border-white/5">
+                      Setor
                     </th>
                     {periodosMonitoria.map(p => (
-                      <th key={p.id} className="py-3 px-2 text-center border-l border-white/5 min-w-[140px]">
-                        <div className="text-[10px] font-black text-[#fbbf24] uppercase tracking-wider">{p.nome}</div>
+                      <th key={p.id} className="py-2.5 md:py-3 px-1 md:px-2 text-center border-l border-white/5 min-w-[100px] md:min-w-[140px]">
+                        <div className="text-[9px] md:text-[10px] font-black text-[#fbbf24] uppercase tracking-wider">{p.nome}</div>
                         <div className="text-[8px] font-black text-white/40 tracking-widest mt-0.5">
-                          {p.horarioInicio.slice(0, 5)} - {p.horarioFim.slice(0, 5)}
+                          {p.horarioInicio.slice(0, 5)}
+                          <span className="hidden md:inline"> - {p.horarioFim.slice(0, 5)}</span>
                         </div>
                       </th>
                     ))}
@@ -451,7 +460,7 @@ export default function Monitores() {
                     return (
                       <tr key={macro} className="hover:bg-white/[0.01] transition-all">
                         {/* Sector Name */}
-                        <td className="py-4 px-5 font-black text-xs text-white uppercase italic tracking-wider sticky left-0 bg-[#0a0a0a] z-10 border-r border-white/5 min-w-[200px]">
+                        <td className="py-3 md:py-4 px-2 md:px-5 font-black text-[9px] md:text-xs text-white uppercase italic tracking-wider sticky left-0 bg-[#0a0a0a] z-10 border-r border-white/5 min-w-[120px] md:min-w-[200px]">
                           {macro}
                         </td>
 
