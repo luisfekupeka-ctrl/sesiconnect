@@ -91,19 +91,17 @@ export default function MonitorScheduleEditor() {
   }, [monitores, gradeMonitores, CORES_MONITOR]);
 
   const SEQUENCIA_LOCAIS = useMemo(() => [
-    'TERREO',
-    '1 ANDAR',
-    '2 ANDAR',
-    '3 ANDAR',
     'S1',
     'S2',
-    'BIBLIOTECA',
-    'PATIO LATERAL',
     'GRAMADO',
-    'VOLANTE 1',
-    'VOLANTE 2',
+    'PATIO LATERAL',
+    'TERREO',
+    'BIBLIOTECA',
+    'ENFERMARIA',
+    '1 ANDAR',
+    '2 ANDAR',
     'MONITORIA',
-    'ENFERMARIA'
+    '3 ANDAR'
   ], []);
 
   const obterPesoLocal = (posto: string): number => {
