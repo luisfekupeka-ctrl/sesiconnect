@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Save, Calendar, Clock, Trash2, Plus, Coffee, X, 
-  Settings, ChevronLeft, RefreshCw, Copy, Check, Info, MapPin, Briefcase
+  Settings, ChevronLeft, RefreshCw, Copy, Check, Info, MapPin, Briefcase, ClipboardCheck
 } from 'lucide-react';
 import { useEscola } from '../context/ContextoEscola';
 import { salvarGradeMonitores, limparGradeMonitorDia, limparGradeDia, limparGradeMultiplosDias, salvarPeriodos, buscarPeriodos, salvarLocalCMS } from '../services/dataService';
@@ -78,6 +78,20 @@ export default function MonitorScheduleEditor() {
     corEtiqueta: string;
     tipo: 'servico' | 'almoco';
     slotOriginal?: GradeMonitor | null;
+  } | null>(null);
+
+  // Estado de Coluna Copiada
+  const [colunaCopiada, setColunaCopiada] = useState<{
+    periodoId: string;
+    periodoNome: string;
+    horarioInicio: string;
+    horarioFim: string;
+    alocacoes: Array<{
+      monitorNome: string;
+      posto: string;
+      funcao: string;
+      corEtiqueta: string;
+    }>;
   } | null>(null);
 
   // Lista local de períodos do segmento monitoria
@@ -431,6 +445,97 @@ export default function MonitorScheduleEditor() {
     }
   };
 
+  // Copiar alocações de uma coluna (período)
+  const copiarColuna = (p: PeriodoConfig) => {
+    const alocacoesPeriodo = (gradeMonitores || [])
+      .filter(g => g.diaSemana === diaSelecionado && slotOcupaPeriodo(g, p))
+      .map(g => ({
+        monitorNome: g.monitorNome,
+        posto: g.posto,
+        funcao: g.funcao,
+        corEtiqueta: g.corEtiqueta
+      }));
+
+    if (alocacoesPeriodo.length === 0) {
+      setMensagem({ tipo: 'erro', texto: `A coluna "${p.nome}" não possui alocações para copiar.` });
+      return;
+    }
+
+    setColunaCopiada({
+      periodoId: p.id,
+      periodoNome: p.nome,
+      horarioInicio: p.horarioInicio,
+      horarioFim: p.horarioFim,
+      alocacoes: alocacoesPeriodo
+    });
+
+    setMensagem({ tipo: 'sucesso', texto: `Coluna "${p.nome}" (${alocacoesPeriodo.length} plantões) copiada! Escolha uma coluna de destino e clique em Colar.` });
+  };
+
+  // Colar alocações em uma coluna (período) de destino
+  const colarColuna = async (pAlvo: PeriodoConfig) => {
+    if (!colunaCopiada) return;
+
+    if (!confirm(`Deseja colar os ${colunaCopiada.alocacoes.length} plantões da coluna "${colunaCopiada.periodoNome}" na coluna "${pAlvo.nome}" para ${diaSelecionado}?`)) return;
+
+    setSalvando(true);
+    setMensagem(null);
+
+    try {
+      const inicioAlvo = pAlvo.horarioInicio.slice(0, 5);
+      const fimAlvo = pAlvo.horarioFim.slice(0, 5);
+
+      const monitoresCopiados = Array.from(new Set(colunaCopiada.alocacoes.map(a => a.monitorNome)));
+      const todosPayloads: Partial<GradeMonitor>[] = [];
+
+      for (const monitorNome of monitoresCopiados) {
+        const alocacaoCopiada = colunaCopiada.alocacoes.find(a => a.monitorNome === monitorNome);
+        if (!alocacaoCopiada) continue;
+
+        const turnosAtuais = (gradeMonitores || [])
+          .filter(g => g.monitorNome === monitorNome && g.diaSemana === diaSelecionado)
+          .map(g => ({
+            monitorNome: g.monitorNome,
+            diaSemana: g.diaSemana,
+            horarioInicio: g.horarioInicio.slice(0, 5),
+            horarioFim: g.horarioFim.slice(0, 5),
+            posto: g.posto,
+            funcao: g.funcao,
+            instrucoes: g.instrucoes || '',
+            corEtiqueta: g.corEtiqueta
+          }));
+
+        const turnosFiltrados = turnosAtuais.filter(t => t.horarioInicio !== inicioAlvo);
+
+        turnosFiltrados.push({
+          monitorNome: monitorNome,
+          diaSemana: diaSelecionado,
+          horarioInicio: inicioAlvo,
+          horarioFim: fimAlvo,
+          posto: alocacaoCopiada.posto,
+          funcao: alocacaoCopiada.funcao || 'Monitoria Geral',
+          instrucoes: '',
+          corEtiqueta: alocacaoCopiada.corEtiqueta || '#3b82f6'
+        });
+
+        todosPayloads.push(...turnosFiltrados);
+      }
+
+      const ok = await salvarGradeMonitores(todosPayloads);
+      if (ok) {
+        setMensagem({ tipo: 'sucesso', texto: `Coluna colada com sucesso em "${pAlvo.nome}"!` });
+        await atualizarGradeMonitores();
+      } else {
+        setMensagem({ tipo: 'erro', texto: 'Erro ao colar coluna.' });
+      }
+    } catch (error) {
+      console.error(error);
+      setMensagem({ tipo: 'erro', texto: 'Erro ao colar coluna.' });
+    } finally {
+      setSalvando(false);
+    }
+  };
+
   // Cadastrar novo local dinamicamente
   const salvarNovoLocal = async () => {
     if (!novoLocalNome.trim()) {
@@ -560,11 +665,42 @@ export default function MonitorScheduleEditor() {
                     <span className="hidden md:inline">Monitor</span>
                   </th>
                   {periodosMonitoria.map(p => (
-                    <th key={p.id} className="py-3 md:py-4 px-1.5 md:px-3 text-center border-l border-white/5 min-w-[130px] md:min-w-[150px]">
+                    <th key={p.id} className="py-3 md:py-4 px-1.5 md:px-3 text-center border-l border-white/5 min-w-[130px] md:min-w-[150px] relative group/th">
                       <div className="text-[9px] md:text-[10px] font-black text-primary uppercase tracking-wider">{p.nome}</div>
                       <div className="text-[8px] md:text-[9px] font-black text-white/40 tracking-widest mt-0.5">
                         {p.horarioInicio.slice(0, 5)}
                         <span className="hidden md:inline"> - {p.horarioFim.slice(0, 5)}</span>
+                      </div>
+                      
+                      {/* Ações da Coluna: Copiar e Colar */}
+                      <div className="mt-1.5 flex items-center justify-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => copiarColuna(p)}
+                          className={cn(
+                            "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider flex items-center gap-1 transition-all",
+                            colunaCopiada?.periodoId === p.id 
+                              ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" 
+                              : "bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10"
+                          )}
+                          title={`Copiar alocações de ${p.nome}`}
+                        >
+                          <Copy size={9} />
+                          <span>{colunaCopiada?.periodoId === p.id ? 'Copiado' : 'Copiar'}</span>
+                        </button>
+
+                        {colunaCopiada && colunaCopiada.periodoId !== p.id && (
+                          <button
+                            type="button"
+                            onClick={() => colarColuna(p)}
+                            disabled={salvando}
+                            className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider flex items-center gap-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 transition-all disabled:opacity-50"
+                            title={`Colar alocações da coluna "${colunaCopiada.periodoNome}" em "${p.nome}"`}
+                          >
+                            <ClipboardCheck size={9} />
+                            <span>Colar</span>
+                          </button>
+                        )}
                       </div>
                     </th>
                   ))}
