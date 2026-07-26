@@ -647,6 +647,14 @@ export async function limparGradeMonitorDia(monitorNome: string, diaSemana: stri
   return !error;
 }
 
+export async function limparGradeDia(diaSemana: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('grade_monitores')
+    .delete()
+    .eq('dia_semana', diaSemana);
+  return !error;
+}
+
 // ============================================================
 // LANGUAGE LAB
 // ============================================================

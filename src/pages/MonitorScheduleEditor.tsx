@@ -5,7 +5,7 @@ import {
   Settings, ChevronLeft, RefreshCw, Copy, Check, Info, MapPin, Briefcase
 } from 'lucide-react';
 import { useEscola } from '../context/ContextoEscola';
-import { salvarGradeMonitores, limparGradeMonitorDia, salvarPeriodos, buscarPeriodos, salvarLocalCMS } from '../services/dataService';
+import { salvarGradeMonitores, limparGradeMonitorDia, limparGradeDia, salvarPeriodos, buscarPeriodos, salvarLocalCMS } from '../services/dataService';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import SeletorLocalPosto from '../components/SeletorLocalPosto';
@@ -363,18 +363,13 @@ export default function MonitorScheduleEditor() {
     try {
       const escalaOrigem = gradeMonitores.filter(g => g.diaSemana === diaSelecionado);
       
-      // Lista de todos os monitores cadastrados
-      const todosMonitoresNomes = (monitores || []).map(m => m.nome);
-      
       for (const dia of DIAS_SEMANA) {
         if (dia === diaSelecionado) continue;
         
-        // 1. Limpar TODAS as escalas do dia alvo para todos os monitores
-        for (const nome of todosMonitoresNomes) {
-          const cleanOk = await limparGradeMonitorDia(nome, dia);
-          if (!cleanOk) {
-            throw new Error(`Erro ao limpar escala antiga do monitor ${nome} para o dia ${dia}`);
-          }
+        // 1. Limpar TODA a escala do dia alvo
+        const cleanOk = await limparGradeDia(dia);
+        if (!cleanOk) {
+          throw new Error(`Erro ao limpar escala antiga para o dia ${dia}`);
         }
         
         // 2. Se houver escalas na origem, salvar no dia alvo
@@ -412,9 +407,9 @@ export default function MonitorScheduleEditor() {
     if (!confirm(`Deseja excluir TODA a escala de monitores do dia ${diaSelecionado}?`)) return;
     setSalvando(true);
     try {
-      const nomesMonitores = Array.from(new Set(monitores.map(m => m.nome)));
-      for (const nome of nomesMonitores) {
-        await limparGradeMonitorDia(nome as string, diaSelecionado);
+      const cleanOk = await limparGradeDia(diaSelecionado);
+      if (!cleanOk) {
+        throw new Error(`Erro ao limpar escala para o dia ${diaSelecionado}`);
       }
       setMensagem({ tipo: 'sucesso', texto: 'Escala do dia limpa com sucesso!' });
       atualizar();
