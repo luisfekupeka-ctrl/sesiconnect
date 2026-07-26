@@ -5,7 +5,7 @@ import {
   Settings, ChevronLeft, RefreshCw, Copy, Check, Info, MapPin, Briefcase
 } from 'lucide-react';
 import { useEscola } from '../context/ContextoEscola';
-import { salvarGradeMonitores, limparGradeMonitorDia, limparGradeDia, salvarPeriodos, buscarPeriodos, salvarLocalCMS } from '../services/dataService';
+import { salvarGradeMonitores, limparGradeMonitorDia, limparGradeDia, limparGradeMultiplosDias, salvarPeriodos, buscarPeriodos, salvarLocalCMS } from '../services/dataService';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import SeletorLocalPosto from '../components/SeletorLocalPosto';
@@ -372,32 +372,33 @@ export default function MonitorScheduleEditor() {
     try {
       const escalaOrigem = gradeMonitores.filter(g => g.diaSemana === diaSelecionado);
       
-      for (const dia of DIAS_SEMANA) {
-        if (dia === diaSelecionado) continue;
-        
-        // 1. Limpar TODA a escala do dia alvo
-        const cleanOk = await limparGradeDia(dia);
-        if (!cleanOk) {
-          throw new Error(`Erro ao limpar escala antiga para o dia ${dia}`);
+      // 1. Limpar TODA a escala de todos os outros dias em uma única query
+      const cleanOk = await limparGradeMultiplosDias(outrosDias);
+      if (!cleanOk) {
+        throw new Error(`Erro ao limpar escalas antigas.`);
+      }
+      
+      // 2. Se houver escalas na origem, salvar todas nos outros dias em uma única query
+      if (escalaOrigem.length > 0) {
+        const todosPayloads: any[] = [];
+        for (const dia of outrosDias) {
+          escalaOrigem.forEach(item => {
+            todosPayloads.push({
+              monitorNome: item.monitorNome,
+              diaSemana: dia,
+              horarioInicio: item.horarioInicio.slice(0, 5),
+              horarioFim: item.horarioFim.slice(0, 5),
+              posto: item.posto || 'TÉRREO',
+              funcao: item.funcao || 'Monitoria Geral',
+              instrucoes: item.instrucoes || '',
+              corEtiqueta: item.corEtiqueta || '#3b82f6'
+            });
+          });
         }
-        
-        // 2. Se houver escalas na origem, salvar no dia alvo
-        if (escalaOrigem.length > 0) {
-          const payloads = escalaOrigem.map(item => ({
-            monitorNome: item.monitorNome,
-            diaSemana: dia,
-            horarioInicio: item.horarioInicio.slice(0, 5),
-            horarioFim: item.horarioFim.slice(0, 5),
-            posto: item.posto || 'TÉRREO',
-            funcao: item.funcao || 'Monitoria Geral',
-            instrucoes: item.instrucoes || '',
-            corEtiqueta: item.corEtiqueta || '#3b82f6'
-          }));
 
-          const saveOk = await salvarGradeMonitores(payloads);
-          if (!saveOk) {
-            throw new Error(`Erro ao salvar escala replicada para o dia ${dia}`);
-          }
+        const saveOk = await salvarGradeMonitores(todosPayloads);
+        if (!saveOk) {
+          throw new Error(`Erro ao salvar escala replicada.`);
         }
       }
 

@@ -655,6 +655,14 @@ export async function limparGradeDia(diaSemana: string): Promise<boolean> {
   return !error;
 }
 
+export async function limparGradeMultiplosDias(diasSemana: string[]): Promise<boolean> {
+  const { error } = await supabase
+    .from('grade_monitores')
+    .delete()
+    .in('dia_semana', diasSemana);
+  return !error;
+}
+
 // ============================================================
 // LANGUAGE LAB
 // ============================================================
