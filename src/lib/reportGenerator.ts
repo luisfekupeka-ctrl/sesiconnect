@@ -693,7 +693,7 @@ export const generateEscalaGeralPDF = async (
       didParseCell: (data) => {
         if (data.section === 'body') {
           const monitorNome = data.row.cells[1].raw as string;
-          const monitorObj = monitores.find(m => m.nome === monitorNome);
+          const monitorObj = monitores.find(m => (m.nome || '').trim().toUpperCase() === (monitorNome || '').trim().toUpperCase());
           const corHex = monitorObj?.cor || '#3B82F6';
           const rgb = hexToRgb(corHex);
 
@@ -706,7 +706,7 @@ export const generateEscalaGeralPDF = async (
       didDrawCell: (data) => {
         if (data.section === 'body' && data.column.index === 0) {
           const monitorNome = data.row.cells[1].raw as string;
-          const monitorObj = monitores.find(m => m.nome === monitorNome);
+          const monitorObj = monitores.find(m => (m.nome || '').trim().toUpperCase() === (monitorNome || '').trim().toUpperCase());
           const corHex = monitorObj?.cor || '#3B82F6';
           const rgb = hexToRgb(corHex);
 
@@ -756,7 +756,10 @@ export const generateEscalasIndividuaisPDF = async (
 
     for (const monitor of activeMonitors) {
       const postos = gradeMonitores
-        .filter(g => g.monitorNome === monitor.nome && g.diaSemana === diaSemana)
+        .filter(g => 
+          (g.monitorNome || '').trim().toUpperCase() === (monitor.nome || '').trim().toUpperCase() &&
+          (g.diaSemana || '').trim().toUpperCase() === (diaSemana || '').trim().toUpperCase()
+        )
         .sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
 
       if (!isFirstPage) {
