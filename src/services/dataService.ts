@@ -61,7 +61,7 @@ export async function buscarPeriodos(): Promise<any[]> {
 // ============================================================
 
 export async function buscarMapaSalas(): Promise<EntradaGradeSala[]> {
-  const { data, error } = await supabase.from('mapa_salas').select('*');
+  const { data, error } = await supabase.from('mapa_salas').select('*').range(0, 5000);
 
   if (error) {
     console.error('[DEBUG] Erro ao buscar mapa de salas:', error);
@@ -547,14 +547,26 @@ export async function excluirTodosMonitores(): Promise<boolean> {
 // ============================================================
 
 export async function buscarGradeMonitores(): Promise<GradeMonitor[]> {
-  const { data } = await supabase
-    .from('grade_monitores')
-    .select('*')
-    .order('horario_inicio', { ascending: true });
+  const DIAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO', 'DOMINGO'];
+  const results = await Promise.all(
+    DIAS.map(dia =>
+      supabase
+        .from('grade_monitores')
+        .select('*')
+        .eq('dia_semana', dia)
+        .order('horario_inicio', { ascending: true })
+        .range(0, 2000)
+    )
+  );
 
-  if (!data) return [];
+  const allRows: any[] = [];
+  for (const r of results) {
+    if (r.data) {
+      allRows.push(...r.data);
+    }
+  }
 
-  return data.map(item => ({
+  return allRows.map(item => ({
     id: item.id,
     monitorNome: item.monitor_nome,
     diaSemana: item.dia_semana,
