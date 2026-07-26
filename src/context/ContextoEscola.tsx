@@ -64,6 +64,7 @@ interface ContextoEscolaType {
   adicionarOcorrencia: (ocorrencia: RegistroOcorrencia) => void;
   carregando: boolean;
   atualizar: () => void;
+  atualizarGradeMonitores: () => Promise<void>;
 }
 
 const Contexto = createContext<ContextoEscolaType | null>(null);
@@ -517,6 +518,11 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
     setOcorrencias(prev => [ocorrencia, ...prev]);
   }, []);
 
+  const atualizarGradeMonitores = useCallback(async () => {
+    const data = await buscarGradeMonitores();
+    setGradeMonitores(data);
+  }, []);
+
   const atualizar = carregarDados;
 
   return (
@@ -540,6 +546,7 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
       adicionarOcorrencia,
       carregando,
       atualizar,
+      atualizarGradeMonitores,
     }}>
       {children}
     </Contexto.Provider>

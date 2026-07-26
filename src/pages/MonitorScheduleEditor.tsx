@@ -55,7 +55,7 @@ const PERIODOS_FALLBACK = [
 ];
 
 export default function MonitorScheduleEditor() {
-  const { monitores, gradeMonitores, periodos, atualizar } = useEscola();
+  const { monitores, gradeMonitores, periodos, atualizar, atualizarGradeMonitores } = useEscola();
   const navigate = useNavigate();
 
   const [diaSelecionado, setDiaSelecionado] = useState('SEGUNDA');
@@ -281,7 +281,7 @@ export default function MonitorScheduleEditor() {
 
       if (ok) {
         setMensagem({ tipo: 'sucesso', texto: 'Escala atualizada!' });
-        atualizar();
+        atualizarGradeMonitores();
         setModalAlocacaoAberto(false);
       } else {
         setMensagem({ tipo: 'erro', texto: 'Erro ao salvar escala.' });
@@ -328,7 +328,7 @@ export default function MonitorScheduleEditor() {
       }
 
       setMensagem({ tipo: 'sucesso', texto: 'Alocação removida!' });
-      atualizar();
+      atualizarGradeMonitores();
       setModalAlocacaoAberto(false);
     } catch (e) {
       console.error(e);
@@ -403,7 +403,7 @@ export default function MonitorScheduleEditor() {
       }
 
       setMensagem({ tipo: 'sucesso', texto: 'Escala replicada para a semana inteira!' });
-      atualizar();
+      atualizarGradeMonitores();
     } catch (e) {
       console.error(e);
       setMensagem({ tipo: 'erro', texto: 'Erro ao replicar escala.' });
@@ -422,7 +422,7 @@ export default function MonitorScheduleEditor() {
         throw new Error(`Erro ao limpar escala para o dia ${diaSelecionado}`);
       }
       setMensagem({ tipo: 'sucesso', texto: 'Escala do dia limpa com sucesso!' });
-      atualizar();
+      atualizarGradeMonitores();
     } catch (e) {
       console.error(e);
       setMensagem({ tipo: 'erro', texto: 'Erro ao limpar escala.' });
