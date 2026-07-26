@@ -770,6 +770,8 @@ export default function MonitorScheduleEditor() {
                         <span className="ml-2 text-primary/70">({monitoresDisponiveis.length} sem escala neste horário)</span>
                       </label>
                       <select
+                        id="seletor-monitor-escala"
+                        name="monitor_escala"
                         className="w-full bg-[#161616] border border-white/5 rounded-xl py-3 px-4 text-xs font-bold text-white outline-none focus:border-primary/45 uppercase cursor-pointer"
                         value=""
                         onChange={e => {
@@ -852,6 +854,8 @@ export default function MonitorScheduleEditor() {
                   <div className="relative">
                     <Briefcase size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" />
                     <input 
+                      id="funcao-observacao-escala"
+                      name="funcao_observacao"
                       type="text" 
                       value={alocacaoEditando.funcao} 
                       placeholder="Ex: Monitoria Geral, Apoio no Portão..."

@@ -34,6 +34,8 @@ export default function SeletorLocalPosto({ value, onChange, className }: Seleto
 
   return (
     <select
+      id="seletor-local-posto"
+      name="local_posto"
       value={value?.toUpperCase() || ''}
       onChange={e => onChange(e.target.value)}
       className={className}
