@@ -5,7 +5,7 @@ import {
   Settings, ChevronLeft, RefreshCw, Copy, Check, Info, MapPin, Briefcase
 } from 'lucide-react';
 import { useEscola } from '../context/ContextoEscola';
-import { salvarGradeMonitores, limparGradeMonitorDia, salvarPeriodos, buscarPeriodos } from '../services/dataService';
+import { salvarGradeMonitores, limparGradeMonitorDia, salvarPeriodos, buscarPeriodos, salvarLocalCMS } from '../services/dataService';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import SeletorLocalPosto from '../components/SeletorLocalPosto';
@@ -49,6 +49,9 @@ export default function MonitorScheduleEditor() {
   // Estados dos Modais
   const [modalAlocacaoAberto, setModalAlocacaoAberto] = useState(false);
   const [modalPeriodosAberto, setModalPeriodosAberto] = useState(false);
+  const [modalLocalAberto, setModalLocalAberto] = useState(false);
+  const [novoLocalNome, setNovoLocalNome] = useState('');
+  const [novoLocalTipo, setNovoLocalTipo] = useState<'sala' | 'arena' | 'quadra' | 'patio' | 'especializado'>('patio');
 
   // Alocação ativa no Modal
   const [alocacaoEditando, setAlocacaoEditando] = useState<{
@@ -389,6 +392,45 @@ export default function MonitorScheduleEditor() {
     }
   };
 
+  // Cadastrar novo local dinamicamente
+  const salvarNovoLocal = async () => {
+    if (!novoLocalNome.trim()) {
+      alert('Por favor, informe o nome do local.');
+      return;
+    }
+    setSalvando(true);
+    try {
+      const sucesso = await salvarLocalCMS({
+        nome: novoLocalNome.trim().toUpperCase(),
+        tipo: novoLocalTipo,
+        capacidade: 0,
+        lista_alunos: []
+      });
+      if (sucesso) {
+        setMensagem({ tipo: 'sucesso', texto: 'Local cadastrado com sucesso!' });
+        
+        // Se estivermos editando uma alocação, atualiza o posto selecionado para o novo local
+        if (alocacaoEditando) {
+          setAlocacaoEditando({
+            ...alocacaoEditando,
+            posto: novoLocalNome.trim().toUpperCase()
+          });
+        }
+        
+        setNovoLocalNome('');
+        setModalLocalAberto(false);
+        atualizar(); // Sincroniza dados da escola
+      } else {
+        setMensagem({ tipo: 'erro', texto: 'Erro ao cadastrar o local.' });
+      }
+    } catch (e) {
+      console.error(e);
+      setMensagem({ tipo: 'erro', texto: 'Erro ao cadastrar o local.' });
+    } finally {
+      setSalvando(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white p-3 md:p-8 font-sans selection:bg-primary/30">
       <div className="max-w-7xl mx-auto space-y-5 md:space-y-8">
@@ -422,6 +464,10 @@ export default function MonitorScheduleEditor() {
                 {mensagem.texto}
               </motion.div>
             )}
+            <button onClick={() => setModalLocalAberto(true)} className="btn-secondary flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-3 py-2.5 md:px-5 md:py-3 rounded-xl md:rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10">
+              <MapPin size={13} className="text-[#10b981]" />
+              Cadastrar Local
+            </button>
             <button onClick={() => setModalPeriodosAberto(true)} className="btn-secondary flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-3 py-2.5 md:px-5 md:py-3 rounded-xl md:rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10">
               <Settings size={13} className="text-[#a855f7]" />
               <span className="hidden sm:inline">Distribuir </span>Horários
@@ -741,7 +787,16 @@ export default function MonitorScheduleEditor() {
 
                 {/* Local selector */}
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black uppercase tracking-wider text-white/40 block ml-1">Local / Posto</label>
+                  <div className="flex justify-between items-center ml-1">
+                    <label className="text-[9px] font-black uppercase tracking-wider text-white/40 block">Local / Posto</label>
+                    <button 
+                      type="button"
+                      onClick={() => setModalLocalAberto(true)}
+                      className="text-[9px] font-black text-primary hover:underline uppercase tracking-wider flex items-center gap-1 transition-all"
+                    >
+                      <Plus size={10} /> Cadastrar Novo
+                    </button>
+                  </div>
                   <div className="relative">
                     <MapPin size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" />
                     <SeletorLocalPosto 
@@ -918,6 +973,82 @@ export default function MonitorScheduleEditor() {
                   {salvando ? "Salvando..." : "Salvar Distribuição"}
                 </button>
                 <button onClick={() => setModalPeriodosAberto(false)} className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-black uppercase text-white transition-all">
+                  Cancelar
+                </button>
+              </div>
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DE CADASTRO DE NOVO LOCAL */}
+      <AnimatePresence>
+        {modalLocalAberto && (
+          <div className="fixed inset-0 z-[320] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
+              onClick={() => setModalLocalAberto(false)} className="absolute inset-0 bg-black/95 backdrop-blur-md" />
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} 
+              className="relative w-full max-w-md bg-surface-container-lowest border border-white/10 rounded-2xl p-6 md:p-8 shadow-3xl overflow-hidden flex flex-col">
+              
+              <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6 shrink-0">
+                <div className="flex items-center gap-3">
+                  <MapPin size={22} className="text-[#10b981]" />
+                  <div>
+                    <h3 className="text-xl font-black italic uppercase tracking-tighter text-white">
+                      Cadastrar Novo Local
+                    </h3>
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">
+                      Adicione um espaço/posto para a escala
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => setModalLocalAberto(false)} 
+                  className="w-10 h-10 rounded-full bg-white/5 hover:bg-red-500/20 text-white/40 hover:text-red-500 flex items-center justify-center transition-all">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-wider text-white/40 block ml-1">Nome do Local</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: QUADRA COBERTA, PORTÃO PRINCIPAL" 
+                    value={novoLocalNome} 
+                    onChange={e => setNovoLocalNome(e.target.value)} 
+                    className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-xs font-bold text-white outline-none focus:border-primary/45 uppercase" 
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-wider text-white/40 block ml-1">Categoria / Tipo</label>
+                  <select
+                    value={novoLocalTipo}
+                    onChange={e => setNovoLocalTipo(e.target.value as any)}
+                    className="w-full bg-[#161616] border border-white/5 rounded-xl py-3 px-4 text-xs font-bold text-white outline-none focus:border-primary/45 cursor-pointer"
+                  >
+                    <option value="patio">Pátio / Área Externa</option>
+                    <option value="sala">Sala de Aula</option>
+                    <option value="arena">Arena</option>
+                    <option value="quadra">Quadra</option>
+                    <option value="especializado">Espaço Especializado (Biblioteca, Refeitório, etc.)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex gap-2 border-t border-white/5 pt-6 shrink-0 justify-end">
+                <button 
+                  onClick={salvarNovoLocal} 
+                  disabled={salvando}
+                  className="btn-primary px-8 py-3 flex items-center justify-center gap-2 text-white"
+                  style={{ backgroundColor: '#10b981' }}
+                >
+                  {salvando ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}
+                  {salvando ? "Cadastrando..." : "Cadastrar Local"}
+                </button>
+                <button onClick={() => setModalLocalAberto(false)} className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-black uppercase text-white transition-all">
                   Cancelar
                 </button>
               </div>

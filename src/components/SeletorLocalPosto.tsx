@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { LOCAIS_MONITORIA } from '../lib/locations';
+import { useEscola } from '../context/ContextoEscola';
 
 interface SeletorLocalPostoProps {
   value: string;
@@ -8,14 +9,28 @@ interface SeletorLocalPostoProps {
 }
 
 export default function SeletorLocalPosto({ value, onChange, className }: SeletorLocalPostoProps) {
+  const { locaisCMS } = useEscola();
+
   const opcoesPosto = useMemo(() => {
     const valorPosto = (value || '').trim().toUpperCase();
-    const base = ['', ...LOCAIS_MONITORIA];
-    if (valorPosto && !LOCAIS_MONITORIA.includes(valorPosto)) {
+    
+    // Nomes cadastrados no banco
+    const nomesCMS = (locaisCMS || []).map(l => l.nome.trim().toUpperCase());
+    
+    // Combina os locais estáticos com os dinâmicos
+    const todosLocais = Array.from(new Set([
+      ...LOCAIS_MONITORIA.map(l => l.toUpperCase()),
+      ...nomesCMS
+    ])).sort((a, b) => a.localeCompare(b));
+
+    const base = ['', ...todosLocais];
+    
+    if (valorPosto && !todosLocais.includes(valorPosto)) {
       base.push(valorPosto);
     }
+    
     return base;
-  }, [value]);
+  }, [value, locaisCMS]);
 
   return (
     <select
