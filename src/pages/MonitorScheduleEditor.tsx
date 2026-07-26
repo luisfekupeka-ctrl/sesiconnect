@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Save, Calendar, Clock, Trash2, Plus, Coffee, X, 
-  Settings, ChevronLeft, RefreshCw, Copy, Check, Info, MapPin, Briefcase, ClipboardCheck
+  Settings, ChevronLeft, RefreshCw, Copy, Check, Info, MapPin, Briefcase, ClipboardCheck, ArrowRight
 } from 'lucide-react';
 import { useEscola } from '../context/ContextoEscola';
 import { salvarGradeMonitores, limparGradeMonitorDia, limparGradeDia, limparGradeMultiplosDias, salvarPeriodos, buscarPeriodos, salvarLocalCMS } from '../services/dataService';
@@ -93,6 +93,10 @@ export default function MonitorScheduleEditor() {
       corEtiqueta: string;
     }>;
   } | null>(null);
+
+  // Estado de Drag & Drop de cards individuais
+  const [slotArrastando, setSlotArrastando] = useState<GradeMonitor | null>(null);
+  const [periodoHoverDrag, setPeriodoHoverDrag] = useState<string | null>(null);
 
   // Lista local de períodos do segmento monitoria
   const periodosMonitoria = useMemo(() => {
@@ -536,6 +540,151 @@ export default function MonitorScheduleEditor() {
     }
   };
 
+  // Handlers para Arrastar e Soltar (Drag & Drop) cards individuais
+  const handleDragStart = (e: React.DragEvent, slot: GradeMonitor) => {
+    setSlotArrastando(slot);
+    try {
+      e.dataTransfer.setData('text/plain', JSON.stringify({
+        monitorNome: slot.monitorNome,
+        posto: slot.posto,
+        funcao: slot.funcao,
+        corEtiqueta: slot.corEtiqueta
+      }));
+    } catch {}
+    e.dataTransfer.effectAllowed = 'copy';
+  };
+
+  const handleDragOver = (e: React.DragEvent, periodoId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    if (periodoHoverDrag !== periodoId) {
+      setPeriodoHoverDrag(periodoId);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setPeriodoHoverDrag(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetMonitorNome: string | null, targetPeriodo: PeriodoConfig) => {
+    e.preventDefault();
+    setPeriodoHoverDrag(null);
+
+    let data = slotArrastando;
+    if (!data) {
+      try {
+        const raw = e.dataTransfer.getData('text/plain');
+        if (raw) data = JSON.parse(raw);
+      } catch {}
+    }
+
+    if (!data) return;
+
+    const monitorNome = targetMonitorNome || data.monitorNome;
+    const inicioAlvo = targetPeriodo.horarioInicio.slice(0, 5);
+    const fimAlvo = targetPeriodo.horarioFim.slice(0, 5);
+
+    setSalvando(true);
+    try {
+      const turnosAtuais = (gradeMonitores || [])
+        .filter(g => g.monitorNome === monitorNome && g.diaSemana === diaSelecionado)
+        .map(g => ({
+          monitorNome: g.monitorNome,
+          diaSemana: g.diaSemana,
+          horarioInicio: g.horarioInicio.slice(0, 5),
+          horarioFim: g.horarioFim.slice(0, 5),
+          posto: g.posto,
+          funcao: g.funcao,
+          instrucoes: g.instrucoes || '',
+          corEtiqueta: g.corEtiqueta
+        }));
+
+      const turnosFiltrados = turnosAtuais.filter(t => t.horarioInicio !== inicioAlvo);
+
+      turnosFiltrados.push({
+        monitorNome: monitorNome,
+        diaSemana: diaSelecionado,
+        horarioInicio: inicioAlvo,
+        horarioFim: fimAlvo,
+        posto: data.posto,
+        funcao: data.funcao || 'Monitoria Geral',
+        instrucoes: '',
+        corEtiqueta: data.corEtiqueta || '#3b82f6'
+      });
+
+      const ok = await salvarGradeMonitores(turnosFiltrados);
+      if (ok) {
+        setMensagem({ tipo: 'sucesso', texto: `Plantão "${data.posto}" arrastado e copiado para ${targetPeriodo.nome}!` });
+        await atualizarGradeMonitores();
+      } else {
+        setMensagem({ tipo: 'erro', texto: 'Erro ao copiar plantão arrastado.' });
+      }
+    } catch (error) {
+      console.error(error);
+      setMensagem({ tipo: 'erro', texto: 'Erro ao copiar plantão arrastado.' });
+    } finally {
+      setSalvando(false);
+      setSlotArrastando(null);
+    }
+  };
+
+  // Duplicar plantão para o próximo período em 1 clique
+  const duplicarParaProximoPeriodo = async (e: React.MouseEvent, slot: GradeMonitor, periodoAtual: PeriodoConfig) => {
+    e.stopPropagation();
+    const indexAtual = periodosMonitoria.findIndex(p => p.id === periodoAtual.id);
+    if (indexAtual === -1 || indexAtual >= periodosMonitoria.length - 1) {
+      setMensagem({ tipo: 'erro', texto: 'Não há um próximo período para duplicar neste dia.' });
+      return;
+    }
+
+    const proximoPeriodo = periodosMonitoria[indexAtual + 1];
+    const inicioAlvo = proximoPeriodo.horarioInicio.slice(0, 5);
+    const fimAlvo = proximoPeriodo.horarioFim.slice(0, 5);
+
+    setSalvando(true);
+    try {
+      const turnosAtuais = (gradeMonitores || [])
+        .filter(g => g.monitorNome === slot.monitorNome && g.diaSemana === diaSelecionado)
+        .map(g => ({
+          monitorNome: g.monitorNome,
+          diaSemana: g.diaSemana,
+          horarioInicio: g.horarioInicio.slice(0, 5),
+          horarioFim: g.horarioFim.slice(0, 5),
+          posto: g.posto,
+          funcao: g.funcao,
+          instrucoes: g.instrucoes || '',
+          corEtiqueta: g.corEtiqueta
+        }));
+
+      const turnosFiltrados = turnosAtuais.filter(t => t.horarioInicio !== inicioAlvo);
+
+      turnosFiltrados.push({
+        monitorNome: slot.monitorNome,
+        diaSemana: diaSelecionado,
+        horarioInicio: inicioAlvo,
+        horarioFim: fimAlvo,
+        posto: slot.posto,
+        funcao: slot.funcao || 'Monitoria Geral',
+        instrucoes: '',
+        corEtiqueta: slot.corEtiqueta || '#3b82f6'
+      });
+
+      const ok = await salvarGradeMonitores(turnosFiltrados);
+      if (ok) {
+        setMensagem({ tipo: 'sucesso', texto: `Plantão "${slot.posto}" duplicado para ${proximoPeriodo.nome}!` });
+        await atualizarGradeMonitores();
+      } else {
+        setMensagem({ tipo: 'erro', texto: 'Erro ao duplicar plantão.' });
+      }
+    } catch (error) {
+      console.error(error);
+      setMensagem({ tipo: 'erro', texto: 'Erro ao duplicar plantão.' });
+    } finally {
+      setSalvando(false);
+    }
+  };
+
   // Cadastrar novo local dinamicamente
   const salvarNovoLocal = async () => {
     if (!novoLocalNome.trim()) {
@@ -732,19 +881,40 @@ export default function MonitorScheduleEditor() {
                             const blockColor = ehAlmoco ? '#fbbf24' : (slot.corEtiqueta || mObj.cor || '#3b82f6');
 
                             return (
-                              <td key={p.id} className="p-1.5 md:p-2 border-l border-white/5 text-center align-middle">
+                              <td 
+                                key={p.id} 
+                                className={cn(
+                                  "p-1.5 md:p-2 border-l border-white/5 text-center align-middle transition-all",
+                                  periodoHoverDrag === p.id && "bg-emerald-500/10 border-emerald-500/40"
+                                )}
+                                onDragOver={(e) => handleDragOver(e, p.id)}
+                                onDragLeave={handleDragLeave}
+                                onDrop={(e) => handleDrop(e, slot.monitorNome, p)}
+                              >
                                 <button
+                                  draggable={true}
+                                  onDragStart={(e) => handleDragStart(e, slot)}
                                   onClick={() => abrirAlocacao(slot, p)}
-                                  className="w-full text-left px-2 py-2.5 md:p-3 rounded-md border transition-all flex flex-col justify-center min-h-[64px] md:min-h-[60px] group/card hover:brightness-125"
+                                  className="w-full text-left px-2 py-2.5 md:p-3 rounded-md border transition-all flex flex-col justify-center min-h-[64px] md:min-h-[60px] group/card hover:brightness-125 cursor-grab active:cursor-grabbing relative"
                                   style={{ 
                                     backgroundColor: `${blockColor}22`,
                                     borderColor: `${blockColor}50`,
                                     borderLeft: `4px solid ${blockColor}`
                                   }}
                                 >
-                                  <div className="text-[9px] font-black text-white group-hover/card:text-white transition-all truncate uppercase flex items-center gap-0.5 leading-tight">
-                                    {ehAlmoco ? <Coffee size={9} className="text-amber-400 shrink-0" /> : <MapPin size={9} className="shrink-0" style={{ color: blockColor }} />}
-                                    <span className="truncate">{slot.posto}</span>
+                                  <div className="text-[9px] font-black text-white group-hover/card:text-white transition-all truncate uppercase flex items-center justify-between gap-0.5 leading-tight">
+                                    <div className="flex items-center gap-0.5 truncate">
+                                      {ehAlmoco ? <Coffee size={9} className="text-amber-400 shrink-0" /> : <MapPin size={9} className="shrink-0" style={{ color: blockColor }} />}
+                                      <span className="truncate">{slot.posto}</span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => duplicarParaProximoPeriodo(e, slot, p)}
+                                      className="opacity-0 group-hover/card:opacity-100 p-0.5 bg-black/40 hover:bg-black/80 rounded text-white/80 hover:text-white transition-all shrink-0 border border-white/10"
+                                      title="Duplicar para o próximo horário (→)"
+                                    >
+                                      <ArrowRight size={9} />
+                                    </button>
                                   </div>
                                   <div className="text-[9px] font-bold text-white/80 truncate uppercase mt-1 leading-tight">
                                     {slot.monitorNome.split(' ')[0]}
@@ -759,11 +929,25 @@ export default function MonitorScheduleEditor() {
 
                           if (rowIndex >= turnosPeriodo.length) {
                             return (
-                              <td key={p.id} className="p-1 md:p-2 border-l border-white/5 text-center align-middle">
+                              <td 
+                                key={p.id} 
+                                className={cn(
+                                  "p-1 md:p-2 border-l border-white/5 text-center align-middle transition-all",
+                                  periodoHoverDrag === p.id && "bg-emerald-500/10 border-emerald-500/40"
+                                )}
+                                onDragOver={(e) => handleDragOver(e, p.id)}
+                                onDragLeave={handleDragLeave}
+                                onDrop={(e) => handleDrop(e, null, p)}
+                              >
                                 <button
                                   onClick={() => abrirAlocacao(null, p)}
-                                  className="w-full h-7 border border-dashed border-white/5 hover:border-primary/40 hover:bg-primary/[0.05] rounded-md flex items-center justify-center transition-all group/empty opacity-20 hover:opacity-100"
-                                  title="Adicionar Horário"
+                                  className={cn(
+                                    "w-full h-7 border border-dashed rounded-md flex items-center justify-center transition-all group/empty",
+                                    periodoHoverDrag === p.id 
+                                      ? "border-emerald-500 bg-emerald-500/20 text-emerald-400 opacity-100 scale-105" 
+                                      : "border-white/5 hover:border-primary/40 hover:bg-primary/[0.05] opacity-20 hover:opacity-100"
+                                  )}
+                                  title="Adicionar Horário ou Soltar Plantão Copiado"
                                 >
                                   <Plus size={10} className="text-white/40 group-hover/empty:text-primary group-hover:rotate-90 transition-all" />
                                 </button>
@@ -817,20 +1001,41 @@ export default function MonitorScheduleEditor() {
                           const blockColor = ehAlmoco ? '#fbbf24' : (slot?.corEtiqueta || cor);
 
                           return (
-                              <td key={p.id} className="p-1.5 md:p-2 border-l border-white/5 text-center align-middle">
+                              <td 
+                                key={p.id} 
+                                className={cn(
+                                  "p-1.5 md:p-2 border-l border-white/5 text-center align-middle transition-all",
+                                  periodoHoverDrag === p.id && "bg-emerald-500/10 border-emerald-500/40"
+                                )}
+                                onDragOver={(e) => handleDragOver(e, p.id)}
+                                onDragLeave={handleDragLeave}
+                                onDrop={(e) => handleDrop(e, m.nome, p)}
+                              >
                               {slot ? (
                                 <button
+                                  draggable={true}
+                                  onDragStart={(e) => handleDragStart(e, slot)}
                                   onClick={() => abrirAlocacao(m, p)}
-                                  className="w-full text-left px-2 py-2.5 md:p-3 rounded-md border transition-all flex flex-col justify-center min-h-[64px] md:min-h-[60px] group/card hover:brightness-125"
+                                  className="w-full text-left px-2 py-2.5 md:p-3 rounded-md border transition-all flex flex-col justify-center min-h-[64px] md:min-h-[60px] group/card hover:brightness-125 cursor-grab active:cursor-grabbing relative"
                                   style={{ 
                                     backgroundColor: `${blockColor}22`,
                                     borderColor: `${blockColor}50`,
                                     borderLeft: `4px solid ${blockColor}`
                                   }}
                                 >
-                                  <div className="text-[9px] font-black text-white group-hover/card:text-white transition-all truncate uppercase flex items-center gap-0.5 leading-tight">
-                                    {ehAlmoco ? <Coffee size={9} className="text-amber-400 shrink-0" /> : <MapPin size={9} className="shrink-0" style={{ color: blockColor }} />}
-                                    <span className="truncate">{slot.posto}</span>
+                                  <div className="text-[9px] font-black text-white group-hover/card:text-white transition-all truncate uppercase flex items-center justify-between gap-0.5 leading-tight">
+                                    <div className="flex items-center gap-0.5 truncate">
+                                      {ehAlmoco ? <Coffee size={9} className="text-amber-400 shrink-0" /> : <MapPin size={9} className="shrink-0" style={{ color: blockColor }} />}
+                                      <span className="truncate">{slot.posto}</span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => duplicarParaProximoPeriodo(e, slot, p)}
+                                      className="opacity-0 group-hover/card:opacity-100 p-0.5 bg-black/40 hover:bg-black/80 rounded text-white/80 hover:text-white transition-all shrink-0 border border-white/10"
+                                      title="Duplicar para o próximo horário (→)"
+                                    >
+                                      <ArrowRight size={9} />
+                                    </button>
                                   </div>
                                   <div className="text-[7px] md:text-[8px] font-bold text-white/70 truncate uppercase mt-0.5 hidden md:block">
                                     {slot.funcao}
@@ -839,7 +1044,13 @@ export default function MonitorScheduleEditor() {
                               ) : (
                                 <button
                                   onClick={() => abrirAlocacao(m, p)}
-                                  className="w-full h-8 md:h-7 border border-dashed border-white/5 hover:border-primary/40 hover:bg-primary/[0.02] rounded-md flex items-center justify-center transition-all group/empty opacity-20 hover:opacity-100"
+                                  className={cn(
+                                    "w-full h-8 md:h-7 border border-dashed rounded-md flex items-center justify-center transition-all group/empty",
+                                    periodoHoverDrag === p.id 
+                                      ? "border-emerald-500 bg-emerald-500/20 text-emerald-400 opacity-100 scale-105" 
+                                      : "border-white/5 hover:border-primary/40 hover:bg-primary/[0.02] opacity-20 hover:opacity-100"
+                                  )}
+                                  title="Adicionar Horário ou Soltar Plantão Copiado"
                                 >
                                   <Plus size={10} className="text-white/15 group-hover/empty:text-primary/60 group-hover:rotate-90 transition-all" />
                                 </button>
