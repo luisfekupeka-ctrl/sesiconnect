@@ -592,8 +592,8 @@ export async function salvarGradeMonitor(grade: Partial<GradeMonitor>): Promise<
 export async function salvarGradeMonitores(lista: Partial<GradeMonitor>[]): Promise<boolean> {
   if (!lista || lista.length === 0) return false;
 
-  const monitorNome = lista[0].monitorNome;
-  if (!monitorNome) return false;
+  const nomesMonitores = Array.from(new Set(lista.map(l => l.monitorNome).filter(Boolean)));
+  if (nomesMonitores.length === 0) return false;
 
   const diasParaLimpar = Array.from(new Set(lista.map(l => l.diaSemana)));
 
@@ -601,7 +601,7 @@ export async function salvarGradeMonitores(lista: Partial<GradeMonitor>[]): Prom
     const { error: deleteError } = await supabase
       .from('grade_monitores')
       .delete()
-      .eq('monitor_nome', monitorNome)
+      .in('monitor_nome', nomesMonitores)
       .in('dia_semana', diasParaLimpar);
 
     if (deleteError) {

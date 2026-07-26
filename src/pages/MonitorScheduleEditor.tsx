@@ -9,6 +9,7 @@ import { salvarGradeMonitores, limparGradeMonitorDia, salvarPeriodos, buscarPeri
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import SeletorLocalPosto from '../components/SeletorLocalPosto';
+import { GradeMonitor } from '../types';
 
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
@@ -21,6 +22,21 @@ function normalizarParaOrdenacao(str: string): string {
     .replace(/ª/g, "")
     .trim();
 }
+
+const parseTimeToMinutes = (h: string) => {
+  if (!h) return 0;
+  const [hh, mm] = h.split(':').map(Number);
+  return (hh || 0) * 60 + (mm || 0);
+};
+
+const slotOcupaPeriodo = (g: any, p: any) => {
+  if (!g.horarioInicio || !g.horarioFim || !p.horarioInicio || !p.horarioFim) return false;
+  const gInicio = parseTimeToMinutes(g.horarioInicio);
+  const gFim = parseTimeToMinutes(g.horarioFim);
+  const pInicio = parseTimeToMinutes(p.horarioInicio);
+  const pFim = parseTimeToMinutes(p.horarioFim);
+  return gInicio < pFim && gFim > pInicio;
+};
 
 const PERIODOS_FALLBACK = [
   { id: 'p1', nome: '1ª Aula', horarioInicio: '07:30', horarioFim: '08:20', tipo: 'aula', segmento: 'monitoria' },
@@ -61,6 +77,7 @@ export default function MonitorScheduleEditor() {
     funcao: string;
     corEtiqueta: string;
     tipo: 'servico' | 'almoco';
+    slotOriginal?: GradeMonitor | null;
   } | null>(null);
 
   // Lista local de períodos do segmento monitoria
@@ -158,7 +175,7 @@ export default function MonitorScheduleEditor() {
     let max = (monitores || []).length;
     for (const p of periodosMonitoria) {
       const count = (gradeMonitores || []).filter(
-        g => g.diaSemana === diaSelecionado && g.horarioInicio.slice(0, 5) === p.horarioInicio.slice(0, 5)
+        g => g.diaSemana === diaSelecionado && slotOcupaPeriodo(g, p)
       ).length;
       if (count + 1 > max) max = count + 1;
     }
@@ -187,7 +204,7 @@ export default function MonitorScheduleEditor() {
       slotExistente = gradeMonitores.find(
         g => g.monitorNome === monitorObj.nome && 
              g.diaSemana === diaSelecionado &&
-             g.horarioInicio.slice(0, 5) === periodo.horarioInicio.slice(0, 5)
+             slotOcupaPeriodo(g, periodo)
       );
     }
 
@@ -197,7 +214,8 @@ export default function MonitorScheduleEditor() {
       posto: slotExistente?.posto || 'TÉRREO',
       funcao: slotExistente?.funcao || 'Monitoria Geral',
       corEtiqueta: slotExistente?.corEtiqueta || monitorObj?.cor || '#3b82f6',
-      tipo: (slotExistente?.funcao === 'ALMOÇO' || slotExistente?.posto === 'ALMOÇO') ? 'almoco' : 'servico'
+      tipo: (slotExistente?.funcao === 'ALMOÇO' || slotExistente?.posto === 'ALMOÇO') ? 'almoco' : 'servico',
+      slotOriginal: slotExistente
     });
     setModalAlocacaoAberto(true);
   };
@@ -208,7 +226,7 @@ export default function MonitorScheduleEditor() {
     setSalvando(true);
     setMensagem(null);
 
-    const { monitor, periodo, posto, funcao, corEtiqueta } = alocacaoEditando;
+    const { monitor, periodo, posto, funcao, corEtiqueta, slotOriginal } = alocacaoEditando;
 
     if (!monitor) {
       setMensagem({ tipo: 'erro', texto: 'Selecione um monitor antes de salvar.' });
@@ -227,23 +245,28 @@ export default function MonitorScheduleEditor() {
           horarioFim: g.horarioFim.slice(0, 5),
           posto: g.posto,
           funcao: g.funcao,
+          instrucoes: g.instrucoes || '',
           corEtiqueta: g.corEtiqueta
         }));
 
       // 2. Filtrar removendo o horário que estamos editando
-      const turnosAtualizados = turnosAtuais.filter(
-        t => t.horarioInicio !== periodo.horarioInicio.slice(0, 5)
-      );
+      const turnosAtualizados = slotOriginal
+        ? turnosAtuais.filter(t => t.horarioInicio !== slotOriginal.horarioInicio.slice(0, 5))
+        : turnosAtuais.filter(t => t.horarioInicio !== periodo.horarioInicio.slice(0, 5));
 
       // 3. Adicionar o novo slot se posto/funcao forem preenchidos
       if (posto) {
+        const inicioSalvar = slotOriginal ? slotOriginal.horarioInicio.slice(0, 5) : periodo.horarioInicio.slice(0, 5);
+        const fimSalvar = slotOriginal ? slotOriginal.horarioFim.slice(0, 5) : periodo.horarioFim.slice(0, 5);
+
         turnosAtualizados.push({
           monitorNome: monitor.nome,
           diaSemana: diaSelecionado,
-          horarioInicio: periodo.horarioInicio.slice(0, 5),
-          horarioFim: periodo.horarioFim.slice(0, 5),
+          horarioInicio: inicioSalvar,
+          horarioFim: fimSalvar,
           posto: posto,
           funcao: funcao || 'Monitoria Geral',
+          instrucoes: slotOriginal?.instrucoes || '',
           corEtiqueta: corEtiqueta
         });
       }
@@ -271,7 +294,7 @@ export default function MonitorScheduleEditor() {
     setSalvando(true);
     setMensagem(null);
 
-    const { monitor, periodo } = alocacaoEditando;
+    const { monitor, periodo, slotOriginal } = alocacaoEditando;
 
     try {
       const turnosAtuais = gradeMonitores
@@ -283,12 +306,13 @@ export default function MonitorScheduleEditor() {
           horarioFim: g.horarioFim.slice(0, 5),
           posto: g.posto,
           funcao: g.funcao,
+          instrucoes: g.instrucoes || '',
           corEtiqueta: g.corEtiqueta
         }));
 
-      const turnosRestantes = turnosAtuais.filter(
-        t => t.horarioInicio !== periodo.horarioInicio.slice(0, 5)
-      );
+      const turnosRestantes = slotOriginal
+        ? turnosAtuais.filter(t => t.horarioInicio !== slotOriginal.horarioInicio.slice(0, 5))
+        : turnosAtuais.filter(t => t.horarioInicio !== periodo.horarioInicio.slice(0, 5));
 
       // Se não sobrar nada, limpa o dia inteiro para esse monitor
       if (turnosRestantes.length === 0) {
@@ -339,27 +363,37 @@ export default function MonitorScheduleEditor() {
     try {
       const escalaOrigem = gradeMonitores.filter(g => g.diaSemana === diaSelecionado);
       
+      // Lista de todos os monitores cadastrados
+      const todosMonitoresNomes = (monitores || []).map(m => m.nome);
+      
       for (const dia of DIAS_SEMANA) {
         if (dia === diaSelecionado) continue;
         
-        // Deleta e reinsere para cada dia
-        const payloads = escalaOrigem.map(item => ({
-          monitorNome: item.monitorNome,
-          diaSemana: dia,
-          horarioInicio: item.horarioInicio.slice(0, 5),
-          horarioFim: item.horarioFim.slice(0, 5),
-          posto: item.posto || 'TÉRREO',
-          funcao: item.funcao || 'Monitoria Geral',
-          corEtiqueta: item.corEtiqueta || '#3b82f6'
-        }));
-
-        // Limpa e salva para cada monitor correspondente
-        const nomesMonitores = Array.from(new Set(payloads.map(p => p.monitorNome)));
-        for (const nome of nomesMonitores) {
-          await limparGradeMonitorDia(nome as string, dia);
+        // 1. Limpar TODAS as escalas do dia alvo para todos os monitores
+        for (const nome of todosMonitoresNomes) {
+          const cleanOk = await limparGradeMonitorDia(nome, dia);
+          if (!cleanOk) {
+            throw new Error(`Erro ao limpar escala antiga do monitor ${nome} para o dia ${dia}`);
+          }
         }
-        if (payloads.length > 0) {
-          await salvarGradeMonitores(payloads);
+        
+        // 2. Se houver escalas na origem, salvar no dia alvo
+        if (escalaOrigem.length > 0) {
+          const payloads = escalaOrigem.map(item => ({
+            monitorNome: item.monitorNome,
+            diaSemana: dia,
+            horarioInicio: item.horarioInicio.slice(0, 5),
+            horarioFim: item.horarioFim.slice(0, 5),
+            posto: item.posto || 'TÉRREO',
+            funcao: item.funcao || 'Monitoria Geral',
+            instrucoes: item.instrucoes || '',
+            corEtiqueta: item.corEtiqueta || '#3b82f6'
+          }));
+
+          const saveOk = await salvarGradeMonitores(payloads);
+          if (!saveOk) {
+            throw new Error(`Erro ao salvar escala replicada para o dia ${dia}`);
+          }
         }
       }
 
@@ -541,7 +575,7 @@ export default function MonitorScheduleEditor() {
                         </td>
                         {periodosMonitoria.map(p => {
                           const turnosPeriodo = (gradeMonitores || [])
-                            .filter(g => g.diaSemana === diaSelecionado && g.horarioInicio.slice(0, 5) === p.horarioInicio.slice(0, 5))
+                            .filter(g => g.diaSemana === diaSelecionado && slotOcupaPeriodo(g, p))
                             .sort((a, b) => {
                               const pesoA = obterPesoLocal(a.posto);
                               const pesoB = obterPesoLocal(b.posto);
@@ -635,7 +669,7 @@ export default function MonitorScheduleEditor() {
                           const slot = gradeMonitores.find(
                             g => g.monitorNome === m.nome && 
                                  g.diaSemana === diaSelecionado &&
-                                 g.horarioInicio.slice(0, 5) === p.horarioInicio.slice(0, 5)
+                                 slotOcupaPeriodo(g, p)
                           );
 
                           const ehAlmoco = slot?.funcao === 'ALMOÇO' || slot?.posto === 'ALMOÇO' || slot?.posto === 'REFEITÓRIO';

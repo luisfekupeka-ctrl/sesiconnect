@@ -11,6 +11,21 @@ import { useAuth } from '../context/AuthContext';
 
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 
+const parseTimeToMinutes = (h: string) => {
+  if (!h) return 0;
+  const [hh, mm] = h.split(':').map(Number);
+  return (hh || 0) * 60 + (mm || 0);
+};
+
+const slotOcupaPeriodo = (g: any, p: any) => {
+  if (!g.horarioInicio || !g.horarioFim || !p.horarioInicio || !p.horarioFim) return false;
+  const gInicio = parseTimeToMinutes(g.horarioInicio);
+  const gFim = parseTimeToMinutes(g.horarioFim);
+  const pInicio = parseTimeToMinutes(p.horarioInicio);
+  const pFim = parseTimeToMinutes(p.horarioFim);
+  return gInicio < pFim && gFim > pInicio;
+};
+
 const MACRO_SETORES = [
   '🚗 S1',
   '🚗 S2',
@@ -468,7 +483,7 @@ export default function Monitores() {
                         {periodosMonitoria.map(p => {
                           const slotsAlocados = escalaDoDia.filter(g => 
                             obterMacroSetor(g.posto) === macro && 
-                            g.horarioInicio.slice(0, 5) === p.horarioInicio.slice(0, 5)
+                            slotOcupaPeriodo(g, p)
                           );
 
                           return (

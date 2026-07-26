@@ -1542,10 +1542,10 @@ export default function Admin() {
                   const payload = {
                     ...editandoMonitor,
                     status: 'ativo',
-                    turno: 'manha',
-                    diaSemana: 'SEGUNDA',
-                    localPermanencia: '',
-                    localAlmoco: ''
+                    turno: editandoMonitor.turno || 'manha',
+                    diaSemana: editandoMonitor.diaSemana || 'SEGUNDA',
+                    localPermanencia: editandoMonitor.localPermanencia || '',
+                    localAlmoco: editandoMonitor.localAlmoco || ''
                   };
                   doSave(salvarMonitor(payload), setEditandoMonitor);
                 }} carregando={carregando}>
@@ -1553,6 +1553,7 @@ export default function Admin() {
                   <div className="space-y-4">
                     <CampoTexto label="Nome do monitor" value={editandoMonitor.nome} onChange={v => setEditandoMonitor({ ...editandoMonitor, nome: v })} />
                     <CampoSelect label="Tipo" value={editandoMonitor.tipo || 'fixo'} options={['fixo', 'volante', 'hibrido']} onChange={v => setEditandoMonitor({ ...editandoMonitor, tipo: v as any })} />
+                    <CampoSelect label="Turno" value={editandoMonitor.turno || 'manha'} options={['manha', 'tarde', 'noite']} onChange={v => setEditandoMonitor({ ...editandoMonitor, turno: v as any })} />
 
                     <div className="p-4 bg-surface-container-high rounded-2xl border border-outline-variant/10">
                       <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-3 block">Identidade Visual</label>
