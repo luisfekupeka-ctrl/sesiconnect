@@ -364,7 +364,10 @@ export default function MonitorScheduleEditor() {
 
   // Replicar escala inteira do dia para a semana
   const replicarDiaSemana = async () => {
-    if (!confirm(`Deseja copiar toda a escala de ${diaSelecionado} para os outros dias da semana (Terça a Sexta)?`)) return;
+    const outrosDias = DIAS_SEMANA.filter(d => d !== diaSelecionado);
+    const outrosDiasFormatados = outrosDias.map(d => d.charAt(0) + d.slice(1).toLowerCase()).join(', ');
+
+    if (!confirm(`Deseja copiar toda a escala de ${diaSelecionado} para os outros dias da semana (${outrosDiasFormatados})?`)) return;
     setSalvando(true);
     try {
       const escalaOrigem = gradeMonitores.filter(g => g.diaSemana === diaSelecionado);
