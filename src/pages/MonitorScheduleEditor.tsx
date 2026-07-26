@@ -272,7 +272,13 @@ export default function MonitorScheduleEditor() {
       }
 
       // 4. Salvar no Banco
-      const ok = await salvarGradeMonitores(turnosAtualizados);
+      let ok = false;
+      if (turnosAtualizados.length === 0) {
+        ok = await limparGradeMonitorDia(monitor.nome, diaSelecionado);
+      } else {
+        ok = await salvarGradeMonitores(turnosAtualizados);
+      }
+
       if (ok) {
         setMensagem({ tipo: 'sucesso', texto: 'Escala atualizada!' });
         atualizar();
