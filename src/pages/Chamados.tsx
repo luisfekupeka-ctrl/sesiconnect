@@ -20,69 +20,91 @@ import { cn } from '../lib/utils';
 /**
  * Comprime uma imagem usando Canvas API.
  * - Redimensiona para no máximo maxDimension px de largura/altura
- * - Reduz a qualidade progressivamente até atingir maxSizeMB
- * - Retorna um novo File com tipo image/jpeg
+ * - Exporta direto para JPEG leve (qualidade 0.72) em 1 passo de ~50ms
+ * - Possui trava de segurança de 3 segundos contra travamentos (ex: HEIC do iPhone)
  */
 async function comprimirImagem(
   file: File,
   maxDimension = 1920,
-  maxSizeMB = 2
+  _maxSizeMB = 2
 ): Promise<File> {
-  // Se não for imagem, retorna como está
-  if (!file.type.startsWith('image/')) return file;
-  // Se for imagem levinha E já for JPEG, pode retornar direto
-  if (file.size <= maxSizeMB * 1024 * 1024 && file.type === 'image/jpeg') return file;
+  // Se não for imagem, retorna o arquivo original imediatamente
+  if (!file || !file.type || !file.type.startsWith('image/')) return file;
+  
+  // Se já for uma imagem comprimida (_c.jpg) ou levinha (<= 500KB JPEG), retorna direto
+  if (file.name.includes('_c.') || (file.size <= 500 * 1024 && file.type === 'image/jpeg')) return file;
 
   return new Promise((resolve) => {
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
+    // Trava de segurança de 3 segundos contra travamentos do browser/HEIC
+    const timer = setTimeout(() => {
+      console.warn('Timeout na compressão da imagem. Usando arquivo original:', file.name);
+      resolve(file);
+    }, 3000);
 
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
+    try {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
 
-      // Calcular novas dimensões mantendo proporção
-      let { width, height } = img;
-      if (width > maxDimension || height > maxDimension) {
-        if (width > height) {
-          height = Math.round((height * maxDimension) / width);
-          width = maxDimension;
-        } else {
-          width = Math.round((width * maxDimension) / height);
-          height = maxDimension;
-        }
-      }
+      img.onload = () => {
+        clearTimeout(timer);
+        URL.revokeObjectURL(objectUrl);
 
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(img, 0, 0, width, height);
+        try {
+          // Calcular novas dimensões mantendo proporção
+          let { width, height } = img;
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = Math.round((height * maxDimension) / width);
+              width = maxDimension;
+            } else {
+              width = Math.round((width * maxDimension) / height);
+              height = maxDimension;
+            }
+          }
 
-      // Reduzir qualidade progressivamente
-      let quality = 0.85;
-      const tryCompress = () => {
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) { resolve(file); return; }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
 
-            if (blob.size <= maxSizeMB * 1024 * 1024 || quality <= 0.1) {
+          if (!ctx) {
+            resolve(file);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Exporta em qualidade 0.72 (instantâneo, gera ~400KB - 1.2MB)
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                resolve(file);
+                return;
+              }
+
               const ext = 'jpg';
               const newName = file.name.replace(/\.[^.]+$/, '') + '_c.' + ext;
               resolve(new File([blob], newName, { type: 'image/jpeg' }));
-            } else {
-              quality = Math.max(0.1, quality - 0.1);
-              tryCompress();
-            }
-          },
-          'image/jpeg',
-          quality
-        );
+            },
+            'image/jpeg',
+            0.72
+          );
+        } catch (err) {
+          resolve(file);
+        }
       };
-      tryCompress();
-    };
 
-    img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
-    img.src = objectUrl;
+      img.onerror = () => {
+        clearTimeout(timer);
+        URL.revokeObjectURL(objectUrl);
+        resolve(file);
+      };
+
+      img.src = objectUrl;
+    } catch (err) {
+      clearTimeout(timer);
+      resolve(file);
+    }
   });
 }
 
