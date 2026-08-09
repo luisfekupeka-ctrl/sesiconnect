@@ -8,10 +8,9 @@ import {
 import { Aluno, RegistroOcorrencia, DailyOccurrenceRecord } from '../types';
 import { cn } from '../lib/utils';
 import { arquivarELimparMes } from '../services/dataService';
-import { generateBackupZip } from '../lib/reportGenerator';
+import { generateBackupZip, generateDossieZip } from '../lib/reportGenerator';
 import { occurrenceService } from '../services/occurrenceService';
 import FichaOcorrencia from './FichaOcorrencia';
-import ProntuarioPDF from './ProntuarioPDF';
 
 interface Props {
   alunos: Aluno[];
@@ -27,8 +26,8 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
   const [selecao, setSelecao] = useState<{ unidade?: string; turma?: string; aluno?: Aluno }>({});
   const [busca, setBusca] = useState('');
   const [visualizandoDoc, setVisualizandoDoc] = useState<RegistroOcorrencia | null>(null);
-  const [dossieAberto, setDossieAberto] = useState(false);
   const [carregando, setCarregando] = useState(false);
+  const [baixandoDossie, setBaixandoDossie] = useState(false);
 
   // Estado para armazenar as ocorrências diárias trazidas do Supabase
   const [registrosDiarios, setRegistrosDiarios] = useState<DailyOccurrenceRecord[]>([]);
@@ -446,8 +445,22 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
                   {documentosDoAluno.length} Registros no Histórico (Atas + Diários)
                 </p>
               </div>
-              <button onClick={() => setDossieAberto(true)} className="flex items-center gap-2 px-6 py-4 bg-primary text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white hover:scale-105 transition-all shadow-xl shadow-primary/20 cursor-pointer">
-                <Download size={16} /> Dossiê Completo (PDF)
+              <button
+                onClick={async () => {
+                  if (baixandoDossie) return;
+                  setBaixandoDossie(true);
+                  try {
+                    await generateDossieZip(mappedDossieOcorrencias, selecao.aluno?.nome || 'Aluno');
+                  } catch (e) {
+                    alert('Erro ao gerar o ZIP. Tente novamente.');
+                  } finally {
+                    setBaixandoDossie(false);
+                  }
+                }}
+                disabled={baixandoDossie}
+                className="flex items-center gap-2 px-6 py-4 bg-primary text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white hover:scale-105 transition-all shadow-xl shadow-primary/20 cursor-pointer disabled:opacity-60 disabled:scale-100"
+              >
+                <Download size={16} /> {baixandoDossie ? 'Gerando ZIP...' : 'Baixar ZIP (PDF por ata)'}
               </button>
             </div>
           )}
@@ -546,9 +559,6 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
             onEditSuccess={atualizar}
             onDeleteSuccess={atualizar}
           />
-        )}
-        {dossieAberto && mappedDossieOcorrencias.length > 0 && (
-          <ProntuarioPDF ocorrencias={mappedDossieOcorrencias} onClose={() => setDossieAberto(false)} alunoNome={selecao.aluno?.nome || ''} />
         )}
       </AnimatePresence>
     </div>

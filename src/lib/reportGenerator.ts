@@ -277,187 +277,383 @@ export const buildFichaOcorrenciaDoc = async (
   ocorrencia: any,
   configAssinaturas: any,
   assinaturasExtras: any[],
-  bgBase64?: string
+  _bgBase64?: string  // mantido por compatibilidade, não utilizado no novo layout
 ) => {
   const doc = new jsPDF('p', 'mm', 'a4');
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
+  const pageWidth  = doc.internal.pageSize.getWidth();   // 210 mm
+  const pageHeight = doc.internal.pageSize.getHeight();  // 297 mm
 
-  if (!bgBase64) {
-    try {
-      bgBase64 = await loadImageAsBase64(papelTimbradoImg);
-    } catch (e) {
-      console.error(e);
-    }
-  }
+  const HEADER_H = 38;   // altura do cabeçalho em mm
+  const MARGIN_X  = 20;  // margem lateral
 
-  if (bgBase64) {
-    doc.addImage(bgBase64, 'PNG', 0, 0, pageWidth, pageHeight);
-  }
+  // -----------------------------------------------------------------------
+  // drawHeader — desenha o cabeçalho novo em cada página (igual ao ProntuarioPDF)
+  // -----------------------------------------------------------------------
+  const drawHeader = () => {
+    // Fundo branco
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
-  const marginX = 25;
-  let currentY = 55;
+    // — Formas geométricas (lado esquerdo) —
 
+    // Forma 1: cinza claro #e2e8f0
+    // clipPath: polygon(0 0, 100% 0, 70% 100%, 0 80%) sobre w=53mm, h=HEADER_H
+    // Pontos absolutos: (0,0) (53,0) (37.1,HEADER_H) (0,HEADER_H*0.8)
+    doc.setFillColor(226, 232, 240);
+    (doc as any).lines(
+      [[53, 0], [-15.9, HEADER_H], [-37.1, -HEADER_H * 0.2]],
+      0, 0, [1, 1], 'F', true
+    );
+
+    // Forma 2: cinza médio #cbd5e1 @ 40% → misturado com branco = #eaecf3
+    // clipPath: polygon(0 0, 100% 0, 80% 100%, 0 60%) sobre w=42mm, h=26mm
+    doc.setFillColor(234, 238, 243);
+    (doc as any).lines(
+      [[42, 0], [-8.4, 26], [-33.6, -10.4]],
+      0, 0, [1, 1], 'F', true
+    );
+
+    // Forma 3: amarelo #fbbf24
+    // top=5mm, w=10.6mm, h=26mm
+    // clipPath: polygon(0 0, 100% 30%, 80% 90%, 0 100%)
+    // Pontos absolutos: (0,5) (10.6,12.8) (8.5,28.4) (0,31)
+    doc.setFillColor(251, 191, 36);
+    (doc as any).lines(
+      [[10.6, 7.8], [-2.1, 15.6], [-8.5, 2.6]],
+      0, 5, [1, 1], 'F', true
+    );
+
+    // Borda inferior navy #0c2340
+    doc.setFillColor(12, 35, 64);
+    doc.rect(0, HEADER_H - 1, pageWidth, 1.2, 'F');
+
+    // — Logo Colégio Sesi (lado direito) —
+    const lx = pageWidth - 50;
+    const ly = 9;
+
+    // "colégio" pequeno
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text('Nome do Aluno:', marginX, currentY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(configAssinaturas.nomeAluno || ocorrencia.nomeAluno, marginX + 35, currentY);
-    
-    currentY += 8;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Ano:', marginX, currentY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(ocorrencia.anoAluno || ocorrencia.turmaAluno || 'Não informado', marginX + 10, currentY);
-
-    currentY += 8;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Responsável pelo Registro:', marginX, currentY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(configAssinaturas.nomeEmissor || ocorrencia.professorAtual || 'Administração', marginX + 50, currentY);
-
-    if (configAssinaturas.nomeResponsavel) {
-      currentY += 8;
-      doc.setFont('helvetica', 'bold');
-      doc.text('Responsável Legal:', marginX, currentY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(configAssinaturas.nomeResponsavel, marginX + 40, currentY);
-    }
-
-    // Quaisquer outros campos adicionados vêm abaixo do responsável pelo registro
-    assinaturasExtras.forEach(e => {
-      currentY += 8;
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${e.papel}:`, marginX, currentY);
-      doc.setFont('helvetica', 'normal');
-      const labelWidth = doc.getTextWidth(`${e.papel}:`) + 3;
-      doc.text(e.nome, marginX + labelWidth, currentY);
-    });
-
-    currentY += 8;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Data:', marginX, currentY);
-    doc.setFont('helvetica', 'normal');
-    
-    // Robust date parsing to avoid timezone bugs
-    const dateKey = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase() === 'data');
-    const rawDate = ocorrencia.dataOcorrencia || (dateKey ? String(ocorrencia.dados[dateKey]) : ocorrencia.criadoEm) || new Date().toISOString();
-    let dateStr = rawDate;
-    if (rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      const [y, m, d] = rawDate.split('-');
-      dateStr = `${d}/${m}/${y}`;
-    } else {
-      try {
-        const dt = new Date(rawDate);
-        if (!isNaN(dt.getTime())) {
-          const useUTC = !rawDate.includes('T') && !rawDate.includes(' ');
-          dateStr = dt.toLocaleDateString('pt-BR', useUTC ? { timeZone: 'UTC' } : undefined);
-        }
-      } catch (e) {
-        dateStr = rawDate;
-      }
-    }
-    
-    doc.text(dateStr, marginX + 12, currentY);
-
-    const numAtaKey = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase().includes('número da ata') || k.toLowerCase().includes('numero da ata') || k.toLowerCase() === 'ata');
-    if (numAtaKey && ocorrencia.dados[numAtaKey]) {
-      currentY += 8;
-      doc.setFont('helvetica', 'bold');
-      doc.text('Número da Ata:', marginX, currentY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(ocorrencia.dados[numAtaKey]), marginX + 30, currentY);
-    }
-
-    currentY += 15;
-    doc.setDrawColor(220, 220, 220);
-    doc.line(marginX, currentY, pageWidth - marginX, currentY);
-    
-    currentY += 15;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
+    doc.setFontSize(6.5);
     doc.setTextColor(12, 35, 64);
-    doc.text('REGISTRO DE ATA', marginX, currentY);
-    
-    currentY += 8;
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    doc.text(ocorrencia.nomeModelo.toUpperCase(), marginX, currentY);
-    
-    currentY += 15;
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
+    doc.text('colégio', lx, ly);
+
+    // Dois pontos decorativos
+    doc.setFillColor(12, 35, 64);
+    doc.circle(lx + 21.5, ly - 2.8, 0.85, 'F');
+    doc.circle(lx + 21.5, ly - 0.6, 0.65, 'F');
+
+    // "Sesi" grande itálico
+    doc.setFont('times', 'bolditalic');
+    doc.setFontSize(25);
+    doc.setTextColor(12, 35, 64);
+    doc.text('Sesi', lx, ly + 12);
+
+    // Badge "internacional" amarelo
     doc.setFont('helvetica', 'bold');
-    doc.text('DESCRIÇÃO', marginX, currentY);
-    
-    currentY += 6;
+    doc.setFontSize(5.5);
+    const badgeTxt = 'INTERNACIONAL';
+    const bw = doc.getTextWidth(badgeTxt) + 5;
+    doc.setFillColor(251, 191, 36);
+    (doc as any).roundedRect(lx + 1, ly + 14, bw, 4.5, 0.8, 0.8, 'F');
+    doc.setTextColor(12, 35, 64);
+    doc.text(badgeTxt, lx + 3.5, ly + 17.6);
+
+    doc.setTextColor(0, 0, 0);
+  };
+
+  // — Desenha a primeira página —
+  drawHeader();
+  let currentY = HEADER_H + 9;
+
+  // -----------------------------------------------------------------------
+  // Informações do aluno
+  // -----------------------------------------------------------------------
+  doc.setFontSize(10);
+  doc.setTextColor(12, 35, 64);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Nome do Aluno:', MARGIN_X, currentY);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 0, 0);
+  doc.text(configAssinaturas.nomeAluno || ocorrencia.nomeAluno || '', MARGIN_X + 33, currentY);
+
+  currentY += 7;
+  doc.setTextColor(12, 35, 64);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Ano:', MARGIN_X, currentY);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 0, 0);
+  doc.text(ocorrencia.anoAluno || ocorrencia.turmaAluno || 'Não informado', MARGIN_X + 10, currentY);
+
+  currentY += 7;
+  doc.setTextColor(12, 35, 64);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Responsável pelo Registro:', MARGIN_X, currentY);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 0, 0);
+  doc.text(configAssinaturas.nomeEmissor || ocorrencia.professorAtual || 'Administração', MARGIN_X + 50, currentY);
+
+  if (configAssinaturas.nomeResponsavel) {
+    currentY += 7;
+    doc.setTextColor(12, 35, 64);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Responsável Legal:', MARGIN_X, currentY);
     doc.setFont('helvetica', 'normal');
-    // Ensure all checks inside report are correctly formatted
-    const relatoRaw = ocorrencia.relato || '';
-    const cleanRelato = relatoRaw.replace(/\[ \]/g, '\u25A1').replace(/\[x\]/g, '\u25A3');
-    const splitText = doc.splitTextToSize(cleanRelato, pageWidth - marginX * 2);
-    const lineHeight = 6;
-    const bottomLimit = pageHeight - 65;
+    doc.setTextColor(0, 0, 0);
+    doc.text(configAssinaturas.nomeResponsavel, MARGIN_X + 38, currentY);
+  }
 
-    for (let i = 0; i < splitText.length; i++) {
-      if (currentY + lineHeight > bottomLimit) {
-        doc.addPage();
-        if (bgBase64) {
-          doc.addImage(bgBase64, 'PNG', 0, 0, pageWidth, pageHeight);
-        }
-        currentY = 55;
+  assinaturasExtras.forEach(e => {
+    currentY += 7;
+    doc.setTextColor(12, 35, 64);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${e.papel}:`, MARGIN_X, currentY);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    const lw = doc.getTextWidth(`${e.papel}:`) + 3;
+    doc.text(e.nome, MARGIN_X + lw, currentY);
+  });
+
+  currentY += 7;
+  doc.setTextColor(12, 35, 64);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Data:', MARGIN_X, currentY);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 0, 0);
+
+  // Parsing robusto de data (evita bugs de fuso horário)
+  const dateKey = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase() === 'data');
+  const rawDate = ocorrencia.dataOcorrencia || (dateKey ? String(ocorrencia.dados[dateKey]) : ocorrencia.criadoEm) || new Date().toISOString();
+  let dateStr = rawDate;
+  if (rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [y, m, d] = rawDate.split('-');
+    dateStr = `${d}/${m}/${y}`;
+  } else {
+    try {
+      const dt = new Date(rawDate);
+      if (!isNaN(dt.getTime())) {
+        const useUTC = !rawDate.includes('T') && !rawDate.includes(' ');
+        dateStr = dt.toLocaleDateString('pt-BR', useUTC ? { timeZone: 'UTC' } : undefined);
       }
-      doc.text(splitText[i], marginX, currentY);
-      currentY += lineHeight;
+    } catch (e) { dateStr = rawDate; }
+  }
+  doc.text(dateStr, MARGIN_X + 12, currentY);
+
+  const numAtaKey = Object.keys(ocorrencia.dados || {}).find(k =>
+    k.toLowerCase().includes('número da ata') || k.toLowerCase().includes('numero da ata') || k.toLowerCase() === 'ata'
+  );
+  if (numAtaKey && ocorrencia.dados[numAtaKey]) {
+    currentY += 7;
+    doc.setTextColor(12, 35, 64);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Número da Ata:', MARGIN_X, currentY);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    doc.text(String(ocorrencia.dados[numAtaKey]), MARGIN_X + 30, currentY);
+  }
+
+  // Linha separadora
+  currentY += 12;
+  doc.setDrawColor(220, 220, 220);
+  doc.line(MARGIN_X, currentY, pageWidth - MARGIN_X, currentY);
+
+  // Título "REGISTRO DE ATA"
+  currentY += 13;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(12, 35, 64);
+  doc.text('REGISTRO DE ATA', MARGIN_X, currentY);
+
+  currentY += 8;
+  doc.setFontSize(11);
+  doc.setTextColor(100, 100, 100);
+  doc.text((ocorrencia.nomeModelo || '').toUpperCase(), MARGIN_X, currentY);
+
+  currentY += 13;
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'bold');
+  doc.text('DESCRIÇÃO', MARGIN_X, currentY);
+
+  currentY += 6;
+
+  // -----------------------------------------------------------------------
+  // Extrai o relato
+  // -----------------------------------------------------------------------
+  const relatoRaw: string =
+    (ocorrencia as any).relato ||
+    (() => {
+      const descKey = Object.keys(ocorrencia.dados || {}).find(k =>
+        ['descrição', 'descricao', 'relato', 'descrição do ocorrido', 'descrição do fato',
+         'description', 'observações', 'observacoes', 'obs'].includes(k.toLowerCase())
+      );
+      return descKey ? String(ocorrencia.dados[descKey]) : '';
+    })();
+
+  // Converte checkboxes estilo markdown
+  const processedRelato = relatoRaw
+    .replace(/\[ \]/g, '\u25A1')
+    .replace(/\[x\]/g, '\u25A3');
+
+  // -----------------------------------------------------------------------
+  // Renderizador de texto com suporte a **negrito** (markdown inline)
+  // Faz word-wrap manual ciente do tamanho de cada segmento (bold vs normal)
+  // -----------------------------------------------------------------------
+  type TxtSeg = { text: string; bold: boolean };
+
+  const parseMarkdown = (line: string): TxtSeg[] => {
+    const segs: TxtSeg[] = [];
+    const re = /\*\*(.+?)\*\*/g;
+    let last = 0, m: RegExpExecArray | null;
+    while ((m = re.exec(line)) !== null) {
+      if (m.index > last) segs.push({ text: line.slice(last, m.index), bold: false });
+      segs.push({ text: m[1], bold: true });
+      last = m.index + m[0].length;
     }
-    
-    // Signatures
-    const sigY = pageHeight - 50;
-    doc.setDrawColor(0, 0, 0);
-    
-    // Collect signatures
-    const allSigs = [];
-    if (configAssinaturas.mostrarAluno) allSigs.push({ label: 'ASSINATURA DO ALUNO', name: configAssinaturas.nomeAluno || ocorrencia.nomeAluno });
-    if (configAssinaturas.mostrarResponsavel) allSigs.push({ label: 'ASSINATURA DO RESPONSÁVEL', name: configAssinaturas.nomeResponsavel || '' });
-    if (configAssinaturas.mostrarEmissor) allSigs.push({ label: 'RESPONSÁVEL PELO REGISTRO', name: configAssinaturas.nomeEmissor || '' });
-    assinaturasExtras.forEach(e => allSigs.push({ label: e.papel.toUpperCase(), name: e.nome }));
+    if (last < line.length) segs.push({ text: line.slice(last), bold: false });
+    return segs.length ? segs : [{ text: line, bold: false }];
+  };
 
-    let sigX = marginX;
-    let currentSigY = sigY;
-    const sigWidth = 60;
-    const sigSpacing = 15;
+  const segW = (t: string, bold: boolean): number => {
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.setFontSize(10);
+    return doc.getTextWidth(t);
+  };
 
-    // We can fit up to 2 per row
-    allSigs.forEach((sig, index) => {
-      const col = index % 2;
-      const row = Math.floor(index / 2);
-      const x = col === 0 ? marginX : pageWidth - marginX - sigWidth;
-      const y = sigY + (row * 30);
-      
-      doc.setDrawColor(0, 0, 0);
-      doc.line(x, y, x + sigWidth, y);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.text(sig.label, x + (sigWidth / 2), y + 5, { align: 'center' });
-      
-      if (sig.name) {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
-        doc.setTextColor(150, 150, 150);
-        doc.text(sig.name.toUpperCase(), x + (sigWidth / 2), y + 10, { align: 'center' });
+  const LH = 6;          // line height mm
+  const MAX_W = pageWidth - MARGIN_X * 2;
+  // Space needed for signatures (2 rows = 56mm + margin)
+  const SIG_RESERVE = 65;
+  const TEXT_BOTTOM  = pageHeight - SIG_RESERVE;
+
+  const flushTextLine = (lineParts: TxtSeg[], y: number): number => {
+    if (!lineParts.length) return y;
+    // Check if we need a new page (reserve SIG_RESERVE at bottom)
+    if (y + LH > TEXT_BOTTOM) {
+      doc.addPage();
+      drawHeader();
+      y = HEADER_H + 15;
+    }
+    let cx = MARGIN_X;
+    doc.setFontSize(10);
+    for (const seg of lineParts) {
+      doc.setFont('helvetica', seg.bold ? 'bold' : 'normal');
+      doc.text(seg.text, cx, y);
+      cx += doc.getTextWidth(seg.text);
+    }
+    return y + LH;
+  };
+
+  // Word-wrap with bold awareness
+  const paragraphs = processedRelato.split('\n');
+  for (const para of paragraphs) {
+    if (!para.trim()) {
+      currentY += LH * 0.5;
+      continue;
+    }
+
+    const allSegs = parseMarkdown(para);
+
+    // Break each segment into tokens (words + spaces)
+    type Token = { text: string; bold: boolean };
+    const tokens: Token[] = [];
+    for (const seg of allSegs) {
+      // Split on word boundaries keeping spaces
+      const parts = seg.text.split(/(\s+)/);
+      for (const p of parts) {
+        if (p) tokens.push({ text: p, bold: seg.bold });
       }
-      doc.setTextColor(0, 0, 0);
-    });
+    }
+
+    let lineParts: TxtSeg[] = [];
+    let lineW = 0;
+
+    for (const tok of tokens) {
+      const tw = segW(tok.text, tok.bold);
+      if (lineW + tw > MAX_W && lineParts.length > 0 && !/^\s+$/.test(tok.text)) {
+        // Trim trailing space from current line
+        if (lineParts.length && /^\s+$/.test(lineParts[lineParts.length - 1].text)) {
+          lineParts.pop();
+        }
+        currentY = flushTextLine(lineParts, currentY);
+        lineParts = [];
+        lineW = 0;
+        // Skip leading whitespace at start of new line
+        if (/^\s+$/.test(tok.text)) continue;
+      }
+      lineParts.push({ text: tok.text, bold: tok.bold });
+      lineW += tw;
+    }
+    // Flush remaining
+    if (lineParts.length) {
+      if (lineParts.length && /^\s+$/.test(lineParts[lineParts.length - 1].text)) lineParts.pop();
+      currentY = flushTextLine(lineParts, currentY);
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Assinaturas — garante que aparecem sempre (adiciona página se necessário)
+  // -----------------------------------------------------------------------
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+
+  // Coleta assinaturas necessárias para calcular espaço
+  const allSigs: { label: string; name: string }[] = [];
+  if (configAssinaturas.mostrarAluno)
+    allSigs.push({ label: 'ASSINATURA DO ALUNO', name: configAssinaturas.nomeAluno || ocorrencia.nomeAluno });
+  if (configAssinaturas.mostrarResponsavel)
+    allSigs.push({ label: 'ASSINATURA DO RESPONSÁVEL', name: configAssinaturas.nomeResponsavel || '' });
+  if (configAssinaturas.mostrarEmissor)
+    allSigs.push({ label: 'RESPONSÁVEL PELO REGISTRO', name: configAssinaturas.nomeEmissor || '' });
+  assinaturasExtras.forEach(e => allSigs.push({ label: e.papel.toUpperCase(), name: e.nome }));
+
+  // Espaço que as assinaturas ocupam (em linhas de 28mm por fileira)
+  const sigRows  = Math.ceil(allSigs.length / 2);
+  const sigBlock = sigRows * 28 + 20; // 20mm de margem
+
+  // Se não há espaço na página atual → nova página só para assinaturas
+  if (currentY + sigBlock > pageHeight - 10) {
+    doc.addPage();
+    drawHeader();
+  }
+
+  // Posiciona assinaturas na parte inferior da página atual
+  const sigW  = 65;
+  const sigY  = pageHeight - 20 - sigBlock + 20; // 20mm do rodapé
+
+  allSigs.forEach((sig, index) => {
+    const col = index % 2;
+    const row = Math.floor(index / 2);
+    const x   = col === 0 ? MARGIN_X : pageWidth - MARGIN_X - sigW;
+    const y   = sigY + row * 28;
+
+    doc.setDrawColor(50, 50, 50);
+    doc.line(x, y, x + sigW, y);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(0, 0, 0);
+    doc.text(sig.label, x + sigW / 2, y + 5, { align: 'center' });
+
+    if (sig.name) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(120, 120, 120);
+      doc.text(sig.name.toUpperCase(), x + sigW / 2, y + 10, { align: 'center' });
+    }
+    doc.setTextColor(0, 0, 0);
+  });
 
   return doc;
 };
+
 
 export const generateFichaOcorrenciaPDF = async (
   ocorrencia: any,
   configAssinaturas: any,
   assinaturasExtras: any[]
 ) => {
+
   try {
     const doc = await buildFichaOcorrenciaDoc(ocorrencia, configAssinaturas, assinaturasExtras);
     
@@ -533,6 +729,79 @@ export const generateBackupZip = async (ocorrencias: RegistroOcorrencia[], mes: 
     return true;
   } catch (error) {
     console.error('Error generating ZIP backup:', error);
+    return false;
+  }
+};
+
+// ---------------------------------------------------------------------------
+// Gera ZIP com um PDF por ATA, em pasta com nome do aluno (layout novo)
+// Usado no botão "Dossiê Completo" do ExploradorProntuario
+// ---------------------------------------------------------------------------
+export const generateDossieZip = async (
+  ocorrencias: RegistroOcorrencia[],
+  nomeAluno: string
+): Promise<boolean> => {
+  try {
+    const zip = new JSZip();
+    const bgBase64 = await loadImageAsBase64(papelTimbradoImg).catch(() => undefined);
+
+    // Pasta raiz com nome do aluno (sanitizado)
+    const pastaAluno = nomeAluno
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9 _-]/g, '')
+      .trim() || 'Aluno';
+
+    const folder = zip.folder(pastaAluno);
+    if (!folder) throw new Error('Erro ao criar pasta no ZIP');
+
+    for (let i = 0; i < ocorrencias.length; i++) {
+      const oc = ocorrencias[i];
+
+      const config = {
+        mostrarAluno: true,
+        mostrarResponsavel: true,
+        mostrarEmissor: true,
+        nomeEmissor: oc.professorAtual || 'Administração',
+        nomeAluno: oc.nomeAluno,
+        nomeResponsavel: ''
+      };
+
+      const doc = await buildFichaOcorrenciaDoc(oc, config, [], bgBase64);
+      const pdfBuffer = doc.output('arraybuffer');
+
+      // Nome do arquivo: Nº_TipoAta_DD-MM-AAAA.pdf
+      const dateStr = (() => {
+        try {
+          const raw = oc.criadoEm || new Date().toISOString();
+          const dt = new Date(raw);
+          if (!isNaN(dt.getTime())) {
+            const d = String(dt.getDate()).padStart(2, '0');
+            const m = String(dt.getMonth() + 1).padStart(2, '0');
+            const y = dt.getFullYear();
+            return `${d}-${m}-${y}`;
+          }
+        } catch { /* */ }
+        return 'sem-data';
+      })();
+
+      const tipoClean = (oc.nomeModelo || 'Ata')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9 _-]/g, '_')
+        .replace(/\s+/g, '_')
+        .slice(0, 40);
+
+      const filename = `${String(i + 1).padStart(2, '0')}_${tipoClean}_${dateStr}.pdf`;
+      folder.file(filename, pdfBuffer);
+    }
+
+    const content = await zip.generateAsync({ type: 'blob' });
+    const alunoClean = nomeAluno
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '_').toLowerCase();
+    saveAs(content, `Dossie_${alunoClean}.zip`);
+    return true;
+  } catch (error) {
+    console.error('Erro ao gerar ZIP do dossiê:', error);
     return false;
   }
 };

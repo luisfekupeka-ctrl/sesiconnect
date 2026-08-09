@@ -14,6 +14,83 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { cn } from '../lib/utils';
 
+// ---------------------------------------------------------------------------
+// Utilitário: Compressão de Imagem no lado do cliente
+// ---------------------------------------------------------------------------
+/**
+ * Comprime uma imagem usando Canvas API.
+ * - Redimensiona para no máximo maxDimension px de largura/altura
+ * - Reduz a qualidade progressivamente até atingir maxSizeMB
+ * - Retorna um novo File com tipo image/jpeg
+ */
+async function comprimirImagem(
+  file: File,
+  maxDimension = 1920,
+  maxSizeMB = 2
+): Promise<File> {
+  // Se não for imagem ou já for pequena demais, retorna como está
+  if (!file.type.startsWith('image/')) return file;
+  if (file.size <= maxSizeMB * 1024 * 1024) return file;
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+
+      // Calcular novas dimensões mantendo proporção
+      let { width, height } = img;
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Reduzir qualidade progressivamente
+      let quality = 0.85;
+      const tryCompress = () => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) { resolve(file); return; }
+
+            if (blob.size <= maxSizeMB * 1024 * 1024 || quality <= 0.1) {
+              const ext = 'jpg';
+              const newName = file.name.replace(/\.[^.]+$/, '') + '_c.' + ext;
+              resolve(new File([blob], newName, { type: 'image/jpeg' }));
+            } else {
+              quality = Math.max(0.1, quality - 0.1);
+              tryCompress();
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      tryCompress();
+    };
+
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+    img.src = objectUrl;
+  });
+}
+
+function formatarBytes(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
 // Interfaces do Módulo
 interface Andar {
   id: string;
@@ -266,6 +343,8 @@ export default function ChamadosPage() {
   const [tipoOutroDescricao, setTipoOutroDescricao] = useState('');
   const [descricao, setDescricao] = useState('');
   const [fotosUpload, setFotosUpload] = useState<File[]>([]);
+  const [fotosUploadOriginalSize, setFotosUploadOriginalSize] = useState<number[]>([]);
+  const [comprimindoFotos, setComprimindoFotos] = useState(false);
   const [salvandoChamado, setSalvandoChamado] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -277,6 +356,8 @@ export default function ChamadosPage() {
   const [historico, setHistorico] = useState<Historico[]>([]);
   const [novoComentario, setNovoComentario] = useState('');
   const [fotosComentario, setFotosComentario] = useState<File[]>([]);
+  const [fotosComentarioOriginalSize, setFotosComentarioOriginalSize] = useState<number[]>([]);
+  const [comprimindoFotosComentario, setComprimindoFotosComentario] = useState(false);
   const commentFileInputRef = useRef<HTMLInputElement>(null);
   const commentCameraInputRef = useRef<HTMLInputElement>(null);
   const [enviandoComentario, setEnviandoComentario] = useState(false);
@@ -604,16 +685,18 @@ export default function ChamadosPage() {
         status_novo: 'Aberto'
       });
 
-      // 3. Fazer Upload de Imagens no Storage e cadastrar como anexos
+      // 3. Fazer Upload de Imagens no Storage e cadastrar como anexos (com compressão)
       if (fotosUpload.length > 0) {
         for (const foto of fotosUpload) {
-          const fileExt = foto.name.split('.').pop();
+          // Comprimir imagem antes de enviar (máx 2MB por foto)
+          const fotoComprimida = await comprimirImagem(foto, 1920, 2);
+          const fileExt = 'jpg';
           const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
           const filePath = `chamados/${chamadoCriado.id}/${fileName}`;
 
           const { error: erroUpload } = await supabase.storage
             .from('fotos_chamados')
-            .upload(filePath, foto);
+            .upload(filePath, fotoComprimida, { contentType: 'image/jpeg' });
 
           if (erroUpload) throw erroUpload;
 
@@ -756,16 +839,18 @@ export default function ChamadosPage() {
         acao: `${profile?.full_name || 'Usuário'} adicionou um comentário.`
       });
 
-      // 3. Fazer upload de fotos anexadas ao comentário (se houver)
+      // 3. Fazer upload de fotos anexadas ao comentário (com compressão)
       if (fotosComentario.length > 0) {
         for (const foto of fotosComentario) {
-          const fileExt = foto.name.split('.').pop();
+          // Comprimir imagem antes de enviar (máx 2MB por foto)
+          const fotoComprimida = await comprimirImagem(foto, 1920, 2);
+          const fileExt = 'jpg';
           const fileName = `${Date.now()}_comment_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
           const filePath = `chamados/${chamadoSelecionado.id}/${fileName}`;
 
           const { error: erroUpload } = await supabase.storage
             .from('fotos_chamados')
-            .upload(filePath, foto);
+            .upload(filePath, fotoComprimida, { contentType: 'image/jpeg' });
 
           if (erroUpload) throw erroUpload;
 
@@ -1793,11 +1878,24 @@ export default function ChamadosPage() {
                               <img src={URL.createObjectURL(f)} className="w-full h-full object-cover" alt="Preview" />
                               <button
                                 type="button"
-                                onClick={() => setFotosComentario(prev => prev.filter((_, i) => i !== idx))}
+                                onClick={() => {
+                                  setFotosComentario(prev => prev.filter((_, i) => i !== idx));
+                                  setFotosComentarioOriginalSize(prev => prev.filter((_, i) => i !== idx));
+                                }}
                                 className="absolute top-0 right-0 p-1 bg-red-600 text-white rounded-bl-lg hover:bg-red-700 transition-colors"
                               >
                                 <X size={10} />
                               </button>
+                              {/* Badge tamanho */}
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5 text-center">
+                                {fotosComentarioOriginalSize[idx] && fotosComentarioOriginalSize[idx] !== f.size ? (
+                                  <span className="text-[7px] text-green-400 font-bold leading-none">
+                                    {formatarBytes(f.size)}
+                                  </span>
+                                ) : (
+                                  <span className="text-[7px] text-white/60 font-bold leading-none">{formatarBytes(f.size)}</span>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -1809,9 +1907,14 @@ export default function ChamadosPage() {
                             type="file"
                             accept="image/png, image/jpeg, image/jpg, image/webp"
                             multiple
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               if (e.target.files) {
-                                setFotosComentario(prev => [...prev, ...Array.from(e.target.files!)]);
+                                const novos = Array.from<File>(e.target.files);
+                                setComprimindoFotosComentario(true);
+                                const comprimidos = await Promise.all(novos.map((f: File) => comprimirImagem(f, 1920, 2)));
+                                setFotosComentario(prev => [...prev, ...comprimidos]);
+                                setFotosComentarioOriginalSize(prev => [...prev, ...novos.map((f: File) => f.size)]);
+                                setComprimindoFotosComentario(false);
                               }
                             }}
                             ref={commentFileInputRef}
@@ -1822,15 +1925,20 @@ export default function ChamadosPage() {
                             accept="image/*"
                             capture="environment"
                             multiple
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               if (e.target.files) {
-                                setFotosComentario(prev => [...prev, ...Array.from(e.target.files!)]);
+                                const novos = Array.from<File>(e.target.files);
+                                setComprimindoFotosComentario(true);
+                                const comprimidos = await Promise.all(novos.map((f: File) => comprimirImagem(f, 1920, 2)));
+                                setFotosComentario(prev => [...prev, ...comprimidos]);
+                                setFotosComentarioOriginalSize(prev => [...prev, ...novos.map((f: File) => f.size)]);
+                                setComprimindoFotosComentario(false);
                               }
                             }}
                             ref={commentCameraInputRef}
                             className="hidden"
                           />
-                          <div className="flex gap-2">
+                          <div className="flex flex-wrap gap-2 items-center">
                             <button
                               type="button"
                               onClick={() => commentFileInputRef.current?.click()}
@@ -1845,6 +1953,11 @@ export default function ChamadosPage() {
                             >
                               <Camera size={14} className="text-primary" /> Tirar Foto
                             </button>
+                            {comprimindoFotosComentario && (
+                              <span className="flex items-center gap-1 text-xs text-yellow-400 font-bold">
+                                <Loader2 size={12} className="animate-spin" /> Comprimindo...
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -2010,9 +2123,14 @@ export default function ChamadosPage() {
                     accept="image/png, image/jpeg, image/jpg, image/webp"
                     multiple
                     ref={fileInputRef}
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       if (e.target.files) {
-                        setFotosUpload(prev => [...prev, ...Array.from(e.target.files!)]);
+                        const novos = Array.from<File>(e.target.files);
+                        setComprimindoFotos(true);
+                        const comprimidos = await Promise.all(novos.map((f: File) => comprimirImagem(f, 1920, 2)));
+                        setFotosUpload(prev => [...prev, ...comprimidos]);
+                        setFotosUploadOriginalSize(prev => [...prev, ...novos.map((f: File) => f.size)]);
+                        setComprimindoFotos(false);
                       }
                     }}
                     className="hidden"
@@ -2023,9 +2141,14 @@ export default function ChamadosPage() {
                     capture="environment"
                     multiple
                     ref={cameraInputRef}
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       if (e.target.files) {
-                        setFotosUpload(prev => [...prev, ...Array.from(e.target.files!)]);
+                        const novos = Array.from<File>(e.target.files);
+                        setComprimindoFotos(true);
+                        const comprimidos = await Promise.all(novos.map((f: File) => comprimirImagem(f, 1920, 2)));
+                        setFotosUpload(prev => [...prev, ...comprimidos]);
+                        setFotosUploadOriginalSize(prev => [...prev, ...novos.map((f: File) => f.size)]);
+                        setComprimindoFotos(false);
                       }
                     }}
                     className="hidden"
@@ -2047,6 +2170,11 @@ export default function ChamadosPage() {
                       <Camera size={16} className="text-primary" /> Tirar Foto
                     </button>
                     <span className="text-xs text-on-surface-variant font-semibold">Formatos aceitos: JPG, JPEG, PNG, WEBP</span>
+                  {comprimindoFotos && (
+                    <span className="flex items-center gap-1 text-xs text-yellow-400 font-bold">
+                      <Loader2 size={12} className="animate-spin" /> Comprimindo...
+                    </span>
+                  )}
                   </div>
 
                   {/* Previews das fotos selecionadas */}
@@ -2057,11 +2185,24 @@ export default function ChamadosPage() {
                           <img src={URL.createObjectURL(foto)} alt="Preview" className="w-full h-full object-cover" />
                           <button
                             type="button"
-                            onClick={() => setFotosUpload(prev => prev.filter((_, i) => i !== idx))}
+                            onClick={() => {
+                              setFotosUpload(prev => prev.filter((_, i) => i !== idx));
+                              setFotosUploadOriginalSize(prev => prev.filter((_, i) => i !== idx));
+                            }}
                             className="absolute top-0 right-0 p-1.5 bg-red-600 text-white rounded-bl-lg hover:bg-red-700 transition-colors"
                           >
                             <X size={14} />
                           </button>
+                          {/* Badge de tamanho */}
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1.5 py-0.5 text-center">
+                            {fotosUploadOriginalSize[idx] && fotosUploadOriginalSize[idx] !== foto.size ? (
+                              <span className="text-[9px] text-green-400 font-bold">
+                                {formatarBytes(fotosUploadOriginalSize[idx])} → {formatarBytes(foto.size)}
+                              </span>
+                            ) : (
+                              <span className="text-[9px] text-white/60 font-bold">{formatarBytes(foto.size)}</span>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
