@@ -871,7 +871,7 @@ export default function ChamadosPage() {
         .in('status', statusFiltro);
 
       if (!chamadosAlvo || chamadosAlvo.length === 0) {
-        exibirMensagem('info', 'Nenhum chamado encontrado para excluir.');
+        exibirMensagem('ok', 'Nenhum chamado encontrado para excluir.');
         return;
       }
 
