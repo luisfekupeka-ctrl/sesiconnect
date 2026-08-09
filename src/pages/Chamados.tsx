@@ -28,9 +28,10 @@ async function comprimirImagem(
   maxDimension = 1920,
   maxSizeMB = 2
 ): Promise<File> {
-  // Se não for imagem ou já for pequena demais, retorna como está
+  // Se não for imagem, retorna como está
   if (!file.type.startsWith('image/')) return file;
-  if (file.size <= maxSizeMB * 1024 * 1024) return file;
+  // Se for imagem levinha E já for JPEG, pode retornar direto
+  if (file.size <= maxSizeMB * 1024 * 1024 && file.type === 'image/jpeg') return file;
 
   return new Promise((resolve) => {
     const img = new Image();
@@ -1154,13 +1155,34 @@ export default function ChamadosPage() {
     doc.save(`Chamados_${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
-  const baixarArquivo = async (url: string, nomeOriginal: string) => {
+  const baixarArquivo = async (url: string, nomeOriginal: string, numeroChamado?: string) => {
     try {
       const response = await fetch(url);
       const blob = await response.blob();
+
+      // Garantia de tamanho pequeno (alerta se ultrapassar 10MB)
+      if (blob.size > 10 * 1024 * 1024) {
+        console.warn('Aviso: Arquivo com tamanho acima de 10MB:', blob.size);
+      }
+
       const link = document.createElement('a');
       link.href = window.URL.createObjectURL(blob);
-      link.download = nomeOriginal;
+
+      // Limpa e garante extensão válida de imagem
+      let baseName = (nomeOriginal || 'foto.jpg').trim();
+      if (!/\.(jpg|jpeg|png|webp|gif)$/i.test(baseName)) {
+        baseName += '.jpg';
+      }
+
+      // Prepara o nome final incluindo o número do chamado (ex: CH-000042_foto.jpg)
+      let finalName = baseName;
+      if (numeroChamado) {
+        const cleanNum = numeroChamado.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const cleanOrig = baseName.replace(/[^a-zA-Z0-9._-]/g, '_');
+        finalName = `${cleanNum}_${cleanOrig}`;
+      }
+
+      link.download = finalName;
       link.click();
     } catch (err) {
       alert('Erro ao tentar baixar o arquivo.');
@@ -1794,7 +1816,7 @@ export default function ChamadosPage() {
                                 <Eye size={16} />
                               </button>
                               <button
-                                onClick={() => baixarArquivo(a.url, a.nome_arquivo)}
+                                onClick={() => baixarArquivo(a.url, a.nome_arquivo, chamadoSelecionado?.numero_chamado)}
                                 className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all"
                                 title="Baixar Foto"
                               >
@@ -1962,7 +1984,7 @@ export default function ChamadosPage() {
                                       </button>
                                       <button
                                         type="button"
-                                        onClick={() => baixarArquivo(a.url, a.nome_arquivo)}
+                                        onClick={() => baixarArquivo(a.url, a.nome_arquivo, chamadoSelecionado?.numero_chamado)}
                                         className="p-1 bg-white/10 hover:bg-white/20 text-white rounded transition-all"
                                       >
                                         <Download size={12} />
@@ -2567,12 +2589,25 @@ export default function ChamadosPage() {
             onClick={() => setFotoZoom(null)}
             className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 backdrop-blur-md cursor-zoom-out"
           >
-            <button
-              onClick={() => setFotoZoom(null)}
-              className="absolute top-6 right-6 p-3 bg-white/10 text-white rounded-full hover:bg-white/20 transition-all"
-            >
-              <X size={24} />
-            </button>
+            <div className="absolute top-6 right-6 flex items-center gap-3">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  baixarArquivo(fotoZoom, 'foto.jpg', chamadoSelecionado?.numero_chamado);
+                }}
+                className="px-4 py-2.5 bg-white/10 text-white rounded-full hover:bg-white/20 transition-all flex items-center gap-2 text-xs font-bold"
+                title="Baixar Foto"
+              >
+                <Download size={18} /> Baixar
+              </button>
+              <button
+                onClick={() => setFotoZoom(null)}
+                className="p-3 bg-white/10 text-white rounded-full hover:bg-white/20 transition-all"
+                title="Fechar"
+              >
+                <X size={24} />
+              </button>
+            </div>
             <img src={fotoZoom} alt="Zoom" className="max-w-full max-h-[90vh] rounded-2xl object-contain shadow-2xl border border-white/10" />
           </motion.div>
         )}
