@@ -696,7 +696,10 @@ export default function ChamadosPage() {
 
           const { error: erroUpload } = await supabase.storage
             .from('fotos_chamados')
-            .upload(filePath, fotoComprimida, { contentType: 'image/jpeg' });
+            .upload(filePath, fotoComprimida, {
+              contentType: 'image/jpeg',
+              cacheControl: '31536000, public, immutable'
+            });
 
           if (erroUpload) throw erroUpload;
 
@@ -850,7 +853,10 @@ export default function ChamadosPage() {
 
           const { error: erroUpload } = await supabase.storage
             .from('fotos_chamados')
-            .upload(filePath, fotoComprimida, { contentType: 'image/jpeg' });
+            .upload(filePath, fotoComprimida, {
+              contentType: 'image/jpeg',
+              cacheControl: '31536000, public, immutable'
+            });
 
           if (erroUpload) throw erroUpload;
 
