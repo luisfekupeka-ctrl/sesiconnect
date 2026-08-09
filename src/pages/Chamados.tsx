@@ -813,6 +813,101 @@ export default function ChamadosPage() {
   };
 
   // ---------------------------------------------------------------------------
+  // Exclusão Individual de Chamado com remoção das fotos no Storage
+  // ---------------------------------------------------------------------------
+  const handleExcluirChamado = async (chamadoId: string) => {
+    if (!window.confirm('Tem certeza de que deseja excluir este chamado permanentemente? Todas as fotos anexadas a ele serão apagadas do Supabase Storage para liberar espaço.')) return;
+
+    try {
+      setCarregando(true);
+      
+      // 1. Buscar todos os anexos do chamado para obter caminhos no Storage
+      const { data: anexosData } = await supabase
+        .from('anexos_chamado')
+        .select('caminho_storage')
+        .eq('chamado_id', chamadoId);
+
+      if (anexosData && anexosData.length > 0) {
+        const paths = anexosData.map(a => a.caminho_storage).filter(Boolean);
+        if (paths.length > 0) {
+          await supabase.storage.from('fotos_chamados').remove(paths);
+        }
+      }
+
+      // 2. Excluir o chamado do banco de dados (cascade exclui anexos e histórico)
+      const { error: erroDelete } = await supabase
+        .from('chamados')
+        .delete()
+        .eq('id', chamadoId);
+
+      if (erroDelete) throw erroDelete;
+
+      exibirMensagem('ok', 'Chamado e fotos associadas excluídos com sucesso!');
+      setChamadoSelecionado(null);
+      await carregarChamados();
+    } catch (err: any) {
+      exibirMensagem('erro', 'Erro ao excluir chamado: ' + err.message);
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Exclusão em Lote de Chamados Finalizados (Atendidos / Cancelados)
+  // ---------------------------------------------------------------------------
+  const handleLimparChamadosFinalizados = async (categoria: 'atendidos' | 'cancelados') => {
+    const rotulo = categoria === 'atendidos' ? 'ATENDIDOS' : 'CANCELADOS';
+    
+    if (!window.confirm(`ATENÇÃO: Deseja apagar PERMANENTEMENTE todos os chamados com status "${rotulo}"? Esta ação irá remover os registros e APAGAR todas as fotos do Supabase Storage para liberar espaço.`)) return;
+
+    try {
+      setCarregando(true);
+      const statusFiltro = categoria === 'atendidos' ? ['Atendido'] : ['Cancelado'];
+
+      // 1. Buscar IDs dos chamados a serem excluídos
+      const { data: chamadosAlvo } = await supabase
+        .from('chamados')
+        .select('id')
+        .in('status', statusFiltro);
+
+      if (!chamadosAlvo || chamadosAlvo.length === 0) {
+        exibirMensagem('info', 'Nenhum chamado encontrado para excluir.');
+        return;
+      }
+
+      const ids = chamadosAlvo.map(c => c.id);
+
+      // 2. Buscar caminhos das fotos no Storage desses chamados
+      const { data: anexosData } = await supabase
+        .from('anexos_chamado')
+        .select('caminho_storage')
+        .in('chamado_id', ids);
+
+      if (anexosData && anexosData.length > 0) {
+        const paths = anexosData.map(a => a.caminho_storage).filter(Boolean);
+        if (paths.length > 0) {
+          await supabase.storage.from('fotos_chamados').remove(paths);
+        }
+      }
+
+      // 3. Excluir os chamados do banco
+      const { error: erroDelete } = await supabase
+        .from('chamados')
+        .delete()
+        .in('id', ids);
+
+      if (erroDelete) throw erroDelete;
+
+      exibirMensagem('ok', `${ids.length} chamados e todas as suas fotos foram excluídos com sucesso!`);
+      await carregarChamados();
+    } catch (err: any) {
+      exibirMensagem('erro', 'Erro ao apagar chamados: ' + err.message);
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
   // Envio de Comentários
   // ---------------------------------------------------------------------------
   const handleEnviarComentario = async (e: React.FormEvent) => {
@@ -1334,6 +1429,15 @@ export default function ChamadosPage() {
               >
                 Cancelados ({chamados.filter(c => c.status === 'Cancelado').length})
               </button>
+
+              {isAdmin && (exibicaoLista === 'atendidos' || exibicaoLista === 'cancelados') && (
+                <button
+                  onClick={() => handleLimparChamadosFinalizados(exibicaoLista === 'atendidos' ? 'atendidos' : 'cancelados')}
+                  className="sm:ml-auto px-4 py-2.5 bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/20 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <Trash2 size={14} /> Limpar {exibicaoLista === 'atendidos' ? 'Atendidos' : 'Cancelados'} (Apagar Fotos)
+                </button>
+              )}
             </div>
 
             {/* Filtros */}
@@ -1762,6 +1866,15 @@ export default function ChamadosPage() {
                         className="px-5 py-3 bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 font-bold uppercase tracking-wider rounded-xl active:scale-95 transition-all text-xs flex items-center gap-2"
                       >
                         Problema Não Resolvido (Reabrir em Espera)
+                      </button>
+                    )}
+
+                    {(isAdmin || chamadoSelecionado.usuario_id === user?.id) && (
+                      <button
+                        onClick={() => handleExcluirChamado(chamadoSelecionado.id)}
+                        className="px-5 py-3 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-600 hover:text-white font-black uppercase tracking-wider rounded-xl active:scale-95 transition-all text-xs flex items-center gap-2 cursor-pointer"
+                      >
+                        <Trash2 size={14} /> Excluir Chamado e Fotos
                       </button>
                     )}
                   </div>
