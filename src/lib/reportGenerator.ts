@@ -277,93 +277,33 @@ export const buildFichaOcorrenciaDoc = async (
   ocorrencia: any,
   configAssinaturas: any,
   assinaturasExtras: any[],
-  _bgBase64?: string  // mantido por compatibilidade, não utilizado no novo layout
+  bgBase64?: string
 ) => {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth  = doc.internal.pageSize.getWidth();   // 210 mm
   const pageHeight = doc.internal.pageSize.getHeight();  // 297 mm
 
-  const HEADER_H = 38;   // altura do cabeçalho em mm
-  const MARGIN_X  = 20;  // margem lateral
+  if (!bgBase64) {
+    try {
+      bgBase64 = await loadImageAsBase64(papelTimbradoImg);
+    } catch (e) {
+      console.error(e);
+    }
+  }
 
-  // -----------------------------------------------------------------------
-  // drawHeader — desenha o cabeçalho novo em cada página (igual ao ProntuarioPDF)
-  // -----------------------------------------------------------------------
-  const drawHeader = () => {
-    // Fundo branco
-    doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, pageWidth, pageHeight, 'F');
-
-    // — Formas geométricas (lado esquerdo) —
-
-    // Forma 1: cinza claro #e2e8f0
-    // clipPath: polygon(0 0, 100% 0, 70% 100%, 0 80%) sobre w=53mm, h=HEADER_H
-    // Pontos absolutos: (0,0) (53,0) (37.1,HEADER_H) (0,HEADER_H*0.8)
-    doc.setFillColor(226, 232, 240);
-    (doc as any).lines(
-      [[53, 0], [-15.9, HEADER_H], [-37.1, -HEADER_H * 0.2]],
-      0, 0, [1, 1], 'F', true
-    );
-
-    // Forma 2: cinza médio #cbd5e1 @ 40% → misturado com branco = #eaecf3
-    // clipPath: polygon(0 0, 100% 0, 80% 100%, 0 60%) sobre w=42mm, h=26mm
-    doc.setFillColor(234, 238, 243);
-    (doc as any).lines(
-      [[42, 0], [-8.4, 26], [-33.6, -10.4]],
-      0, 0, [1, 1], 'F', true
-    );
-
-    // Forma 3: amarelo #fbbf24
-    // top=5mm, w=10.6mm, h=26mm
-    // clipPath: polygon(0 0, 100% 30%, 80% 90%, 0 100%)
-    // Pontos absolutos: (0,5) (10.6,12.8) (8.5,28.4) (0,31)
-    doc.setFillColor(251, 191, 36);
-    (doc as any).lines(
-      [[10.6, 7.8], [-2.1, 15.6], [-8.5, 2.6]],
-      0, 5, [1, 1], 'F', true
-    );
-
-    // Borda inferior navy #0c2340
-    doc.setFillColor(12, 35, 64);
-    doc.rect(0, HEADER_H - 1, pageWidth, 1.2, 'F');
-
-    // — Logo Colégio Sesi (lado direito) —
-    const lx = pageWidth - 50;
-    const ly = 9;
-
-    // "colégio" pequeno
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(6.5);
-    doc.setTextColor(12, 35, 64);
-    doc.text('colégio', lx, ly);
-
-    // Dois pontos decorativos
-    doc.setFillColor(12, 35, 64);
-    doc.circle(lx + 21.5, ly - 2.8, 0.85, 'F');
-    doc.circle(lx + 21.5, ly - 0.6, 0.65, 'F');
-
-    // "Sesi" grande itálico
-    doc.setFont('times', 'bolditalic');
-    doc.setFontSize(25);
-    doc.setTextColor(12, 35, 64);
-    doc.text('Sesi', lx, ly + 12);
-
-    // Badge "internacional" amarelo
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(5.5);
-    const badgeTxt = 'INTERNACIONAL';
-    const bw = doc.getTextWidth(badgeTxt) + 5;
-    doc.setFillColor(251, 191, 36);
-    (doc as any).roundedRect(lx + 1, ly + 14, bw, 4.5, 0.8, 0.8, 'F');
-    doc.setTextColor(12, 35, 64);
-    doc.text(badgeTxt, lx + 3.5, ly + 17.6);
-
-    doc.setTextColor(0, 0, 0);
+  const applyBackground = () => {
+    if (bgBase64) {
+      doc.addImage(bgBase64, 'PNG', 0, 0, pageWidth, pageHeight);
+    }
   };
 
-  // — Desenha a primeira página —
-  drawHeader();
-  let currentY = HEADER_H + 9;
+  const MARGIN_X = 25;
+  const HEADER_START_Y = 55;
+
+  // — Aplica fundo oficial da 1ª página —
+  applyBackground();
+  let currentY = HEADER_START_Y;
+
 
   // -----------------------------------------------------------------------
   // Informações do aluno
@@ -530,8 +470,8 @@ export const buildFichaOcorrenciaDoc = async (
     // Check if we need a new page (reserve SIG_RESERVE at bottom)
     if (y + LH > TEXT_BOTTOM) {
       doc.addPage();
-      drawHeader();
-      y = HEADER_H + 15;
+      applyBackground();
+      y = HEADER_START_Y;
     }
     let cx = MARGIN_X;
     doc.setFontSize(10);
@@ -614,7 +554,7 @@ export const buildFichaOcorrenciaDoc = async (
   // Se não há espaço na página atual → nova página só para assinaturas
   if (currentY + sigBlock > pageHeight - 10) {
     doc.addPage();
-    drawHeader();
+    applyBackground();
   }
 
   // Posiciona assinaturas na parte inferior da página atual
