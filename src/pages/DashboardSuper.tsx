@@ -163,10 +163,23 @@ export default function DashboardSuperBI() {
   const [filtrosB, setFiltrosB] = useState<FiltroSet>(filtroInicial);
 
   useEffect(() => {
+    let intervalId: NodeJS.Timeout;
     if (!authLoading && profile) {
-      if (profile.role !== 'super_admin') navigate('/');
-      else carregarDados();
+      if (profile.role !== 'super_admin') {
+        navigate('/');
+      } else {
+        carregarDados();
+        // Atualiza os dados automaticamente a cada 24 horas (1 dia)
+        intervalId = setInterval(() => {
+          carregarDados();
+        }, 86400000); // 24 horas em milissegundos
+      }
     }
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
   }, [profile, authLoading, navigate]);
 
   const carregarDados = async () => {
