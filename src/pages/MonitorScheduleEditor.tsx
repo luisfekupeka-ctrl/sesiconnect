@@ -75,6 +75,7 @@ export default function MonitorScheduleEditor() {
     periodo: any;
     posto: string;
     funcao: string;
+    instrucoes?: string;
     corEtiqueta: string;
     tipo: 'servico' | 'almoco';
     slotOriginal?: GradeMonitor | null;
@@ -231,6 +232,7 @@ export default function MonitorScheduleEditor() {
       periodo,
       posto: slotExistente?.posto || 'TÉRREO',
       funcao: slotExistente?.funcao || 'Monitoria Geral',
+      instrucoes: slotExistente?.instrucoes || '',
       corEtiqueta: slotExistente?.corEtiqueta || monitorObj?.cor || '#3b82f6',
       tipo: (slotExistente?.funcao === 'ALMOÇO' || slotExistente?.posto === 'ALMOÇO') ? 'almoco' : 'servico',
       slotOriginal: slotExistente
@@ -244,7 +246,7 @@ export default function MonitorScheduleEditor() {
     setSalvando(true);
     setMensagem(null);
 
-    const { monitor, periodo, posto, funcao, corEtiqueta, slotOriginal } = alocacaoEditando;
+    const { monitor, periodo, posto, funcao, instrucoes, corEtiqueta, slotOriginal } = alocacaoEditando;
 
     if (!monitor) {
       setMensagem({ tipo: 'erro', texto: 'Selecione um monitor antes de salvar.' });
@@ -284,7 +286,7 @@ export default function MonitorScheduleEditor() {
           horarioFim: fimSalvar,
           posto: posto,
           funcao: funcao || 'Monitoria Geral',
-          instrucoes: slotOriginal?.instrucoes || '',
+          instrucoes: instrucoes || '',
           corEtiqueta: corEtiqueta
         });
       }
@@ -1207,6 +1209,23 @@ export default function MonitorScheduleEditor() {
                       value={alocacaoEditando.funcao} 
                       placeholder="Ex: Monitoria Geral, Apoio no Portão..."
                       onChange={e => setAlocacaoEditando({ ...alocacaoEditando, funcao: e.target.value })}
+                      className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-10 text-xs font-bold text-white outline-none focus:border-primary/45 placeholder:opacity-20 uppercase" 
+                    />
+                  </div>
+                </div>
+
+                {/* Instruções input */}
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-wider text-white/40 block ml-1">Instruções / Notas (Opcional)</label>
+                  <div className="relative">
+                    <ClipboardCheck size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" />
+                    <input 
+                      id="instrucoes-escala"
+                      name="instrucoes"
+                      type="text" 
+                      value={alocacaoEditando.instrucoes || ''} 
+                      placeholder="Ex: Ficar atento aos alunos do 1º ano..."
+                      onChange={e => setAlocacaoEditando({ ...alocacaoEditando, instrucoes: e.target.value })}
                       className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-10 text-xs font-bold text-white outline-none focus:border-primary/45 placeholder:opacity-20 uppercase" 
                     />
                   </div>
