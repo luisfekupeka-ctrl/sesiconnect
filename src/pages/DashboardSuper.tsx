@@ -182,13 +182,31 @@ export default function DashboardSuperBI() {
     };
   }, [profile, authLoading, navigate]);
 
+  const fetchAllFromTable = async (table: string, select = '*') => {
+    let allData: any[] = [];
+    let from = 0;
+    const step = 1000;
+    while (true) {
+      const { data, error } = await supabase.from(table).select(select).range(from, from + step - 1);
+      if (error) throw error;
+      if (data && data.length > 0) {
+        allData = [...allData, ...data];
+        if (data.length < step) break;
+        from += step;
+      } else {
+        break;
+      }
+    }
+    return { data: allData };
+  };
+
   const carregarDados = async () => {
     try {
       setCarregando(true);
       const [recs, profs, alunos] = await Promise.all([
-        supabase.from('daily_occurrence_records').select('*'),
-        supabase.from('profiles').select('*'),
-        supabase.from('alunos_cms').select('nome, turma, ano')
+        fetchAllFromTable('daily_occurrence_records'),
+        fetchAllFromTable('profiles'),
+        fetchAllFromTable('alunos_cms', 'nome, turma, ano')
       ]);
       setRegistros(recs.data || []);
       setPerfis(profs.data || []);
