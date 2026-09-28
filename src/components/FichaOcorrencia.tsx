@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { RegistroOcorrencia } from '../types';
-import { Printer, X, User, ClipboardList, MapPin, CheckSquare, Square, Plus, Trash2, Download, Clock, Calendar, FileText } from 'lucide-react';
+import { Printer, X, User, ClipboardList, MapPin, CheckSquare, Square, Plus, Trash2, Download, Clock, Calendar, FileText, GraduationCap } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { generateFichaOcorrenciaPDF } from '../lib/reportGenerator';
 import papelTimbradoImg from '../assets/papel_timbrado.png';
 import { occurrenceService } from '../services/occurrenceService';
-import { montarEstruturaAta, parseDataEHorarioAta } from '../lib/ataUtils';
+import { montarEstruturaAta } from '../lib/ataUtils';
 
 const CARGOS_SUGERIDOS = [
   'Psicólogo Escolar',
@@ -21,36 +21,20 @@ const CARGOS_SUGERIDOS = [
   'Responsável pelo Registro'
 ];
 
-const SERIES_CADASTRO = [
+const SERIES_OPCOES = [
   '6º Ano',
   '7º Ano',
   '8º Ano',
   '9º Ano',
   '1º Ano EM',
   '2º Ano EM',
-  '3º Ano EM'
-];
-
-const TIPOS_OCORRENCIA = [
-  'Uso indevido de celular e aparelhos eletrônicos',
-  'Desrespeito a colegas, professores e funcionários',
-  'Baderna, gritaria e perturbação das aulas',
-  'Bullying, cyberbullying e constrangimentos',
-  'Agressão física ou verbal',
-  'Saída da sala sem autorização',
-  'Saída da escola sem autorização',
-  'Atrasos e descumprimento de horários',
-  'Danos leves ao patrimônio ou pertences alheios, sem intenção',
-  'Dano intencional ou depredação',
-  'Cola ou fraude em atividade escolar',
-  'Falsificação ou adulteração de documentos',
-  'Porte ou uso de vape, cigarros, álcool e drogas',
-  'Uso inadequado do uniforme escolar',
-  'Porte de objetos ou materiais comuns não autorizados',
-  'Porte de objeto perigoso, arma ou explosivo',
-  'Comércio, vendas ou arrecadações sem autorização',
-  'Descumprimento de orientações da equipe escolar',
-  'Conduta incompatível com o ambiente escolar'
+  '3º Ano EM',
+  '1º Ano EM - Turma A',
+  '1º Ano EM - Turma B',
+  '2º Ano EM - Turma A',
+  '2º Ano EM - Turma B',
+  '3º Ano EM - Turma A',
+  '3º Ano EM - Turma B'
 ];
 
 interface AssinaturaExtra {
@@ -75,14 +59,6 @@ export default function FichaOcorrencia({
   onDeleteSuccess,
   startInEditMode
 }: Props) {
-  // Estados para edição de Ocorrências Diárias legadas
-  const [isEditing, setIsEditing] = useState(startInEditMode || false);
-  const [editStudentName, setEditStudentName] = useState(ocorrencia.nomeAluno || '');
-  const [editSchoolYear, setEditSchoolYear] = useState(ocorrencia.turmaAluno || '');
-  const [editOccurrenceType, setEditOccurrenceType] = useState('');
-  const [editReport, setEditReport] = useState('');
-  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
-
   // Estados principais da ATA
   const [numeroAta, setNumeroAta] = useState('');
   const [anoAta, setAnoAta] = useState(String(new Date().getFullYear()));
@@ -90,6 +66,7 @@ export default function FichaOcorrencia({
   const [horarioAta, setHorarioAta] = useState('10:00');
   const [cargoEmissor, setCargoEmissor] = useState('Psicólogo Escolar');
   const [nomeEmissor, setNomeEmissor] = useState(ocorrencia.professorAtual || 'Guilherme Juliano de Freitas Silva');
+  const [turmaAluno, setTurmaAluno] = useState(ocorrencia.turmaAluno || ocorrencia.anoAluno || '1º Ano EM');
   const [listaAlunos, setListaAlunos] = useState<string[]>([]);
   const [novoAlunoNome, setNovoAlunoNome] = useState('');
   const [relatoTexto, setRelatoTexto] = useState('');
@@ -148,7 +125,7 @@ export default function FichaOcorrencia({
         initialDate = new Date().toISOString().split('T')[0];
       }
     }
-    setDataAta(initialDate || '2026-09-23');
+    setDataAta(initialDate || '2026-09-28');
 
     // Extrai horário
     const horaKey = Object.keys(dados).find(k =>
@@ -161,6 +138,10 @@ export default function FichaOcorrencia({
       setHorarioAta('10:00');
     }
 
+    // Extrai turma / série
+    const turmaVal = ocorrencia.turmaAluno || ocorrencia.anoAluno || dados['Turma'] || dados['turma'] || dados['Série'] || dados['serie'] || '1º Ano EM';
+    setTurmaAluno(String(turmaVal));
+
     // Extrai cargo e nome emissor
     const cargoKey = Object.keys(dados).find(k =>
       k.toLowerCase().includes('cargo') || k.toLowerCase().includes('função') || k.toLowerCase().includes('funcao')
@@ -171,7 +152,7 @@ export default function FichaOcorrencia({
       setCargoEmissor('Psicólogo Escolar');
     }
 
-    const emissor = ocorrencia.professorAtual || 'Guilherme Juliano de Freitas Silva';
+    const emissor = ocorrencia.professorAtual || dados['Responsável'] || dados['responsavel'] || 'Guilherme Juliano de Freitas Silva';
     setNomeEmissor(emissor);
 
     // Extrai lista de alunos
@@ -193,14 +174,6 @@ export default function FichaOcorrencia({
     const rawRelato = descKey ? String(dados[descKey]) : ((ocorrencia as any).relato || '');
     setRelatoTexto(rawRelato || 'Nesta data, as estudantes foram encontradas fora de sala de aula em horário indevido, relatando que vivenciaram uma situação de crise emocional, por conta disso não se dirigiram para a sala de aula, complementaram que estavam se escondendo no banheiro feminino do terceiro andar. Informei as alunas quanto a natureza inaceitável de suas ações, destacando que, em caso de crises emocionais, podem e devem procurar meu auxílio, para que sejam atendidas de forma profissional e qualificada. Complementei destacando as medidas previstas no Regimento Escolar, em caso de reincidência de suas ações.');
 
-    // Sincroniza campos legados de edição
-    setEditStudentName(ocorrencia.nomeAluno || '');
-    setEditSchoolYear(ocorrencia.turmaAluno || '');
-    const typeKey = Object.keys(dados).find(k => k.toLowerCase() === 'tipo de ocorrência' || k.toLowerCase() === 'tipo de ocorrencia' || k.toLowerCase() === 'tipo');
-    setEditOccurrenceType(typeKey ? String(dados[typeKey]) : (ocorrencia.nomeModelo || ''));
-    setEditReport(rawRelato);
-    setIsEditing(startInEditMode || false);
-
     setConfigAssinaturas({
       mostrarAluno: true,
       nomeAluno: ocorrencia.nomeAluno || '',
@@ -212,7 +185,7 @@ export default function FichaOcorrencia({
     setAssinaturasExtras([]);
   }, [ocorrencia, startInEditMode]);
 
-  // Monta a estrutura da ATA em tempo real
+  // Monta a estrutura da ATA em tempo real no padrão ABNT
   const estruturaAta = useMemo(() => {
     return montarEstruturaAta({
       numeroAta,
@@ -220,12 +193,13 @@ export default function FichaOcorrencia({
       dataStr: dataAta,
       horarioStr: horarioAta,
       alunos: listaAlunos,
+      turmaAluno,
       nomeEmissor,
       cargoEmissor,
       relato: relatoTexto,
       assinaturasExtras
     });
-  }, [numeroAta, anoAta, dataAta, horarioAta, listaAlunos, nomeEmissor, cargoEmissor, relatoTexto, assinaturasExtras]);
+  }, [numeroAta, anoAta, dataAta, horarioAta, listaAlunos, turmaAluno, nomeEmissor, cargoEmissor, relatoTexto, assinaturasExtras]);
 
   const adicionarAluno = () => {
     if (novoAlunoNome.trim() && !listaAlunos.includes(novoAlunoNome.trim())) {
@@ -262,6 +236,7 @@ export default function FichaOcorrencia({
       horario: horarioAta,
       cargoEmissor,
       nomeEmissor,
+      turmaAluno,
       alunos: listaAlunos
     };
 
@@ -273,6 +248,7 @@ export default function FichaOcorrencia({
         'Número da Ata': numeroAta ? `${numeroAta}/${anoAta}` : '',
         'Data': dataAta,
         'Horário': horarioAta,
+        'Turma': turmaAluno,
         'Cargo': cargoEmissor,
         'Responsável': nomeEmissor,
         'Descrição': relatoTexto
@@ -288,23 +264,23 @@ export default function FichaOcorrencia({
         "bg-transparent md:bg-white w-full max-w-6xl flex flex-col md:flex-row gap-4 md:gap-0 print:shadow-none print:max-h-none print:rounded-none print-modal-container",
         !isPrintOnly ? "max-h-none md:max-h-[95vh] md:overflow-hidden md:rounded-[2.5rem] md:shadow-2xl" : "rounded-none"
       )}>
-        {/* Painel de Configurações da ATA (Esquerda) - Oculta na Impressão */}
+        {/* Painel de Formulário / Configurações da ATA (Esquerda) - Oculta na Impressão */}
         <div className="w-full md:w-96 bg-white md:bg-gray-50 border border-gray-100 md:border-0 md:border-r border-gray-100 p-6 md:p-8 flex flex-col gap-6 print:hidden rounded-3xl md:rounded-none md:rounded-l-[2.5rem] shadow-xl md:shadow-none overflow-y-visible md:overflow-y-auto shrink-0 custom-scrollbar">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="w-2 h-2 rounded-full bg-primary" />
-              <h3 className="font-black text-lg text-gray-900">Configurar ATA</h3>
+              <span className="w-2.5 h-2.5 rounded-full bg-primary" />
+              <h3 className="font-black text-lg text-gray-900">Preenchimento da ATA</h3>
             </div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              Estrutura Oficial de Registro
+              Formulário & Padrão ABNT
             </p>
           </div>
 
           <div className="space-y-5">
-            {/* Número da ATA */}
+            {/* Título e Número da ATA */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-black uppercase tracking-widest text-gray-700 flex items-center gap-1.5">
-                <FileText size={13} className="text-primary" /> Número da ATA
+                <FileText size={13} className="text-primary" /> Número da ATA (Título em Negrito)
               </label>
               <div className="flex gap-2">
                 <input
@@ -351,43 +327,28 @@ export default function FichaOcorrencia({
               </div>
             </div>
 
-            {/* Profissional / Emissor */}
-            <div className="space-y-3 pt-2 border-t border-gray-200">
+            {/* Turma / Série Escolar */}
+            <div className="space-y-1.5 pt-2 border-t border-gray-200">
               <label className="text-[10px] font-black uppercase tracking-widest text-gray-700 flex items-center gap-1.5">
-                <User size={13} className="text-primary" /> Profissional Responsável
+                <GraduationCap size={13} className="text-primary" /> Turma do(a) Aluno(a)
               </label>
-              <div className="space-y-2">
-                <div>
-                  <label className="text-[9px] font-bold text-gray-400 uppercase">Cargo / Função</label>
-                  <input
-                    type="text"
-                    list="cargos-emissor-list"
-                    value={cargoEmissor}
-                    onChange={e => setCargoEmissor(e.target.value)}
-                    placeholder="Ex: Psicólogo Escolar"
-                    className="w-full bg-white border border-gray-200 p-2.5 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all shadow-sm mt-0.5"
-                  />
-                  <datalist id="cargos-emissor-list">
-                    {CARGOS_SUGERIDOS.map(c => <option key={c} value={c} />)}
-                  </datalist>
-                </div>
-                <div>
-                  <label className="text-[9px] font-bold text-gray-400 uppercase">Nome Completo</label>
-                  <input
-                    type="text"
-                    value={nomeEmissor}
-                    onChange={e => setNomeEmissor(e.target.value)}
-                    placeholder="Nome do Profissional"
-                    className="w-full bg-white border border-gray-200 p-2.5 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all shadow-sm mt-0.5"
-                  />
-                </div>
-              </div>
+              <input
+                type="text"
+                list="turmas-sugestoes"
+                value={turmaAluno}
+                onChange={e => setTurmaAluno(e.target.value)}
+                placeholder="Ex: 1º Ano EM"
+                className="w-full bg-white border border-gray-200 p-2.5 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all shadow-sm"
+              />
+              <datalist id="turmas-sugestoes">
+                {SERIES_OPCOES.map(s => <option key={s} value={s} />)}
+              </datalist>
             </div>
 
             {/* Estudantes Envolvidos */}
             <div className="space-y-2 pt-2 border-t border-gray-200">
               <label className="text-[10px] font-black uppercase tracking-widest text-gray-700 flex items-center justify-between">
-                <span>Estudantes na ATA</span>
+                <span>Aluno(a) / Estudantes</span>
                 <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-[9px] font-bold">
                   {listaAlunos.length}
                 </span>
@@ -398,7 +359,7 @@ export default function FichaOcorrencia({
                   type="text"
                   value={novoAlunoNome}
                   onChange={e => setNovoAlunoNome(e.target.value)}
-                  placeholder="Nome do estudante..."
+                  placeholder="Nome do(a) aluno(a)..."
                   className="flex-1 bg-white border border-gray-200 p-2.5 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all shadow-sm"
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
@@ -436,17 +397,50 @@ export default function FichaOcorrencia({
               )}
             </div>
 
-            {/* Relato / Fatos Ocorridos */}
+            {/* Profissional / Emissor */}
+            <div className="space-y-3 pt-2 border-t border-gray-200">
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-700 flex items-center gap-1.5">
+                <User size={13} className="text-primary" /> Profissional Responsável
+              </label>
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[9px] font-bold text-gray-400 uppercase">Cargo / Função</label>
+                  <input
+                    type="text"
+                    list="cargos-emissor-list"
+                    value={cargoEmissor}
+                    onChange={e => setCargoEmissor(e.target.value)}
+                    placeholder="Ex: Psicólogo Escolar"
+                    className="w-full bg-white border border-gray-200 p-2.5 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all shadow-sm mt-0.5"
+                  />
+                  <datalist id="cargos-emissor-list">
+                    {CARGOS_SUGERIDOS.map(c => <option key={c} value={c} />)}
+                  </datalist>
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-gray-400 uppercase">Nome Completo</label>
+                  <input
+                    type="text"
+                    value={nomeEmissor}
+                    onChange={e => setNomeEmissor(e.target.value)}
+                    placeholder="Nome do Profissional"
+                    className="w-full bg-white border border-gray-200 p-2.5 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all shadow-sm mt-0.5"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Relato / Descrição dos Fatos */}
             <div className="space-y-1.5 pt-2 border-t border-gray-200">
               <label className="text-[10px] font-black uppercase tracking-widest text-gray-700 flex items-center justify-between">
-                <span>Relato dos Fatos</span>
+                <span>Descrição do Ocorrido</span>
               </label>
               <textarea
                 value={relatoTexto}
                 onChange={e => setRelatoTexto(e.target.value)}
                 rows={5}
                 className="w-full bg-white border border-gray-200 p-3 rounded-xl text-xs font-medium text-gray-900 focus:border-primary outline-none transition-all resize-y shadow-sm leading-relaxed"
-                placeholder="Descreva os fatos detalhados que serão emendados na ATA..."
+                placeholder="Descreva detalhadamente o ocorrido..."
               />
             </div>
 
@@ -539,7 +533,7 @@ export default function FichaOcorrencia({
           </div>
         </div>
 
-        {/* Folha Oficial de Impressão e Preview (Direita) */}
+        {/* Folha Oficial de Impressão e Preview (Direita) - Padrão ABNT (Arial 12, 1.5 entrelinhas, Justificado) */}
         <div
           id="printable-occurrence"
           className="flex-1 bg-white rounded-3xl md:rounded-none md:rounded-r-[2.5rem] shadow-xl md:shadow-none border border-gray-100 md:border-0 overflow-y-visible md:overflow-y-auto custom-scrollbar relative flex flex-col print-card-content min-h-[600px]"
@@ -553,21 +547,42 @@ export default function FichaOcorrencia({
 
           <div className="flex-1 px-8 sm:px-14 md:px-20 pt-[42mm] md:pt-[50mm] pb-12 md:pb-20 space-y-8 print:pt-[52mm] print:px-[25mm] print:pb-[20mm] relative z-10 flex flex-col justify-between">
             <div>
-              {/* Título Oficial da ATA (ex: ATA 1040/2026) */}
+              {/* TÍTULO EM FORMATO DE TÍTULO ANTES DE COMEÇAR A FRASE E EM NEGRITO */}
               <div className="mb-6">
-                <h1 className="text-xl md:text-2xl font-black text-[#0c2340] tracking-tight uppercase">
+                <h1 className="text-xl md:text-2xl font-bold font-sans text-[#0c2340] tracking-tight uppercase">
                   {estruturaAta.tituloAta}
                 </h1>
               </div>
 
-              {/* Texto Corrido Contínuo da ATA */}
-              <div className="text-sm md:text-[15px] text-gray-900 leading-[1.8] text-justify font-normal space-y-4 font-sans">
-                <p>
-                  <span className="font-normal">{estruturaAta.textoAbertura} </span>
-                  {estruturaAta.textoRelato && (
-                    <span className="font-normal">{estruturaAta.textoRelato} </span>
-                  )}
-                  <span className="font-normal">{estruturaAta.textoFechamento}</span>
+              {/* Corpo da ATA: Arial 12pt, Espaçamento 1,5 linha, Texto Justificado (Padrão ABNT) */}
+              <div
+                className="text-gray-900 text-justify space-y-4"
+                style={{
+                  fontFamily: 'Arial, Helvetica, sans-serif',
+                  fontSize: '12pt',
+                  lineHeight: '1.5'
+                }}
+              >
+                {/* Parágrafo 1: Abertura com Dados Preenchidos */}
+                <p className="text-justify indent-0">
+                  {estruturaAta.paragrafoAbertura}
+                </p>
+
+                {/* Parágrafo 2: Descrição / Relato dos Fatos */}
+                {estruturaAta.paragrafoRelato && (
+                  <p className="text-justify whitespace-pre-wrap indent-0">
+                    {estruturaAta.paragrafoRelato}
+                  </p>
+                )}
+
+                {/* Parágrafo 3: Encaminhamentos */}
+                <p className="text-justify indent-0">
+                  {estruturaAta.paragrafoEncaminhamentos}
+                </p>
+
+                {/* Parágrafo 4: Fechamento */}
+                <p className="text-justify indent-0">
+                  {estruturaAta.paragrafoFechamento}
                 </p>
               </div>
             </div>
@@ -578,7 +593,7 @@ export default function FichaOcorrencia({
                 {estruturaAta.assinaturas.map((ass, idx) => (
                   <div key={idx} className="flex flex-col items-center text-center">
                     <div className="w-full max-w-[240px] border-b border-gray-900 mb-2"></div>
-                    <p className="text-xs font-bold text-gray-900 tracking-wide">
+                    <p className="text-xs font-bold text-gray-900 tracking-wide font-sans">
                       {ass.nome}
                     </p>
                   </div>

@@ -1,40 +1,40 @@
 /**
  * Utilitários de formatação e transcrição para o novo modelo de ATA (Ocorrência Oficial)
- * Colégio Sesi Internacional
+ * Colégio Sesi Internacional - Padrão ABNT (Arial 12, espaçamento 1,5, texto justificado)
  */
 
-const DIAS_ORDINAIS: Record<number, string> = {
+const DIAS_EXTENSO: Record<number, string> = {
   1: 'primeiro',
-  2: 'segundo',
-  3: 'terceiro',
-  4: 'quarto',
-  5: 'quinto',
-  6: 'sexto',
-  7: 'sétimo',
-  8: 'oitavo',
-  9: 'nono',
-  10: 'décimo',
-  11: 'décimo primeiro',
-  12: 'décimo segundo',
-  13: 'décimo terceiro',
-  14: 'décimo quarto',
-  15: 'décimo quinto',
-  16: 'décimo sexto',
-  17: 'décimo sétimo',
-  18: 'décimo oitavo',
-  19: 'décimo nono',
-  20: 'vigésimo',
-  21: 'vigésimo primeiro',
-  22: 'vigésimo segundo',
-  23: 'vigésimo terceiro',
-  24: 'vigésimo quarto',
-  25: 'vigésimo quinto',
-  26: 'vigésimo sexto',
-  27: 'vigésimo sétimo',
-  28: 'vigésimo oitavo',
-  29: 'vigésimo nono',
-  30: 'trigésimo',
-  31: 'trigésimo primeiro'
+  2: 'dois',
+  3: 'três',
+  4: 'quatro',
+  5: 'cinco',
+  6: 'seis',
+  7: 'sete',
+  8: 'oito',
+  9: 'nove',
+  10: 'dez',
+  11: 'onze',
+  12: 'doze',
+  13: 'treze',
+  14: 'quatorze',
+  15: 'quinze',
+  16: 'dezesseis',
+  17: 'dezessete',
+  18: 'dezoito',
+  19: 'dezenove',
+  20: 'vinte',
+  21: 'vinte e um',
+  22: 'vinte e dois',
+  23: 'vinte e três',
+  24: 'vinte e quatro',
+  25: 'vinte e cinco',
+  26: 'vinte e seis',
+  27: 'vinte e sete',
+  28: 'vinte e oito',
+  29: 'vinte e nove',
+  30: 'trinta',
+  31: 'trinta e um'
 };
 
 const MESES_EXTENSO = [
@@ -61,7 +61,7 @@ const DEZ_A_DEZENOVE = [
 const DEZENAS_EXTENSO = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
 
 export function diaPorExtenso(dia: number): string {
-  return DIAS_ORDINAIS[dia] || `${dia}º`;
+  return DIAS_EXTENSO[dia] || String(dia);
 }
 
 export function mesPorExtenso(mes: number): string {
@@ -96,7 +96,7 @@ export function formatarHorarioAta(horarioStr?: string, dataObj?: Date): string 
   if (horarioStr && typeof horarioStr === 'string' && horarioStr.trim()) {
     const limpo = horarioStr.trim().toLowerCase();
     if (limpo.includes('h')) {
-      return limpo.startsWith('às ') ? limpo.replace('às ', '') : limpo;
+      return limpo.startsWith('às ') ? limpo.replace('às ', '') : (limpo.startsWith('por volta das ') ? limpo.replace('por volta das ', '') : limpo);
     }
     const match = limpo.match(/^(\d{1,2}):(\d{2})$/);
     if (match) {
@@ -132,7 +132,7 @@ export interface DataAtaExtenso {
 }
 
 export function parseDataEHorarioAta(dataStr?: string, horarioStr?: string): DataAtaExtenso {
-  let dia = 23;
+  let dia = 28;
   let mes = 9;
   let ano = 2026;
   let dateObj: Date | null = null;
@@ -174,7 +174,9 @@ export function parseDataEHorarioAta(dataStr?: string, horarioStr?: string): Dat
   const anoExt = anoPorExtenso(ano);
   const horExt = formatarHorarioAta(horarioStr, dateObj || undefined);
 
-  const fraseDataExtenso = `Ao ${diaExt} dia do mês de ${mesExt} do ano de ${anoExt}, às ${horExt}`;
+  // Se dia for 1: "Ao 1º dia" ou "Ao primeiro dia", para os demais: "Aos X dias"
+  const prefixoDia = dia === 1 ? 'Ao primeiro dia' : `Aos ${diaExt} dias`;
+  const fraseDataExtenso = `${prefixoDia} do mês de ${mesExt} do ano de ${anoExt}, por volta das ${horExt}`;
 
   return {
     dia,
@@ -188,69 +190,24 @@ export function parseDataEHorarioAta(dataStr?: string, horarioStr?: string): Dat
   };
 }
 
-export const ENDERECO_PADRAO_SESI =
-  'nas dependências do Colégio Sesi Internacional, localizado na rua Marginal Comendador Franco | Avenida, 1341 - Jardim Botânico, Curitiba - PR, 80215-090.';
+export const ENDERECO_PADRAO_SESI_ABNT =
+  'nas dependências do Colégio SESI Internacional, localizado na Marginal Comendador Franco, Avenida, nº 1341, Jardim Botânico, Curitiba – PR';
 
-export const FECHAMENTO_PADRAO_ATA = 'Nada mais havendo a tratar, encerra-se o presente registro.';
+export const ENCAMINHAMENTOS_PADRAO_ATA =
+  'Diante do ocorrido, foram realizados os encaminhamentos e/ou orientações necessários, conforme as normas e procedimentos da instituição.';
 
-export function formatarParticipantesAta(
-  alunos: string[],
-  nomeEmissor?: string,
-  cargoEmissor?: string
-): { textoParticipantes: string; listaAssinaturas: { nome: string; papel: string }[] } {
-  const alunosLimpos = alunos.map(a => a.trim()).filter(Boolean);
-  let textoEstudantes = '';
-
-  if (alunosLimpos.length === 0) {
-    textoEstudantes = 'o(a) estudante';
-  } else if (alunosLimpos.length === 1) {
-    textoEstudantes = `o(a) estudante ${alunosLimpos[0]}`;
-  } else if (alunosLimpos.length === 2) {
-    textoEstudantes = `as estudantes ${alunosLimpos[0]} e ${alunosLimpos[1]}`;
-  } else {
-    const ult = alunosLimpos[alunosLimpos.length - 1];
-    const rest = alunosLimpos.slice(0, -1).join(', ');
-    textoEstudantes = `os(as) estudantes ${rest} e ${ult}`;
-  }
-
-  const emissorNome = (nomeEmissor || 'Responsável pelo Registro').trim();
-  const cargoLimpo = (cargoEmissor || 'Psicólogo Escolar').trim();
-  
-  // Decide artigo do profissional
-  let artigo = 'o';
-  const cLower = cargoLimpo.toLowerCase();
-  if (cLower.startsWith('professora') || cLower.startsWith('orientadora') || cLower.startsWith('psicóloga') || cLower.startsWith('coordenadora') || cLower.startsWith('pedagoga')) {
-    artigo = 'a';
-  } else if (cLower.startsWith('o ') || cLower.startsWith('a ') || cLower.startsWith('o(a) ')) {
-    artigo = '';
-  }
-
-  const textoProfissional = artigo ? `${artigo} ${cargoLimpo} ${emissorNome}` : `${cargoLimpo} ${emissorNome}`;
-  const textoParticipantes = `realizou-se atendimento com ${textoEstudantes} e ${textoProfissional}`;
-
-  const listaAssinaturas: { nome: string; papel: string }[] = [];
-
-  alunosLimpos.forEach(a => {
-    listaAssinaturas.push({ nome: a, papel: 'Estudante' });
-  });
-
-  if (emissorNome && emissorNome !== 'Administração') {
-    listaAssinaturas.push({ nome: emissorNome, papel: cargoLimpo });
-  }
-
-  return {
-    textoParticipantes,
-    listaAssinaturas
-  };
-}
+export const FECHAMENTO_PADRAO_ATA_ABNT =
+  'Nada mais havendo a registrar, lavra-se o presente relato para fins de acompanhamento e registro escolar.';
 
 export interface EstruturaAtaCompleta {
   tituloAta: string;
   numeroAta: string;
   anoAta: string;
-  textoAbertura: string;
-  textoRelato: string;
-  textoFechamento: string;
+  paragrafoAbertura: string;
+  paragrafoRelato: string;
+  paragrafoEncaminhamentos: string;
+  paragrafoFechamento: string;
+  paragrafos: string[];
   textoCorridoCompleto: string;
   assinaturas: { nome: string; papel: string }[];
 }
@@ -262,6 +219,7 @@ export function montarEstruturaAta(params: {
   horarioStr?: string;
   alunos?: string[];
   nomeAluno?: string;
+  turmaAluno?: string;
   nomeEmissor?: string;
   cargoEmissor?: string;
   relato?: string;
@@ -274,7 +232,6 @@ export function montarEstruturaAta(params: {
   let anoAtaStr = params.anoAta ? String(params.anoAta) : String(dataExt.ano);
   let numAtaStr = (params.numeroAta || '').trim();
 
-  // Se o número da ata já contiver a barra (ex: 1040/2026), extrai
   if (numAtaStr.includes('/')) {
     const parts = numAtaStr.split('/');
     numAtaStr = parts[0].trim();
@@ -286,9 +243,8 @@ export function montarEstruturaAta(params: {
   // Processa lista de alunos
   let listaAlunos: string[] = [];
   if (params.alunos && params.alunos.length > 0) {
-    listaAlunos = params.alunos;
+    listaAlunos = params.alunos.map(a => a.trim()).filter(Boolean);
   } else if (params.nomeAluno) {
-    // Pode conter múltiplos nomes separados por ' e ' ou ','
     if (params.nomeAluno.includes(' e ') || params.nomeAluno.includes(',')) {
       listaAlunos = params.nomeAluno
         .split(/,|\se\s/)
@@ -299,37 +255,65 @@ export function montarEstruturaAta(params: {
     }
   }
 
-  const { textoParticipantes, listaAssinaturas } = formatarParticipantesAta(
-    listaAlunos,
-    params.nomeEmissor,
-    params.cargoEmissor
-  );
-
-  const endereco = (params.endereco || ENDERECO_PADRAO_SESI).trim();
-
-  // Abertura formal padrão
-  const textoAbertura = `${dataExt.fraseDataExtenso}, ${textoParticipantes}, ${endereco}`;
-
-  // Relato
-  let relatoLimpo = (params.relato || '').trim();
-  
-  // Remove fechamento duplicado se já estiver no relato
-  const fechamentoFrase = FECHAMENTO_PADRAO_ATA;
-  if (relatoLimpo.toLowerCase().includes('nada mais havendo a tratar')) {
-    // Garante pontuação
-    relatoLimpo = relatoLimpo.replace(/nada mais havendo a tratar[^\.]*\.?/i, '').trim();
-  }
-
-  // Junta o texto corrido completo
-  let textoCorridoCompleto = '';
-  if (relatoLimpo) {
-    textoCorridoCompleto = `${textoAbertura} ${relatoLimpo} ${fechamentoFrase}`;
+  // Formata nomes dos estudantes
+  let textoEstudantes = '';
+  if (listaAlunos.length === 0) {
+    textoEstudantes = 'o(a) aluno(a) ______________________________________________';
+  } else if (listaAlunos.length === 1) {
+    textoEstudantes = `o(a) aluno(a) ${listaAlunos[0]}`;
+  } else if (listaAlunos.length === 2) {
+    textoEstudantes = `os(as) alunos(as) ${listaAlunos[0]} e ${listaAlunos[1]}`;
   } else {
-    textoCorridoCompleto = `${textoAbertura} ${fechamentoFrase}`;
+    const ult = listaAlunos[listaAlunos.length - 1];
+    const rest = listaAlunos.slice(0, -1).join(', ');
+    textoEstudantes = `os(as) alunos(as) ${rest} e ${ult}`;
   }
 
-  // Assinaturas finais
-  const assinaturas = [...listaAssinaturas];
+  // Turma / Série
+  const turmaFormatada = (params.turmaAluno || '__________').trim();
+  const endereco = (params.endereco || ENDERECO_PADRAO_SESI_ABNT).trim();
+
+  // 1. Parágrafo de Abertura Oficial Padrão ABNT
+  const paragrafoAbertura = `${dataExt.fraseDataExtenso}, ${endereco}, ${textoEstudantes}, da turma ${turmaFormatada}, esteve envolvido(a) em uma situação/ocorrência, conforme descrito a seguir:`;
+
+  // 2. Parágrafo de Relato dos Fatos
+  let relatoLimpo = (params.relato || '').trim();
+  // Remove menções duplicadas de fechamento se o usuário colou texto anterior
+  relatoLimpo = relatoLimpo
+    .replace(/diante do ocorrido, foram realizados[^\.]*\.?/i, '')
+    .replace(/nada mais havendo a registrar[^\.]*\.?/i, '')
+    .replace(/nada mais havendo a tratar[^\.]*\.?/i, '')
+    .trim();
+
+  const paragrafoRelato = relatoLimpo || '[Descreva detalhadamente o ocorrido...]';
+
+  // 3. Parágrafo de Encaminhamentos e Orientações
+  const paragrafoEncaminhamentos = ENCAMINHAMENTOS_PADRAO_ATA;
+
+  // 4. Parágrafo de Fechamento Padrão
+  const paragrafoFechamento = FECHAMENTO_PADRAO_ATA_ABNT;
+
+  const paragrafos = [
+    paragrafoAbertura,
+    paragrafoRelato,
+    paragrafoEncaminhamentos,
+    paragrafoFechamento
+  ];
+
+  const textoCorridoCompleto = paragrafos.join('\n\n');
+
+  // Assinaturas
+  const assinaturas: { nome: string; papel: string }[] = [];
+  listaAlunos.forEach(a => {
+    assinaturas.push({ nome: a, papel: 'Aluno(a)' });
+  });
+
+  const emissorNome = (params.nomeEmissor || 'Responsável pelo Registro').trim();
+  const cargoLimpo = (params.cargoEmissor || 'Responsável pelo Registro').trim();
+  if (emissorNome && emissorNome !== 'Administração') {
+    assinaturas.push({ nome: emissorNome, papel: cargoLimpo });
+  }
+
   if (params.assinaturasExtras && params.assinaturasExtras.length > 0) {
     params.assinaturasExtras.forEach(extra => {
       if (extra.nome && !assinaturas.some(a => a.nome.toLowerCase() === extra.nome.toLowerCase())) {
@@ -342,9 +326,11 @@ export function montarEstruturaAta(params: {
     tituloAta,
     numeroAta: numAtaStr,
     anoAta: anoAtaStr,
-    textoAbertura,
-    textoRelato: relatoLimpo,
-    textoFechamento: fechamentoFrase,
+    paragrafoAbertura,
+    paragrafoRelato,
+    paragrafoEncaminhamentos,
+    paragrafoFechamento,
+    paragrafos,
     textoCorridoCompleto,
     assinaturas
   };

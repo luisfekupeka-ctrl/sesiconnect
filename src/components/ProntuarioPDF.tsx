@@ -67,11 +67,13 @@ export default function ProntuarioPDF({ ocorrencias, onClose, alunoNome }: Props
             const rawDate = getDado('Data') || ocorrencia.criadoEm;
             const rawRelato = getDado('Descrição') || getDado('descricao') || getDado('relato') || (ocorrencia as any).relato || '';
             const numAta = getDado('Número da Ata') || getDado('numero da ata') || getDado('ata') || '';
+            const turmaVal = ocorrencia.turmaAluno || ocorrencia.anoAluno || getDado('Turma') || getDado('turma') || '1º Ano EM';
 
             const estrutura = montarEstruturaAta({
               numeroAta: numAta,
               dataStr: rawDate,
               nomeAluno: ocorrencia.nomeAluno,
+              turmaAluno: turmaVal,
               nomeEmissor: profResp,
               relato: rawRelato
             });
@@ -109,22 +111,28 @@ export default function ProntuarioPDF({ ocorrencias, onClose, alunoNome }: Props
 
                 <div className="flex-1 px-8 sm:px-14 md:px-20 pt-8 md:pt-14 pb-12 md:pb-20 flex flex-col justify-between">
                   <div>
-                    {/* Título Oficial da ATA */}
+                    {/* TÍTULO EM FORMATO DE TÍTULO ANTES DE COMEÇAR A FRASE E EM NEGRITO */}
                     <div className="mb-6">
-                      <h1 className="text-xl md:text-2xl font-black text-[#0c2340] tracking-tight uppercase">
+                      <h1 className="text-xl md:text-2xl font-bold font-sans text-[#0c2340] tracking-tight uppercase">
                         {estrutura.tituloAta}
                       </h1>
                     </div>
 
-                    {/* Texto Corrido Contínuo da ATA */}
-                    <div className="text-sm md:text-[15px] text-gray-900 leading-[1.8] text-justify font-normal space-y-4 font-sans">
-                      <p>
-                        <span>{estrutura.textoAbertura} </span>
-                        {estrutura.textoRelato && (
-                          <span>{estrutura.textoRelato} </span>
-                        )}
-                        <span>{estrutura.textoFechamento}</span>
-                      </p>
+                    {/* Texto da ATA: Arial 12pt, Espaçamento 1,5, Justificado (ABNT) */}
+                    <div
+                      className="text-gray-900 text-justify space-y-4"
+                      style={{
+                        fontFamily: 'Arial, Helvetica, sans-serif',
+                        fontSize: '12pt',
+                        lineHeight: '1.5'
+                      }}
+                    >
+                      <p className="text-justify">{estrutura.paragrafoAbertura}</p>
+                      {estrutura.paragrafoRelato && (
+                        <p className="text-justify whitespace-pre-wrap">{estrutura.paragrafoRelato}</p>
+                      )}
+                      <p className="text-justify">{estrutura.paragrafoEncaminhamentos}</p>
+                      <p className="text-justify">{estrutura.paragrafoFechamento}</p>
                     </div>
                   </div>
 
@@ -134,7 +142,7 @@ export default function ProntuarioPDF({ ocorrencias, onClose, alunoNome }: Props
                       {estrutura.assinaturas.map((ass, aIdx) => (
                         <div key={aIdx} className="flex flex-col items-center text-center">
                           <div className="w-full max-w-[240px] border-b border-gray-900 mb-2"></div>
-                          <p className="text-xs font-bold text-gray-900 tracking-wide">
+                          <p className="text-xs font-bold text-gray-900 tracking-wide font-sans">
                             {ass.nome}
                           </p>
                         </div>

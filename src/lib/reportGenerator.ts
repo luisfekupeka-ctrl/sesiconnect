@@ -340,7 +340,7 @@ export const buildFichaOcorrenciaDoc = async (
       return descKey ? String(dados[descKey]) : '';
     })();
 
-  // Monta a estrutura contínua da ATA (abertura por extenso, relato e fechamento)
+  // Monta a estrutura contínua da ATA padrão ABNT
   const estrutura = montarEstruturaAta({
     numeroAta,
     anoAta: configAssinaturas.anoAta,
@@ -348,6 +348,7 @@ export const buildFichaOcorrenciaDoc = async (
     horarioStr,
     alunos: configAssinaturas.alunos,
     nomeAluno: configAssinaturas.nomeAluno || ocorrencia.nomeAluno,
+    turmaAluno: configAssinaturas.turmaAluno || ocorrencia.turmaAluno || ocorrencia.anoAluno,
     nomeEmissor,
     cargoEmissor,
     relato: relatoRaw,
@@ -365,9 +366,10 @@ export const buildFichaOcorrenciaDoc = async (
   currentY += 12;
 
   // -----------------------------------------------------------------------
-  // Renderização do Texto Corrido com suporte a Markdown e Justificação
+  // Renderização do Texto Corrido - Padrão ABNT (Arial/Helvetica 12pt, 1.5 entrelinhas, Justificado)
   // -----------------------------------------------------------------------
-  const LH = 6.2; // line height mm
+  const FONT_SIZE = 12; // Arial / Helvetica 12pt ABNT
+  const LH = 7.0; // Espaçamento 1,5 linha (7.0 mm)
   const MAX_W = pageWidth - MARGIN_X * 2; // 160 mm
 
   // Coleta lista de assinaturas
@@ -426,7 +428,7 @@ export const buildFichaOcorrenciaDoc = async (
 
   const segW = (t: string, bold: boolean): number => {
     doc.setFont('helvetica', bold ? 'bold' : 'normal');
-    doc.setFontSize(10);
+    doc.setFontSize(FONT_SIZE);
     return doc.getTextWidth(t);
   };
 
@@ -438,7 +440,7 @@ export const buildFichaOcorrenciaDoc = async (
       y = HEADER_START_Y;
     }
 
-    doc.setFontSize(10);
+    doc.setFontSize(FONT_SIZE);
     doc.setTextColor(0, 0, 0);
 
     // Se é a última linha do parágrafo ou só tem 1 elemento, alinha à esquerda
@@ -493,13 +495,9 @@ export const buildFichaOcorrenciaDoc = async (
     return y + LH;
   };
 
-  // Divide texto corrido em parágrafos e formata
-  const paragraphs = estrutura.textoCorridoCompleto.split('\n');
-  for (const para of paragraphs) {
-    if (!para.trim()) {
-      currentY += LH * 0.4;
-      continue;
-    }
+  // Itera sobre cada parágrafo padrão ABNT
+  for (const para of estrutura.paragrafos) {
+    if (!para.trim()) continue;
 
     const allSegs = parseMarkdown(para.trim());
     type Token = { text: string; bold: boolean };
@@ -535,7 +533,8 @@ export const buildFichaOcorrenciaDoc = async (
       if (lineParts.length && /^\s+$/.test(lineParts[lineParts.length - 1].text)) lineParts.pop();
       currentY = renderJustifiedLine(lineParts, currentY, true);
     }
-    currentY += LH * 0.3;
+    // Espaço entre parágrafos (ABNT)
+    currentY += 4.5;
   }
 
   // -----------------------------------------------------------------------
