@@ -2,6 +2,7 @@ import React from 'react';
 import { RegistroOcorrencia } from '../types';
 import { Printer, X } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { montarEstruturaAta } from '../lib/ataUtils';
 
 interface Props {
   ocorrencias: RegistroOcorrencia[];
@@ -25,10 +26,10 @@ export default function ProntuarioPDF({ ocorrencias, onClose, alunoNome }: Props
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{alunoNome} · {ocorrencias.length} Documentos</p>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={handlePrint} className="flex items-center gap-2 px-6 py-4 bg-[#0c2340] text-white rounded-2xl text-xs font-black uppercase hover:bg-gray-800 transition-all shadow-lg">
+            <button onClick={handlePrint} className="flex items-center gap-2 px-6 py-4 bg-[#0c2340] text-white rounded-2xl text-xs font-black uppercase hover:bg-gray-800 transition-all shadow-lg cursor-pointer">
               <Printer size={16} /> Imprimir Dossiê
             </button>
-            <button onClick={onClose} className="p-4 bg-gray-200 text-gray-600 rounded-2xl hover:bg-red-50 hover:text-red-500 transition-all">
+            <button onClick={onClose} className="p-4 bg-gray-200 text-gray-600 rounded-2xl hover:bg-red-50 hover:text-red-500 transition-all cursor-pointer">
               <X size={20} />
             </button>
           </div>
@@ -58,24 +59,25 @@ export default function ProntuarioPDF({ ocorrencias, onClose, alunoNome }: Props
 
           {ocorrencias.map((ocorrencia, idx) => {
             const getDado = (chave: string) => {
-              const key = Object.keys(ocorrencia.dados).find(k => k.toLowerCase() === chave.toLowerCase());
+              const key = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase() === chave.toLowerCase());
               return key ? ocorrencia.dados[key] : null;
             };
 
-            const profResp = getDado('responsável') || getDado('responsavel') || getDado('Professor') || ocorrencia.professorAtual || 'Administração';
+            const profResp = getDado('responsável') || getDado('responsavel') || getDado('Professor') || ocorrencia.professorAtual || 'Guilherme Juliano de Freitas Silva';
             const rawDate = getDado('Data') || ocorrencia.criadoEm;
-            let dataFormatada = rawDate;
-            if (rawDate && rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-              const [y, m, d] = rawDate.split('-');
-              dataFormatada = `${d}/${m}/${y}`;
-            } else if (rawDate) {
-              dataFormatada = new Date(rawDate).toLocaleDateString('pt-BR');
-            }
+            const rawRelato = getDado('Descrição') || getDado('descricao') || getDado('relato') || (ocorrencia as any).relato || '';
+            const numAta = getDado('Número da Ata') || getDado('numero da ata') || getDado('ata') || '';
 
-            const tipoOcorrencia = getDado('Tipo de Ocorrência') || getDado('Tipo de Ocorrencia') || ocorrencia.nomeModelo;
+            const estrutura = montarEstruturaAta({
+              numeroAta: numAta,
+              dataStr: rawDate,
+              nomeAluno: ocorrencia.nomeAluno,
+              nomeEmissor: profResp,
+              relato: rawRelato
+            });
 
             return (
-              <div key={ocorrencia.id} className={cn("w-full max-w-[210mm] min-h-[297mm] bg-white shadow-xl print:shadow-none relative flex flex-col print:w-[210mm] print:min-h-[297mm] shrink-0", idx < ocorrencias.length - 1 ? "page-break" : "")}>
+              <div key={ocorrencia.id || idx} className={cn("w-full max-w-[210mm] min-h-[297mm] bg-white shadow-xl print:shadow-none relative flex flex-col print:w-[210mm] print:min-h-[297mm] shrink-0", idx < ocorrencias.length - 1 ? "page-break" : "")}>
                 {/* Header Sesi */}
                 <div className="relative w-full h-[100px] md:h-[140px] bg-white border-b-4 border-[#0c2340] overflow-hidden flex items-center justify-between px-4 md:px-8 select-none shrink-0">
                   {/* Polígonos Geométricos */}
@@ -105,48 +107,38 @@ export default function ProntuarioPDF({ ocorrencias, onClose, alunoNome }: Props
                   </div>
                 </div>
 
-                <div className="flex-1 px-4 sm:px-12 md:px-20 pt-6 md:pt-12 pb-10 md:pb-20 space-y-6 md:space-y-10 flex flex-col">
-                  {/* Cabeçalho */}
-                  <div className="space-y-1.5 text-sm text-[#0c2340] font-medium border-b border-gray-200 pb-6 shrink-0">
-                    <p><span className="font-bold mr-2">Nome do Aluno:</span> {ocorrencia.nomeAluno}</p>
-                    <p><span className="font-bold mr-2">Ano:</span> {ocorrencia.anoAluno || ocorrencia.turmaAluno}</p>
-                    <p><span className="font-bold mr-2">Responsável pelo Registro:</span> {profResp}</p>
-                    <p><span className="font-bold mr-2">Data:</span> {dataFormatada}</p>
-                  </div>
-
-                  {/* Título */}
-                  <div className="shrink-0">
-                    <h1 className="text-2xl font-black text-[#0c2340] uppercase tracking-tight">Registro de Ocorrência</h1>
-                    <p className="text-sm font-bold text-gray-500 uppercase mt-1">{tipoOcorrencia}</p>
-                  </div>
-
-                  {/* Descrição */}
-                  <div className="flex-1 space-y-6 text-sm text-gray-800 leading-relaxed text-justify pt-4">
-                    {Object.entries(ocorrencia.dados || {})
-                      .filter(([key]) => !['responsável', 'responsavel', 'professor', 'data', 'tipo de ocorrência', 'tipo de ocorrencia'].includes(key.toLowerCase()))
-                      .map(([key, value]) => (
-                      <div key={key}>
-                        <p className="font-bold mb-1 uppercase text-xs text-[#0c2340]">{key}</p>
-                        <p className="whitespace-pre-wrap text-gray-700">{Array.isArray(value) ? value.join(', ') : String(value)}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Assinaturas Fixas no Fundo */}
-                  <div className="pt-20 grid grid-cols-2 gap-x-12 gap-y-16 shrink-0 mt-auto">
-                    <div className="text-center">
-                      <div className="w-full border-b border-gray-900 mb-2"></div>
-                      <p className="text-xs font-bold text-gray-900 uppercase">Assinatura do Aluno</p>
-                      <p className="text-[10px] text-gray-500 uppercase mt-1">{ocorrencia.nomeAluno}</p>
+                <div className="flex-1 px-8 sm:px-14 md:px-20 pt-8 md:pt-14 pb-12 md:pb-20 flex flex-col justify-between">
+                  <div>
+                    {/* Título Oficial da ATA */}
+                    <div className="mb-6">
+                      <h1 className="text-xl md:text-2xl font-black text-[#0c2340] tracking-tight uppercase">
+                        {estrutura.tituloAta}
+                      </h1>
                     </div>
-                    <div className="text-center">
-                      <div className="w-full border-b border-gray-900 mb-2"></div>
-                      <p className="text-xs font-bold text-gray-900 uppercase">Assinatura do Responsável</p>
+
+                    {/* Texto Corrido Contínuo da ATA */}
+                    <div className="text-sm md:text-[15px] text-gray-900 leading-[1.8] text-justify font-normal space-y-4 font-sans">
+                      <p>
+                        <span>{estrutura.textoAbertura} </span>
+                        {estrutura.textoRelato && (
+                          <span>{estrutura.textoRelato} </span>
+                        )}
+                        <span>{estrutura.textoFechamento}</span>
+                      </p>
                     </div>
-                    <div className="text-center col-span-2 max-w-sm mx-auto w-full">
-                      <div className="w-full border-b border-gray-900 mb-2"></div>
-                      <p className="text-xs font-bold text-gray-900 uppercase">Responsável pelo Registro</p>
-                      <p className="text-[10px] text-gray-500 uppercase mt-1">{profResp}</p>
+                  </div>
+
+                  {/* Assinaturas */}
+                  <div className="pt-16 print:pt-20">
+                    <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-x-12 gap-y-12 max-w-3xl">
+                      {estrutura.assinaturas.map((ass, aIdx) => (
+                        <div key={aIdx} className="flex flex-col items-center text-center">
+                          <div className="w-full max-w-[240px] border-b border-gray-900 mb-2"></div>
+                          <p className="text-xs font-bold text-gray-900 tracking-wide">
+                            {ass.nome}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>

@@ -739,13 +739,27 @@ Registro realizado para acompanhamento pedagógico e institucional.`;
                         )}
   
                         {campo.tipo === 'data' && (
-                          <input 
-                            type="date" 
-                            required={campo.obrigatorio} 
-                            value={dadosFormulario[campo.rotulo] || ''} 
-                            onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} 
-                            className="campo-input-base" 
-                          />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Data da ATA</label>
+                              <input 
+                                type="date" 
+                                required={campo.obrigatorio} 
+                                value={dadosFormulario[campo.rotulo] || ''} 
+                                onChange={e => setDadosFormulario(prev => ({ ...prev, [campo.rotulo]: e.target.value }))} 
+                                className="campo-input-base" 
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Horário</label>
+                              <input 
+                                type="time" 
+                                value={dadosFormulario['Horário'] || dadosFormulario['Horario'] || '10:00'} 
+                                onChange={e => setDadosFormulario(prev => ({ ...prev, 'Horário': e.target.value, 'Horario': e.target.value }))} 
+                                className="campo-input-base" 
+                              />
+                            </div>
+                          </div>
                         )}
   
                         {campo.tipo === 'area_texto' && (
@@ -783,7 +797,7 @@ Registro realizado para acompanhamento pedagógico e institucional.`;
                 
                 <div className="space-y-2">
                   <h2 className="text-2xl font-black text-emerald-500">Registrado com Sucesso!</h2>
-                  <p className="text-on-surface-variant font-medium text-sm">O formulário de ata foi salvo no prontuário com sucesso.</p>
+                  <p className="text-on-surface-variant font-medium text-sm">A ATA foi salva e gerada com sucesso.</p>
                 </div>
 
                 {submittedRecord && (
@@ -805,12 +819,21 @@ Registro realizado para acompanhamento pedagógico e institucional.`;
                   </div>
                 )}
 
-                <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md pt-2">
+                <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md pt-2">
                   <button 
                     onClick={limparFormulario} 
-                    className="flex-1 py-4 bg-white/[0.05] hover:bg-white/[0.1] text-white font-bold rounded-2xl text-xs uppercase tracking-widest transition-all cursor-pointer border border-white/10"
+                    className="flex-1 py-3.5 bg-white/[0.05] hover:bg-white/[0.1] text-white font-bold rounded-2xl text-xs uppercase tracking-widest transition-all cursor-pointer border border-white/10"
                   >
                     Novo Registro
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (submittedRecord) setOcorrenciaSelecionada(submittedRecord);
+                    }} 
+                    disabled={!submittedRecord}
+                    className="flex-1 py-3.5 bg-primary hover:bg-primary/90 text-black font-black rounded-2xl text-xs uppercase tracking-widest transition-all shadow-lg shadow-primary/20 cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <FileText size={14} /> Ver ATA
                   </button>
                   <button 
                     onClick={async () => {
@@ -818,7 +841,7 @@ Registro realizado para acompanhamento pedagógico e institucional.`;
                         const configAssinaturas = {
                           mostrarAluno: true,
                           nomeAluno: submittedRecord.nomeAluno,
-                          mostrarResponsavel: true,
+                          mostrarResponsavel: false,
                           nomeResponsavel: '',
                           mostrarEmissor: true,
                           nomeEmissor: submittedRecord.professorAtual || 'Administração'
@@ -827,7 +850,7 @@ Registro realizado para acompanhamento pedagógico e institucional.`;
                       }
                     }} 
                     disabled={!submittedRecord}
-                    className="flex-1 py-4 bg-emerald-500 hover:bg-emerald-600 text-black font-black rounded-2xl text-xs uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-black font-black rounded-2xl text-xs uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Download size={14} /> Baixar PDF
                   </button>

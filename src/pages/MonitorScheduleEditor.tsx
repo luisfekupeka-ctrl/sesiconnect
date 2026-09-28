@@ -9,7 +9,7 @@ import { salvarGradeMonitores, limparGradeMonitorDia, limparGradeDia, limparGrad
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import SeletorLocalPosto from '../components/SeletorLocalPosto';
-import { GradeMonitor } from '../types';
+import { GradeMonitor, PeriodoConfig } from '../types';
 
 const DIAS_SEMANA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA'];
 

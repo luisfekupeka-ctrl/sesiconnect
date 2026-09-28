@@ -273,10 +273,12 @@ export const generateOccurrencesExcel = (
   XLSX.writeFile(workbook, filename);
 };
 
+import { montarEstruturaAta } from './ataUtils';
+
 export const buildFichaOcorrenciaDoc = async (
   ocorrencia: any,
-  configAssinaturas: any,
-  assinaturasExtras: any[],
+  configAssinaturas: any = {},
+  assinaturasExtras: any[] = [],
   bgBase64?: string
 ) => {
   const doc = new jsPDF('p', 'mm', 'a4');
@@ -298,146 +300,115 @@ export const buildFichaOcorrenciaDoc = async (
   };
 
   const MARGIN_X = 25;
-  const HEADER_START_Y = 55;
+  const HEADER_START_Y = 52;
 
   // — Aplica fundo oficial da 1ª página —
   applyBackground();
   let currentY = HEADER_START_Y;
 
-
   // -----------------------------------------------------------------------
-  // Informações do aluno
+  // Extração e Preparação dos Dados da ATA
   // -----------------------------------------------------------------------
-  doc.setFontSize(10);
-  doc.setTextColor(12, 35, 64);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Nome do Aluno:', MARGIN_X, currentY);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0, 0, 0);
-  doc.text(configAssinaturas.nomeAluno || ocorrencia.nomeAluno || '', MARGIN_X + 33, currentY);
+  const dados = ocorrencia.dados || {};
 
-  currentY += 7;
-  doc.setTextColor(12, 35, 64);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Ano:', MARGIN_X, currentY);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0, 0, 0);
-  doc.text(ocorrencia.anoAluno || ocorrencia.turmaAluno || 'Não informado', MARGIN_X + 10, currentY);
-
-  currentY += 7;
-  doc.setTextColor(12, 35, 64);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Responsável pelo Registro:', MARGIN_X, currentY);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0, 0, 0);
-  doc.text(configAssinaturas.nomeEmissor || ocorrencia.professorAtual || 'Administração', MARGIN_X + 50, currentY);
-
-  if (configAssinaturas.nomeResponsavel) {
-    currentY += 7;
-    doc.setTextColor(12, 35, 64);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Responsável Legal:', MARGIN_X, currentY);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-    doc.text(configAssinaturas.nomeResponsavel, MARGIN_X + 38, currentY);
-  }
-
-  assinaturasExtras.forEach(e => {
-    currentY += 7;
-    doc.setTextColor(12, 35, 64);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`${e.papel}:`, MARGIN_X, currentY);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-    const lw = doc.getTextWidth(`${e.papel}:`) + 3;
-    doc.text(e.nome, MARGIN_X + lw, currentY);
-  });
-
-  currentY += 7;
-  doc.setTextColor(12, 35, 64);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Data:', MARGIN_X, currentY);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0, 0, 0);
-
-  // Parsing robusto de data (evita bugs de fuso horário)
-  const dateKey = Object.keys(ocorrencia.dados || {}).find(k => k.toLowerCase() === 'data');
-  const rawDate = ocorrencia.dataOcorrencia || (dateKey ? String(ocorrencia.dados[dateKey]) : ocorrencia.criadoEm) || new Date().toISOString();
-  let dateStr = rawDate;
-  if (rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    const [y, m, d] = rawDate.split('-');
-    dateStr = `${d}/${m}/${y}`;
-  } else {
-    try {
-      const dt = new Date(rawDate);
-      if (!isNaN(dt.getTime())) {
-        const useUTC = !rawDate.includes('T') && !rawDate.includes(' ');
-        dateStr = dt.toLocaleDateString('pt-BR', useUTC ? { timeZone: 'UTC' } : undefined);
-      }
-    } catch (e) { dateStr = rawDate; }
-  }
-  doc.text(dateStr, MARGIN_X + 12, currentY);
-
-  const numAtaKey = Object.keys(ocorrencia.dados || {}).find(k =>
-    k.toLowerCase().includes('número da ata') || k.toLowerCase().includes('numero da ata') || k.toLowerCase() === 'ata'
+  const numAtaKey = Object.keys(dados).find(k =>
+    k.toLowerCase().includes('número da ata') || k.toLowerCase().includes('numero da ata') || k.toLowerCase() === 'ata' || k.toLowerCase() === 'número' || k.toLowerCase() === 'numero'
   );
-  if (numAtaKey && ocorrencia.dados[numAtaKey]) {
-    currentY += 7;
-    doc.setTextColor(12, 35, 64);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Número da Ata:', MARGIN_X, currentY);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-    doc.text(String(ocorrencia.dados[numAtaKey]), MARGIN_X + 30, currentY);
-  }
+  const numeroAta = configAssinaturas.numeroAta || (numAtaKey ? String(dados[numAtaKey]) : '') || ocorrencia.numeroAta || '';
 
-  // Linha separadora
-  currentY += 12;
-  doc.setDrawColor(220, 220, 220);
-  doc.line(MARGIN_X, currentY, pageWidth - MARGIN_X, currentY);
+  const dateKey = Object.keys(dados).find(k => k.toLowerCase() === 'data' || k.toLowerCase().includes('data'));
+  const rawDate = configAssinaturas.dataAta || ocorrencia.dataOcorrencia || (dateKey ? String(dados[dateKey]) : ocorrencia.criadoEm) || new Date().toISOString();
 
-  // Título "REGISTRO DE ATA"
-  currentY += 13;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.setTextColor(12, 35, 64);
-  doc.text('REGISTRO DE ATA', MARGIN_X, currentY);
+  const horaKey = Object.keys(dados).find(k =>
+    k.toLowerCase().includes('horário') || k.toLowerCase().includes('horario') || k.toLowerCase().includes('hora')
+  );
+  const horarioStr = configAssinaturas.horario || (horaKey ? String(dados[horaKey]) : '') || '';
 
-  currentY += 8;
-  doc.setFontSize(11);
-  doc.setTextColor(100, 100, 100);
-  doc.text((ocorrencia.nomeModelo || '').toUpperCase(), MARGIN_X, currentY);
+  const cargoKey = Object.keys(dados).find(k =>
+    k.toLowerCase().includes('cargo') || k.toLowerCase().includes('função') || k.toLowerCase().includes('funcao')
+  );
+  const cargoEmissor = configAssinaturas.cargoEmissor || (cargoKey ? String(dados[cargoKey]) : '') || 'Psicólogo Escolar';
+  const nomeEmissor = configAssinaturas.nomeEmissor || ocorrencia.professorAtual || 'Guilherme Juliano de Freitas Silva';
 
-  currentY += 13;
-  doc.setFontSize(10);
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'bold');
-  doc.text('DESCRIÇÃO', MARGIN_X, currentY);
-
-  currentY += 6;
-
-  // -----------------------------------------------------------------------
-  // Extrai o relato
-  // -----------------------------------------------------------------------
   const relatoRaw: string =
     (ocorrencia as any).relato ||
     (() => {
-      const descKey = Object.keys(ocorrencia.dados || {}).find(k =>
+      const descKey = Object.keys(dados).find(k =>
         ['descrição', 'descricao', 'relato', 'descrição do ocorrido', 'descrição do fato',
-         'description', 'observações', 'observacoes', 'obs'].includes(k.toLowerCase())
+         'description', 'observações', 'observacoes', 'obs', 'fatos'].includes(k.toLowerCase())
       );
-      return descKey ? String(ocorrencia.dados[descKey]) : '';
+      return descKey ? String(dados[descKey]) : '';
     })();
 
-  // Converte checkboxes estilo markdown
-  const processedRelato = relatoRaw
-    .replace(/\[ \]/g, '\u25A1')
-    .replace(/\[x\]/g, '\u25A3');
+  // Monta a estrutura contínua da ATA (abertura por extenso, relato e fechamento)
+  const estrutura = montarEstruturaAta({
+    numeroAta,
+    anoAta: configAssinaturas.anoAta,
+    dataStr: rawDate,
+    horarioStr,
+    alunos: configAssinaturas.alunos,
+    nomeAluno: configAssinaturas.nomeAluno || ocorrencia.nomeAluno,
+    nomeEmissor,
+    cargoEmissor,
+    relato: relatoRaw,
+    assinaturasExtras
+  });
 
   // -----------------------------------------------------------------------
-  // Renderizador de texto com suporte a **negrito** (markdown inline)
-  // Faz word-wrap manual ciente do tamanho de cada segmento (bold vs normal)
+  // Título da ATA (ex: "ATA 1040/2026")
   // -----------------------------------------------------------------------
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(12, 35, 64);
+  doc.text(estrutura.tituloAta, MARGIN_X, currentY);
+
+  currentY += 12;
+
+  // -----------------------------------------------------------------------
+  // Renderização do Texto Corrido com suporte a Markdown e Justificação
+  // -----------------------------------------------------------------------
+  const LH = 6.2; // line height mm
+  const MAX_W = pageWidth - MARGIN_X * 2; // 160 mm
+
+  // Coleta lista de assinaturas
+  const allSigs: { label: string; name: string }[] = [];
+
+  if (configAssinaturas.mostrarAluno !== false) {
+    if (configAssinaturas.alunos && configAssinaturas.alunos.length > 0) {
+      configAssinaturas.alunos.forEach((al: string) => {
+        allSigs.push({ label: '', name: al });
+      });
+    } else {
+      const nAl = configAssinaturas.nomeAluno || ocorrencia.nomeAluno;
+      if (nAl && (nAl.includes(' e ') || nAl.includes(','))) {
+        nAl.split(/,|\se\s/).map((s: string) => s.trim()).filter(Boolean).forEach((al: string) => {
+          allSigs.push({ label: '', name: al });
+        });
+      } else if (nAl) {
+        allSigs.push({ label: '', name: nAl });
+      }
+    }
+  }
+
+  if (configAssinaturas.mostrarEmissor !== false && nomeEmissor) {
+    allSigs.push({ label: '', name: nomeEmissor });
+  }
+
+  if (configAssinaturas.nomeResponsavel && configAssinaturas.mostrarResponsavel) {
+    allSigs.push({ label: '', name: configAssinaturas.nomeResponsavel });
+  }
+
+  assinaturasExtras.forEach(e => {
+    if (e.nome && !allSigs.some(s => s.name.toLowerCase() === e.nome.toLowerCase())) {
+      allSigs.push({ label: '', name: e.nome });
+    }
+  });
+
+  // Espaço que as assinaturas ocupam
+  const sigRows = Math.max(1, Math.ceil(allSigs.length / 2));
+  const sigBlock = sigRows * 26 + 25;
+  const TEXT_BOTTOM = pageHeight - sigBlock;
+
   type TxtSeg = { text: string; bold: boolean };
 
   const parseMarkdown = (line: string): TxtSeg[] => {
@@ -459,45 +430,81 @@ export const buildFichaOcorrenciaDoc = async (
     return doc.getTextWidth(t);
   };
 
-  const LH = 6;          // line height mm
-  const MAX_W = pageWidth - MARGIN_X * 2;
-  // Space needed for signatures (2 rows = 56mm + margin)
-  const SIG_RESERVE = 65;
-  const TEXT_BOTTOM  = pageHeight - SIG_RESERVE;
-
-  const flushTextLine = (lineParts: TxtSeg[], y: number): number => {
+  const renderJustifiedLine = (lineParts: TxtSeg[], y: number, isLastLineOfParagraph: boolean): number => {
     if (!lineParts.length) return y;
-    // Check if we need a new page (reserve SIG_RESERVE at bottom)
     if (y + LH > TEXT_BOTTOM) {
       doc.addPage();
       applyBackground();
       y = HEADER_START_Y;
     }
-    let cx = MARGIN_X;
+
     doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+
+    // Se é a última linha do parágrafo ou só tem 1 elemento, alinha à esquerda
+    if (isLastLineOfParagraph || lineParts.length <= 1) {
+      let cx = MARGIN_X;
+      for (const seg of lineParts) {
+        doc.setFont('helvetica', seg.bold ? 'bold' : 'normal');
+        doc.text(seg.text, cx, y);
+        cx += doc.getTextWidth(seg.text);
+      }
+      return y + LH;
+    }
+
+    let totalContentW = 0;
+    let spaceCount = 0;
+    lineParts.forEach(seg => {
+      totalContentW += segW(seg.text, seg.bold);
+      const m = seg.text.match(/ /g);
+      if (m) spaceCount += m.length;
+    });
+
+    if (spaceCount === 0) {
+      let cx = MARGIN_X;
+      for (const seg of lineParts) {
+        doc.setFont('helvetica', seg.bold ? 'bold' : 'normal');
+        doc.text(seg.text, cx, y);
+        cx += doc.getTextWidth(seg.text);
+      }
+      return y + LH;
+    }
+
+    const totalSlack = MAX_W - totalContentW;
+    const extraPerSpace = totalSlack > 0 ? totalSlack / spaceCount : 0;
+
+    let cx = MARGIN_X;
     for (const seg of lineParts) {
       doc.setFont('helvetica', seg.bold ? 'bold' : 'normal');
-      doc.text(seg.text, cx, y);
-      cx += doc.getTextWidth(seg.text);
+      const words = seg.text.split(' ');
+      for (let wIdx = 0; wIdx < words.length; wIdx++) {
+        const w = words[wIdx];
+        if (w) {
+          doc.text(w, cx, y);
+          cx += doc.getTextWidth(w);
+        }
+        if (wIdx < words.length - 1) {
+          const baseSpaceW = doc.getTextWidth(' ');
+          cx += baseSpaceW + extraPerSpace;
+        }
+      }
     }
+
     return y + LH;
   };
 
-  // Word-wrap with bold awareness
-  const paragraphs = processedRelato.split('\n');
+  // Divide texto corrido em parágrafos e formata
+  const paragraphs = estrutura.textoCorridoCompleto.split('\n');
   for (const para of paragraphs) {
     if (!para.trim()) {
-      currentY += LH * 0.5;
+      currentY += LH * 0.4;
       continue;
     }
 
-    const allSegs = parseMarkdown(para);
-
-    // Break each segment into tokens (words + spaces)
+    const allSegs = parseMarkdown(para.trim());
     type Token = { text: string; bold: boolean };
     const tokens: Token[] = [];
     for (const seg of allSegs) {
-      // Split on word boundaries keeping spaces
       const parts = seg.text.split(/(\s+)/);
       for (const p of parts) {
         if (p) tokens.push({ text: p, bold: seg.bold });
@@ -507,81 +514,56 @@ export const buildFichaOcorrenciaDoc = async (
     let lineParts: TxtSeg[] = [];
     let lineW = 0;
 
-    for (const tok of tokens) {
+    for (let i = 0; i < tokens.length; i++) {
+      const tok = tokens[i];
       const tw = segW(tok.text, tok.bold);
+
       if (lineW + tw > MAX_W && lineParts.length > 0 && !/^\s+$/.test(tok.text)) {
-        // Trim trailing space from current line
         if (lineParts.length && /^\s+$/.test(lineParts[lineParts.length - 1].text)) {
           lineParts.pop();
         }
-        currentY = flushTextLine(lineParts, currentY);
+        currentY = renderJustifiedLine(lineParts, currentY, false);
         lineParts = [];
         lineW = 0;
-        // Skip leading whitespace at start of new line
         if (/^\s+$/.test(tok.text)) continue;
       }
       lineParts.push({ text: tok.text, bold: tok.bold });
       lineW += tw;
     }
-    // Flush remaining
+
     if (lineParts.length) {
       if (lineParts.length && /^\s+$/.test(lineParts[lineParts.length - 1].text)) lineParts.pop();
-      currentY = flushTextLine(lineParts, currentY);
+      currentY = renderJustifiedLine(lineParts, currentY, true);
     }
+    currentY += LH * 0.3;
   }
 
   // -----------------------------------------------------------------------
-  // Assinaturas — garante que aparecem sempre (adiciona página se necessário)
+  // Assinaturas no Rodapé
   // -----------------------------------------------------------------------
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(0, 0, 0);
-
-  // Coleta assinaturas necessárias para calcular espaço
-  const allSigs: { label: string; name: string }[] = [];
-  if (configAssinaturas.mostrarAluno)
-    allSigs.push({ label: 'ASSINATURA DO ALUNO', name: configAssinaturas.nomeAluno || ocorrencia.nomeAluno });
-  if (configAssinaturas.mostrarResponsavel)
-    allSigs.push({ label: 'ASSINATURA DO RESPONSÁVEL', name: configAssinaturas.nomeResponsavel || '' });
-  if (configAssinaturas.mostrarEmissor)
-    allSigs.push({ label: 'RESPONSÁVEL PELO REGISTRO', name: configAssinaturas.nomeEmissor || '' });
-  assinaturasExtras.forEach(e => allSigs.push({ label: e.papel.toUpperCase(), name: e.nome }));
-
-  // Espaço que as assinaturas ocupam (em linhas de 28mm por fileira)
-  const sigRows  = Math.ceil(allSigs.length / 2);
-  const sigBlock = sigRows * 28 + 20; // 20mm de margem
-
-  // Se não há espaço na página atual → nova página só para assinaturas
-  if (currentY + sigBlock > pageHeight - 10) {
+  if (currentY + sigBlock > pageHeight - 15) {
     doc.addPage();
     applyBackground();
+    currentY = HEADER_START_Y;
   }
 
-  // Posiciona assinaturas na parte inferior da página atual
-  const sigW  = 65;
-  const sigY  = pageHeight - 20 - sigBlock + 20; // 20mm do rodapé
+  const sigW = 65;
+  const sigY = pageHeight - 20 - sigBlock + 20;
 
   allSigs.forEach((sig, index) => {
     const col = index % 2;
     const row = Math.floor(index / 2);
-    const x   = col === 0 ? MARGIN_X : pageWidth - MARGIN_X - sigW;
-    const y   = sigY + row * 28;
+    const x = col === 0 ? MARGIN_X : pageWidth - MARGIN_X - sigW;
+    const y = sigY + row * 26;
 
     doc.setDrawColor(50, 50, 50);
+    doc.setLineWidth(0.3);
     doc.line(x, y, x + sigW, y);
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
     doc.setTextColor(0, 0, 0);
-    doc.text(sig.label, x + sigW / 2, y + 5, { align: 'center' });
-
-    if (sig.name) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      doc.setTextColor(120, 120, 120);
-      doc.text(sig.name.toUpperCase(), x + sigW / 2, y + 10, { align: 'center' });
-    }
-    doc.setTextColor(0, 0, 0);
+    doc.text(sig.name, x + sigW / 2, y + 5, { align: 'center' });
   });
 
   return doc;
