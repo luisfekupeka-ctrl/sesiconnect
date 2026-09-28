@@ -186,67 +186,6 @@ export default function FormsPage() {
       setModeloSelecionado(formModel);
     }
 
-    let tipoOcorrenciaMapped = 'Outros';
-    const tipoCampo = formModel?.campos.find(c => c.rotulo === 'Tipo de Ocorrência');
-    const opcoesDisponiveis = tipoCampo?.opcoes || [];
-    
-    // Tenta encontrar correspondência exata
-    const matchExato = opcoesDisponiveis.find(
-      opt => opt.trim().toLowerCase() === type.trim().toLowerCase()
-    );
-    
-    if (matchExato) {
-      tipoOcorrenciaMapped = matchExato;
-    } else {
-      // Regras de fallback inteligentes
-      const normalizedType = type.toLowerCase();
-      if (normalizedType.includes('celular') || normalizedType.includes('aparelho') || normalizedType.includes('eletrô') || normalizedType.includes('eletro')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('celular') || o.toLowerCase().includes('eletrô') || o.toLowerCase().includes('aparelho'));
-        tipoOcorrenciaMapped = found || 'Uso indevido de celular e aparelhos eletrônicos';
-      } else if (normalizedType.includes('uniforme')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('uniforme'));
-        tipoOcorrenciaMapped = found || 'Uso inadequado do uniforme escolar';
-      } else if (normalizedType.includes('atraso') || normalizedType.includes('horário') || normalizedType.includes('horario')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('atraso'));
-        tipoOcorrenciaMapped = found || 'Atrasos e descumprimento de horários';
-      } else if (normalizedType.includes('bullying') || normalizedType.includes('cyberbullying') || normalizedType.includes('constrangimento')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('bullying') || o.toLowerCase().includes('constrangimento'));
-        tipoOcorrenciaMapped = found || 'Bullying, cyberbullying e constrangimentos';
-      } else if (normalizedType.includes('agressão') || normalizedType.includes('agressao') || normalizedType.includes('física') || normalizedType.includes('fisica') || normalizedType.includes('verbal') || normalizedType.includes('briga') || normalizedType.includes('conflito')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('agressão') || o.toLowerCase().includes('agressao') || o.toLowerCase().includes('verbal') || o.toLowerCase().includes('briga'));
-        tipoOcorrenciaMapped = found || 'Agressão física ou verbal';
-      } else if (normalizedType.includes('desrespeito') || normalizedType.includes('ofensa') || normalizedType.includes('xingamento') || normalizedType.includes('ofender')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('desrespeito'));
-        tipoOcorrenciaMapped = found || 'Desrespeito a colegas, professores e funcionários';
-      } else if (normalizedType.includes('patrimônio') || normalizedType.includes('patrimonio') || normalizedType.includes('danos') || normalizedType.includes('pertence')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('patrimônio') || o.toLowerCase().includes('patrimonio') || o.toLowerCase().includes('danos'));
-        tipoOcorrenciaMapped = found || 'Danos ao patrimônio escolar ou pertences alheios';
-      } else if (normalizedType.includes('saída') || normalizedType.includes('saida')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('saída') || o.toLowerCase().includes('saida'));
-        tipoOcorrenciaMapped = found || 'Saída da sala ou da escola sem autorização';
-      } else if (normalizedType.includes('vape') || normalizedType.includes('cigarro') || normalizedType.includes('álcool') || normalizedType.includes('alcool') || normalizedType.includes('droga')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('vape') || o.toLowerCase().includes('cigarro') || o.toLowerCase().includes('droga'));
-        tipoOcorrenciaMapped = found || 'Porte ou uso de vape, cigarros, álcool e drogas';
-      } else if (normalizedType.includes('baderna') || normalizedType.includes('gritaria') || normalizedType.includes('perturbação') || normalizedType.includes('perturbacao') || normalizedType.includes('bagunça') || normalizedType.includes('bagunca') || normalizedType.includes('barulho')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('baderna') || o.toLowerCase().includes('gritaria') || o.toLowerCase().includes('perturbação') || o.toLowerCase().includes('perturbacao'));
-        tipoOcorrenciaMapped = found || 'Baderna, gritaria e perturbação das aulas';
-      } else if ((normalizedType.includes('cola') && !normalizedType.includes('escolar')) || normalizedType.includes('fraude') || normalizedType.includes('falsificação') || normalizedType.includes('falsificacao')) {
-        const found = opcoesDisponiveis.find(o => (o.toLowerCase().includes('cola') && !o.toLowerCase().includes('escolar')) || o.toLowerCase().includes('fraude') || o.toLowerCase().includes('falsificação') || o.toLowerCase().includes('falsificacao'));
-        tipoOcorrenciaMapped = found || 'Cola, fraude e falsificação de documentos';
-      } else if (normalizedType.includes('objeto') || normalizedType.includes('material') || normalizedType.includes('materiais')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('objeto') || o.toLowerCase().includes('material'));
-        tipoOcorrenciaMapped = found || 'Porte de objetos ou materiais não autorizados';
-      } else if (normalizedType.includes('comércio') || normalizedType.includes('comercio') || normalizedType.includes('venda') || normalizedType.includes('arrecada')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('comércio') || o.toLowerCase().includes('comercio') || o.toLowerCase().includes('venda') || o.toLowerCase().includes('arrecada'));
-        tipoOcorrenciaMapped = found || 'Comércio, vendas ou arrecadações sem autorização';
-      } else if (normalizedType.includes('orienta')) {
-        const found = opcoesDisponiveis.find(o => o.toLowerCase().includes('orienta'));
-        tipoOcorrenciaMapped = found || 'Descumprimento de orientações da equipe escolar';
-      } else {
-        tipoOcorrenciaMapped = opcoesDisponiveis.find(o => o.toLowerCase().includes('conduta')) || opcoesDisponiveis[opcoesDisponiveis.length - 1] || 'Conduta incompatível com o ambiente escolar';
-      }
-    }
-
     const today = new Date();
     const dateStr = today.toLocaleDateString('pt-BR');
     const todayStr = today.toISOString().split('T')[0];
@@ -382,7 +321,6 @@ Registro realizado para acompanhamento pedagógico e institucional.`;
 
     const initialDados: Record<string, string> = {
       'Data': todayStr,
-      'Tipo de Ocorrência': tipoOcorrenciaMapped,
       'Descrição': defaultDescription
     };
 
@@ -650,7 +588,9 @@ Registro realizado para acompanhamento pedagógico e institucional.`;
                       <p className="text-on-surface-variant font-medium text-sm">{modeloSelecionado.descricao}</p>
                     </div>
                     <form onSubmit={handleSubmit} className="space-y-8">
-                    {modeloSelecionado.campos.map(campo => (
+                    {modeloSelecionado.campos
+                      .filter(campo => campo.rotulo !== 'Tipo de Ocorrência' && campo.id !== 'f-tipo' && !campo.rotulo.toLowerCase().includes('tipo de ocorrência') && !campo.rotulo.toLowerCase().includes('tipo de ocorrencia'))
+                      .map(campo => (
                       <div key={campo.id} className="space-y-4 bg-white/[0.02] p-4 md:p-8 rounded-[2.5rem] border border-white/[0.05] relative group/field">
                         <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-focus-within/field:bg-primary transition-all" />
                         

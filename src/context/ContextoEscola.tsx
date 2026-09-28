@@ -148,16 +148,19 @@ export function ProvedorEscola({ children }: { children: ReactNode }) {
       buscarMonitores().then(setMonitores),
       buscarModelosFormulario().then(mf => {
         if (mf && mf.length > 0) {
-          setModelosFormulario(mf);
+          const modelosLimpos = mf.map(m => ({
+            ...m,
+            campos: m.campos.filter(c => c.rotulo !== 'Tipo de Ocorrência' && c.id !== 'f-tipo')
+          }));
+          setModelosFormulario(modelosLimpos);
         } else {
           setModelosFormulario([
             {
               id: '11111111-1111-1111-1111-111111111111',
               nome: 'Ocorrência Disciplinar',
-              descricao: 'Registre ocorrências disciplinares de alunos com categoria e descrição detalhada.',
+              descricao: 'Registre ocorrências disciplinares de alunos com descrição detalhada.',
               campos: [
                 { id: 'f-aluno', rotulo: 'Aluno', tipo: 'autocomplete_aluno', obrigatorio: true },
-                { id: 'f-tipo', rotulo: 'Tipo de Ocorrência', tipo: 'selecao', obrigatorio: true, opcoes: ['Atraso', 'Indisciplina', 'Falta', 'Elogio', 'Outro'] },
                 { id: 'f-desc', rotulo: 'Descrição', tipo: 'area_texto', obrigatorio: true },
                 { id: 'f-prof', rotulo: 'Responsável', tipo: 'texto', obrigatorio: false },
               ],
