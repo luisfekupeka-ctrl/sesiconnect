@@ -220,6 +220,7 @@ export function montarEstruturaAta(params: {
   alunos?: string[];
   nomeAluno?: string;
   turmaAluno?: string;
+  tipoOcorrencia?: string;
   nomeEmissor?: string;
   cargoEmissor?: string;
   relato?: string;
@@ -273,8 +274,11 @@ export function montarEstruturaAta(params: {
   const turmaFormatada = (params.turmaAluno || '__________').trim();
   const endereco = (params.endereco || ENDERECO_PADRAO_SESI_ABNT).trim();
 
+  // Verbo de envolvimento (singular ou plural)
+  const verboEnvolvido = listaAlunos.length > 1 ? 'estiveram envolvidos(as)' : 'esteve envolvido(a)';
+
   // 1. Parágrafo de Abertura Oficial Padrão ABNT
-  const paragrafoAbertura = `${dataExt.fraseDataExtenso}, ${endereco}, ${textoEstudantes}, da turma ${turmaFormatada}, esteve envolvido(a) em uma situação/ocorrência, conforme descrito a seguir:`;
+  const paragrafoAbertura = `${dataExt.fraseDataExtenso}, ${endereco}, ${textoEstudantes}, da turma ${turmaFormatada}, ${verboEnvolvido} em uma situação/ocorrência, conforme descrito a seguir:`;
 
   // 2. Parágrafo de Relato dos Fatos
   let relatoLimpo = (params.relato || '').trim();
