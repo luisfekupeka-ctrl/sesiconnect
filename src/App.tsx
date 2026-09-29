@@ -23,7 +23,8 @@ const Occurrences = React.lazy(() => import('./pages/Occurrences').then(module =
 const PendingAtas = React.lazy(() => import('./pages/PendingAtas'));
 const ChamadosPage = React.lazy(() => import('./pages/Chamados'));
 const DashboardSuper = React.lazy(() => import('./pages/DashboardSuper'));
-const CamerasCFTV = React.lazy(() => import('./pages/CamerasCFTV'));
+const PortalSolicitacaoCameras = React.lazy(() => import('./pages/PortalSolicitacaoCameras'));
+const GestaoCamerasCFTV = React.lazy(() => import('./pages/GestaoCamerasCFTV'));
 
 // Componente de Proteção de Rota
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode; requiredRole?: string }) {
@@ -108,14 +109,14 @@ export default function App() {
         <BrowserRouter>
           <React.Suspense fallback={<LoadingFallback />}>
             <Routes>
-              {/* Rotas Públicas */}
+              {/* Rotas Públicas (Acesso via QR Code / Sem Login no Sistema) */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/meu-horario" element={<MonitorPortal />} />
-              <Route path="/cameras" element={<CamerasCFTV />} />
+              <Route path="/cameras" element={<PortalSolicitacaoCameras />} />
               <Route path="/cftv" element={<Navigate to="/cameras" replace />} />
               <Route path="/solicitacao-cftv" element={<Navigate to="/cameras" replace />} />
               
-              {/* Rotas com Layout (Agora 100% Protegidas por Login e Aprovação) */}
+              {/* Rotas com Layout (Protegidas por Login e Aprovação) */}
               <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                 {/* Páginas Internas de Consulta */}
                 <Route path="/" element={<ProtectedRoute requiredRole="super_admin"><Dashboard /></ProtectedRoute>} />
@@ -127,9 +128,9 @@ export default function App() {
                 <Route path="/relatorio-diario" element={<RelatorioDiario />} />
                 <Route path="/ocorrencias" element={<Occurrences />} />
                 <Route path="/chamados" element={<ChamadosPage />} />
-                <Route path="/painel-cameras" element={<CamerasCFTV />} />
                 
                 {/* Áreas que exigem Login/Role ADMIN */}
+                <Route path="/painel-cameras" element={<ProtectedRoute requiredRole="admin"><GestaoCamerasCFTV /></ProtectedRoute>} />
                 <Route path="/atas-pendentes" element={<ProtectedRoute requiredRole="admin"><PendingAtas /></ProtectedRoute>} />
                 <Route path="/forms" element={<ProtectedRoute requiredRole="admin"><FormsPage /></ProtectedRoute>} />
                 <Route path="/controle-faltas" element={<ProtectedRoute requiredRole="admin"><ControleFaltas /></ProtectedRoute>} />

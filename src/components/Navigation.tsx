@@ -30,7 +30,7 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean; setIsOpen?: (
     { to: isProfessor ? '/professor-chamada' : '/controle-faltas', icon: ClipboardCheck, label: 'Chamadas', visible: isAdmin || isProfessor },
     { to: '/realocacao', icon: RefreshCw, label: 'Realocação', visible: isAdmin },
     { to: '/chamados', icon: Wrench, label: 'Chamados', visible: true },
-    { to: '/cameras', icon: Camera, label: 'Câmeras CFTV', visible: true },
+    { to: '/painel-cameras', icon: Camera, label: 'Câmeras CFTV', visible: isAdmin },
   ];
 
   const visibleItems = allNavItems.filter(item => item.visible);
