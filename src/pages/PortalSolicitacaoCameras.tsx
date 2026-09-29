@@ -93,7 +93,6 @@ export default function PortalSolicitacaoCameras() {
   const [validandoOtp, setValidandoOtp] = useState(false);
   const [tempoRestanteReenvio, setTempoRestanteReenvio] = useState(0);
   const [mensagemAuth, setMensagemAuth] = useState<{ tipo: 'sucesso' | 'erro' | 'info'; texto: string } | null>(null);
-  const [otpDicaDev, setOtpDicaDev] = useState<string | null>(null);
 
   const inputOtpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -233,7 +232,6 @@ export default function PortalSolicitacaoCameras() {
   const handleSolicitarCodigo = async (e: React.FormEvent) => {
     e.preventDefault();
     setMensagemAuth(null);
-    setOtpDicaDev(null);
 
     const emailLimpo = inputEmail.trim().toLowerCase();
     if (!emailLimpo || !emailLimpo.includes('@')) {
@@ -286,9 +284,6 @@ export default function PortalSolicitacaoCameras() {
       setTempoRestanteReenvio(60);
       setEtapaAuth('codigo_otp');
       setMensagemAuth({ tipo: 'sucesso', texto: `Código de verificação de 6 dígitos enviado para ${emailLimpo}!` });
-      if (res.codigoSimulado) {
-        setOtpDicaDev(res.codigoSimulado);
-      }
     } catch (err: any) {
       console.error('Erro ao enviar código OTP:', err);
       setMensagemAuth({ tipo: 'erro', texto: err.message || 'Erro ao enviar código de verificação.' });
@@ -349,6 +344,26 @@ export default function PortalSolicitacaoCameras() {
     const completo = novoOtp.join('');
     if (completo.length === 6 && !novoOtp.includes('')) {
       handleValidarOtp(completo);
+    }
+  };
+
+  // Suporte a colar (Paste) o código de 6 dígitos completo copiado do e-mail
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pasted) return;
+
+    const digits = pasted.split('');
+    const novoOtp = ['', '', '', '', '', ''];
+    digits.forEach((d, i) => {
+      if (i < 6) novoOtp[i] = d;
+    });
+    setCodigoOtp(novoOtp);
+
+    if (digits.length === 6) {
+      handleValidarOtp(digits.join(''));
+    } else if (digits.length > 0 && digits.length < 6) {
+      inputOtpRefs.current[digits.length]?.focus();
     }
   };
 
@@ -714,14 +729,15 @@ export default function PortalSolicitacaoCameras() {
               </div>
             )}
 
-            {otpDicaDev && (
-              <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-2xl text-xs text-amber-300 text-center font-mono">
-                ⚡ Código Gerado para Teste: <strong>{otpDicaDev}</strong>
-              </div>
-            )}
+            <div className="bg-surface-container-high/60 border border-white/5 p-3.5 rounded-2xl text-xs text-zinc-300 flex items-start gap-2.5">
+              <Mail size={16} className="text-amber-400 shrink-0 mt-0.5" />
+              <span>
+                Abra sua caixa de entrada institucional (e pasta de <em>Spam/Lixo Eletrônico</em> se necessário). Copie ou digite o código de 6 dígitos recebido.
+              </span>
+            </div>
 
             <div className="space-y-6">
-              {/* 6 Inputs Numéricos */}
+              {/* 6 Inputs Numéricos com suporte a colagem direta */}
               <div className="flex items-center justify-center gap-2 sm:gap-3">
                 {codigoOtp.map((digito, idx) => (
                   <input
@@ -733,6 +749,7 @@ export default function PortalSolicitacaoCameras() {
                     value={digito}
                     onChange={(e) => handleOtpChange(idx, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                    onPaste={handleOtpPaste}
                     className="w-11 h-14 sm:w-14 sm:h-16 bg-surface-container-high border-2 border-white/10 rounded-2xl text-center text-xl sm:text-2xl font-black text-primary outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all font-mono"
                   />
                 ))}

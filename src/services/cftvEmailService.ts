@@ -6,13 +6,15 @@ import type { SolicitacaoCFTV, SolicitanteRecord } from '../types';
  */
 export const cftvEmailService = {
   /**
-   * Gera um código de 6 dígitos numéricos e grava no banco com validade de 15 minutos
+   * Gera um código de 6 dígitos numéricos e dispara o envio por e-mail
    */
   async gerarEnviarCodigoOTP(email: string, nome?: string): Promise<{ sucesso: boolean; mensagem: string; codigoSimulado?: string }> {
     const emailNorm = email.trim().toLowerCase();
     
-    // Gerar código de 6 dígitos
-    const codigo = Math.floor(100000 + Math.random() * 900000).toString();
+    // Gerar código de 6 dígitos numéricos criptograficamente seguro
+    const array = new Uint32Array(1);
+    crypto.getRandomValues(array);
+    const codigo = (100000 + (array[0] % 900000)).toString();
     const expiraEm = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 minutos
 
     try {
@@ -23,7 +25,7 @@ export const cftvEmailService = {
         .eq('email', emailNorm)
         .eq('utilizado', false);
 
-      // 2. Grava o novo código
+      // 2. Grava o novo código na base
       const { error: insertError } = await supabase
         .from('cftv_codigos_otp')
         .insert([{
@@ -37,29 +39,46 @@ export const cftvEmailService = {
 
       if (insertError) throw insertError;
 
-      // 3. Tentar envio de e-mail via Supabase Auth ou Webhook
-      console.log(`[CFTV OTP] Código de 6 dígitos gerado para ${emailNorm}: ${codigo}`);
+      console.log(`[CFTV OTP] Código de 6 dígitos gerado para ${emailNorm}`);
 
-      // Se houver integração com edge function ou SMTP
+      // 3. Disparo do e-mail via Supabase Edge Function 'send-cftv-email'
       try {
-        await supabase.functions.invoke('send-cftv-otp', {
-          body: { email: emailNorm, codigo, nome: nome || 'Solicitante' }
+        await supabase.functions.invoke('send-cftv-email', {
+          body: { 
+            tipo: 'otp',
+            email: emailNorm, 
+            codigo, 
+            nome: nome || 'Solicitante' 
+          }
         });
       } catch (fnErr) {
-        // Fallback silencioso caso edge function não esteja configurada no ambiente local
-        console.info('[CFTV Email] Envio de e-mail registrado no banco.');
+        console.warn('[CFTV Edge Function] Aviso ao invocar send-cftv-email:', fnErr);
+      }
+
+      // 4. Também aciona o canal nativo de e-mail OTP do Supabase Auth como garantia
+      try {
+        await supabase.auth.signInWithOtp({
+          email: emailNorm,
+          options: {
+            shouldCreateUser: true,
+            data: {
+              nome: nome || 'Solicitante CFTV'
+            }
+          }
+        });
+      } catch (authErr) {
+        console.info('[CFTV Supabase Auth OTP] Tentativa de disparo nativo processada.');
       }
 
       return {
         sucesso: true,
-        mensagem: `Código de verificação enviado para o e-mail ${emailNorm}.`,
-        codigoSimulado: codigo // Facilita testes em desenvolvimento
+        mensagem: `Código de verificação enviado para o e-mail ${emailNorm}. Verifique sua caixa de entrada e spam.`
       };
     } catch (err: any) {
-      console.error('Erro ao gerar código OTP:', err);
+      console.error('Erro ao gerar/enviar código OTP:', err);
       return {
         sucesso: false,
-        mensagem: err.message || 'Erro ao gerar código de verificação.'
+        mensagem: err.message || 'Erro ao enviar código de verificação por e-mail.'
       };
     }
   },
@@ -72,7 +91,7 @@ export const cftvEmailService = {
     const codigoLimpo = codigoDigitado.trim();
 
     try {
-      // 1. Busca código válido e não expirado
+      // 1. Busca código válido e não expirado na tabela cftv_codigos_otp
       const { data: registroOTP, error: errOTP } = await supabase
         .from('cftv_codigos_otp')
         .select('*')
@@ -84,22 +103,42 @@ export const cftvEmailService = {
         .limit(1)
         .maybeSingle();
 
-      if (errOTP) throw errOTP;
+      let validadoPorTabela = false;
 
-      if (!registroOTP) {
-        return {
-          sucesso: false,
-          erro: 'Código inválido ou expirado. Verifique os dígitos recebidos no seu e-mail ou solicite um novo código.'
-        };
+      if (!errOTP && registroOTP) {
+        // Marca código como utilizado
+        await supabase
+          .from('cftv_codigos_otp')
+          .update({ utilizado: true })
+          .eq('id', registroOTP.id);
+
+        validadoPorTabela = true;
       }
 
-      // 2. Marca código como utilizado
-      await supabase
-        .from('cftv_codigos_otp')
-        .update({ utilizado: true })
-        .eq('id', registroOTP.id);
+      // 2. Se não validou pela tabela, tenta validar via Supabase Auth OTP
+      if (!validadoPorTabela) {
+        try {
+          const { data: authData, error: authErr } = await supabase.auth.verifyOtp({
+            email: emailNorm,
+            token: codigoLimpo,
+            type: 'email'
+          });
 
-      // 3. Busca perfil do solicitante
+          if (authErr || !authData.user) {
+            return {
+              sucesso: false,
+              erro: 'Código inválido ou expirado. Verifique os dígitos recebidos no seu e-mail ou solicite um novo envio.'
+            };
+          }
+        } catch {
+          return {
+            sucesso: false,
+            erro: 'Código de verificação inválido ou expirado.'
+          };
+        }
+      }
+
+      // 3. Busca perfil do solicitante na tabela solicitantes_cftv
       const { data: solicitante, error: errSol } = await supabase
         .from('solicitantes_cftv')
         .select('*')
@@ -135,16 +174,17 @@ export const cftvEmailService = {
   async notificarAprovacaoSolicitante(solicitante: SolicitanteRecord): Promise<void> {
     console.log(`[CFTV Notificação] Solicitante ${solicitante.nome} (${solicitante.email}) foi APROVADO pelo Super Admin.`);
     try {
-      await supabase.functions.invoke('send-cftv-notification', {
+      await supabase.functions.invoke('send-cftv-email', {
         body: {
           tipo: 'aprovacao_acesso',
           destinatario: solicitante.email,
+          email: solicitante.email,
           nome: solicitante.nome,
           mensagem: 'Seu acesso para solicitação de imagens de segurança (CFTV) foi aprovado pelo Super Administrador.'
         }
       });
     } catch (e) {
-      console.info('[CFTV Notificação] Disparo registrado.');
+      console.info('[CFTV Notificação] Disparo de aprovação registrado.', e);
     }
   },
 
@@ -154,10 +194,11 @@ export const cftvEmailService = {
   async notificarDevolutivaChamado(solicitacao: SolicitacaoCFTV): Promise<void> {
     console.log(`[CFTV Devolutiva] Enviando devolutiva do chamado ${solicitacao.numero_protocolo} para ${solicitacao.solicitante_email}. Status: ${solicitacao.status}`);
     try {
-      await supabase.functions.invoke('send-cftv-notification', {
+      await supabase.functions.invoke('send-cftv-email', {
         body: {
           tipo: 'devolutiva_chamado',
           destinatario: solicitacao.solicitante_email,
+          email: solicitacao.solicitante_email,
           nome: solicitacao.solicitante_nome,
           protocolo: solicitacao.numero_protocolo,
           status: solicitacao.status,
@@ -166,7 +207,7 @@ export const cftvEmailService = {
         }
       });
     } catch (e) {
-      console.info('[CFTV Devolutiva] Disparo registrado.');
+      console.info('[CFTV Devolutiva] Disparo de devolutiva registrado.', e);
     }
   }
 };
