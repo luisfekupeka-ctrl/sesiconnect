@@ -148,18 +148,40 @@ export default function PortalSolicitacaoCameras() {
     }
   }, []);
 
-  // 1.1 Atualização automática de status quando pendente de aprovação
+  // 1.1 Atualização automática de status quando pendente de aprovação (Polling a cada 3s)
   useEffect(() => {
-    if (!solicitante || solicitante.status !== 'pendente') return;
+    if (etapaAuth !== 'aguardando_aprovacao' && (!solicitante || solicitante.status !== 'pendente')) return;
 
-    const interval = setInterval(() => {
-      if (solicitante?.email) {
-        verificarStatusAtualizado(solicitante.email);
+    const emailParaChecar = inputEmail || solicitante?.email;
+    if (!emailParaChecar) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const { data } = await supabase
+          .from('solicitantes_cftv')
+          .select('*')
+          .ilike('email', emailParaChecar.trim().toLowerCase())
+          .maybeSingle();
+
+        if (data && data.status === 'aprovado') {
+          // Solicitante acabou de ser aprovado pelo Administrador!
+          setSolicitante(data);
+          // Gera e envia o código OTP de 6 dígitos
+          const res = await cftvEmailService.gerarEnviarCodigoOTP(data.email, data.nome);
+          setTempoRestanteReenvio(60);
+          setEtapaAuth('codigo_otp');
+          setMensagemAuth({
+            tipo: 'sucesso',
+            texto: `🎉 Seu cadastro foi APROVADO pela administração! Enviamos seu código de segurança para ${data.email}.`
+          });
+        }
+      } catch (err) {
+        console.error('Erro no polling de aprovação:', err);
       }
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [solicitante?.status, solicitante?.email]);
+  }, [etapaAuth, inputEmail, solicitante?.status, solicitante?.email]);
 
   // Timer de reenvio de OTP
   useEffect(() => {
@@ -210,18 +232,13 @@ export default function PortalSolicitacaoCameras() {
       if (data) {
         const record: SolicitanteRecord = data;
         setSolicitante(record);
-        setEtapaAuth('autenticado');
-        localStorage.setItem('sesi_cftv_solicitante_session', JSON.stringify(record));
-        buscarChamadosDoPerfil(record.email);
-      } else {
-        // Usuário autenticado via link de e-mail mas ainda não cadastrado na tabela de solicitantes
-        setInputEmail(email);
-        setIsNovoCadastro(true);
-        setEtapaAuth('identificacao');
-        setMensagemAuth({
-          tipo: 'info',
-          texto: 'E-mail autenticado com sucesso! Complete seu Nome e Cargo para enviar para aprovação.'
-        });
+        if (record.status === 'aprovado') {
+          setEtapaAuth('autenticado');
+          localStorage.setItem('sesi_cftv_solicitante_session', JSON.stringify(record));
+          buscarChamadosDoPerfil(record.email);
+        } else if (record.status === 'pendente') {
+          setEtapaAuth('aguardando_aprovacao');
+        }
       }
     } catch (err) {
       console.error('Erro ao verificar status do solicitante:', err);
@@ -249,8 +266,8 @@ export default function PortalSolicitacaoCameras() {
     }
   };
 
-  // 2. Passo 1: Solicitar Código OTP no E-mail
-  const handleSolicitarCodigo = async (e: React.FormEvent) => {
+  // 2. Passo 1: Identificação & Verificação de Cadastro / Envio de OTP para Aprovados
+  const handleIdentificacaoOuSolicitacao = async (e: React.FormEvent) => {
     e.preventDefault();
     setMensagemAuth(null);
 
@@ -262,26 +279,26 @@ export default function PortalSolicitacaoCameras() {
 
     setEnviandoOtp(true);
     try {
-      // 1. Verifica se o e-mail já existe na base
+      // 1. Busca perfil do solicitante na tabela
       const { data: existente } = await supabase
         .from('solicitantes_cftv')
         .select('*')
         .ilike('email', emailLimpo)
         .maybeSingle();
 
+      // CASO A: Usuário NÃO cadastrado (Primeiro Acesso)
       if (!existente) {
-        // Se não existe, precisa ter preenchido Nome e Cargo
         if (!inputNome.trim() || !inputCargo.trim()) {
           setIsNovoCadastro(true);
           setMensagemAuth({ 
             tipo: 'info', 
-            texto: 'Identificamos que este é seu primeiro acesso. Por favor, preencha seu Nome Completo e Cargo para completar seu pré-cadastro.' 
+            texto: 'Identificamos que este é seu primeiro acesso. Por favor, preencha seu Nome Completo e Cargo para solicitar a liberação de acesso.' 
           });
           setEnviandoOtp(false);
           return;
         }
 
-        // Cria o registro inicial com status 'pendente'
+        // Cria o registro inicial com status 'pendente' (Aguardando Aprovação do Administrador)
         const { data: novo, error: errNovo } = await supabase
           .from('solicitantes_cftv')
           .insert([{
@@ -294,26 +311,60 @@ export default function PortalSolicitacaoCameras() {
           .single();
 
         if (errNovo) throw errNovo;
+
+        setSolicitante(novo);
+        setEtapaAuth('aguardando_aprovacao');
+        setMensagemAuth({
+          tipo: 'sucesso',
+          texto: 'Pré-cadastro enviado com sucesso! Seu acesso está aguardando liberação do Administrador.'
+        });
+        return;
       }
 
-      // 2. Envia código OTP
-      const res = await cftvEmailService.gerarEnviarCodigoOTP(emailLimpo, inputNome || existente?.nome);
-      if (!res.sucesso) {
-        throw new Error(res.mensagem);
+      // CASO B: Usuário já cadastrado, mas ainda PENDENTE de aprovação
+      if (existente.status === 'pendente') {
+        setSolicitante(existente);
+        setEtapaAuth('aguardando_aprovacao');
+        setMensagemAuth({
+          tipo: 'info',
+          texto: 'Seu cadastro já foi recebido e está aguardando aprovação do Administrador.'
+        });
+        return;
       }
 
-      setTempoRestanteReenvio(60);
-      setEtapaAuth('codigo_otp');
-      setMensagemAuth({ tipo: 'sucesso', texto: `Código de verificação de 6 dígitos enviado para ${emailLimpo}!` });
+      // CASO C: Usuário BLOQUEADO
+      if (existente.status === 'bloqueado') {
+        setMensagemAuth({
+          tipo: 'erro',
+          texto: 'Seu acesso para solicitação de imagens está desativado pela administração escolar.'
+        });
+        return;
+      }
+
+      // CASO D: Usuário APROVADO -> Dispara Código de 6 Dígitos para o E-mail!
+      if (existente.status === 'aprovado') {
+        setSolicitante(existente);
+        const res = await cftvEmailService.gerarEnviarCodigoOTP(emailLimpo, existente.nome);
+        if (!res.sucesso) {
+          throw new Error(res.mensagem);
+        }
+
+        setTempoRestanteReenvio(60);
+        setEtapaAuth('codigo_otp');
+        setMensagemAuth({
+          tipo: 'sucesso',
+          texto: `Código de verificação de 6 dígitos enviado para ${emailLimpo}!`
+        });
+      }
     } catch (err: any) {
-      console.error('Erro ao enviar código OTP:', err);
-      setMensagemAuth({ tipo: 'erro', texto: err.message || 'Erro ao enviar código de verificação.' });
+      console.error('Erro na identificação/envio de OTP:', err);
+      setMensagemAuth({ tipo: 'erro', texto: err.message || 'Erro ao processar identificação.' });
     } finally {
       setEnviandoOtp(false);
     }
   };
 
-  // 3. Passo 2: Validar Código de 6 Dígitos Digitado
+  // 3. Passo 2: Validar Código de 6 Dígitos Digitado (Apenas para Usuários Aprovados)
   const handleValidarOtp = async (codigoCompleto?: string) => {
     const codigoParaTestar = codigoCompleto || codigoOtp.join('');
     if (codigoParaTestar.length < 6) {
@@ -635,7 +686,7 @@ export default function PortalSolicitacaoCameras() {
       <main className="max-w-5xl mx-auto px-4 md:px-8 pt-6 space-y-6">
         
         {/* ========================================================================= */}
-        {/* FLUXO DE IDENTIFICAÇÃO E VERIFICAÇÃO POR CÓDIGO NO E-MAIL (OTP)           */}
+        {/* FLUXO DE AUTENTICAÇÃO: IDENTIFICAÇÃO -> APROVAÇÃO -> CÓDIGO OTP          */}
         {/* ========================================================================= */}
         {etapaAuth === 'identificacao' ? (
           <div className="bg-surface border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6 max-w-xl mx-auto">
@@ -646,7 +697,9 @@ export default function PortalSolicitacaoCameras() {
               <div>
                 <h2 className="text-lg font-black text-white">Identificação do Solicitante</h2>
                 <p className="text-xs text-on-surface-variant">
-                  Valide seu acesso recebendo um código de segurança no seu e-mail institucional
+                  {isNovoCadastro
+                    ? 'Preencha seus dados para solicitar liberação de acesso à administração escolar'
+                    : 'Informe seu e-mail institucional para acessar o portal de câmeras'}
                 </p>
               </div>
             </div>
@@ -663,7 +716,7 @@ export default function PortalSolicitacaoCameras() {
               </div>
             )}
 
-            <form onSubmit={handleSolicitarCodigo} className="space-y-4">
+            <form onSubmit={handleIdentificacaoOuSolicitacao} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
                   E-mail Institucional *
@@ -672,8 +725,11 @@ export default function PortalSolicitacaoCameras() {
                   type="email"
                   required
                   value={inputEmail}
-                  onChange={(e) => setInputEmail(e.target.value)}
-                  placeholder="exemplo@sesisp.org.br"
+                  onChange={(e) => {
+                    setInputEmail(e.target.value);
+                    if (isNovoCadastro) setIsNovoCadastro(false);
+                  }}
+                  placeholder="exemplo@sistemafiep.org.br ou @sesisp.org.br"
                   className="campo-input"
                 />
               </div>
@@ -715,17 +771,68 @@ export default function PortalSolicitacaoCameras() {
                 disabled={enviandoOtp}
                 className="w-full btn-primary !py-3.5 text-sm font-black uppercase tracking-wider shadow-glow-yellow flex items-center justify-center gap-2"
               >
-                {enviandoOtp ? <RefreshCw size={18} className="animate-spin" /> : <Send size={18} />}
-                Receber Código de Verificação no E-mail
+                {enviandoOtp ? (
+                  <RefreshCw size={18} className="animate-spin" />
+                ) : isNovoCadastro ? (
+                  <UserCheck size={18} />
+                ) : (
+                  <Send size={18} />
+                )}
+                {isNovoCadastro ? 'Cadastrar e Solicitar Aprovação' : 'Acessar com E-mail'}
               </button>
             </form>
 
             <div className="border-t border-white/10 pt-3 text-center text-xs text-zinc-400">
-              🔒 Por segurança institucional, a verificação por e-mail confirma a titularidade do solicitante.
+              🔒 Primeiro acesso: cadastro prévio para aprovação da Direção. Usuários aprovados recebem código de segurança por e-mail a cada acesso.
+            </div>
+          </div>
+        ) : etapaAuth === 'aguardando_aprovacao' ? (
+          /* Tela Dedicada de Aguardando Aprovação do Administrador */
+          <div className="bg-surface border border-amber-500/40 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6 max-w-xl mx-auto">
+            <div className="flex items-center gap-3 border-b border-amber-500/20 pb-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30 shrink-0">
+                <Hourglass size={26} className="animate-spin-slow" />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-white">Cadastro em Análise</h2>
+                <p className="text-xs text-amber-300 font-mono">
+                  {inputEmail || solicitante?.email}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-amber-950/30 border border-amber-500/30 p-5 rounded-2xl space-y-3 text-xs text-amber-200">
+              <p className="text-sm font-bold text-white">
+                Seu pedido de liberação de acesso foi registrado com sucesso!
+              </p>
+              <p className="leading-relaxed">
+                Por motivos de segurança e privacidade escolar, as solicitações de imagens de câmeras (CFTV) exigem prévia <strong>aprovação do Administrador / Direção</strong>.
+              </p>
+              <p className="text-zinc-300 text-[11px] pt-1 border-t border-amber-500/20">
+                ⚡ Assim que seu acesso for aprovado no painel, esta tela se atualizará automaticamente e enviará seu código de segurança por e-mail.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleSairDesconectar}
+                className="btn-secondary !py-2.5 !px-4 text-xs text-zinc-400 hover:text-white"
+              >
+                ← Trocar de E-mail
+              </button>
+
+              <button
+                type="button"
+                onClick={() => verificarStatusAtualizado(inputEmail || solicitante?.email || '')}
+                className="btn-primary !py-2.5 !px-5 text-xs font-bold flex items-center gap-2 shadow-glow-yellow"
+              >
+                <RefreshCw size={14} /> Verificar Aprovação Agora
+              </button>
             </div>
           </div>
         ) : etapaAuth === 'codigo_otp' ? (
-          /* Tela de Digitação do Código OTP de 6 Dígitos */
+          /* Tela de Digitação do Código OTP de 6 Dígitos (Usuário Já Aprovado) */
           <div className="bg-surface border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6 max-w-xl mx-auto">
             <div className="flex items-center gap-3 border-b border-white/10 pb-4">
               <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
@@ -734,7 +841,7 @@ export default function PortalSolicitacaoCameras() {
               <div>
                 <h2 className="text-lg font-black text-white">Digite o Código de 6 Dígitos</h2>
                 <p className="text-xs text-on-surface-variant">
-                  Enviamos um código para: <strong className="text-white font-mono">{inputEmail}</strong>
+                  Enviamos seu código de acesso para: <strong className="text-white font-mono">{inputEmail || solicitante?.email}</strong>
                 </p>
               </div>
             </div>
@@ -789,10 +896,7 @@ export default function PortalSolicitacaoCameras() {
               <div className="flex items-center justify-between gap-3 text-xs pt-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setEtapaAuth('identificacao');
-                    setMensagemAuth(null);
-                  }}
+                  onClick={handleSairDesconectar}
                   className="text-zinc-400 hover:text-white"
                 >
                   ← Trocar de E-mail
@@ -801,7 +905,7 @@ export default function PortalSolicitacaoCameras() {
                 <button
                   type="button"
                   disabled={tempoRestanteReenvio > 0 || enviandoOtp}
-                  onClick={handleSolicitarCodigo}
+                  onClick={handleIdentificacaoOuSolicitacao}
                   className={cn(
                     "font-bold transition-colors",
                     tempoRestanteReenvio > 0 ? "text-zinc-500 cursor-not-allowed" : "text-primary hover:underline"
