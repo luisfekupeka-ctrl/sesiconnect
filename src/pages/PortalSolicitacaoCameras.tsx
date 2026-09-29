@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { 
   Camera, PlusCircle, FileText, CheckCircle2, Clock, 
   AlertTriangle, Shield, Download, User, 
   MapPin, Calendar, Check, X, RefreshCw, ChevronRight,
-  FileCheck, ShieldAlert, ArrowRight, Edit3, Info, Lock, LogIn
+  FileCheck, ShieldAlert, ArrowRight, Edit3, Info, Lock, 
+  Copy, Share2, Search, KeyRound, ExternalLink, MessageCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -66,6 +68,8 @@ const SETORES_SUGESTOES = [
 ];
 
 export default function PortalSolicitacaoCameras() {
+  const [searchParams] = useSearchParams();
+
   // Tabs do Solicitante: 'formulario' | 'meus-chamados'
   const [tabAtiva, setTabAtiva] = useState<'formulario' | 'meus-chamados'>('formulario');
 
@@ -81,6 +85,9 @@ export default function PortalSolicitacaoCameras() {
   const [inputNome, setInputNome] = useState('');
   const [inputCargo, setInputCargo] = useState('');
   const [inputEmail, setInputEmail] = useState('');
+
+  // Busca Universal por E-mail ou Protocolo
+  const [termoConsulta, setTermoConsulta] = useState('');
 
   // Listas de Andares e Locais
   const [andares, setAndares] = useState<string[]>(ANDARES_PADRAO);
@@ -113,14 +120,28 @@ export default function PortalSolicitacaoCameras() {
   const [enviando, setEnviando] = useState(false);
   const [protocoloGerado, setProtocoloGerado] = useState<string | null>(null);
   const [solicitacaoRecente, setSolicitacaoRecente] = useState<SolicitacaoCFTV | null>(null);
+  const [copiadoFeedback, setCopiadoFeedback] = useState(false);
 
   // Lista de chamados do solicitante
   const [minhasSolicitacoes, setMinhasSolicitacoes] = useState<SolicitacaoCFTV[]>([]);
   const [carregandoChamados, setCarregandoChamados] = useState(false);
 
-  // 1. Carregar Pré-cadastro do LocalStorage
+  // 1. Carregar Pré-cadastro do LocalStorage e Parâmetros da URL
   useEffect(() => {
     try {
+      const paramProtocolo = searchParams.get('protocolo');
+      const paramEmail = searchParams.get('email');
+
+      if (paramProtocolo) {
+        setTermoConsulta(paramProtocolo);
+        setTabAtiva('meus-chamados');
+        consultarChamadosDireto(paramProtocolo);
+      } else if (paramEmail) {
+        setTermoConsulta(paramEmail);
+        setTabAtiva('meus-chamados');
+        consultarChamadosDireto(paramEmail);
+      }
+
       const salvo = localStorage.getItem('sesi_cftv_solicitante_profile');
       if (salvo) {
         const parsed: SolicitanteProfile = JSON.parse(salvo);
@@ -128,15 +149,20 @@ export default function PortalSolicitacaoCameras() {
         setInputNome(parsed.nome || '');
         setInputCargo(parsed.cargo || '');
         setInputEmail(parsed.email || '');
+        if (!paramProtocolo && !paramEmail && parsed.email) {
+          setTermoConsulta(parsed.email);
+          consultarChamadosDireto(parsed.email);
+        }
       } else {
-        // Se não tiver cadastro, abre edição por padrão
-        setIsEditandoPerfil(true);
+        if (!paramProtocolo && !paramEmail) {
+          setIsEditandoPerfil(true);
+        }
       }
     } catch (e) {
       console.error('Erro ao ler perfil salvo:', e);
       setIsEditandoPerfil(true);
     }
-  }, []);
+  }, [searchParams]);
 
   // 2. Carregar Andares e Locais públicos
   useEffect(() => {
@@ -164,33 +190,57 @@ export default function PortalSolicitacaoCameras() {
     carregarLocaisEAndares();
   }, []);
 
-  // 3. Buscar Chamados apenas do E-mail do Solicitante
-  const buscarMeusChamados = async (emailBusca?: string) => {
-    const emailAlvo = emailBusca || perfil.email || inputEmail;
-    if (!emailAlvo || !emailAlvo.trim()) return;
+  // 3. Consulta Rápida por Protocolo OU E-mail
+  const consultarChamadosDireto = async (buscaParam?: string) => {
+    const termo = (buscaParam !== undefined ? buscaParam : termoConsulta).trim();
+    if (!termo) {
+      if (perfil.email) {
+        buscarPorEmail(perfil.email);
+      }
+      return;
+    }
 
     setCarregandoChamados(true);
     try {
-      const { data, error } = await supabase
-        .from('solicitacoes_cftv')
-        .select('*')
-        .ilike('solicitante_email', emailAlvo.trim())
-        .order('created_at', { ascending: false });
+      // Se for formato de protocolo (ex: CFTV-2026-0001 ou contém 'CFTV')
+      if (termo.toUpperCase().startsWith('CFTV') || termo.includes('-')) {
+        const { data, error } = await supabase
+          .from('solicitacoes_cftv')
+          .select('*')
+          .ilike('numero_protocolo', `%${termo}%`)
+          .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setMinhasSolicitacoes(data || []);
+        if (error) throw error;
+        setMinhasSolicitacoes(data || []);
+      } else {
+        // Busca por e-mail
+        buscarPorEmail(termo);
+      }
     } catch (err) {
-      console.error('Erro ao carregar chamados:', err);
+      console.error('Erro ao consultar chamados:', err);
     } finally {
       setCarregandoChamados(false);
     }
   };
 
-  useEffect(() => {
-    if (perfil.email) {
-      buscarMeusChamados(perfil.email);
+  const buscarPorEmail = async (email: string) => {
+    if (!email || !email.trim()) return;
+    setCarregandoChamados(true);
+    try {
+      const { data, error } = await supabase
+        .from('solicitacoes_cftv')
+        .select('*')
+        .ilike('solicitante_email', email.trim())
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setMinhasSolicitacoes(data || []);
+    } catch (err) {
+      console.error('Erro ao carregar chamados por e-mail:', err);
+    } finally {
+      setCarregandoChamados(false);
     }
-  }, [perfil.email, tabAtiva]);
+  };
 
   // Salvar / Atualizar Pré-Cadastro
   const handleSalvarPerfil = (e?: React.FormEvent) => {
@@ -209,10 +259,23 @@ export default function PortalSolicitacaoCameras() {
     setPerfil(novoPerfil);
     localStorage.setItem('sesi_cftv_solicitante_profile', JSON.stringify(novoPerfil));
     setIsEditandoPerfil(false);
-    buscarMeusChamados(novoPerfil.email);
+    setTermoConsulta(novoPerfil.email);
+    consultarChamadosDireto(novoPerfil.email);
   };
 
-  // Cálculo da diferença de horários em minutos
+  const handleLimparPerfil = () => {
+    if (confirm('Deseja desconectar este perfil deste aparelho? Você poderá consultar seus chamados a qualquer momento digitando seu e-mail ou número de protocolo.')) {
+      localStorage.removeItem('sesi_cftv_solicitante_profile');
+      setPerfil({ nome: '', cargo: '', email: '' });
+      setInputNome('');
+      setInputCargo('');
+      setInputEmail('');
+      setMinhasSolicitacoes([]);
+      setIsEditandoPerfil(true);
+    }
+  };
+
+  // Cálculo de Horário
   const duracaoMinutos = useMemo(() => {
     if (!horarioInicio || !horarioTermino) return 0;
     const [h1, m1] = horarioInicio.split(':').map(Number);
@@ -229,11 +292,10 @@ export default function PortalSolicitacaoCameras() {
     return tipoIntervalo === 'Aproximado' && duracaoMinutos > 60;
   }, [tipoIntervalo, duracaoMinutos]);
 
-  // Enviar Solicitação de Câmera
+  // Enviar Solicitação
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Se perfil não estiver pronto, valida e salva
     const nomeFinal = perfil.nome || inputNome.trim();
     const cargoFinal = perfil.cargo || inputCargo.trim();
     const emailFinal = perfil.email || inputEmail.trim();
@@ -279,7 +341,6 @@ export default function PortalSolicitacaoCameras() {
       return;
     }
 
-    // Salva perfil se necessário
     if (!perfil.email) {
       handleSalvarPerfil();
     }
@@ -337,7 +398,8 @@ export default function PortalSolicitacaoCameras() {
       setTipoOcorrenciaOutro('');
       setMotivoOutroDescricao('');
 
-      buscarMeusChamados(emailFinal);
+      setTermoConsulta(emailFinal);
+      consultarChamadosDireto(emailFinal);
     } catch (err: any) {
       console.error('Erro ao enviar solicitação:', err);
       alert(`Erro ao registrar solicitação: ${err.message || 'Falha de conexão.'}`);
@@ -346,7 +408,24 @@ export default function PortalSolicitacaoCameras() {
     }
   };
 
-  // Helper de badges de status
+  // Helper para copiar link direto de acompanhamento
+  const handleCopiarLinkProtocolo = (protocolo: string) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const url = `${origin}/cameras?protocolo=${protocolo}`;
+    navigator.clipboard.writeText(url);
+    setCopiadoFeedback(true);
+    setTimeout(() => setCopiadoFeedback(false), 2500);
+  };
+
+  // Helper para abrir no WhatsApp
+  const handleCompartilharWhatsApp = (protocolo: string) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const url = `${origin}/cameras?protocolo=${protocolo}`;
+    const msg = encodeURIComponent(`Olá! Minha solicitação de imagens CFTV no SESI Connect foi registrada sob o protocolo *${protocolo}*. Para acompanhar o andamento e o parecer técnico, acesse: ${url}`);
+    window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
+  };
+
+  // Render do Badge de Status
   const renderStatusBadge = (status: StatusCftv) => {
     switch (status) {
       case 'Em Espera':
@@ -384,9 +463,77 @@ export default function PortalSolicitacaoCameras() {
     }
   };
 
+  // Render da Linha do Tempo / Timeline de Status
+  const renderTimelineStatus = (item: SolicitacaoCFTV) => {
+    const isCancelado = item.status === 'Cancelado';
+    const isAtendido = item.status === 'Atendido' || item.status === 'Finalizado';
+    const isEmAnalise = item.status === 'Em Análise' || isAtendido;
+
+    return (
+      <div className="bg-zinc-950/80 border border-white/5 rounded-2xl p-4 my-3">
+        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-3">
+          Progresso do Chamado
+        </span>
+        <div className="grid grid-cols-3 gap-2 text-center relative">
+          {/* Passo 1: Enviado */}
+          <div className="flex flex-col items-center space-y-1">
+            <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-xs font-bold shadow-glow-yellow">
+              <Check size={14} />
+            </div>
+            <span className="text-[11px] font-bold text-white">1. Enviado</span>
+            <span className="text-[9px] text-zinc-400 font-mono">
+              {new Date(item.created_at).toLocaleDateString('pt-BR')}
+            </span>
+          </div>
+
+          {/* Passo 2: Análise Técnica */}
+          <div className="flex flex-col items-center space-y-1">
+            <div className={cn(
+              "w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold transition-all",
+              isEmAnalise
+                ? "bg-blue-500/20 text-blue-400 border-blue-500/40"
+                : "bg-zinc-900 text-zinc-600 border-zinc-800"
+            )}>
+              {isEmAnalise ? <RefreshCw size={14} className={item.status === 'Em Análise' ? "animate-spin" : ""} /> : "2"}
+            </div>
+            <span className={cn("text-[11px] font-bold", isEmAnalise ? "text-blue-300" : "text-zinc-500")}>
+              2. Em Análise
+            </span>
+            <span className="text-[9px] text-zinc-400">
+              {item.status === 'Em Análise' ? 'Verificando câmeras' : isAtendido ? 'Concluída' : 'Aguardando'}
+            </span>
+          </div>
+
+          {/* Passo 3: Conclusão / Parecer */}
+          <div className="flex flex-col items-center space-y-1">
+            <div className={cn(
+              "w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold transition-all",
+              isCancelado 
+                ? "bg-red-500/20 text-red-400 border-red-500/40"
+                : isAtendido
+                ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
+                : "bg-zinc-900 text-zinc-600 border-zinc-800"
+            )}>
+              {isCancelado ? <X size={14} /> : isAtendido ? <CheckCircle2 size={14} /> : "3"}
+            </div>
+            <span className={cn(
+              "text-[11px] font-bold",
+              isCancelado ? "text-red-300" : isAtendido ? "text-emerald-300" : "text-zinc-500"
+            )}>
+              {isCancelado ? '3. Recusado' : '3. Atendido'}
+            </span>
+            <span className="text-[9px] text-zinc-400">
+              {isCancelado ? 'Ver motivo abaixo' : isAtendido ? 'Parecer emitido' : 'Pendente'}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background text-on-surface font-sans pb-24 selection:bg-primary selection:text-black">
-      {/* Barra de Topo do Portal Público */}
+      {/* Barra de Topo do Portal */}
       <header className="bg-surface/90 border-b border-white/10 backdrop-blur-md sticky top-0 z-40 px-4 md:px-8 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -403,21 +550,34 @@ export default function PortalSolicitacaoCameras() {
             </div>
           </div>
 
-          <a
-            href="/login"
-            className="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 bg-surface-container-high px-3 py-2 rounded-xl border border-white/5 transition-colors"
-            title="Área restrita de administradores do sistema"
-          >
-            <Lock size={13} className="text-primary" />
-            <span className="hidden sm:inline">Acesso</span> ADM
-          </a>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setTabAtiva('meus-chamados');
+                if (perfil.email) consultarChamadosDireto(perfil.email);
+              }}
+              className="text-xs text-zinc-300 hover:text-white flex items-center gap-1.5 bg-surface-container-high px-3 py-2 rounded-xl border border-white/5 transition-colors font-bold"
+            >
+              <Search size={14} className="text-primary" />
+              <span className="hidden sm:inline">Consultar</span> Meus Chamados
+            </button>
+
+            <a
+              href="/login"
+              className="text-xs text-zinc-400 hover:text-white flex items-center gap-1 bg-surface-container-high px-2.5 py-2 rounded-xl border border-white/5 transition-colors"
+              title="Acesso restrito de Administradores"
+            >
+              <Lock size={12} className="text-amber-400" />
+              <span className="hidden md:inline">ADM</span>
+            </a>
+          </div>
         </div>
       </header>
 
-      {/* Conteúdo Central */}
+      {/* Conteúdo Principal */}
       <main className="max-w-5xl mx-auto px-4 md:px-8 pt-6 space-y-6">
         
-        {/* Banner / Card do Pré-Cadastro do Solicitante */}
+        {/* Banner de Pré-Cadastro do Solicitante */}
         <div className="bg-surface border border-white/10 rounded-3xl p-6 shadow-xl relative overflow-hidden">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-4">
             <div className="flex items-center gap-3">
@@ -427,23 +587,33 @@ export default function PortalSolicitacaoCameras() {
               <div>
                 <h2 className="text-base font-bold text-white">Pré-Cadastro do Solicitante</h2>
                 <p className="text-xs text-on-surface-variant">
-                  Seus dados ficam gravados neste aparelho para suas próximas solicitações e acompanhamento
+                  Seus dados ficam gravados neste aparelho para preenchimento rápido e consulta de chamados
                 </p>
               </div>
             </div>
 
             {perfil.nome && !isEditandoPerfil && (
-              <button
-                type="button"
-                onClick={() => setIsEditandoPerfil(true)}
-                className="text-xs font-bold text-primary hover:underline flex items-center gap-1 self-start md:self-auto"
-              >
-                <Edit3 size={14} /> Alterar Meus Dados
-              </button>
+              <div className="flex items-center gap-2 self-start md:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setIsEditandoPerfil(true)}
+                  className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                >
+                  <Edit3 size={14} /> Alterar Dados
+                </button>
+                <span className="text-zinc-600">•</span>
+                <button
+                  type="button"
+                  onClick={handleLimparPerfil}
+                  className="text-xs font-bold text-zinc-400 hover:text-red-400 transition-colors"
+                >
+                  Sair / Trocar
+                </button>
+              </div>
             )}
           </div>
 
-          {/* Visualização de Perfil Gravado */}
+          {/* Perfil Ativo */}
           {perfil.nome && !isEditandoPerfil ? (
             <div className="bg-zinc-950/70 border border-white/5 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 mt-4">
               <div className="space-y-1">
@@ -456,9 +626,11 @@ export default function PortalSolicitacaoCameras() {
                 <p className="text-xs text-zinc-400 font-mono">{perfil.email}</p>
               </div>
 
-              <span className="text-xs text-emerald-400 flex items-center gap-1 font-bold bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
-                <Check size={14} /> Solicitante Identificado
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-emerald-400 flex items-center gap-1 font-bold bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
+                  <Check size={14} /> Solicitante Conectado
+                </span>
+              </div>
             </div>
           ) : (
             /* Formulário de Pré-Cadastro */
@@ -487,7 +659,7 @@ export default function PortalSolicitacaoCameras() {
                     required
                     value={inputCargo}
                     onChange={(e) => setInputCargo(e.target.value)}
-                    placeholder="Ex: Professor de Matemática, Monitor, Coordenação"
+                    placeholder="Ex: Professor, Coordenador, Inspetor"
                     className="campo-input"
                   />
                 </div>
@@ -507,28 +679,33 @@ export default function PortalSolicitacaoCameras() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
-                {perfil.nome && (
+              <div className="flex items-center justify-between gap-3 pt-2">
+                <p className="text-[11px] text-zinc-400">
+                  💡 Seus pedidos ficarão vinculados ao seu e-mail para consulta posterior.
+                </p>
+                <div className="flex items-center gap-2">
+                  {perfil.nome && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditandoPerfil(false)}
+                      className="btn-secondary !py-2.5 !px-4 text-xs"
+                    >
+                      Cancelar
+                    </button>
+                  )}
                   <button
-                    type="button"
-                    onClick={() => setIsEditandoPerfil(false)}
-                    className="btn-secondary !py-2.5 !px-4 text-xs"
+                    type="submit"
+                    className="btn-primary !py-2.5 !px-5 text-xs flex items-center gap-2 shadow-glow-yellow"
                   >
-                    Cancelar
+                    <Check size={16} /> Salvar Pré-Cadastro
                   </button>
-                )}
-                <button
-                  type="submit"
-                  className="btn-primary !py-2.5 !px-5 text-xs flex items-center gap-2 shadow-glow-yellow"
-                >
-                  <Check size={16} /> Salvar Pré-Cadastro
-                </button>
+                </div>
               </div>
             </form>
           )}
         </div>
 
-        {/* Navegação entre Abas do Solicitante */}
+        {/* Abas */}
         <div className="flex items-center gap-2 border-b border-white/10 pb-2">
           <button
             onClick={() => setTabAtiva('formulario')}
@@ -540,11 +717,14 @@ export default function PortalSolicitacaoCameras() {
             )}
           >
             <PlusCircle size={18} />
-            Nova Solicitação de Câmera
+            Nova Solicitação
           </button>
 
           <button
-            onClick={() => setTabAtiva('meus-chamados')}
+            onClick={() => {
+              setTabAtiva('meus-chamados');
+              if (perfil.email) consultarChamadosDireto(perfil.email);
+            }}
             className={cn(
               "flex items-center gap-2 px-5 py-3 rounded-2xl text-xs md:text-sm font-bold transition-all",
               tabAtiva === 'meus-chamados'
@@ -562,51 +742,89 @@ export default function PortalSolicitacaoCameras() {
         {/* ========================================================================= */}
         {tabAtiva === 'formulario' && (
           <div className="space-y-8">
-            {/* Sucesso do Protocolo Recém Criado */}
+            {/* Card de Confirmação com Links de Compartilhamento */}
             {protocoloGerado && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-emerald-950/40 border-2 border-emerald-500/50 rounded-3xl p-6 md:p-8 space-y-4 shadow-xl"
+                className="bg-emerald-950/40 border-2 border-emerald-500/50 rounded-3xl p-6 md:p-8 space-y-5 shadow-2xl"
               >
-                <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center justify-between flex-wrap gap-4 border-b border-emerald-500/20 pb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
                       <CheckCircle2 size={28} />
                     </div>
                     <div>
                       <h3 className="text-lg md:text-xl font-black text-white">
-                        Solicitação de Imagens Enviada!
+                        Solicitação de Imagens Enviada com Sucesso!
                       </h3>
                       <p className="text-xs md:text-sm text-emerald-300 font-medium">
-                        Protocolo de Acompanhamento: <span className="font-mono font-bold text-white bg-black/50 px-2 py-0.5 rounded border border-emerald-500/30">{protocoloGerado}</span>
+                        Protocolo de Acompanhamento: <span className="font-mono font-bold text-white bg-black/60 px-2.5 py-1 rounded border border-emerald-500/40 text-base">{protocoloGerado}</span>
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     {solicitacaoRecente && (
                       <button
                         onClick={() => gerarPdfSolicitacaoCFTV(solicitacaoRecente)}
                         className="btn-secondary !py-2.5 !px-4 text-xs flex items-center gap-2"
                       >
-                        <Download size={16} /> Baixar Comprovante
+                        <Download size={16} /> Baixar Comprovante PDF
                       </button>
                     )}
                     <button
                       onClick={() => {
                         setTabAtiva('meus-chamados');
+                        consultarChamadosDireto(protocoloGerado);
                         setProtocoloGerado(null);
                       }}
                       className="btn-primary !py-2.5 !px-4 text-xs flex items-center gap-2 shadow-glow-yellow"
                     >
-                      Acompanhar em Meus Chamados <ArrowRight size={16} />
+                      Acompanhar Status <ArrowRight size={16} />
                     </button>
                   </div>
                 </div>
-                <p className="text-xs text-zinc-300">
-                  O pedido foi encaminhado para a equipe técnica de monitoramento. Você pode consultar a resposta, câmeras e parecer a qualquer momento na aba <strong>Meus Chamados</strong>.
-                </p>
+
+                {/* Como Acessar Depois / Guardar Comprovante */}
+                <div className="bg-black/50 border border-emerald-500/20 rounded-2xl p-4 space-y-3 text-xs">
+                  <span className="font-bold text-emerald-300 block uppercase tracking-wider text-[11px]">
+                    📲 Como Acompanhar Esta Solicitação Mais Tarde:
+                  </span>
+                  <p className="text-zinc-300">
+                    Você pode consultar o andamento deste chamado pelo seu celular ou computador a qualquer momento das seguintes formas:
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <button
+                      onClick={() => handleCopiarLinkProtocolo(protocoloGerado)}
+                      className="bg-surface-container-high hover:bg-white/10 p-3 rounded-xl border border-white/10 flex items-center justify-between text-left transition-colors"
+                    >
+                      <div>
+                        <strong className="text-white block text-xs">Copiar Link Direto</strong>
+                        <span className="text-zinc-400 text-[10px]">Guarde o link direto deste chamado</span>
+                      </div>
+                      <Copy size={16} className={copiadoFeedback ? "text-emerald-400" : "text-primary"} />
+                    </button>
+
+                    <button
+                      onClick={() => handleCompartilharWhatsApp(protocoloGerado)}
+                      className="bg-emerald-950/60 hover:bg-emerald-900/60 p-3 rounded-xl border border-emerald-500/30 flex items-center justify-between text-left transition-colors"
+                    >
+                      <div>
+                        <strong className="text-emerald-200 block text-xs">Salvar no WhatsApp</strong>
+                        <span className="text-emerald-300/70 text-[10px]">Envie o link para o seu WhatsApp</span>
+                      </div>
+                      <MessageCircle size={18} className="text-emerald-400" />
+                    </button>
+                  </div>
+
+                  {copiadoFeedback && (
+                    <p className="text-emerald-400 text-[11px] font-bold text-center pt-1 animate-pulse">
+                      ✓ Link copiado para a área de transferência!
+                    </p>
+                  )}
+                </div>
               </motion.div>
             )}
 
@@ -619,14 +837,14 @@ export default function PortalSolicitacaoCameras() {
                   </div>
                   <div>
                     <h2 className="text-base font-bold text-white">2. Informações de Data e Horário</h2>
-                    <p className="text-xs text-on-surface-variant">Delimite o momento exato ou aproximado para agilizar a localização do vídeo</p>
+                    <p className="text-xs text-on-surface-variant">Delimite o momento para facilitar a localização das imagens</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-                      Data do Fato / Ocorrência *
+                      Data da Ocorrência *
                     </label>
                     <div className="flex items-center gap-2">
                       <input
@@ -670,7 +888,7 @@ export default function PortalSolicitacaoCameras() {
                   </div>
                 </div>
 
-                {/* Avisos de Regra de Horário */}
+                {/* Avisos de Regra */}
                 {tipoIntervalo === 'Aproximado' && (
                   <div className="bg-blue-950/30 border border-blue-500/30 rounded-2xl p-4 text-xs text-blue-200 flex items-start gap-3">
                     <Info size={18} className="text-blue-400 shrink-0 mt-0.5" />
@@ -689,7 +907,7 @@ export default function PortalSolicitacaoCameras() {
                   </div>
                 )}
 
-                {/* Horários */}
+                {/* Horários Início e Fim */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                   <div>
                     <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
@@ -720,12 +938,12 @@ export default function PortalSolicitacaoCameras() {
 
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-white/5 text-xs">
                   <span className="text-zinc-400">
-                    Duração calculada: <strong className="text-white font-mono">{Math.floor(duracaoMinutos / 60)}h {duracaoMinutos % 60}min ({duracaoMinutos} min)</strong>
+                    Duração estimada informada: <strong className="text-white font-mono">{Math.floor(duracaoMinutos / 60)}h {duracaoMinutos % 60}min ({duracaoMinutos} min)</strong>
                   </span>
 
                   {isIntervaloAproximadoInvalido && (
                     <span className="text-red-400 font-bold flex items-center gap-1">
-                      <AlertTriangle size={14} /> Trava do Sistema: Intervalo superior a 1 hora no modo Aproximado. Ajuste os horários ou selecione 'Amplo'.
+                      <AlertTriangle size={14} /> Trava: Intervalo superior a 1h para modo Aproximado. Reduza o tempo ou selecione 'Amplo'.
                     </span>
                   )}
                 </div>
@@ -766,13 +984,13 @@ export default function PortalSolicitacaoCameras() {
                     <input
                       type="text"
                       required
-                      list="portal-locais"
+                      list="portal-locais-list"
                       value={ambiente}
                       onChange={(e) => setAmbiente(e.target.value)}
                       placeholder="Ex: Pátio, Corredor Bloco B, Sala 14, Portão Principal, Refeitório, Quadra"
                       className="campo-input"
                     />
-                    <datalist id="portal-locais">
+                    <datalist id="portal-locais-list">
                       {locais.map((loc) => (
                         <option key={loc} value={loc} />
                       ))}
@@ -802,7 +1020,7 @@ export default function PortalSolicitacaoCameras() {
                   </div>
                   <div>
                     <h2 className="text-base font-bold text-white">4. Tipo de Ocorrência</h2>
-                    <p className="text-xs text-on-surface-variant">Classifique a natureza da ocorrência</p>
+                    <p className="text-xs text-on-surface-variant">Classifique a ocorrência</p>
                   </div>
                 </div>
 
@@ -863,13 +1081,13 @@ export default function PortalSolicitacaoCameras() {
                     rows={5}
                     value={descricaoFatos}
                     onChange={(e) => setDescricaoFatos(e.target.value)}
-                    placeholder="Descreva com detalhes o que aconteceu, horários aproximados de movimentação, o que foi presenciado..."
+                    placeholder="Descreva com detalhes o que aconteceu, a sequência dos fatos e o desfecho..."
                     className="campo-input text-sm leading-relaxed"
                   />
                 </div>
               </div>
 
-              {/* SEÇÃO 6: IDENTIFICAÇÃO DOS ENVOLVIDOS E DESLOCAMENTO */}
+              {/* SEÇÃO 6: IDENTIFICAÇÃO DOS ENVOLVIDOS */}
               <div className="bg-surface border border-white/10 rounded-3xl p-6 md:p-8 space-y-6">
                 <div className="flex items-center gap-3 border-b border-white/5 pb-4">
                   <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/20">
@@ -877,7 +1095,7 @@ export default function PortalSolicitacaoCameras() {
                   </div>
                   <div>
                     <h2 className="text-base font-bold text-white">6. Identificação dos Envolvidos e Deslocamento</h2>
-                    <p className="text-xs text-on-surface-variant">Traços visuais para facilitar a identificação nas gravações</p>
+                    <p className="text-xs text-on-surface-variant">Traços visuais para localização nas filmagens</p>
                   </div>
                 </div>
 
@@ -890,7 +1108,7 @@ export default function PortalSolicitacaoCameras() {
                       type="text"
                       value={envolvidosNomesTurmas}
                       onChange={(e) => setEnvolvidosNomesTurmas(e.target.value)}
-                      placeholder="Ex: Alunos do 7º B ou 9º Ano"
+                      placeholder="Ex: Alunos do 8º A ou 1º EM"
                       className="campo-input"
                     />
                   </div>
@@ -903,7 +1121,7 @@ export default function PortalSolicitacaoCameras() {
                       type="text"
                       value={envolvidosCaracteristicas}
                       onChange={(e) => setEnvolvidosCaracteristicas(e.target.value)}
-                      placeholder="Ex: Casaco vermelho, mochila preta com detalhe amarelo, tênis branco"
+                      placeholder="Ex: Casaco vermelho, mochila preta, tênis branco"
                       className="campo-input"
                     />
                   </div>
@@ -918,7 +1136,7 @@ export default function PortalSolicitacaoCameras() {
                       type="text"
                       value={envolvidosSentidoFuga}
                       onChange={(e) => setEnvolvidosSentidoFuga(e.target.value)}
-                      placeholder="Ex: Saíram da quadra e foram para o bloco B"
+                      placeholder="Ex: Vieram da quadra e foram para o bloco B"
                       className="campo-input"
                     />
                   </div>
@@ -931,14 +1149,14 @@ export default function PortalSolicitacaoCameras() {
                       type="text"
                       value={objetosEnvolvidos}
                       onChange={(e) => setObjetosEnvolvidos(e.target.value)}
-                      placeholder="Ex: Celular, estojo, garrafa térmica"
+                      placeholder="Ex: Celular, estojo preto, fechadura"
                       className="campo-input"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* SEÇÃO 7: MOTIVO DA SOLICITAÇÃO */}
+              {/* SEÇÃO 7: FINALIDADE */}
               <div className="bg-surface border border-white/10 rounded-3xl p-6 md:p-8 space-y-6">
                 <div className="flex items-center gap-3 border-b border-white/5 pb-4">
                   <div className="w-10 h-10 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center border border-pink-500/20">
@@ -1014,47 +1232,75 @@ export default function PortalSolicitacaoCameras() {
         )}
 
         {/* ========================================================================= */}
-        {/* ABA 2: MEUS CHAMADOS (ACOMPANHAMENTO DO SOLICITANTE)                      */}
+        {/* ABA 2: MEUS CHAMADOS / CONSULTA UNIVERSAL                                 */}
         {/* ========================================================================= */}
         {tabAtiva === 'meus-chamados' && (
           <div className="space-y-6">
-            <div className="bg-surface border border-white/10 rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <FileText size={20} className="text-primary" />
-                  Minhas Solicitações de Câmeras
-                </h3>
-                <p className="text-xs text-on-surface-variant">
-                  Chamados vinculados ao seu e-mail: <strong className="text-white font-mono">{perfil.email || 'Nenhum e-mail definido'}</strong>
-                </p>
+            {/* Campo de Consulta por Protocolo ou E-mail */}
+            <div className="bg-surface border border-white/10 rounded-3xl p-6 shadow-xl space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <FileText size={20} className="text-primary" />
+                    Consultar Minhas Solicitações de Câmeras
+                  </h3>
+                  <p className="text-xs text-on-surface-variant">
+                    Digite seu e-mail institucional ou o número de protocolo para ver o status e o parecer
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => consultarChamadosDireto()}
+                  className="btn-secondary !py-2 !px-3 text-xs flex items-center gap-1.5 self-start md:self-auto"
+                >
+                  <RefreshCw size={14} className={carregandoChamados ? "animate-spin" : ""} />
+                  Atualizar
+                </button>
               </div>
 
-              <button
-                onClick={() => buscarMeusChamados()}
-                className="btn-secondary !py-2 !px-3 text-xs flex items-center gap-1.5 self-start md:self-auto"
-              >
-                <RefreshCw size={14} className={carregandoChamados ? "animate-spin" : ""} />
-                Atualizar Lista
-              </button>
+              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                <div className="relative flex-1 w-full">
+                  <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
+                  <input
+                    type="text"
+                    value={termoConsulta}
+                    onChange={(e) => setTermoConsulta(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') consultarChamadosDireto();
+                    }}
+                    placeholder="Digite seu e-mail (ex: nome@sesisp.org.br) ou Protocolo (ex: CFTV-2026-0001)..."
+                    className="campo-input !pl-11 !py-3 text-xs w-full"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => consultarChamadosDireto()}
+                  className="w-full sm:w-auto btn-primary !py-3 !px-6 text-xs flex items-center justify-center gap-2 shadow-glow-yellow"
+                >
+                  <Search size={16} /> Buscar Chamados
+                </button>
+              </div>
             </div>
 
+            {/* Lista de Chamados Encontrados */}
             {carregandoChamados ? (
-              <div className="text-center py-12 text-zinc-400">
-                <RefreshCw size={28} className="animate-spin mx-auto mb-2 text-primary" />
-                Carregando seus chamados...
+              <div className="text-center py-16 text-zinc-400">
+                <RefreshCw size={32} className="animate-spin mx-auto mb-2 text-primary" />
+                Buscando solicitações no sistema...
               </div>
             ) : minhasSolicitacoes.length === 0 ? (
-              <div className="bg-surface border border-white/5 rounded-3xl p-12 text-center space-y-4">
-                <Camera size={44} className="mx-auto text-zinc-600" />
-                <h4 className="text-base font-bold text-white">Nenhuma solicitação registrada</h4>
+              <div className="bg-surface border border-white/5 rounded-3xl p-16 text-center space-y-4 shadow-lg">
+                <Camera size={48} className="mx-auto text-zinc-600" />
+                <h4 className="text-base font-bold text-white">Nenhum chamado localizado</h4>
                 <p className="text-xs text-on-surface-variant max-w-md mx-auto">
-                  Assim que você preencher o formulário, seus pedidos e as respostas da equipe técnica aparecerão aqui.
+                  Não encontramos nenhuma solicitação com o termo buscado. Certifique-se de digitar o mesmo e-mail informado no momento do envio ou o código do protocolo.
                 </p>
                 <button
                   onClick={() => setTabAtiva('formulario')}
                   className="btn-primary !py-2.5 !px-5 text-xs inline-flex items-center gap-2"
                 >
-                  <PlusCircle size={16} /> Fazer Primeira Solicitação
+                  <PlusCircle size={16} /> Fazer Nova Solicitação
                 </button>
               </div>
             ) : (
@@ -1062,27 +1308,48 @@ export default function PortalSolicitacaoCameras() {
                 {minhasSolicitacoes.map((item) => (
                   <div
                     key={item.id}
-                    className="bg-surface border border-white/10 rounded-3xl p-6 space-y-4 transition-all hover:border-primary/30"
+                    className="bg-surface border border-white/10 rounded-3xl p-6 space-y-4 transition-all hover:border-primary/40 shadow-xl"
                   >
                     {/* Topo do Card */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-white/5 pb-4">
                       <div className="flex items-center gap-3 flex-wrap">
-                        <span className="font-mono font-black text-sm bg-black/60 border border-white/10 px-3 py-1 rounded-xl text-primary">
+                        <span className="font-mono font-black text-sm bg-black/60 border border-amber-500/30 px-3 py-1 rounded-xl text-primary">
                           {item.numero_protocolo}
                         </span>
                         {renderStatusBadge(item.status)}
-                        <span className="text-xs text-zinc-400">
+                        <span className="text-xs text-zinc-400 font-mono">
                           {new Date(item.created_at).toLocaleString('pt-BR')}
                         </span>
                       </div>
 
-                      <button
-                        onClick={() => gerarPdfSolicitacaoCFTV(item)}
-                        className="btn-secondary !py-2 !px-3 text-xs flex items-center gap-1.5 self-start md:self-auto"
-                      >
-                        <Download size={14} /> PDF Comprovante
-                      </button>
+                      <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+                        <button
+                          onClick={() => handleCopiarLinkProtocolo(item.numero_protocolo)}
+                          className="btn-secondary !py-2 !px-3 text-xs flex items-center gap-1.5"
+                          title="Copiar link para consultar este chamado depois"
+                        >
+                          <Copy size={14} /> Link do Chamado
+                        </button>
+
+                        <button
+                          onClick={() => handleCompartilharWhatsApp(item.numero_protocolo)}
+                          className="bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 border border-emerald-500/30 px-3 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+                          title="Enviar protocolo para o WhatsApp"
+                        >
+                          <MessageCircle size={14} /> WhatsApp
+                        </button>
+
+                        <button
+                          onClick={() => gerarPdfSolicitacaoCFTV(item)}
+                          className="btn-secondary !py-2 !px-3 text-xs flex items-center gap-1.5"
+                        >
+                          <Download size={14} /> PDF
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Linha do Tempo / Timeline */}
+                    {renderTimelineStatus(item)}
 
                     {/* Resumo da Ocorrência */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
@@ -1111,7 +1378,7 @@ export default function PortalSolicitacaoCameras() {
 
                     {/* Relato */}
                     <div className="bg-black/40 p-4 rounded-2xl border border-white/5 text-xs text-zinc-300 space-y-1">
-                      <span className="text-zinc-400 font-bold block text-[11px]">Seu Relato:</span>
+                      <span className="text-zinc-400 font-bold block text-[11px]">Relato do Solicitante:</span>
                       <p className="leading-relaxed whitespace-pre-wrap">{item.descricao_fatos}</p>
                     </div>
 
@@ -1128,7 +1395,7 @@ export default function PortalSolicitacaoCameras() {
                         <div className="flex items-center justify-between border-b border-white/10 pb-2">
                           <span className="font-bold flex items-center gap-1.5 uppercase text-[11px]">
                             {item.status === 'Cancelado' ? <X size={14} /> : <CheckCircle2 size={14} />}
-                            Resposta da Equipe Técnica / Segurança
+                            Resposta da Equipe Técnica de Monitoramento
                           </span>
                           {item.analisado_por_nome && (
                             <span className="text-[10px] text-zinc-400">
