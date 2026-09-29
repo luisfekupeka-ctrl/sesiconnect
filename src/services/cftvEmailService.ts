@@ -15,17 +15,10 @@ export const cftvEmailService = {
     const array = new Uint32Array(1);
     crypto.getRandomValues(array);
     const codigo = (100000 + (array[0] % 900000)).toString();
-    const expiraEm = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 minutos
+    const expiraEm = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 minutos
 
     try {
-      // 1. Invalida códigos anteriores não utilizados deste e-mail
-      await supabase
-        .from('cftv_codigos_otp')
-        .update({ utilizado: true })
-        .eq('email', emailNorm)
-        .eq('utilizado', false);
-
-      // 2. Grava o novo código na base
+      // 1. Grava o novo código na base (mantendo códigos recentes válidos por 30min para evitar expiração prematura)
       const { error: insertError } = await supabase
         .from('cftv_codigos_otp')
         .insert([{
@@ -41,7 +34,7 @@ export const cftvEmailService = {
 
       console.log(`[CFTV OTP] Código de 6 dígitos gerado para ${emailNorm}`);
 
-      // 3. Disparo do e-mail com o código de 6 dígitos via Supabase Edge Function 'send-cftv-email'
+      // 2. Disparo do e-mail com o código de 6 dígitos via Supabase Edge Function 'send-cftv-email'
       try {
         await supabase.functions.invoke('send-cftv-email', {
           body: { 
@@ -57,7 +50,7 @@ export const cftvEmailService = {
 
       return {
         sucesso: true,
-        mensagem: `Código de verificação enviado para o e-mail ${emailNorm}. Verifique sua caixa de entrada e spam.`
+        mensagem: `Código de verificação enviado para o e-mail ${emailNorm}. Válido por 30 minutos.`
       };
     } catch (err: any) {
       console.error('Erro ao gerar/enviar código OTP:', err);
@@ -73,7 +66,7 @@ export const cftvEmailService = {
    */
   async validarCodigoOTP(email: string, codigoDigitado: string): Promise<{ sucesso: boolean; solicitante?: SolicitanteRecord; erro?: string }> {
     const emailNorm = email.trim().toLowerCase();
-    const codigoLimpo = codigoDigitado.trim();
+    const codigoLimpo = codigoDigitado.trim().replace(/\D/g, '');
 
     try {
       // 1. Busca código válido e não expirado na tabela cftv_codigos_otp
@@ -93,15 +86,16 @@ export const cftvEmailService = {
       if (!registroOTP) {
         return {
           sucesso: false,
-          erro: 'Código inválido ou expirado. Verifique os dígitos recebidos no seu e-mail institucional.'
+          erro: 'Código incorreto ou já expirado. Certifique-se de digitar os 6 dígitos recebidos no seu e-mail.'
         };
       }
 
-      // 2. Marca código como utilizado
+      // 2. Marca este e todos os códigos anteriores deste e-mail como utilizados
       await supabase
         .from('cftv_codigos_otp')
         .update({ utilizado: true })
-        .eq('id', registroOTP.id);
+        .eq('email', emailNorm)
+        .eq('utilizado', false);
 
       // 3. Busca perfil do solicitante na tabela solicitantes_cftv
       const { data: solicitante, error: errSol } = await supabase

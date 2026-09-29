@@ -113,7 +113,7 @@ Deno.serve(async (req: Request) => {
               </span>
             </div>
             <p style="color: #94a3b8; font-size: 13px; margin-top: 12px;">
-              ⏱️ Este código expira em <strong>15 minutos</strong>.
+              ⏱️ Este código expira em <strong>30 minutos</strong>.
             </p>
             <p style="color: #64748b; font-size: 12px; margin-top: 16px;">
               Se você não solicitou este acesso, ignore esta mensagem. Não compartilhe este código com ninguém.
