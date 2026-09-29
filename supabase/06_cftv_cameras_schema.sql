@@ -95,6 +95,8 @@ CREATE TABLE IF NOT EXISTS public.solicitacoes_cftv (
     analisado_por_nome TEXT,
     analisado_por_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     analisado_em TIMESTAMPTZ,
+    devolutiva_enviada_em TIMESTAMPTZ,
+    devolutiva_enviada_por TEXT,
     
     -- Timestamps
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),

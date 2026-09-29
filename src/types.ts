@@ -336,6 +336,8 @@ export interface SolicitacaoCFTV {
   analisado_por_nome?: string | null;
   analisado_por_id?: string | null;
   analisado_em?: string | null;
+  devolutiva_enviada_em?: string | null;
+  devolutiva_enviada_por?: string | null;
   
   created_at: string;
   updated_at: string;
