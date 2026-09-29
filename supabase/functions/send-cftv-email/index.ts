@@ -94,9 +94,9 @@ Deno.serve(async (req: Request) => {
           </p>
         </div>
       `;
-    } else {
-      // Padrão: Código OTP de Acesso
-      subject = `🔐 Seu Código de Acesso ao Portal CFTV: ${codigo}`;
+      // Padrão: Código OTP de Acesso com timestamp para evitar agrupamento no Gmail
+      const horaEnvio = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Sao_Paulo' });
+      subject = `🔐 Código de Acesso CFTV: ${codigo} - [${horaEnvio}]`;
       htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background-color: #0f172a; color: #f8fafc; border-radius: 12px;">
           <div style="text-align: center; margin-bottom: 24px;">
@@ -113,7 +113,7 @@ Deno.serve(async (req: Request) => {
               </span>
             </div>
             <p style="color: #94a3b8; font-size: 13px; margin-top: 12px;">
-              ⏱️ Este código expira em <strong>30 minutos</strong>.
+              ⏱️ Este código expira em <strong>30 minutos</strong> (Gerado às ${horaEnvio}).
             </p>
             <p style="color: #64748b; font-size: 12px; margin-top: 16px;">
               Se você não solicitou este acesso, ignore esta mensagem. Não compartilhe este código com ninguém.
@@ -139,6 +139,9 @@ Deno.serve(async (req: Request) => {
           to: [targetEmail],
           subject,
           html: htmlContent,
+          headers: {
+            'X-Entity-Ref-ID': crypto.randomUUID(),
+          }
         }),
       });
 
