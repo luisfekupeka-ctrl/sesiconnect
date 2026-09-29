@@ -3,25 +3,51 @@
 -- Módulo de Solicitação e Gestão de Imagens CFTV (Câmeras de Segurança)
 -- ==============================================================================
 
--- Tabela de Pré-Cadastro e Autenticação por PIN dos Solicitantes CFTV
+-- Tabela de Pré-Cadastro e Aprovação de Solicitantes CFTV (Super Admin)
 CREATE TABLE IF NOT EXISTS public.solicitantes_cftv (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email TEXT UNIQUE NOT NULL,
     nome TEXT NOT NULL,
     cargo TEXT NOT NULL,
-    pin TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pendente' CHECK (status IN ('pendente', 'aprovado', 'bloqueado')),
+    aprovado_por_nome TEXT,
+    aprovado_por_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    aprovado_em TIMESTAMPTZ,
+    ultimo_login_em TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
 CREATE INDEX IF NOT EXISTS idx_solicitantes_cftv_email ON public.solicitantes_cftv(email);
+CREATE INDEX IF NOT EXISTS idx_solicitantes_cftv_status ON public.solicitantes_cftv(status);
 
 ALTER TABLE public.solicitantes_cftv ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Permitir select solicitantes_cftv" ON public.solicitantes_cftv FOR SELECT USING (true);
 CREATE POLICY "Permitir insert solicitantes_cftv" ON public.solicitantes_cftv FOR INSERT WITH CHECK (true);
 CREATE POLICY "Permitir update solicitantes_cftv" ON public.solicitantes_cftv FOR UPDATE USING (true);
 
+-- Tabela de Códigos OTP de Verificação por E-mail
+CREATE TABLE IF NOT EXISTS public.cftv_codigos_otp (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT NOT NULL,
+    codigo TEXT NOT NULL,
+    tipo TEXT NOT NULL DEFAULT 'login_solicitante',
+    tentativas INT NOT NULL DEFAULT 0,
+    utilizado BOOLEAN NOT NULL DEFAULT FALSE,
+    expira_em TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+CREATE INDEX IF NOT EXISTS idx_cftv_otp_email ON public.cftv_codigos_otp(email, codigo, expira_em);
+
+ALTER TABLE public.cftv_codigos_otp ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Permitir select otp cftv" ON public.cftv_codigos_otp FOR SELECT USING (true);
+CREATE POLICY "Permitir insert otp cftv" ON public.cftv_codigos_otp FOR INSERT WITH CHECK (true);
+CREATE POLICY "Permitir update otp cftv" ON public.cftv_codigos_otp FOR UPDATE USING (true);
+CREATE POLICY "Permitir delete otp cftv" ON public.cftv_codigos_otp FOR DELETE USING (true);
+
 CREATE SEQUENCE IF NOT EXISTS seq_solicitacoes_cftv_numero START 1;
+
 
 CREATE TABLE IF NOT EXISTS public.solicitacoes_cftv (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -341,12 +341,14 @@ export interface SolicitacaoCFTV {
   updated_at: string;
 }
 
+export type StatusSolicitante = 'pendente' | 'aprovado' | 'bloqueado';
+
 export interface SolicitanteProfile {
   id?: string;
   nome: string;
   cargo: string;
   email: string;
-  pin?: string;
+  status?: StatusSolicitante;
 }
 
 export interface SolicitanteRecord {
@@ -354,9 +356,24 @@ export interface SolicitanteRecord {
   nome: string;
   cargo: string;
   email: string;
-  pin: string;
+  status: StatusSolicitante;
+  aprovado_por_nome?: string | null;
+  aprovado_por_id?: string | null;
+  aprovado_em?: string | null;
+  ultimo_login_em?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface CodigoOTP {
+  id: string;
+  email: string;
+  codigo: string;
+  tipo: string;
+  tentativas: number;
+  utilizado: boolean;
+  expira_em: string;
+  created_at: string;
 }
 
 
