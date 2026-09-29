@@ -41,7 +41,7 @@ export const cftvEmailService = {
 
       console.log(`[CFTV OTP] Código de 6 dígitos gerado para ${emailNorm}`);
 
-      // 3. Disparo do e-mail via Supabase Edge Function 'send-cftv-email'
+      // 3. Disparo do e-mail com o código de 6 dígitos via Supabase Edge Function 'send-cftv-email'
       try {
         await supabase.functions.invoke('send-cftv-email', {
           body: { 
@@ -53,21 +53,6 @@ export const cftvEmailService = {
         });
       } catch (fnErr) {
         console.warn('[CFTV Edge Function] Aviso ao invocar send-cftv-email:', fnErr);
-      }
-
-      // 4. Também aciona o canal nativo de e-mail OTP do Supabase Auth como garantia
-      try {
-        await supabase.auth.signInWithOtp({
-          email: emailNorm,
-          options: {
-            shouldCreateUser: true,
-            data: {
-              nome: nome || 'Solicitante CFTV'
-            }
-          }
-        });
-      } catch (authErr) {
-        console.info('[CFTV Supabase Auth OTP] Tentativa de disparo nativo processada.');
       }
 
       return {
@@ -84,7 +69,7 @@ export const cftvEmailService = {
   },
 
   /**
-   * Valida o código de 6 dígitos digitado pelo solicitante
+   * Valida o código de 6 dígitos digitado pelo solicitante (Isolado no portal de CFTV)
    */
   async validarCodigoOTP(email: string, codigoDigitado: string): Promise<{ sucesso: boolean; solicitante?: SolicitanteRecord; erro?: string }> {
     const emailNorm = email.trim().toLowerCase();
@@ -103,40 +88,20 @@ export const cftvEmailService = {
         .limit(1)
         .maybeSingle();
 
-      let validadoPorTabela = false;
+      if (errOTP) throw errOTP;
 
-      if (!errOTP && registroOTP) {
-        // Marca código como utilizado
-        await supabase
-          .from('cftv_codigos_otp')
-          .update({ utilizado: true })
-          .eq('id', registroOTP.id);
-
-        validadoPorTabela = true;
+      if (!registroOTP) {
+        return {
+          sucesso: false,
+          erro: 'Código inválido ou expirado. Verifique os dígitos recebidos no seu e-mail institucional.'
+        };
       }
 
-      // 2. Se não validou pela tabela, tenta validar via Supabase Auth OTP
-      if (!validadoPorTabela) {
-        try {
-          const { data: authData, error: authErr } = await supabase.auth.verifyOtp({
-            email: emailNorm,
-            token: codigoLimpo,
-            type: 'email'
-          });
-
-          if (authErr || !authData.user) {
-            return {
-              sucesso: false,
-              erro: 'Código inválido ou expirado. Verifique os dígitos recebidos no seu e-mail ou solicite um novo envio.'
-            };
-          }
-        } catch {
-          return {
-            sucesso: false,
-            erro: 'Código de verificação inválido ou expirado.'
-          };
-        }
-      }
+      // 2. Marca código como utilizado
+      await supabase
+        .from('cftv_codigos_otp')
+        .update({ utilizado: true })
+        .eq('id', registroOTP.id);
 
       // 3. Busca perfil do solicitante na tabela solicitantes_cftv
       const { data: solicitante, error: errSol } = await supabase

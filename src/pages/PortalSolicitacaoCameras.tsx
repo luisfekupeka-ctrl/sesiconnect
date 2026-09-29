@@ -133,17 +133,8 @@ export default function PortalSolicitacaoCameras() {
   const [minhasSolicitacoes, setMinhasSolicitacoes] = useState<SolicitacaoCFTV[]>([]);
   const [carregandoChamados, setCarregandoChamados] = useState(false);
 
-  // 1. Carregar Sessão Prévia do LocalStorage e Listener de Autenticação por Link de E-mail
+  // 1. Carregar Sessão Prévia do Solicitante CFTV (Isolado no LocalStorage)
   useEffect(() => {
-    // A. Listener para capturar autenticação direta por link do e-mail (Magic Link)
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user?.email) {
-        console.log('[CFTV Auth] Usuário autenticado via link de e-mail:', session.user.email);
-        await verificarStatusAtualizado(session.user.email);
-      }
-    });
-
-    // B. Verifica sessão salva previamente no LocalStorage
     try {
       const sessaoSalva = localStorage.getItem('sesi_cftv_solicitante_session');
       if (sessaoSalva) {
@@ -153,12 +144,8 @@ export default function PortalSolicitacaoCameras() {
         }
       }
     } catch (e) {
-      console.error('Erro ao ler sessão salva:', e);
+      console.error('Erro ao ler sessão do solicitante:', e);
     }
-
-    return () => {
-      authListener?.subscription?.unsubscribe();
-    };
   }, []);
 
   // Timer de reenvio de OTP
