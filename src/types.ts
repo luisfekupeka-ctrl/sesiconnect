@@ -288,3 +288,63 @@ export interface DailyOccurrenceRecord {
   tratada?: boolean;
 }
 
+// --- Solicitação de Imagens CFTV (Câmeras) ---
+export type TipoIntervaloCftv = 'Exato' | 'Aproximado' | 'Amplo';
+export type StatusCftv = 'Em Espera' | 'Em Análise' | 'Atendido' | 'Finalizado' | 'Cancelado';
+
+export interface SolicitacaoCFTV {
+  id: string;
+  numero_protocolo: string;
+  solicitante_id?: string | null;
+  solicitante_nome: string;
+  solicitante_cargo: string;
+  solicitante_email: string;
+  
+  // Data e Horário
+  data_fato: string; // YYYY-MM-DD
+  tipo_intervalo: TipoIntervaloCftv;
+  horario_inicio: string; // HH:mm
+  horario_termino: string; // HH:mm
+  
+  // Local da Ocorrência
+  andar: string;
+  andar_id?: string | null;
+  ambiente: string;
+  local_id?: string | null;
+  ponto_referencia?: string | null;
+  
+  // Tipo de Ocorrência
+  tipo_ocorrencia: string;
+  tipo_ocorrencia_outro?: string | null;
+  descricao_fatos: string;
+  
+  // Identificação e Deslocamento
+  envolvidos_nomes_turmas?: string | null;
+  envolvidos_caracteristicas?: string | null;
+  envolvidos_sentido_fuga?: string | null;
+  objetos_envolvidos?: string | null;
+  
+  // Finalidade / Motivo
+  motivo_solicitacao: string;
+  motivo_outro_descricao?: string | null;
+  
+  // Status e Parecer de Análise
+  status: StatusCftv;
+  parecer_analise?: string | null;
+  cameras_analisadas?: string | null;
+  justificativa_cancelamento?: string | null;
+  analisado_por_nome?: string | null;
+  analisado_por_id?: string | null;
+  analisado_em?: string | null;
+  
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SolicitanteProfile {
+  nome: string;
+  cargo: string;
+  email: string;
+}
+
+

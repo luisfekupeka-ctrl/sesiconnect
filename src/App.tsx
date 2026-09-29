@@ -23,6 +23,7 @@ const Occurrences = React.lazy(() => import('./pages/Occurrences').then(module =
 const PendingAtas = React.lazy(() => import('./pages/PendingAtas'));
 const ChamadosPage = React.lazy(() => import('./pages/Chamados'));
 const DashboardSuper = React.lazy(() => import('./pages/DashboardSuper'));
+const CamerasCFTV = React.lazy(() => import('./pages/CamerasCFTV'));
 
 // Componente de Proteção de Rota
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode; requiredRole?: string }) {
@@ -110,6 +111,9 @@ export default function App() {
               {/* Rotas Públicas */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/meu-horario" element={<MonitorPortal />} />
+              <Route path="/cameras" element={<CamerasCFTV />} />
+              <Route path="/cftv" element={<Navigate to="/cameras" replace />} />
+              <Route path="/solicitacao-cftv" element={<Navigate to="/cameras" replace />} />
               
               {/* Rotas com Layout (Agora 100% Protegidas por Login e Aprovação) */}
               <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
@@ -123,6 +127,7 @@ export default function App() {
                 <Route path="/relatorio-diario" element={<RelatorioDiario />} />
                 <Route path="/ocorrencias" element={<Occurrences />} />
                 <Route path="/chamados" element={<ChamadosPage />} />
+                <Route path="/painel-cameras" element={<CamerasCFTV />} />
                 
                 {/* Áreas que exigem Login/Role ADMIN */}
                 <Route path="/atas-pendentes" element={<ProtectedRoute requiredRole="admin"><PendingAtas /></ProtectedRoute>} />

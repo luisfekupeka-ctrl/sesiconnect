@@ -2,12 +2,13 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { FileText, Search, PlusCircle, Download, FileSpreadsheet, Loader2, Calendar, User, Tag, CheckCircle2, Copy, X, Printer, Trash2, AlertTriangle, ShieldAlert, Clock, Pencil } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { occurrenceService, getOccurrenceGroup, GROUP_FRIENDLY_NAMES, getMinimoParaAta } from '../services/occurrenceService';
-import { generateOccurrencesPDF, generateOccurrencesExcel, generateSingleOccurrencePDF } from '../lib/reportGenerator';
+import { generateOccurrencesPDF, generateOccurrencesExcel, generateSingleOccurrencePDF, generateStudentAllOccurrencesPDF } from '../lib/reportGenerator';
 import { useEscola } from '../context/ContextoEscola';
 import { useAuth } from '../context/AuthContext';
 import type { DailyOccurrenceRecord, RegistroOcorrencia } from '../types';
 import { generateWordOccurrence } from '../lib/wordGenerator';
 import FichaOcorrencia from '../components/FichaOcorrencia';
+import ProntuarioPDF from '../components/ProntuarioPDF';
 import { FluxogramaOcorrencias } from '../components/FluxogramaOcorrencias';
 import { HelpCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -157,6 +158,17 @@ export function Occurrences() {
     count: number;
     occurrences: DailyOccurrenceRecord[];
   } | null>(null);
+
+  const [prontuarioModal, setProntuarioModal] = useState<{
+    isOpen: boolean;
+    studentName: string;
+    records: DailyOccurrenceRecord[];
+  }>({
+    isOpen: false,
+    studentName: '',
+    records: []
+  });
+  const [isOpeningProntuario, setIsOpeningProntuario] = useState(false);
 
   useEffect(() => {
     if (profile?.full_name) {
@@ -347,6 +359,44 @@ export function Occurrences() {
       alert('Erro ao confirmar tratativa.');
     } finally {
       setIsResettingTratativa(false);
+    }
+  };
+
+  const handleOpenStudentProntuario = async (name: string) => {
+    if (!name || !name.trim()) return;
+    setIsOpeningProntuario(true);
+    try {
+      const allRecords = await occurrenceService.fetchRecords({
+        student_name: name.trim()
+      });
+      const sorted = [...allRecords].sort((a, b) => {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA;
+      });
+      if (sorted.length === 0) {
+        alert(`Nenhum registro encontrado para ${name}.`);
+        return;
+      }
+      setProntuarioModal({
+        isOpen: true,
+        studentName: name.trim(),
+        records: sorted
+      });
+    } catch (err) {
+      console.error('Erro ao buscar registros do aluno:', err);
+      const inMem = records.filter(r => r.student_name.trim().toLowerCase() === name.trim().toLowerCase());
+      if (inMem.length > 0) {
+        setProntuarioModal({
+          isOpen: true,
+          studentName: name.trim(),
+          records: inMem
+        });
+      } else {
+        alert('Erro ao carregar registros do aluno.');
+      }
+    } finally {
+      setIsOpeningProntuario(false);
     }
   };
 
@@ -1380,52 +1430,113 @@ Coordenação Pedagógica / SESI`;
                 </button>
               </div>
 
+              {/* Banner de Ação Rápida para Estudante Pesquisado */}
+              {searchName.trim() && (
+                <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 text-slate-800 dark:text-slate-100">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold shrink-0 shadow-md shadow-blue-500/20">
+                      <Printer className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase font-black text-blue-600 dark:text-blue-400 tracking-wider">
+                        Impressão em Massa de Prontuário / Dossiê
+                      </p>
+                      <h4 className="text-base font-extrabold text-slate-900 dark:text-white">
+                        {searchName}
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        {records.length} {records.length === 1 ? 'registro encontrado' : 'registros encontrados'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenStudentProntuario(searchName)}
+                      disabled={isOpeningProntuario || records.length === 0}
+                      className="flex-1 sm:flex-none px-5 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-blue-500/10 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <Printer className="w-4 h-4" />
+                      {isOpeningProntuario ? 'Carregando...' : 'Imprimir Todos de Uma Vez'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        generateStudentAllOccurrencesPDF(records, searchName);
+                      }}
+                      disabled={records.length === 0}
+                      className="flex-1 sm:flex-none px-4 py-3 bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <Download className="w-4 h-4" />
+                      Baixar PDF Único
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
                 <div className="max-h-[65vh] overflow-auto pb-2">
                   <table className="w-full text-left text-xs md:text-sm text-slate-600 dark:text-slate-400">
                     <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 z-10 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
                       <tr>
                         <th className="px-4 py-3 md:px-6 md:py-4 font-medium whitespace-nowrap">Data</th>
-                        <th className="px-4 py-3 md:px-6 md:py-4 font-medium min-w-[150px]">Aluno</th>
+                        <th className="px-4 py-3 md:px-6 md:py-4 font-medium min-w-[170px]">Aluno</th>
                         <th className="px-4 py-3 md:px-6 md:py-4 font-medium whitespace-nowrap">Ano Letivo</th>
                         <th className="px-4 py-3 md:px-6 md:py-4 font-medium min-w-[120px]">Tipo</th>
                         <th className="px-4 py-3 md:px-6 md:py-4 font-medium min-w-[200px]">Relato</th>
-                        {isAdmin && <th className="px-4 py-3 md:px-6 md:py-4 font-medium text-right">Ações</th>}
+                        <th className="px-4 py-3 md:px-6 md:py-4 font-medium text-right">Ações</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                       {isLoadingRecords ? (
                         <tr>
-                          <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                          <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
                             <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-500" />
                             Carregando registros...
                           </td>
                         </tr>
                       ) : records.length === 0 ? (
                         <tr>
-                          <td colSpan={isAdmin ? 6 : 5} className="px-6 py-8 text-center text-slate-500">
+                          <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
                             Nenhum registro encontrado.
                           </td>
                         </tr>
                       ) : (
                         records.map((record) => (
-                          <tr key={record.id} onClick={() => { setSelectedRecord(record); setEditModeOnOpen(false); }} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-colors cursor-pointer">
+                          <tr key={record.id} onClick={() => { setSelectedRecord(record); setEditModeOnOpen(false); }} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-colors cursor-pointer group">
                             <td className="px-4 py-3 md:px-6 md:py-4 whitespace-nowrap text-slate-900 dark:text-slate-200">
                               {new Date(record.created_at || '').toLocaleDateString('pt-BR')}
                             </td>
                             <td className="px-4 py-3 md:px-6 md:py-4 font-medium">
-                              {(() => {
-                                const count = getRecurrenceCount(record.student_name, record.occurrence_type);
-                                if (count >= 4) {
-                                  return (
-                                    <span className="text-red-500 font-extrabold flex items-center gap-1.5" title={`${count} ocorrências deste tipo no trimestre`}>
-                                      {record.student_name}
-                                      <span className="px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-500 text-[8px] font-black uppercase tracking-widest">{count}x Reincidente</span>
-                                    </span>
-                                  );
-                                }
-                                return <span className="text-slate-900 dark:text-slate-100">{record.student_name}</span>;
-                              })()}
+                              <div className="flex items-center justify-between gap-2">
+                                <div>
+                                  {(() => {
+                                    const count = getRecurrenceCount(record.student_name, record.occurrence_type);
+                                    if (count >= 4) {
+                                      return (
+                                        <span className="text-red-500 font-extrabold flex items-center gap-1.5" title={`${count} ocorrências deste tipo no trimestre`}>
+                                          {record.student_name}
+                                          <span className="px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-500 text-[8px] font-black uppercase tracking-widest">{count}x Reincidente</span>
+                                        </span>
+                                      );
+                                    }
+                                    return <span className="text-slate-900 dark:text-slate-100 font-bold">{record.student_name}</span>;
+                                  })()}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenStudentProntuario(record.student_name);
+                                  }}
+                                  className="px-2 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                                  title={`Imprimir todos os registros de ${record.student_name} de uma única vez`}
+                                >
+                                  <Printer className="w-3 h-3 inline" />
+                                  <span className="hidden sm:inline">Imprimir todas</span>
+                                </button>
+                              </div>
                             </td>
                             <td className="px-4 py-3 md:px-6 md:py-4">
                               <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-700 rounded-md text-[10px] md:text-xs font-medium whitespace-nowrap">
@@ -1440,42 +1551,51 @@ Coordenação Pedagógica / SESI`;
                             <td className="px-4 py-3 md:px-6 md:py-4 max-w-[150px] md:max-w-xs truncate" title={record.report}>
                               {record.report}
                             </td>
-                            {isAdmin && (
-                              <td className="px-4 py-3 md:px-6 md:py-4 text-right whitespace-nowrap">
-                                <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                                  <button
-                                    onClick={() => {
-                                      setSelectedRecord(record);
-                                      setEditModeOnOpen(true);
-                                    }}
-                                    className="p-2 rounded-full text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
-                                    title="Editar Registro"
-                                  >
-                                    <Pencil className="w-4 h-4 inline" />
-                                  </button>
-                                  <button
-                                    onClick={async () => {
-                                      if (window.confirm('Tem certeza que deseja apagar este registro?')) {
-                                        try {
-                                          if (record.id) {
-                                            await occurrenceService.deleteRecord(record.id);
-                                            setRecords(prev => prev.filter(r => r.id !== record.id));
-                                            setThirtyDaysRecords(prev => prev.filter(r => r.id !== record.id));
-                                            if (selectedRecord?.id === record.id) setSelectedRecord(null);
+                            <td className="px-4 py-3 md:px-6 md:py-4 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  onClick={() => handleOpenStudentProntuario(record.student_name)}
+                                  className="p-2 rounded-full text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+                                  title={`Imprimir todos os registros de ${record.student_name} de uma única vez`}
+                                >
+                                  <Printer className="w-4 h-4 inline" />
+                                </button>
+                                {isAdmin && (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedRecord(record);
+                                        setEditModeOnOpen(true);
+                                      }}
+                                      className="p-2 rounded-full text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
+                                      title="Editar Registro"
+                                    >
+                                      <Pencil className="w-4 h-4 inline" />
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        if (window.confirm('Tem certeza que deseja apagar este registro?')) {
+                                          try {
+                                            if (record.id) {
+                                              await occurrenceService.deleteRecord(record.id);
+                                              setRecords(prev => prev.filter(r => r.id !== record.id));
+                                              setThirtyDaysRecords(prev => prev.filter(r => r.id !== record.id));
+                                              if (selectedRecord?.id === record.id) setSelectedRecord(null);
+                                            }
+                                          } catch(error) {
+                                            alert('Erro ao apagar registro.');
                                           }
-                                        } catch(error) {
-                                          alert('Erro ao apagar registro.');
                                         }
-                                      }
-                                    }}
-                                    className="p-2 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-                                    title="Apagar Registro"
-                                  >
-                                    <Trash2 className="w-4 h-4 inline" />
-                                  </button>
-                                </div>
-                              </td>
-                            )}
+                                      }}
+                                      className="p-2 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                      title="Apagar Registro"
+                                    >
+                                      <Trash2 className="w-4 h-4 inline" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
                           </tr>
                         ))
                       )}
@@ -1713,6 +1833,19 @@ Coordenação Pedagógica / SESI`;
               {/* Actions */}
               <div className="w-full space-y-2.5 z-10">
                 <button
+                  onClick={() => {
+                    setProntuarioModal({
+                      isOpen: true,
+                      studentName: reoffenderAlert.studentName,
+                      records: reoffenderAlert.occurrences
+                    });
+                  }}
+                  className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/10 cursor-pointer text-sm"
+                >
+                  <Printer className="w-4 h-4" />
+                  Imprimir Todas de Uma Vez
+                </button>
+                <button
                   onClick={() => generateOccurrencesPDF(reoffenderAlert.occurrences, 'dossie_urgente', reoffenderAlert.studentName, reoffenderAlert.occurrences)}
                   className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 cursor-pointer text-sm"
                 >
@@ -1813,6 +1946,17 @@ Coordenação Pedagógica / SESI`;
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Impressão de Todos os Registros do Aluno (Prontuário / Dossiê) */}
+      <AnimatePresence>
+        {prontuarioModal.isOpen && (
+          <ProntuarioPDF
+            ocorrencias={prontuarioModal.records}
+            alunoNome={prontuarioModal.studentName}
+            onClose={() => setProntuarioModal({ isOpen: false, studentName: '', records: [] })}
+          />
         )}
       </AnimatePresence>
     </div>

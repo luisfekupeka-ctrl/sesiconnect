@@ -3,14 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Folder, FileText, ChevronRight, Search, ArrowLeft, 
   Trash2, Download, X, LayoutGrid, ShieldAlert, FileSearch,
-  HardDrive
+  HardDrive, Printer
 } from 'lucide-react';
 import { Aluno, RegistroOcorrencia, DailyOccurrenceRecord } from '../types';
 import { cn } from '../lib/utils';
 import { arquivarELimparMes } from '../services/dataService';
-import { generateBackupZip, generateDossieZip } from '../lib/reportGenerator';
+import { generateBackupZip, generateDossieZip, generateStudentAllOccurrencesPDF } from '../lib/reportGenerator';
 import { occurrenceService } from '../services/occurrenceService';
 import FichaOcorrencia from './FichaOcorrencia';
+import ProntuarioPDF from './ProntuarioPDF';
 
 interface Props {
   alunos: Aluno[];
@@ -28,6 +29,8 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
   const [visualizandoDoc, setVisualizandoDoc] = useState<RegistroOcorrencia | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [baixandoDossie, setBaixandoDossie] = useState(false);
+  const [baixandoPDFUnico, setBaixandoPDFUnico] = useState(false);
+  const [mostrandoProntuarioPDF, setMostrandoProntuarioPDF] = useState(false);
 
   // Estado para armazenar as ocorrências diárias trazidas do Supabase
   const [registrosDiarios, setRegistrosDiarios] = useState<DailyOccurrenceRecord[]>([]);
@@ -438,30 +441,56 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
         <main className="flex-1 p-4 md:p-10 overflow-y-auto custom-scrollbar bg-black/10">
           
           {viewMode === 'DOCUMENTOS' && documentosDoAluno.length > 0 && (
-            <div className="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/5 p-4 md:p-6 rounded-[2rem] border border-white/5">
+            <div className="mb-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 bg-white/5 p-4 md:p-6 rounded-[2rem] border border-white/5">
               <div>
                 <h3 className="text-xl font-black text-white">{selecao.aluno?.nome}</h3>
                 <p className="text-[10px] text-primary uppercase tracking-widest font-bold mt-1">
                   {documentosDoAluno.length} Registros no Histórico (Atas + Diários)
                 </p>
               </div>
-              <button
-                onClick={async () => {
-                  if (baixandoDossie) return;
-                  setBaixandoDossie(true);
-                  try {
-                    await generateDossieZip(mappedDossieOcorrencias, selecao.aluno?.nome || 'Aluno');
-                  } catch (e) {
-                    alert('Erro ao gerar o ZIP. Tente novamente.');
-                  } finally {
-                    setBaixandoDossie(false);
-                  }
-                }}
-                disabled={baixandoDossie}
-                className="flex items-center gap-2 px-6 py-4 bg-primary text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white hover:scale-105 transition-all shadow-xl shadow-primary/20 cursor-pointer disabled:opacity-60 disabled:scale-100"
-              >
-                <Download size={16} /> {baixandoDossie ? 'Gerando ZIP...' : 'Baixar ZIP (PDF por ata)'}
-              </button>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  onClick={() => setMostrandoProntuarioPDF(true)}
+                  className="flex items-center gap-2 px-5 py-3.5 bg-primary text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.15em] hover:bg-white hover:scale-105 transition-all shadow-xl shadow-primary/20 cursor-pointer"
+                >
+                  <Printer size={16} /> Imprimir Todos de Uma Vez
+                </button>
+                <button
+                  onClick={async () => {
+                    if (baixandoPDFUnico) return;
+                    setBaixandoPDFUnico(true);
+                    try {
+                      await generateStudentAllOccurrencesPDF(mappedDossieOcorrencias, selecao.aluno?.nome || 'Aluno');
+                    } catch (e) {
+                      alert('Erro ao gerar o PDF único.');
+                    } finally {
+                      setBaixandoPDFUnico(false);
+                    }
+                  }}
+                  disabled={baixandoPDFUnico}
+                  className="flex items-center gap-2 px-4 py-3.5 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold text-[10px] uppercase tracking-[0.15em] transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <FileText size={15} /> {baixandoPDFUnico ? 'Gerando...' : 'PDF Único'}
+                </button>
+                <button
+                  onClick={async () => {
+                    if (baixandoDossie) return;
+                    setBaixandoDossie(true);
+                    try {
+                      await generateDossieZip(mappedDossieOcorrencias, selecao.aluno?.nome || 'Aluno');
+                    } catch (e) {
+                      alert('Erro ao gerar o ZIP. Tente novamente.');
+                    } finally {
+                      setBaixandoDossie(false);
+                    }
+                  }}
+                  disabled={baixandoDossie}
+                  className="flex items-center gap-2 px-4 py-3.5 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-2xl font-bold text-[10px] uppercase tracking-[0.15em] transition-all cursor-pointer disabled:opacity-50"
+                  title="Baixar arquivo ZIP com 1 PDF individual para cada registro"
+                >
+                  <Download size={15} /> {baixandoDossie ? 'ZIP...' : 'ZIP'}
+                </button>
+              </div>
             </div>
           )}
 
@@ -558,6 +587,16 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
             onClose={() => setVisualizandoDoc(null)} 
             onEditSuccess={atualizar}
             onDeleteSuccess={atualizar}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {mostrandoProntuarioPDF && (
+          <ProntuarioPDF
+            ocorrencias={mappedDossieOcorrencias}
+            alunoNome={selecao.aluno?.nome || 'Aluno'}
+            onClose={() => setMostrandoProntuarioPDF(false)}
           />
         )}
       </AnimatePresence>

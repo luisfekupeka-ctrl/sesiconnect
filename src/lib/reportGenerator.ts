@@ -275,23 +275,16 @@ export const generateOccurrencesExcel = (
 
 import { montarEstruturaAta } from './ataUtils';
 
-export const buildFichaOcorrenciaDoc = async (
+export const appendFichaOcorrenciaToDoc = (
+  doc: jsPDF,
   ocorrencia: any,
   configAssinaturas: any = {},
   assinaturasExtras: any[] = [],
-  bgBase64?: string
+  bgBase64?: string,
+  isFirstPage: boolean = true
 ) => {
-  const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth  = doc.internal.pageSize.getWidth();   // 210 mm
   const pageHeight = doc.internal.pageSize.getHeight();  // 297 mm
-
-  if (!bgBase64) {
-    try {
-      bgBase64 = await loadImageAsBase64(papelTimbradoImg);
-    } catch (e) {
-      console.error(e);
-    }
-  }
 
   const applyBackground = () => {
     if (bgBase64) {
@@ -299,11 +292,15 @@ export const buildFichaOcorrenciaDoc = async (
     }
   };
 
+  if (!isFirstPage) {
+    doc.addPage();
+  }
+
+  // — Aplica fundo oficial da página —
+  applyBackground();
+
   const MARGIN_X = 25;
   const HEADER_START_Y = 52;
-
-  // — Aplica fundo oficial da 1ª página —
-  applyBackground();
   let currentY = HEADER_START_Y;
 
   // -----------------------------------------------------------------------
@@ -564,8 +561,90 @@ export const buildFichaOcorrenciaDoc = async (
     doc.setTextColor(0, 0, 0);
     doc.text(sig.name, x + sigW / 2, y + 5, { align: 'center' });
   });
+};
 
+export const buildFichaOcorrenciaDoc = async (
+  ocorrencia: any,
+  configAssinaturas: any = {},
+  assinaturasExtras: any[] = [],
+  bgBase64?: string
+) => {
+  const doc = new jsPDF('p', 'mm', 'a4');
+  if (!bgBase64) {
+    try {
+      bgBase64 = await loadImageAsBase64(papelTimbradoImg);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  appendFichaOcorrenciaToDoc(doc, ocorrencia, configAssinaturas, assinaturasExtras, bgBase64, true);
   return doc;
+};
+
+export const generateStudentAllOccurrencesPDF = async (
+  records: (DailyOccurrenceRecord | RegistroOcorrencia)[],
+  studentName: string
+) => {
+  if (!records || records.length === 0) {
+    alert('Nenhum registro para exportar.');
+    return;
+  }
+
+  try {
+    const doc = new jsPDF('p', 'mm', 'a4');
+    let bgBase64: string | undefined;
+    try {
+      bgBase64 = await loadImageAsBase64(papelTimbradoImg);
+    } catch (e) {
+      console.error('Error loading papel timbrado:', e);
+    }
+
+    records.forEach((rec, index) => {
+      const isDaily = 'student_name' in rec;
+      const ocObj: any = isDaily ? {
+        id: (rec as DailyOccurrenceRecord).id || '',
+        modeloFormularioId: 'diario',
+        nomeModelo: (rec as DailyOccurrenceRecord).occurrence_type,
+        nomeAluno: (rec as DailyOccurrenceRecord).student_name,
+        turmaAluno: (rec as DailyOccurrenceRecord).school_year,
+        anoAluno: (rec as DailyOccurrenceRecord).school_year,
+        professorAtual: (rec as DailyOccurrenceRecord).created_by || 'Administração',
+        criadoEm: (rec as DailyOccurrenceRecord).created_at || new Date().toISOString(),
+        dados: {
+          'Tipo de Ocorrência': (rec as DailyOccurrenceRecord).occurrence_type,
+          'Descrição': (rec as DailyOccurrenceRecord).report,
+          'Data': (rec as DailyOccurrenceRecord).created_at,
+          'Responsável': (rec as DailyOccurrenceRecord).created_by
+        }
+      } : rec;
+
+      const config = {
+        mostrarAluno: true,
+        mostrarResponsavel: false,
+        mostrarEmissor: true,
+        nomeEmissor: ocObj.professorAtual || 'Administração',
+        nomeAluno: ocObj.nomeAluno,
+        nomeResponsavel: ''
+      };
+
+      appendFichaOcorrenciaToDoc(doc, ocObj, config, [], bgBase64, index === 0);
+    });
+
+    const now = new Date();
+    const dia = String(now.getDate()).padStart(2, '0');
+    const mes = String(now.getMonth() + 1).padStart(2, '0');
+    const ano = String(now.getFullYear()).slice(-2);
+    const dataFormatada = `${dia}_${mes}_${ano}`;
+
+    const studentClean = String(studentName || 'aluno').trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '_');
+    const filename = `dossie_ocorrencias_${studentClean}_dia_${dataFormatada}.pdf`;
+    doc.save(filename);
+  } catch (error) {
+    console.error('Erro ao gerar PDF do dossiê:', error);
+    alert('Erro ao gerar PDF unificado das ocorrências.');
+  }
 };
 
 
