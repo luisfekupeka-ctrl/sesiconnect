@@ -133,20 +133,32 @@ export default function PortalSolicitacaoCameras() {
   const [minhasSolicitacoes, setMinhasSolicitacoes] = useState<SolicitacaoCFTV[]>([]);
   const [carregandoChamados, setCarregandoChamados] = useState(false);
 
-  // 1. Carregar Sessão Prévia do LocalStorage
+  // 1. Carregar Sessão Prévia do LocalStorage e Listener de Autenticação por Link de E-mail
   useEffect(() => {
+    // A. Listener para capturar autenticação direta por link do e-mail (Magic Link)
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user?.email) {
+        console.log('[CFTV Auth] Usuário autenticado via link de e-mail:', session.user.email);
+        await verificarStatusAtualizado(session.user.email);
+      }
+    });
+
+    // B. Verifica sessão salva previamente no LocalStorage
     try {
       const sessaoSalva = localStorage.getItem('sesi_cftv_solicitante_session');
       if (sessaoSalva) {
         const parsed: SolicitanteRecord = JSON.parse(sessaoSalva);
         if (parsed && parsed.email) {
-          // Atualiza status mais recente no banco
           verificarStatusAtualizado(parsed.email);
         }
       }
     } catch (e) {
       console.error('Erro ao ler sessão salva:', e);
     }
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
   }, []);
 
   // Timer de reenvio de OTP
@@ -201,6 +213,15 @@ export default function PortalSolicitacaoCameras() {
         setEtapaAuth('autenticado');
         localStorage.setItem('sesi_cftv_solicitante_session', JSON.stringify(record));
         buscarChamadosDoPerfil(record.email);
+      } else {
+        // Usuário autenticado via link de e-mail mas ainda não cadastrado na tabela de solicitantes
+        setInputEmail(email);
+        setIsNovoCadastro(true);
+        setEtapaAuth('identificacao');
+        setMensagemAuth({
+          tipo: 'info',
+          texto: 'E-mail autenticado com sucesso! Complete seu Nome e Cargo para enviar para aprovação.'
+        });
       }
     } catch (err) {
       console.error('Erro ao verificar status do solicitante:', err);
