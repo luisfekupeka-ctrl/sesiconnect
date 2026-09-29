@@ -3,6 +3,24 @@
 -- Módulo de Solicitação e Gestão de Imagens CFTV (Câmeras de Segurança)
 -- ==============================================================================
 
+-- Tabela de Pré-Cadastro e Autenticação por PIN dos Solicitantes CFTV
+CREATE TABLE IF NOT EXISTS public.solicitantes_cftv (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT UNIQUE NOT NULL,
+    nome TEXT NOT NULL,
+    cargo TEXT NOT NULL,
+    pin TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+CREATE INDEX IF NOT EXISTS idx_solicitantes_cftv_email ON public.solicitantes_cftv(email);
+
+ALTER TABLE public.solicitantes_cftv ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Permitir select solicitantes_cftv" ON public.solicitantes_cftv FOR SELECT USING (true);
+CREATE POLICY "Permitir insert solicitantes_cftv" ON public.solicitantes_cftv FOR INSERT WITH CHECK (true);
+CREATE POLICY "Permitir update solicitantes_cftv" ON public.solicitantes_cftv FOR UPDATE USING (true);
+
 CREATE SEQUENCE IF NOT EXISTS seq_solicitacoes_cftv_numero START 1;
 
 CREATE TABLE IF NOT EXISTS public.solicitacoes_cftv (

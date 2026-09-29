@@ -342,9 +342,21 @@ export interface SolicitacaoCFTV {
 }
 
 export interface SolicitanteProfile {
+  id?: string;
   nome: string;
   cargo: string;
   email: string;
+  pin?: string;
+}
+
+export interface SolicitanteRecord {
+  id: string;
+  nome: string;
+  cargo: string;
+  email: string;
+  pin: string;
+  created_at: string;
+  updated_at: string;
 }
 
 
