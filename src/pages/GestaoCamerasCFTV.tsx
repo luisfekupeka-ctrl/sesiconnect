@@ -215,19 +215,33 @@ export default function GestaoCamerasCFTV() {
     }
   };
 
-  // Excluir Solicitante
-  const handleExcluirSolicitante = async (id: string, nome: string) => {
-    if (!confirm(`Tem certeza que deseja remover o cadastro de ${nome}?`)) return;
+  // Excluir Solicitante e seus códigos OTP residuais
+  const handleExcluirSolicitante = async (id: string, nome: string, email: string) => {
+    if (!confirm(`Tem certeza que deseja apagar o solicitante "${nome}" (${email})?\n\nEle precisará realizar um novo pré-cadastro para solicitar acesso novamente.`)) return;
+    setProcessandoAcaoSolicitante(id);
     try {
+      // 1. Limpa códigos OTP residuais deste e-mail
+      if (email) {
+        await supabase
+          .from('cftv_codigos_otp')
+          .delete()
+          .ilike('email', email.trim());
+      }
+
+      // 2. Remove da tabela de solicitantes
       const { error } = await supabase
         .from('solicitantes_cftv')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
-      buscarSolicitantes();
+      await buscarSolicitantes();
+      alert(`✅ Solicitante ${nome} (${email}) apagado com sucesso!`);
     } catch (err: any) {
+      console.error('Erro ao excluir solicitante:', err);
       alert(`Erro ao excluir: ${err.message}`);
+    } finally {
+      setProcessandoAcaoSolicitante(null);
     }
   };
 
@@ -1170,11 +1184,13 @@ export default function GestaoCamerasCFTV() {
                     )}
 
                     <button
-                      onClick={() => handleExcluirSolicitante(sol.id, sol.nome)}
-                      className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
-                      title="Excluir cadastro"
+                      onClick={() => handleExcluirSolicitante(sol.id, sol.nome, sol.email)}
+                      disabled={processandoAcaoSolicitante === sol.id}
+                      className="btn-secondary !py-2 !px-3 text-xs flex items-center gap-1.5 text-zinc-400 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition-colors"
+                      title="Apagar cadastro e histórico de OTP"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={14} className="text-red-400" />
+                      <span>Apagar</span>
                     </button>
                   </div>
                 </div>
