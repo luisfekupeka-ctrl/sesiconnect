@@ -173,14 +173,14 @@ export default function GestaoCamerasCFTV() {
     }
   }, [novoStatus, solicitacaoEmEdicao]);
 
-  // Alterar Status de Aprovação do Solicitante (Super Admin)
+  // Alterar Status de Aprovação do Solicitante (Admin / Super Admin)
   const handleAlterarStatusSolicitante = async (solicitanteId: string, novoStatusSol: StatusSolicitante) => {
     setProcessandoAcaoSolicitante(solicitanteId);
     try {
       const targetSol = solicitantes.find(s => s.id === solicitanteId);
       const updates = {
         status: novoStatusSol,
-        aprovado_por_nome: authProfile?.full_name || 'Super Admin',
+        aprovado_por_nome: authProfile?.full_name || 'Administrador',
         aprovado_por_id: user?.id || null,
         aprovado_em: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -193,16 +193,22 @@ export default function GestaoCamerasCFTV() {
 
       if (error) throw error;
 
-      // Se for aprovado, dispara e-mail de notificação
+      // Dispara e-mail de notificação de forma assíncrona e segura
       if (novoStatusSol === 'aprovado' && targetSol) {
-        await cftvEmailService.notificarAprovacaoSolicitante({
-          ...targetSol,
-          status: 'aprovado'
-        });
+        try {
+          await cftvEmailService.notificarAprovacaoSolicitante({
+            ...targetSol,
+            status: 'aprovado'
+          });
+        } catch (mailErr) {
+          console.warn('Aviso ao disparar e-mail de aprovação:', mailErr);
+        }
       }
 
-      buscarSolicitantes();
+      await buscarSolicitantes();
+      alert(`✅ Solicitante ${targetSol?.nome || ''} foi ${novoStatusSol === 'aprovado' ? 'APROVADO' : novoStatusSol === 'bloqueado' ? 'BLOQUEADO' : 'redefinido para PENDENTE'} com sucesso!`);
     } catch (err: any) {
+      console.error('Erro ao alterar status:', err);
       alert(`Erro ao alterar status do solicitante: ${err.message}`);
     } finally {
       setProcessandoAcaoSolicitante(null);
@@ -507,7 +513,7 @@ export default function GestaoCamerasCFTV() {
           )}
         </button>
 
-        {isSuperAdmin && (
+        {isAdmin && (
           <button
             onClick={() => setTabAdm('solicitantes')}
             className={cn(

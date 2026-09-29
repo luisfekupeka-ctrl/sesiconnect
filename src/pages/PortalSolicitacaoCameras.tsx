@@ -148,6 +148,19 @@ export default function PortalSolicitacaoCameras() {
     }
   }, []);
 
+  // 1.1 Atualização automática de status quando pendente de aprovação
+  useEffect(() => {
+    if (!solicitante || solicitante.status !== 'pendente') return;
+
+    const interval = setInterval(() => {
+      if (solicitante?.email) {
+        verificarStatusAtualizado(solicitante.email);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [solicitante?.status, solicitante?.email]);
+
   // Timer de reenvio de OTP
   useEffect(() => {
     if (tempoRestanteReenvio <= 0) return;
