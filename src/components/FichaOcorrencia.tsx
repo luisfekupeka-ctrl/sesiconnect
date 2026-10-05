@@ -59,7 +59,8 @@ export default function FichaOcorrencia({
   onDeleteSuccess,
   startInEditMode
 }: Props) {
-  // Estados principais da ATA
+  // Tipo de documento: ATA Oficial ou Registro Diário
+  const [tipoDocumento, setTipoDocumento] = useState<'ata' | 'diario'>('diario');
   const [numeroAta, setNumeroAta] = useState('');
   const [anoAta, setAnoAta] = useState(String(new Date().getFullYear()));
   const [dataAta, setDataAta] = useState('');
@@ -71,11 +72,11 @@ export default function FichaOcorrencia({
   const [novoAlunoNome, setNovoAlunoNome] = useState('');
   const [relatoTexto, setRelatoTexto] = useState('');
 
-  // Configurações extras de assinatura
+  // Configurações de assinatura (Responsável ativo por padrão)
   const [configAssinaturas, setConfigAssinaturas] = useState({
     mostrarAluno: true,
     nomeAluno: ocorrencia.nomeAluno,
-    mostrarResponsavel: false,
+    mostrarResponsavel: true,
     nomeResponsavel: '',
     mostrarEmissor: true,
     nomeEmissor: ocorrencia.professorAtual || 'Guilherme Juliano de Freitas Silva'
@@ -85,28 +86,39 @@ export default function FichaOcorrencia({
   const [novoNomeExtra, setNovoNomeExtra] = useState('');
   const [novoTipoExtra, setNovoTipoExtra] = useState('Responsável');
 
-  // Inicializa e sincroniza os dados da ocorrência com os estados da ATA
+  // Inicializa e sincroniza os dados da ocorrência com os estados
   useEffect(() => {
     const dados = ocorrencia.dados || {};
 
-    // Extrai número da ATA
+    // Verifica se é registro diário ou ATA
+    const isExplicitDaily =
+      ocorrencia.modeloFormularioId === 'diario' ||
+      ocorrencia.nomeModelo === 'diario' ||
+      'occurrence_type' in ocorrencia;
+
     const numAtaKey = Object.keys(dados).find(k =>
-      k.toLowerCase().includes('número da ata') || k.toLowerCase().includes('numero da ata') || k.toLowerCase() === 'ata' || k.toLowerCase() === 'número' || k.toLowerCase() === 'numero'
+      k.toLowerCase().includes('número da ata') || k.toLowerCase().includes('numero da ata') || k.toLowerCase() === 'ata'
     );
     let rawNumAta = numAtaKey ? String(dados[numAtaKey]) : '';
-    if (!rawNumAta && ocorrencia.nomeModelo && ocorrencia.nomeModelo.includes('1040')) {
-      rawNumAta = '1040/2026';
-    }
 
-    if (rawNumAta.includes('/')) {
-      const p = rawNumAta.split('/');
-      setNumeroAta(p[0].trim());
-      if (p[1]) setAnoAta(p[1].trim());
-    } else if (rawNumAta) {
-      setNumeroAta(rawNumAta.trim());
+    const isExplicitAta =
+      Boolean(rawNumAta && rawNumAta !== 'diario') ||
+      Boolean(ocorrencia.nomeModelo && ocorrencia.nomeModelo.toLowerCase().includes('ata'));
+
+    if (isExplicitAta && !isExplicitDaily) {
+      setTipoDocumento('ata');
+      if (rawNumAta.includes('/')) {
+        const p = rawNumAta.split('/');
+        setNumeroAta(p[0].trim());
+        if (p[1]) setAnoAta(p[1].trim());
+      } else if (rawNumAta) {
+        setNumeroAta(rawNumAta.trim());
+      } else {
+        setNumeroAta('1040');
+      }
     } else {
-      setNumeroAta('1040');
-      setAnoAta('2026');
+      setTipoDocumento('diario');
+      setNumeroAta('');
     }
 
     // Extrai data
@@ -125,7 +137,7 @@ export default function FichaOcorrencia({
         initialDate = new Date().toISOString().split('T')[0];
       }
     }
-    setDataAta(initialDate || '2026-09-28');
+    setDataAta(initialDate || new Date().toISOString().split('T')[0]);
 
     // Extrai horário
     const horaKey = Object.keys(dados).find(k =>
@@ -163,7 +175,7 @@ export default function FichaOcorrencia({
     } else if (baseAluno) {
       setListaAlunos([baseAluno]);
     } else {
-      setListaAlunos(['Vithoria Franco', 'Angelina Maria Vaz Guimarães Ferreira Nishizaki']);
+      setListaAlunos(['Estudante']);
     }
 
     // Extrai relato dos fatos
@@ -172,23 +184,25 @@ export default function FichaOcorrencia({
        'description', 'observações', 'observacoes', 'obs', 'fatos'].includes(k.toLowerCase())
     );
     const rawRelato = descKey ? String(dados[descKey]) : ((ocorrencia as any).relato || '');
-    setRelatoTexto(rawRelato || 'Nesta data, as estudantes foram encontradas fora de sala de aula em horário indevido, relatando que vivenciaram uma situação de crise emocional, por conta disso não se dirigiram para a sala de aula, complementaram que estavam se escondendo no banheiro feminino do terceiro andar. Informei as alunas quanto a natureza inaceitável de suas ações, destacando que, em caso de crises emocionais, podem e devem procurar meu auxílio, para que sejam atendidas de forma profissional e qualificada. Complementei destacando as medidas previstas no Regimento Escolar, em caso de reincidência de suas ações.');
+    setRelatoTexto(rawRelato || '');
 
+    // Responsável ativo por padrão
     setConfigAssinaturas({
       mostrarAluno: true,
       nomeAluno: ocorrencia.nomeAluno || '',
-      mostrarResponsavel: false,
-      nomeResponsavel: '',
+      mostrarResponsavel: true,
+      nomeResponsavel: dados['Responsável Legal'] || dados['nome_responsavel'] || '',
       mostrarEmissor: true,
       nomeEmissor: emissor
     });
     setAssinaturasExtras([]);
   }, [ocorrencia, startInEditMode]);
 
-  // Monta a estrutura da ATA em tempo real no padrão ABNT
+  // Monta a estrutura do documento em tempo real no padrão ABNT
   const estruturaAta = useMemo(() => {
     return montarEstruturaAta({
-      numeroAta,
+      tipoDocumento,
+      numeroAta: tipoDocumento === 'ata' ? numeroAta : '',
       anoAta,
       dataStr: dataAta,
       horarioStr: horarioAta,
@@ -197,9 +211,13 @@ export default function FichaOcorrencia({
       nomeEmissor,
       cargoEmissor,
       relato: relatoTexto,
+      mostrarAluno: configAssinaturas.mostrarAluno,
+      mostrarResponsavel: configAssinaturas.mostrarResponsavel,
+      nomeResponsavel: configAssinaturas.nomeResponsavel,
+      mostrarEmissor: configAssinaturas.mostrarEmissor,
       assinaturasExtras
     });
-  }, [numeroAta, anoAta, dataAta, horarioAta, listaAlunos, turmaAluno, nomeEmissor, cargoEmissor, relatoTexto, assinaturasExtras]);
+  }, [tipoDocumento, numeroAta, anoAta, dataAta, horarioAta, listaAlunos, turmaAluno, nomeEmissor, cargoEmissor, relatoTexto, configAssinaturas, assinaturasExtras]);
 
   const adicionarAluno = () => {
     if (novoAlunoNome.trim() && !listaAlunos.includes(novoAlunoNome.trim())) {
@@ -230,7 +248,8 @@ export default function FichaOcorrencia({
   const handleBaixarPDF = async () => {
     const configCompleta = {
       ...configAssinaturas,
-      numeroAta,
+      tipoDocumento,
+      numeroAta: tipoDocumento === 'ata' ? numeroAta : '',
       anoAta,
       dataAta,
       horario: horarioAta,
@@ -245,7 +264,8 @@ export default function FichaOcorrencia({
       relato: relatoTexto,
       dados: {
         ...(ocorrencia.dados || {}),
-        'Número da Ata': numeroAta ? `${numeroAta}/${anoAta}` : '',
+        'Tipo de Documento': tipoDocumento === 'ata' ? 'ATA Oficial' : 'Registro Diário',
+        'Número da Ata': tipoDocumento === 'ata' && numeroAta ? `${numeroAta}/${anoAta}` : '',
         'Data': dataAta,
         'Horário': horarioAta,
         'Turma': turmaAluno,
@@ -264,48 +284,92 @@ export default function FichaOcorrencia({
         "bg-transparent md:bg-white w-full max-w-6xl flex flex-col md:flex-row gap-4 md:gap-0 print:shadow-none print:max-h-none print:rounded-none print-modal-container",
         !isPrintOnly ? "max-h-none md:max-h-[95vh] md:overflow-hidden md:rounded-[2.5rem] md:shadow-2xl" : "rounded-none"
       )}>
-        {/* Painel de Formulário / Configurações da ATA (Esquerda) - Oculta na Impressão */}
+        {/* Painel de Formulário / Configurações da ATA / Registro (Esquerda) - Oculta na Impressão */}
         <div className="w-full md:w-96 bg-white md:bg-gray-50 border border-gray-100 md:border-0 md:border-r border-gray-100 p-6 md:p-8 flex flex-col gap-6 print:hidden rounded-3xl md:rounded-none md:rounded-l-[2.5rem] shadow-xl md:shadow-none overflow-y-visible md:overflow-y-auto shrink-0 custom-scrollbar">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-              <h3 className="font-black text-lg text-gray-900">Preenchimento da ATA</h3>
+              <h3 className="font-black text-lg text-gray-900">Configuração do Documento</h3>
             </div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              Formulário & Padrão ABNT
+              Padrão Oficial Sesi & ABNT
             </p>
           </div>
 
           <div className="space-y-5">
-            {/* Título e Número da ATA */}
+            {/* Seletor de Tipo: ATA Oficial ou Registro Diário */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-black uppercase tracking-widest text-gray-700 flex items-center gap-1.5">
-                <FileText size={13} className="text-primary" /> Número da ATA (Título em Negrito)
+                <FileText size={13} className="text-primary" /> Tipo de Documento no Cabeçalho
               </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={numeroAta}
-                  onChange={e => setNumeroAta(e.target.value)}
-                  placeholder="Ex: 1040"
-                  className="flex-1 bg-white border border-gray-200 p-2.5 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all shadow-sm"
-                />
-                <span className="self-center font-bold text-gray-400">/</span>
-                <input
-                  type="text"
-                  value={anoAta}
-                  onChange={e => setAnoAta(e.target.value)}
-                  placeholder="Ano"
-                  className="w-20 bg-white border border-gray-200 p-2.5 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all shadow-sm text-center"
-                />
+              <div className="grid grid-cols-2 gap-2 bg-gray-200/80 p-1 rounded-2xl">
+                <button
+                  type="button"
+                  onClick={() => setTipoDocumento('diario')}
+                  className={cn(
+                    "py-2 px-3 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                    tipoDocumento === 'diario'
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-500 hover:text-gray-900"
+                  )}
+                >
+                  <Calendar size={13} />
+                  Registro Diário
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTipoDocumento('ata')}
+                  className={cn(
+                    "py-2 px-3 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                    tipoDocumento === 'ata'
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-500 hover:text-gray-900"
+                  )}
+                >
+                  <ClipboardList size={13} />
+                  ATA Oficial
+                </button>
               </div>
+              <p className="text-[10px] font-bold text-gray-500 mt-1">
+                {tipoDocumento === 'diario' ? (
+                  <span className="text-emerald-700 font-bold">✓ Cabeçalho: REGISTRO DIÁRIO - {estruturaAta.dataFormatada}</span>
+                ) : (
+                  <span className="text-blue-700 font-bold">✓ Cabeçalho: {estruturaAta.tituloAta}</span>
+                )}
+              </p>
             </div>
+
+            {/* Número da ATA (apenas se for ATA Oficial) */}
+            {tipoDocumento === 'ata' && (
+              <div className="space-y-1.5 p-3 bg-blue-50/60 border border-blue-100 rounded-2xl">
+                <label className="text-[10px] font-black uppercase tracking-widest text-blue-900 flex items-center gap-1.5">
+                  <FileText size={13} className="text-blue-600" /> Número da ATA
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={numeroAta}
+                    onChange={e => setNumeroAta(e.target.value)}
+                    placeholder="Ex: 1040"
+                    className="flex-1 bg-white border border-blue-200 p-2.5 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all shadow-sm"
+                  />
+                  <span className="self-center font-bold text-gray-400">/</span>
+                  <input
+                    type="text"
+                    value={anoAta}
+                    onChange={e => setAnoAta(e.target.value)}
+                    placeholder="Ano"
+                    className="w-20 bg-white border border-blue-200 p-2.5 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all shadow-sm text-center"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Data e Horário */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-700 flex items-center gap-1">
-                  <Calendar size={13} className="text-primary" /> Data da ATA
+                  <Calendar size={13} className="text-primary" /> Data
                 </label>
                 <input
                   type="date"
@@ -386,7 +450,7 @@ export default function FichaOcorrencia({
                       <button
                         type="button"
                         onClick={() => removerAluno(index)}
-                        className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                        className="text-gray-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
                         title="Remover"
                       >
                         <Trash2 size={13} />
@@ -430,6 +494,33 @@ export default function FichaOcorrencia({
               </div>
             </div>
 
+            {/* Assinatura do Responsável Legal */}
+            <div className="space-y-2 pt-2 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-700 flex items-center gap-1.5">
+                  <User size={13} className="text-primary" /> Assinatura do Responsável Legal
+                </label>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={configAssinaturas.mostrarResponsavel}
+                    onChange={e => setConfigAssinaturas(prev => ({ ...prev, mostrarResponsavel: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                </label>
+              </div>
+              {configAssinaturas.mostrarResponsavel && (
+                <input
+                  type="text"
+                  value={configAssinaturas.nomeResponsavel}
+                  onChange={e => setConfigAssinaturas(prev => ({ ...prev, nomeResponsavel: e.target.value }))}
+                  placeholder="Nome do Responsável (vazio = Pais / Responsável Legal)"
+                  className="w-full bg-white border border-gray-200 p-2.5 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none transition-all shadow-sm"
+                />
+              )}
+            </div>
+
             {/* Relato / Descrição dos Fatos */}
             <div className="space-y-1.5 pt-2 border-t border-gray-200">
               <label className="text-[10px] font-black uppercase tracking-widest text-gray-700 flex items-center justify-between">
@@ -460,7 +551,7 @@ export default function FichaOcorrencia({
                   type="text"
                   value={novoTipoExtra}
                   onChange={e => setNovoTipoExtra(e.target.value)}
-                  placeholder="Cargo / Papel (ex: Responsável Legal)"
+                  placeholder="Cargo / Papel (ex: Testemunha)"
                   className="w-full bg-gray-50 border border-gray-200 p-2 rounded-xl text-xs font-bold text-gray-900 focus:border-primary outline-none"
                 />
                 <div className="flex gap-2">
@@ -480,7 +571,7 @@ export default function FichaOcorrencia({
                   <button
                     type="button"
                     onClick={adicionarAssinaturaExtra}
-                    className="p-2 bg-gray-900 text-white rounded-xl text-xs font-bold hover:bg-gray-800 transition-all flex items-center justify-center shrink-0"
+                    className="p-2 bg-gray-900 text-white rounded-xl text-xs font-bold hover:bg-gray-800 transition-all flex items-center justify-center shrink-0 cursor-pointer"
                     title="Adicionar Assinatura"
                   >
                     <Plus size={16} />
@@ -498,7 +589,7 @@ export default function FichaOcorrencia({
                       </div>
                       <button
                         onClick={() => removerAssinaturaExtra(index)}
-                        className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                        className="text-gray-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
                         type="button"
                       >
                         <Trash2 size={13} />
@@ -516,7 +607,7 @@ export default function FichaOcorrencia({
               onClick={handlePrint}
               className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-gray-900 text-white rounded-2xl text-xs font-black uppercase hover:bg-gray-800 transition-all shadow-md cursor-pointer"
             >
-              <Printer size={16} /> Imprimir ATA
+              <Printer size={16} /> Imprimir {tipoDocumento === 'ata' ? 'ATA' : 'Registro'}
             </button>
             <button
               onClick={handleBaixarPDF}
@@ -533,7 +624,7 @@ export default function FichaOcorrencia({
           </div>
         </div>
 
-        {/* Folha Oficial de Impressão e Preview (Direita) - Padrão ABNT (Arial 12, 1.5 entrelinhas, Justificado) */}
+        {/* Folha Oficial de Impressão e Preview (Direita) - Padrão ABNT com Margens Seguras Anti-Sobreposição */}
         <div
           id="printable-occurrence"
           className="flex-1 bg-white rounded-3xl md:rounded-none md:rounded-r-[2.5rem] shadow-xl md:shadow-none border border-gray-100 md:border-0 overflow-y-visible md:overflow-y-auto custom-scrollbar relative flex flex-col print-card-content min-h-[600px]"
@@ -545,7 +636,7 @@ export default function FichaOcorrencia({
             className="absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-[1]"
           />
 
-          <div className="flex-1 px-8 sm:px-14 md:px-20 pt-[42mm] md:pt-[50mm] pb-12 md:pb-20 space-y-8 print:pt-[52mm] print:px-[25mm] print:pb-[20mm] relative z-10 flex flex-col justify-between">
+          <div className="flex-1 px-8 sm:px-14 md:px-20 pt-[42mm] md:pt-[48mm] pb-10 md:pb-12 space-y-6 print:pt-[48mm] print:px-[25mm] print:pb-[38mm] relative z-10 flex flex-col justify-between">
             <div>
               {/* TÍTULO EM FORMATO DE TÍTULO ANTES DE COMEÇAR A FRASE E EM NEGRITO */}
               <div className="mb-6">
@@ -554,7 +645,7 @@ export default function FichaOcorrencia({
                 </h1>
               </div>
 
-              {/* Corpo da ATA: Arial 12pt, Espaçamento 1,5 linha, Texto Justificado (Padrão ABNT) */}
+              {/* Corpo do Documento: Arial 12pt, Espaçamento 1,5 linha, Texto Justificado (Padrão ABNT) */}
               <div
                 className="text-gray-900 text-justify space-y-4"
                 style={{
@@ -587,15 +678,23 @@ export default function FichaOcorrencia({
               </div>
             </div>
 
-            {/* Seção de Assinaturas (Linhas e Nomes) */}
-            <div className="pt-16 print:pt-20">
-              <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-x-12 gap-y-12 max-w-3xl">
+            {/* Seção de Assinaturas (Linhas e Nomes) - Acima do logotipo SESI sem sobreposição */}
+            <div className="mt-8 pt-4 pb-2 print:mt-auto print:pt-4 print:pb-0">
+              <div className={cn(
+                "grid gap-x-6 gap-y-6 max-w-3xl",
+                estruturaAta.assinaturas.length === 2 ? "grid-cols-2" : (estruturaAta.assinaturas.length === 3 ? "grid-cols-3 print:grid-cols-3" : "grid-cols-2")
+              )}>
                 {estruturaAta.assinaturas.map((ass, idx) => (
                   <div key={idx} className="flex flex-col items-center text-center">
-                    <div className="w-full max-w-[240px] border-b border-gray-900 mb-2"></div>
-                    <p className="text-xs font-bold text-gray-900 tracking-wide font-sans">
+                    <div className="w-full max-w-[190px] border-b border-gray-900 mb-1.5"></div>
+                    <p className="text-[11px] font-bold text-gray-900 tracking-tight font-sans leading-tight">
                       {ass.nome}
                     </p>
+                    {ass.papel && (
+                      <p className="text-[9px] text-gray-600 font-sans mt-0.5 leading-tight">
+                        {ass.papel}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -606,7 +705,7 @@ export default function FichaOcorrencia({
 
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
-          @page { size: A4; margin: 0; }
+          @page { size: A4 portrait; margin: 0; }
           body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           body * { visibility: hidden; }
           #printable-occurrence, #printable-occurrence * { visibility: visible; }
@@ -616,7 +715,9 @@ export default function FichaOcorrencia({
             top: 0;
             width: 210mm;
             min-height: 297mm;
+            height: 297mm;
             padding: 0 !important;
+            box-sizing: border-box !important;
             background: white !important;
           }
           .print\\:hidden { display: none !important; }

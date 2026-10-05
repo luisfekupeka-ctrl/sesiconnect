@@ -131,14 +131,17 @@ export default function ProntuarioPDF({ ocorrencias, onClose, alunoNome }: Props
             const relato = isDaily ? (ocorrencia as DailyOccurrenceRecord).report : (((ocorrencia as RegistroOcorrencia).dados?.['Descrição'] || (ocorrencia as RegistroOcorrencia).dados?.['descricao'] || (ocorrencia as any).relato) || '');
             const dataCriacao = isDaily ? (ocorrencia as DailyOccurrenceRecord).created_at : ((ocorrencia as RegistroOcorrencia).dados?.['Data'] || (ocorrencia as RegistroOcorrencia).criadoEm);
             const emissor = isDaily ? ((ocorrencia as DailyOccurrenceRecord).created_by || 'Administração') : ((ocorrencia as RegistroOcorrencia).professorAtual || (ocorrencia as RegistroOcorrencia).dados?.['Responsável'] || 'Guilherme Juliano de Freitas Silva');
-            const numAta = !isDaily ? ((ocorrencia as RegistroOcorrencia).dados?.['Número da Ata'] || (ocorrencia as RegistroOcorrencia).dados?.['numero da ata'] || '') : '';
+            const rawNumAta = !isDaily ? ((ocorrencia as RegistroOcorrencia).dados?.['Número da Ata'] || (ocorrencia as RegistroOcorrencia).dados?.['numero da ata'] || '') : '';
+            const tipoDoc: 'ata' | 'diario' = !isDaily && rawNumAta ? 'ata' : 'diario';
 
             const estrutura = montarEstruturaAta({
-              numeroAta: numAta,
+              tipoDocumento: tipoDoc,
+              numeroAta: tipoDoc === 'ata' ? rawNumAta : '',
               dataStr: dataCriacao,
               nomeAluno,
               turmaAluno,
               nomeEmissor: emissor,
+              mostrarResponsavel: true,
               relato
             });
 
@@ -157,7 +160,7 @@ export default function ProntuarioPDF({ ocorrencias, onClose, alunoNome }: Props
                   className="absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-[1]"
                 />
 
-                <div className="flex-1 px-8 sm:px-14 md:px-20 pt-[42mm] md:pt-[50mm] pb-12 md:pb-20 space-y-8 print:pt-[52mm] print:px-[25mm] print:pb-[20mm] relative z-10 flex flex-col justify-between">
+                <div className="flex-1 px-8 sm:px-14 md:px-20 pt-[42mm] md:pt-[48mm] pb-10 md:pb-12 space-y-6 print:pt-[48mm] print:px-[25mm] print:pb-[38mm] relative z-10 flex flex-col justify-between">
                   <div>
                     {/* TÍTULO EM FORMATO DE TÍTULO ANTES DE COMEÇAR A FRASE E EM NEGRITO */}
                     <div className="mb-6 flex justify-between items-start">
@@ -169,7 +172,7 @@ export default function ProntuarioPDF({ ocorrencias, onClose, alunoNome }: Props
                       </span>
                     </div>
 
-                    {/* Texto da ATA: Arial 12pt, Espaçamento 1,5, Justificado (ABNT) */}
+                    {/* Texto do Documento: Arial 12pt, Espaçamento 1,5, Justificado (ABNT) */}
                     <div
                       className="text-gray-900 text-justify space-y-4"
                       style={{
@@ -178,24 +181,32 @@ export default function ProntuarioPDF({ ocorrencias, onClose, alunoNome }: Props
                         lineHeight: '1.5'
                       }}
                     >
-                      <p className="text-justify">{estrutura.paragrafoAbertura}</p>
+                      <p className="text-justify indent-0">{estrutura.paragrafoAbertura}</p>
                       {estrutura.paragrafoRelato && (
-                        <p className="text-justify whitespace-pre-wrap">{estrutura.paragrafoRelato}</p>
+                        <p className="text-justify whitespace-pre-wrap indent-0">{estrutura.paragrafoRelato}</p>
                       )}
-                      <p className="text-justify">{estrutura.paragrafoEncaminhamentos}</p>
-                      <p className="text-justify">{estrutura.paragrafoFechamento}</p>
+                      <p className="text-justify indent-0">{estrutura.paragrafoEncaminhamentos}</p>
+                      <p className="text-justify indent-0">{estrutura.paragrafoFechamento}</p>
                     </div>
                   </div>
 
                   {/* Assinaturas */}
-                  <div className="pt-16 print:pt-20">
-                    <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-x-12 gap-y-12 max-w-3xl">
+                  <div className="mt-8 pt-4 pb-2 print:mt-auto print:pt-4 print:pb-0">
+                    <div className={cn(
+                      "grid gap-x-6 gap-y-6 max-w-3xl",
+                      estrutura.assinaturas.length === 2 ? "grid-cols-2" : (estrutura.assinaturas.length === 3 ? "grid-cols-3 print:grid-cols-3" : "grid-cols-2")
+                    )}>
                       {estrutura.assinaturas.map((ass, aIdx) => (
                         <div key={aIdx} className="flex flex-col items-center text-center">
-                          <div className="w-full max-w-[240px] border-b border-gray-900 mb-2"></div>
-                          <p className="text-xs font-bold text-gray-900 tracking-wide font-sans">
+                          <div className="w-full max-w-[190px] border-b border-gray-900 mb-1.5"></div>
+                          <p className="text-[11px] font-bold text-gray-900 tracking-tight font-sans leading-tight">
                             {ass.nome}
                           </p>
+                          {ass.papel && (
+                            <p className="text-[9px] text-gray-600 font-sans mt-0.5 leading-tight">
+                              {ass.papel}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>

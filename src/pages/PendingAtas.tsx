@@ -4,16 +4,25 @@ import { useNavigate } from 'react-router-dom';
 import { 
   AlertTriangle, Search, Filter, ArrowUpDown, FileText, 
   ChevronDown, ChevronUp, Calendar, Clock, User, CheckCircle2,
-  BookOpen
+  BookOpen, Copy, Check, Share2, CheckCheck, Sparkles, ExternalLink,
+  ShieldCheck, ArrowRight
 } from 'lucide-react';
 import { occurrenceService, getOccurrenceGroup, GROUP_FRIENDLY_NAMES, getMinimoParaAta } from '../services/occurrenceService';
 import type { DailyOccurrenceRecord } from '../types';
 import { cn } from '../lib/utils';
+import { 
+  gerarCabecalhoOficialSesi, 
+  extrairRelatoSucinto, 
+  gerarTextoCompletoSGE, 
+  gerarMensagemResponsaveis 
+} from '../lib/ataUtils';
+import ModalRegistroDiarioSGE from '../components/ModalRegistroDiarioSGE';
 
 interface PendingAtaGroup {
   studentName: string;
   schoolYear: string;
   type: string;
+  groupKey: string;
   count: number;
   latestDate: Date;
   records: DailyOccurrenceRecord[];
@@ -34,32 +43,40 @@ export default function PendingAtas() {
   // Controle de cards expandidos para ver o histórico individual
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
 
+  // Modal para ver ocorrência individual em detalhe
+  const [selectedRecordForModal, setSelectedRecordForModal] = useState<DailyOccurrenceRecord | null>(null);
+
+  // Estados de feedback de cópia rápida
+  const [copiadoIds, setCopiadoIds] = useState<Record<string, boolean>>({});
+  const [copiadoTodos, setCopiadoTodos] = useState<Record<string, boolean>>({});
+  const [tratandoIds, setTratandoIds] = useState<Record<string, boolean>>({});
+
   const toggleExpandCard = (key: string) => {
     setExpandedCards(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  useEffect(() => {
-    async function carregarOcorrenciasAtivas() {
-      setLoading(true);
-      setError(null);
-      try {
-        const ninetyDaysAgo = new Date();
-        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-        
-        // Busca ocorrências não tratadas no trimestre
-        const records = await occurrenceService.fetchRecords({
-          start_date: ninetyDaysAgo.toISOString(),
-          tratada: false
-        });
-        setDailyRecords(records);
-      } catch (err) {
-        console.error('Erro ao buscar ocorrências em PendingAtas:', err);
-        setError('Não foi possível carregar as ocorrências ativas.');
-      } finally {
-        setLoading(false);
-      }
+  const carregarOcorrenciasAtivas = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      
+      // Busca ocorrências não tratadas no trimestre
+      const records = await occurrenceService.fetchRecords({
+        start_date: ninetyDaysAgo.toISOString(),
+        tratada: false
+      });
+      setDailyRecords(records);
+    } catch (err) {
+      console.error('Erro ao buscar ocorrências em PendingAtas:', err);
+      setError('Não foi possível carregar as ocorrências ativas.');
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     carregarOcorrenciasAtivas();
   }, []);
 
@@ -80,6 +97,7 @@ export default function PendingAtas() {
           studentName: studentClean,
           schoolYear: r.school_year || 'Não especificado',
           type: GROUP_FRIENDLY_NAMES[groupKey] || typeClean,
+          groupKey,
           count: 0,
           latestDate: recDate,
           records: []
@@ -95,11 +113,19 @@ export default function PendingAtas() {
       }
     });
 
-    // Filtra com base nas regras de etapas/gravidade da tabela
+    // Ordena os records dentro de cada grupo da mais antiga para a mais recente (ordem cronológica)
+    Object.values(groups).forEach(g => {
+      g.records.sort((a, b) => {
+        const da = new Date(a.created_at || 0).getTime();
+        const db = new Date(b.created_at || 0).getTime();
+        return da - db;
+      });
+    });
+
+    // Filtra com base nas regras de etapas/gravidade da tabela (>= 4 ou >= 1 para graves)
     return Object.values(groups).filter(g => {
       if (g.records.length === 0) return false;
-      const groupKey = getOccurrenceGroup(g.records[0].occurrence_type);
-      return g.count >= getMinimoParaAta(groupKey);
+      return g.count >= getMinimoParaAta(g.groupKey);
     });
   }, [dailyRecords]);
 
@@ -163,7 +189,74 @@ export default function PendingAtas() {
     return result;
   }, [pendingAtas, busca, filtroAno, filtroTipo, ordenacao]);
 
-  const handleGerarAta = (group: PendingAtaGroup) => {
+  // Copia o texto formatado para o SGE de um dia específico
+  const handleCopiarDiaSGE = async (rec: DailyOccurrenceRecord, idKey: string) => {
+    const textoSGE = gerarTextoCompletoSGE({
+      dataStr: rec.created_at,
+      nomeAluno: rec.student_name,
+      turmaAluno: rec.school_year,
+      tipoOcorrencia: rec.occurrence_type,
+      relato: rec.report
+    });
+
+    try {
+      await navigator.clipboard.writeText(textoSGE);
+      setCopiadoIds(prev => ({ ...prev, [idKey]: true }));
+      setTimeout(() => {
+        setCopiadoIds(prev => ({ ...prev, [idKey]: false }));
+      }, 2000);
+    } catch (e) {
+      console.error('Erro ao copiar texto do dia:', e);
+    }
+  };
+
+  // Copia todos os registros do aluno agrupados e formatados para o SGE
+  const handleCopiarTodosSGE = async (group: PendingAtaGroup, cardKey: string) => {
+    const textos = group.records.map((rec, index) => {
+      const { cabecalho } = gerarCabecalhoOficialSesi({
+        dataStr: rec.created_at,
+        nomeAluno: rec.student_name,
+        turmaAluno: rec.school_year
+      });
+      const relato = extrairRelatoSucinto(rec.report, rec.occurrence_type);
+      return `--- REGISTRO ${index + 1} DE ${group.records.length} ---
+${cabecalho}
+
+${relato}
+`;
+    });
+
+    const textoConsolidado = textos.join('\n\n') + `\n${ENCAMINHAMENTOS_PADRAO_ATA}\n${FECHAMENTO_PADRAO_ATA_ABNT}`;
+
+    try {
+      await navigator.clipboard.writeText(textoConsolidado);
+      setCopiadoTodos(prev => ({ ...prev, [cardKey]: true }));
+      setTimeout(() => {
+        setCopiadoTodos(prev => ({ ...prev, [cardKey]: false }));
+      }, 2500);
+    } catch (e) {
+      console.error('Erro ao copiar todos os registros:', e);
+    }
+  };
+
+  // Conclui a tratativa no Supabase (marca como tratada)
+  const handleConcluirTratativa = async (group: PendingAtaGroup, cardKey: string) => {
+    if (!window.confirm(`Deseja confirmar a tratativa pedagógica de ${group.studentName} (${group.type})? A contagem de reincidências ativas será zerada.`)) {
+      return;
+    }
+
+    setTratandoIds(prev => ({ ...prev, [cardKey]: true }));
+    try {
+      await occurrenceService.markRecordsAsTreated(group.studentName, group.type);
+      await carregarOcorrenciasAtivas();
+    } catch (e) {
+      alert('Erro ao confirmar tratativa.');
+    } finally {
+      setTratandoIds(prev => ({ ...prev, [cardKey]: false }));
+    }
+  };
+
+  const handleFormalizarAtaDisciplinar = (group: PendingAtaGroup) => {
     navigate('/forms', {
       state: {
         prefill: {
@@ -179,32 +272,31 @@ export default function PendingAtas() {
 
   return (
     <div className="space-y-8 pb-20 pt-6 px-4 md:px-8 max-w-7xl mx-auto">
-      {/* Cabeçalho Premium */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-surface-container-lowest p-8 rounded-[3rem] editorial-shadow border border-outline-variant/10 relative overflow-hidden">
-        {/* Background glow effects */}
+      {/* Cabeçalho */}
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-surface-container-lowest p-6 md:p-8 rounded-[3rem] editorial-shadow border border-outline-variant/10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-red-900/10 rounded-full blur-[100px] pointer-events-none" />
         
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-3 text-red-500">
+          <div className="flex items-center gap-3 mb-2 text-red-500">
             <AlertTriangle size={32} className="animate-pulse drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
-            <h1 className="text-4xl font-black tracking-tighter text-white">Atas Pendentes</h1>
+            <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-white">Atas e Reincidências</h1>
           </div>
-          <p className="text-on-surface-variant font-medium max-w-2xl text-sm leading-relaxed">
-            Alunos que atingiram o limite de reincidência de conduta (4 ou mais ocorrências diárias ativas no trimestre) e necessitam de uma ata oficial de orientação e tratativa pedagógica da Coordenação.
+          <p className="text-on-surface-variant font-medium max-w-2xl text-xs md:text-sm leading-relaxed">
+            Consulte as ocorrências diárias acumuladas de cada aluno no trimestre. Clique no nome do estudante para gerar e copiar as atas formatadas para anexar diretamente no <strong>SGE oficial</strong>.
           </p>
         </div>
 
         <div className="relative z-10 bg-surface-container-low px-5 py-3 rounded-2xl border border-red-500/10 shrink-0">
-          <p className="text-[10px] font-black text-red-400 uppercase tracking-widest leading-none mb-1">Total Pendente</p>
+          <p className="text-[10px] font-black text-red-400 uppercase tracking-widest leading-none mb-1">Casos Acumulados</p>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-black text-white">{filteredAndSortedAtas.length}</span>
-            <span className="text-xs text-on-surface-variant font-bold">casos críticos</span>
+            <span className="text-xs text-on-surface-variant font-bold">pendências</span>
           </div>
         </div>
       </header>
 
       {/* Painel de Filtros e Busca */}
-      <section className="bg-surface-container-low p-6 rounded-3xl border border-white/5 space-y-4 editorial-shadow">
+      <section className="bg-surface-container-low p-5 md:p-6 rounded-3xl border border-white/5 space-y-4 editorial-shadow">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
           
           {/* Busca por Nome */}
@@ -272,12 +364,12 @@ export default function PendingAtas() {
         </div>
       </section>
 
-      {/* Listagem em Cards Premium */}
+      {/* Listagem de Estudantes com Atas Pendentes */}
       <main className="space-y-6">
         {loading ? (
           <div className="flex flex-col items-center justify-center p-20 bg-surface-container-low rounded-[2.5rem] border border-white/5 space-y-4">
             <div className="w-10 h-10 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
-            <p className="font-black text-on-surface-variant uppercase tracking-widest text-xs animate-pulse">Carregando atas pendentes...</p>
+            <p className="font-black text-on-surface-variant uppercase tracking-widest text-xs animate-pulse">Carregando pendências...</p>
           </div>
         ) : error ? (
           <div className="p-12 text-center bg-surface-container-low rounded-[2.5rem] border border-red-500/10 text-red-500">
@@ -293,9 +385,9 @@ export default function PendingAtas() {
             <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 size={36} className="drop-shadow-[0_0_6px_rgba(16,185,129,0.4)]" />
             </div>
-            <h3 className="text-xl font-black mb-2 text-white">Nenhuma Ata Pendente</h3>
+            <h3 className="text-xl font-black mb-2 text-white">Nenhum Caso Pendente</h3>
             <p className="text-on-surface-variant text-sm max-w-md mx-auto leading-relaxed">
-              Todos os alunos estão em conformidade! Não há nenhum estudante com 4 ou mais ocorrências diárias ativas no trimestre precisando de ata pedagógica neste momento.
+              Todos os alunos estão em conformidade! Não há reincidências ativas precisando de ata ou lançamento no SGE neste momento.
             </p>
           </motion.div>
         ) : (
@@ -304,6 +396,8 @@ export default function PendingAtas() {
               {filteredAndSortedAtas.map((group) => {
                 const cardKey = `${group.studentName.toLowerCase()}-${group.type.toLowerCase()}`;
                 const isExpanded = !!expandedCards[cardKey];
+                const todosCopiados = !!copiadoTodos[cardKey];
+                const isTratando = !!tratandoIds[cardKey];
                 
                 return (
                   <motion.div
@@ -314,19 +408,25 @@ export default function PendingAtas() {
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.25 }}
                     className={cn(
-                      "bg-surface-container-lowest border rounded-[2rem] overflow-hidden transition-all duration-300 shadow-premium",
-                      isExpanded ? "border-red-500/30 ring-1 ring-red-500/10" : "border-outline-variant/10 hover:border-red-500/20"
+                      "bg-surface-container-lowest border rounded-[2.2rem] overflow-hidden transition-all duration-300 shadow-premium",
+                      isExpanded ? "border-red-500/40 ring-1 ring-red-500/20" : "border-outline-variant/10 hover:border-red-500/20"
                     )}
                   >
-                    {/* Linha Principal do Card */}
-                    <div className="p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative">
+                    {/* Linha Principal do Card - Clicável */}
+                    <div 
+                      onClick={() => toggleExpandCard(cardKey)}
+                      className="p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative cursor-pointer group select-none"
+                    >
                       {/* Borda de status decorativa */}
-                      <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600" />
+                      <div className="absolute top-0 left-0 w-2 h-full bg-red-600 group-hover:bg-red-500 transition-colors" />
 
                       <div className="flex-1 space-y-2 pl-2">
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                          <h2 className="text-lg md:text-xl font-black text-red-500 uppercase tracking-wide">
+                          <h2 className="text-xl md:text-2xl font-black text-white group-hover:text-red-400 transition-colors uppercase tracking-wide flex items-center gap-2">
                             {group.studentName}
+                            <span className="text-[11px] font-bold text-slate-400 lowercase tracking-normal group-hover:text-slate-300 transition-colors">
+                              (clique para ver atas diárias)
+                            </span>
                           </h2>
                           <span className="text-xs font-bold bg-white/5 text-slate-300 px-3 py-1 rounded-full border border-white/5">
                             {group.schoolYear}
@@ -344,37 +444,43 @@ export default function PendingAtas() {
                         </div>
                       </div>
 
-                      {/* Badges e Ações */}
-                      <div className="flex items-center gap-4 pl-2 md:pl-0 shrink-0">
+                      {/* Badges e Ações Rápidas */}
+                      <div className="flex items-center gap-4 pl-2 md:pl-0 shrink-0" onClick={e => e.stopPropagation()}>
                         {/* Indicador de Quantidade */}
-                        <div className="text-right hidden sm:block">
+                        <div className="text-right">
                           <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest leading-none mb-1">Acúmulo</p>
-                          <p className="text-lg font-black text-red-400">{group.count} Ocorrências</p>
+                          <p className="text-xl font-black text-red-400">{group.count} Ocorrências</p>
                         </div>
                         
                         <div className="flex flex-wrap gap-2">
                           <button
-                            id={`expand-${cardKey}`}
+                            type="button"
                             onClick={() => toggleExpandCard(cardKey)}
-                            className="btn-mini hover:bg-white/5 hover:text-white border border-white/5 cursor-pointer"
+                            className="px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold transition-all flex items-center gap-1.5 border border-white/10 cursor-pointer"
                           >
-                            {isExpanded ? 'Ocultar' : 'Ver Ocorrências'}
-                            {isExpanded ? <ChevronUp size={14} className="ml-1" /> : <ChevronDown size={14} className="ml-1" />}
+                            {isExpanded ? 'Recolher' : 'Abrir Atas dos Dias'}
+                            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                           </button>
-                          
+
                           <button
-                            id={`gerar-ata-${cardKey}`}
-                            onClick={() => handleGerarAta(group)}
-                            className="btn-primary !py-3 !px-5 !rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-glow-yellow border border-primary flex items-center gap-2 cursor-pointer"
+                            type="button"
+                            onClick={() => handleCopiarTodosSGE(group, cardKey)}
+                            className={cn(
+                              "px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer shadow-md",
+                              todosCopiados 
+                                ? "bg-emerald-500 text-black shadow-emerald-500/20" 
+                                : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20"
+                            )}
+                            title="Copiar todas as atas formatadas deste aluno para o SGE"
                           >
-                            <FileText size={14} />
-                            Gerar Ata
+                            {todosCopiados ? <Check size={16} /> : <Copy size={16} />}
+                            {todosCopiados ? 'Copiado para o SGE!' : 'Copiar p/ SGE'}
                           </button>
                         </div>
                       </div>
                     </div>
 
-                    {/* Timeline expandida de Ocorrências Diárias */}
+                    {/* Exibição Simplificada dos Registros / Atas de Cada Dia */}
                     <AnimatePresence>
                       {isExpanded && (
                         <motion.div
@@ -382,40 +488,120 @@ export default function PendingAtas() {
                           animate={{ height: 'auto', opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
                           transition={{ duration: 0.25 }}
-                          className="border-t border-white/5 bg-surface-container-low/30 overflow-hidden"
+                          className="border-t border-white/5 bg-slate-950/70 overflow-hidden"
                         >
                           <div className="p-6 md:p-8 space-y-6">
-                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                              <Clock size={14} className="text-primary" />
-                              Histórico do trimestre
-                            </h3>
+                            
+                            {/* Toolbar superior do aluno */}
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-slate-900/80 border border-slate-800 rounded-2xl">
+                              <div className="space-y-0.5">
+                                <h3 className="text-sm font-black text-white flex items-center gap-2">
+                                  <Sparkles size={16} className="text-[#f1d86f]" />
+                                  Atas Simplificadas de Cada Dia ({group.records.length} registros)
+                                </h3>
+                                <p className="text-xs text-slate-400">
+                                  Cada bloco abaixo já está formatado com cabeçalho oficial e relato sucinto para colar no SGE.
+                                </p>
+                              </div>
 
-                            <div className="relative pl-6 border-l-2 border-outline-variant/30 space-y-6">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleFormalizarAtaDisciplinar(group)}
+                                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-white/5"
+                                  title="Abrir formulário de ata disciplinar formal da coordenação com os pais"
+                                >
+                                  <FileText size={14} className="text-amber-400" />
+                                  Formalizar Ata Disciplinar
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleConcluirTratativa(group, cardKey)}
+                                  disabled={isTratando}
+                                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md shadow-emerald-600/20 cursor-pointer disabled:opacity-50"
+                                >
+                                  <ShieldCheck size={14} />
+                                  {isTratando ? 'Concluindo...' : 'Concluir Tratativa'}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Lista dos Dias Formatados */}
+                            <div className="space-y-4">
                               {group.records.map((rec, rIdx) => {
-                                const recDate = rec.created_at ? new Date(rec.created_at) : new Date();
+                                const recIdKey = rec.id || `${cardKey}-${rIdx}`;
+                                const isCopiadoDia = !!copiadoIds[recIdKey];
+
+                                const { cabecalho, dataFormatada, horarioFormatado } = gerarCabecalhoOficialSesi({
+                                  dataStr: rec.created_at,
+                                  nomeAluno: rec.student_name,
+                                  turmaAluno: rec.school_year
+                                });
+
+                                const relatoCurto = extrairRelatoSucinto(rec.report, rec.occurrence_type);
+
                                 return (
-                                  <div key={rec.id || rIdx} className="relative group/timeline-item">
-                                    {/* Bullet da linha do tempo */}
-                                    <div className="absolute -left-[31px] top-1 w-2.5 h-2.5 rounded-full bg-[#f1d86f] border-2 border-background group-hover/timeline-item:bg-red-500 transition-colors" />
-                                    
-                                    <div className="space-y-1.5 bg-surface-container-high/40 p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
-                                      <div className="flex items-center justify-between text-xs text-on-surface-variant">
-                                        <span className="font-bold flex items-center gap-1.5 text-slate-300">
-                                          <Calendar size={12} className="text-primary/75" />
-                                          {recDate.toLocaleDateString('pt-BR')} - {recDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                                          Registrado por: Administrador
-                                        </span>
+                                  <div 
+                                    key={recIdKey} 
+                                    className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-5 md:p-6 space-y-4 hover:border-slate-700 transition-colors relative"
+                                  >
+                                    {/* Header do Dia */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 font-black text-xs flex items-center justify-center border border-blue-500/20">
+                                          {rIdx + 1}º
+                                        </div>
+                                        <div>
+                                          <p className="text-xs font-black text-white flex items-center gap-2">
+                                            <Calendar size={13} className="text-amber-400" />
+                                            {dataFormatada} às {horarioFormatado}
+                                          </p>
+                                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                            {rec.occurrence_type}
+                                          </p>
+                                        </div>
                                       </div>
-                                      <p className="text-xs text-slate-200 leading-relaxed font-semibold">
-                                        {rec.report}
+
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => setSelectedRecordForModal(rec)}
+                                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                                        >
+                                          <ExternalLink size={12} />
+                                          Ver / Detalhar
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleCopiarDiaSGE(rec, recIdKey)}
+                                          className={cn(
+                                            "px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-sm",
+                                            isCopiadoDia
+                                              ? "bg-emerald-500 text-black"
+                                              : "bg-blue-600 hover:bg-blue-500 text-white"
+                                          )}
+                                        >
+                                          {isCopiadoDia ? <Check size={14} /> : <Copy size={14} />}
+                                          {isCopiadoDia ? 'Copiado para o SGE!' : 'Copiar para SGE'}
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* Texto Formatado Oficial */}
+                                    <div className="space-y-3 text-xs md:text-sm font-sans text-slate-300">
+                                      <p className="text-slate-400 font-medium text-justify">
+                                        {cabecalho}
                                       </p>
+                                      <div className="p-3.5 bg-slate-850/80 rounded-xl border-l-4 border-blue-500 font-semibold text-white">
+                                        <p>{relatoCurto}</p>
+                                      </div>
                                     </div>
                                   </div>
                                 );
                               })}
                             </div>
+
                           </div>
                         </motion.div>
                       )}
@@ -427,6 +613,18 @@ export default function PendingAtas() {
           </div>
         )}
       </main>
+
+      {/* Modal de Registro Diário Completo SGE ao clicar em "Ver / Detalhar" */}
+      <AnimatePresence>
+        {selectedRecordForModal && (
+          <ModalRegistroDiarioSGE
+            record={selectedRecordForModal}
+            onClose={() => setSelectedRecordForModal(null)}
+            onUpdate={carregarOcorrenciasAtivas}
+            onDelete={carregarOcorrenciasAtivas}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

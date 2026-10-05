@@ -119,7 +119,7 @@ export default function App() {
               {/* Rotas com Layout (Protegidas por Login e Aprovação) */}
               <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                 {/* Páginas Internas de Consulta */}
-                <Route path="/" element={<ProtectedRoute requiredRole="super_admin"><Dashboard /></ProtectedRoute>} />
+                <Route path="/" element={<Dashboard />} />
                 <Route path="/teachers" element={<TeachersPage />} />
                 <Route path="/rooms" element={<RoomsPage />} />
                 <Route path="/language-lab" element={<LanguageLab />} />

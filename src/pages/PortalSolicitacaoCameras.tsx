@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { 
   Camera, PlusCircle, FileText, CheckCircle2, Clock, 
-  AlertTriangle, Shield, Download, User, 
+  AlertTriangle, Shield, Download, User, UserCheck,
   MapPin, Calendar, Check, X, RefreshCw, ChevronRight,
   FileCheck, ShieldAlert, ArrowRight, Edit3, Info, Lock, 
   Copy, Mail, KeyRound, MessageCircle, LogOut, ShieldCheck,

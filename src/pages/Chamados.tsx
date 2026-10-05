@@ -326,8 +326,14 @@ export default function ChamadosPage() {
   const { user, profile, isAdmin } = useAuth();
   
   // Controle de Abas
-  const [activeTab, setActiveTab] = useState<'consulta' | 'novo' | 'config'>('consulta');
+  const [activeTab, setActiveTab] = useState<'consulta' | 'novo' | 'config'>(isAdmin ? 'consulta' : 'novo');
   const [subTabConfig, setSubTabConfig] = useState<'andares' | 'locais' | 'tipos'>('andares');
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setActiveTab('novo');
+    }
+  }, [isAdmin]);
 
   // Estados dos Dados
   const [chamados, setChamados] = useState<Chamado[]>([]);
@@ -553,6 +559,10 @@ export default function ChamadosPage() {
   };
 
   const carregarChamados = async () => {
+    if (!isAdmin) {
+      setCarregando(false);
+      return;
+    }
     setCarregando(true);
     try {
       const { data, error } = await supabase
@@ -590,9 +600,13 @@ export default function ChamadosPage() {
 
   useEffect(() => {
     carregarDadosAuxiliares();
-    carregarChamados();
-    carregarUsuarios();
-  }, []);
+    if (isAdmin) {
+      carregarChamados();
+      carregarUsuarios();
+    } else {
+      setCarregando(false);
+    }
+  }, [isAdmin]);
 
   // Mapeamento rápido de Usuários para exibir nomes
   const mapaUsuarios = useMemo(() => {
@@ -753,8 +767,12 @@ export default function ChamadosPage() {
       if (cameraInputRef.current) cameraInputRef.current.value = '';
 
       // Atualizar lista e retornar
-      await carregarChamados();
-      setActiveTab('consulta');
+      if (isAdmin) {
+        await carregarChamados();
+        setActiveTab('consulta');
+      } else {
+        setActiveTab('novo');
+      }
     } catch (err: any) {
       exibirMensagem('erro', 'Erro ao abrir chamado: ' + err.message);
     } finally {
@@ -1391,37 +1409,39 @@ export default function ChamadosPage() {
         </div>
       </header>
 
-      {/* Abas Superiores */}
-      <div className="flex space-x-1 p-1 bg-surface-container-low rounded-2xl w-full max-w-lg backdrop-blur-sm border border-white/5">
-        {[
-          { id: 'consulta', label: 'Consultar', icon: Search },
-          { id: 'novo', label: 'Novo Chamado', icon: PlusCircle },
-          ...(isAdmin ? [{ id: 'config', label: 'Painel Admin', icon: Settings }] : [])
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => {
-              setActiveTab(tab.id as any);
-              setChamadoSelecionado(null);
-            }}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold transition-all duration-200",
-              activeTab === tab.id
-                ? 'bg-primary text-black shadow-glow-yellow'
-                : 'text-on-surface-variant hover:text-primary hover:bg-surface-container-high'
-            )}
-          >
-            <tab.icon size={16} />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* Abas Superiores (Apenas Administradores e Super Admins) */}
+      {isAdmin && (
+        <div className="flex space-x-1 p-1 bg-surface-container-low rounded-2xl w-full max-w-lg backdrop-blur-sm border border-white/5">
+          {[
+            { id: 'consulta', label: 'Consultar', icon: Search },
+            { id: 'novo', label: 'Novo Chamado', icon: PlusCircle },
+            { id: 'config', label: 'Painel Admin', icon: Settings }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id as any);
+                setChamadoSelecionado(null);
+              }}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold transition-all duration-200",
+                activeTab === tab.id
+                  ? 'bg-primary text-black shadow-glow-yellow'
+                  : 'text-on-surface-variant hover:text-primary hover:bg-surface-container-high'
+              )}
+            >
+              <tab.icon size={16} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Conteúdo das Abas */}
       <AnimatePresence mode="wait">
         
         {/* TAB 1: CONSULTA */}
-        {activeTab === 'consulta' && !chamadoSelecionado && (
+        {activeTab === 'consulta' && isAdmin && !chamadoSelecionado && (
           <motion.div
             key="consulta"
             initial={{ opacity: 0, y: 15 }}
@@ -1742,7 +1762,7 @@ export default function ChamadosPage() {
         )}
 
         {/* DETALHE DO CHAMADO SELECIONADO */}
-        {activeTab === 'consulta' && chamadoSelecionado && (
+        {activeTab === 'consulta' && isAdmin && chamadoSelecionado && (
           <motion.div
             key="detalhe"
             initial={{ opacity: 0, x: 20 }}

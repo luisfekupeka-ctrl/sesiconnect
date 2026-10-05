@@ -494,6 +494,8 @@ export default function Admin() {
     }
   };
 
+  const isSuperAdmin = profile?.role === 'super_admin';
+
   const abas: { id: AbaAdmin; rotulo: string; icone: any; badge?: number }[] = [
     { id: 'alunos', rotulo: 'Alunos', icone: Users, badge: (alunos || []).length },
     { id: 'professores', rotulo: 'Professores', icone: UserPlus, badge: (professoresCMS || []).length },
@@ -504,7 +506,7 @@ export default function Admin() {
     { id: 'after-school', rotulo: 'After School', icone: Clock, badge: (atividadesAfter || []).length },
     { id: 'formularios', rotulo: 'Ocorrências', icone: FileSpreadsheet, badge: (modelosFormulario || []).length },
     { id: 'prontuario', rotulo: 'Prontuário', icone: DoorOpen },
-    { id: 'usuarios', rotulo: 'Usuários', icone: Shield, badge: 0 },
+    ...(isSuperAdmin ? [{ id: 'usuarios' as AbaAdmin, rotulo: 'Usuários', icone: Shield, badge: 0 }] : []),
   ];
 
   return (

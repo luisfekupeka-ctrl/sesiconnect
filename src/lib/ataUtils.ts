@@ -129,6 +129,7 @@ export interface DataAtaExtenso {
   anoExtenso: string;
   horario: string;
   fraseDataExtenso: string;
+  dataFormatada: string;
 }
 
 export function parseDataEHorarioAta(dataStr?: string, horarioStr?: string): DataAtaExtenso {
@@ -173,6 +174,7 @@ export function parseDataEHorarioAta(dataStr?: string, horarioStr?: string): Dat
   const mesExt = mesPorExtenso(mes);
   const anoExt = anoPorExtenso(ano);
   const horExt = formatarHorarioAta(horarioStr, dateObj || undefined);
+  const dataFormatada = `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${ano}`;
 
   // Se dia for 1: "Ao 1º dia" ou "Ao primeiro dia", para os demais: "Aos X dias"
   const prefixoDia = dia === 1 ? 'Ao primeiro dia' : `Aos ${diaExt} dias`;
@@ -186,7 +188,8 @@ export function parseDataEHorarioAta(dataStr?: string, horarioStr?: string): Dat
     mesExtenso: mesExt,
     anoExtenso: anoExt,
     horario: horExt,
-    fraseDataExtenso
+    fraseDataExtenso,
+    dataFormatada
   };
 }
 
@@ -201,8 +204,10 @@ export const FECHAMENTO_PADRAO_ATA_ABNT =
 
 export interface EstruturaAtaCompleta {
   tituloAta: string;
+  tipoDocumento: 'ata' | 'diario';
   numeroAta: string;
   anoAta: string;
+  dataFormatada: string;
   paragrafoAbertura: string;
   paragrafoRelato: string;
   paragrafoEncaminhamentos: string;
@@ -213,6 +218,7 @@ export interface EstruturaAtaCompleta {
 }
 
 export function montarEstruturaAta(params: {
+  tipoDocumento?: 'ata' | 'diario';
   numeroAta?: string;
   anoAta?: string | number;
   dataStr?: string;
@@ -225,6 +231,10 @@ export function montarEstruturaAta(params: {
   cargoEmissor?: string;
   relato?: string;
   endereco?: string;
+  mostrarAluno?: boolean;
+  mostrarResponsavel?: boolean;
+  nomeResponsavel?: string;
+  mostrarEmissor?: boolean;
   assinaturasExtras?: { nome: string; papel: string }[];
 }): EstruturaAtaCompleta {
   const dataExt = parseDataEHorarioAta(params.dataStr, params.horarioStr);
@@ -239,7 +249,23 @@ export function montarEstruturaAta(params: {
     if (parts[1]) anoAtaStr = parts[1].trim();
   }
 
-  const tituloAta = numAtaStr ? `ATA ${numAtaStr}/${anoAtaStr}` : `ATA ${anoAtaStr}`;
+  // Determina tipo de documento (ATA oficial vs Registro Diário)
+  let tipoDocumento: 'ata' | 'diario' = params.tipoDocumento || 'diario';
+  if (!params.tipoDocumento) {
+    if (numAtaStr && numAtaStr !== 'diario' && numAtaStr !== '0') {
+      tipoDocumento = 'ata';
+    } else {
+      tipoDocumento = 'diario';
+    }
+  }
+
+  // Define o Título do cabeçalho com base no tipo de documento
+  let tituloAta = '';
+  if (tipoDocumento === 'diario') {
+    tituloAta = `REGISTRO DIÁRIO - ${dataExt.dataFormatada}`;
+  } else {
+    tituloAta = numAtaStr ? `ATA ${numAtaStr}/${anoAtaStr}` : `ATA ${anoAtaStr}`;
+  }
 
   // Processa lista de alunos
   let listaAlunos: string[] = [];
@@ -306,18 +332,41 @@ export function montarEstruturaAta(params: {
 
   const textoCorridoCompleto = paragrafos.join('\n\n');
 
-  // Assinaturas
+  // Montagem das Assinaturas Oficiais
   const assinaturas: { nome: string; papel: string }[] = [];
-  listaAlunos.forEach(a => {
-    assinaturas.push({ nome: a, papel: 'Aluno(a)' });
-  });
 
-  const emissorNome = (params.nomeEmissor || 'Responsável pelo Registro').trim();
-  const cargoLimpo = (params.cargoEmissor || 'Responsável pelo Registro').trim();
-  if (emissorNome && emissorNome !== 'Administração') {
-    assinaturas.push({ nome: emissorNome, papel: cargoLimpo });
+  // 1. Assinatura(s) do(s) Aluno(s)
+  if (params.mostrarAluno !== false) {
+    if (listaAlunos.length > 0) {
+      listaAlunos.forEach(a => {
+        assinaturas.push({ nome: a, papel: 'Aluno(a)' });
+      });
+    } else {
+      assinaturas.push({ nome: 'Aluno(a)', papel: 'Aluno(a)' });
+    }
   }
 
+  // 2. Assinatura do Responsável Legal (Pais ou Responsável) - Padronizado e ativo por padrão
+  if (params.mostrarResponsavel !== false) {
+    const nomeResp = (params.nomeResponsavel || '').trim();
+    assinaturas.push({
+      nome: nomeResp || 'Pais / Responsável Legal',
+      papel: 'Responsável Legal'
+    });
+  }
+
+  // 3. Assinatura do Profissional Emissor / Colégio Sesi
+  if (params.mostrarEmissor !== false) {
+    const emissorNome = (params.nomeEmissor || 'Responsável pelo Registro').trim();
+    const cargoLimpo = (params.cargoEmissor || 'Responsável pelo Registro').trim();
+    if (emissorNome && emissorNome !== 'Administração') {
+      assinaturas.push({ nome: emissorNome, papel: cargoLimpo });
+    } else {
+      assinaturas.push({ nome: 'Coordenação Pedagógica', papel: 'Colégio SESI Internacional' });
+    }
+  }
+
+  // 4. Assinaturas Adicionais / Extras
   if (params.assinaturasExtras && params.assinaturasExtras.length > 0) {
     params.assinaturasExtras.forEach(extra => {
       if (extra.nome && !assinaturas.some(a => a.nome.toLowerCase() === extra.nome.toLowerCase())) {
@@ -328,8 +377,10 @@ export function montarEstruturaAta(params: {
 
   return {
     tituloAta,
+    tipoDocumento,
     numeroAta: numAtaStr,
     anoAta: anoAtaStr,
+    dataFormatada: dataExt.dataFormatada,
     paragrafoAbertura,
     paragrafoRelato,
     paragrafoEncaminhamentos,
@@ -338,4 +389,209 @@ export function montarEstruturaAta(params: {
     textoCorridoCompleto,
     assinaturas
   };
+}
+
+/**
+ * Identifica o gênero aparente do estudante para concordância natural no cabeçalho
+ */
+export function formatarIdentificacaoEstudante(nomeAluno: string, turmaAluno?: string): string {
+  const turmaFormatada = (turmaAluno || '__________').trim();
+  const nomeLimpo = (nomeAluno || '').trim();
+
+  if (!nomeLimpo) {
+    return `o(a) aluno(a) ____________________, da turma ${turmaFormatada}, esteve envolvido(a)`;
+  }
+
+  // Múltiplos alunos
+  if (nomeLimpo.includes(' e ') || nomeLimpo.includes(',')) {
+    return `os(as) alunos(as) ${nomeLimpo}, da turma ${turmaFormatada}, estiveram envolvidos(as)`;
+  }
+
+  const primeiroNome = nomeLimpo.split(' ')[0].toLowerCase();
+  const nomesFemininos = [
+    'alice', 'maria', 'ana', 'laura', 'beatriz', 'isabella', 'isabel', 'isabela',
+    'julia', 'júlia', 'sophia', 'sofia', 'leticia', 'letícia', 'larissa', 'eduarda',
+    'giovanna', 'giovana', 'clara', 'mariana', 'gabriela', 'heloisa', 'heloísa',
+    'valentina', 'luiza', 'luísa', 'manuela', 'emanuelly', 'yasmin', 'camila',
+    'fernanda', 'carolina', 'amanda', 'helena', 'marina', 'bianca', 'rafaela',
+    'rebeca', 'livia', 'lívia', 'nicole', 'sarah', 'sara', 'vitoria', 'vitória',
+    'stella', 'estela', 'bruna', 'lorena', 'melissa', 'cecilia', 'cecília'
+  ];
+
+  if (nomesFemininos.includes(primeiroNome) || (primeiroNome.endsWith('a') && !['lucas', 'luca', 'joshua'].includes(primeiroNome))) {
+    return `a aluna ${nomeLimpo}, da turma ${turmaFormatada}, esteve envolvida`;
+  }
+
+  const nomesMasculinos = [
+    'pedro', 'lucas', 'gabriel', 'arthur', 'artur', 'matheus', 'mateus', 'felipe',
+    'guilherme', 'bruno', 'bernardo', 'gustavo', 'henrique', 'joao', 'joão',
+    'enzo', 'leonardo', 'felipe', 'rafael', 'miguel', 'davi', 'david', 'samuel',
+    'caio', 'rodrigo', 'thiago', 'tiago', 'vitor', 'victor', 'daniel', 'igor',
+    'otavio', 'otávio', 'andre', 'andré', 'luciano', 'marcos', 'marcelo', 'alexandre'
+  ];
+
+  if (nomesMasculinos.includes(primeiroNome) || primeiroNome.endsWith('o') || primeiroNome.endsWith('el')) {
+    return `o aluno ${nomeLimpo}, da turma ${turmaFormatada}, esteve envolvido`;
+  }
+
+  return `o(a) aluno(a) ${nomeLimpo}, da turma ${turmaFormatada}, esteve envolvido(a)`;
+}
+
+/**
+ * Gera o cabeçalho oficial do Colégio SESI Internacional conforme padrão regimental
+ */
+export function gerarCabecalhoOficialSesi(params: {
+  dataStr?: string;
+  horarioStr?: string;
+  nomeAluno: string;
+  turmaAluno?: string;
+  endereco?: string;
+}): { cabecalho: string; dataFormatada: string; horarioFormatado: string } {
+  const dataExt = parseDataEHorarioAta(params.dataStr, params.horarioStr);
+  const endereco = (params.endereco || ENDERECO_PADRAO_SESI_ABNT).trim();
+  const identificacao = formatarIdentificacaoEstudante(params.nomeAluno, params.turmaAluno);
+
+  const prefixoDia = dataExt.dia === 1 ? 'Ao primeiro dia' : `Aos ${dataExt.diaExtenso} dias`;
+  const cabecalho = `${prefixoDia} do mês de ${dataExt.mesExtenso} do ano de ${dataExt.anoExtenso}, por volta das ${dataExt.horario}, ${endereco}, ${identificacao} em uma ocorrência, conforme descrito a seguir:`;
+
+  return {
+    cabecalho,
+    dataFormatada: dataExt.dataFormatada,
+    horarioFormatado: dataExt.horario
+  };
+}
+
+/**
+ * Extrai e normaliza o relato para torná-lo curto, sucinto e sem repetições do cabeçalho
+ */
+export function extrairRelatoSucinto(rawReport: string, occurrenceType?: string): string {
+  if (!rawReport || !rawReport.trim()) {
+    return 'Ocorrência registrada para acompanhamento pedagógico e institucional.';
+  }
+
+  const texto = rawReport.trim();
+
+  // Caso 1: Atraso com texto longo pré-definido antigo
+  if (texto.includes('apresentou atraso às') || (occurrenceType && occurrenceType.toLowerCase().includes('atraso') && texto.includes('Na presente data'))) {
+    let timeStr = '';
+    const timeMatch1 = texto.match(/apresentou atraso às\s*([^\s,]+)/i);
+    const timeMatch2 = texto.match(/\[Horário de Chegada:\s*([^\]]+)\]/i);
+    const timeMatch3 = texto.match(/\b\d{1,2}:\d{2}\b/);
+    if (timeMatch1) timeStr = timeMatch1[1].trim();
+    else if (timeMatch2) timeStr = timeMatch2[1].trim();
+    else if (timeMatch3) timeStr = timeMatch3[0].trim();
+
+    let momentoStr = 'Chegada ao Colégio';
+    const momentoMatch = texto.match(/no momento de\s*([^.,\n]+)/i);
+    if (momentoMatch) momentoStr = momentoMatch[1].trim();
+
+    let motivoStr = '';
+    const motiveMatch1 = texto.match(/apresentou a seguinte justificativa:\s*([^.\n]+)/i);
+    const motiveMatch2 = texto.match(/Como justificativa, relatou:\s*([^.\n]+)/i);
+    const motiveMatch3 = texto.match(/\[Motivo:\s*([^\]]+)\]/i);
+    if (motiveMatch1) motivoStr = motiveMatch1[1].trim();
+    else if (motiveMatch2) motivoStr = motiveMatch2[1].trim();
+    else if (motiveMatch3) motiveStr = motiveMatch3[1].trim();
+
+    const horaParte = timeStr ? ` às ${timeStr}` : '';
+    const momentoParte = momentoStr ? ` (${momentoStr})` : '';
+    const motivoParte = motivoStr && motivoStr !== '________________________________' ? ` Justificativa: ${motivoStr}.` : '';
+
+    return `Atraso registrado${horaParte}${momentoParte}.${motivoParte} Estudante orientado(a) sobre pontualidade.`;
+  }
+
+  // Caso 2: Celular com texto longo pré-definido antigo
+  if (texto.includes('uso indevido de celular') && texto.includes('Lei Federal nº 15.100')) {
+    let justStr = '';
+    const justMatch = texto.match(/apresentou a seguinte justificativa:\s*([^.\n]+)/i);
+    if (justMatch && justMatch[1] && !justMatch[1].includes('______')) {
+      justStr = justMatch[1].trim();
+    }
+
+    const justParte = justStr ? ` Justificativa: ${justStr}.` : '';
+    return `Uso não autorizado de celular.${justParte} Estudante orientado(a) e dispositivo guardado.`;
+  }
+
+  // Caso 3: Uniforme com texto longo pré-definido antigo
+  if (texto.includes('desacordo com as normas estabelecidas para o uso do uniforme') || texto.includes('apresentou-se na instituição')) {
+    let pecaStr = '';
+    const pecaMatch1 = texto.match(/apresentou-se na instituição\s*([^,]+)/i);
+    const pecaMatch2 = texto.match(/\[Peça Faltando \/ Inadequada[^\]]*:\s*([^\]]+)\]/i);
+    if (pecaMatch2 && pecaMatch2[1]) pecaStr = pecaMatch2[1].trim();
+    else if (pecaMatch1 && pecaMatch1[1] && !pecaMatch1[1].includes('desacordo')) pecaStr = pecaMatch1[1].trim();
+
+    const pecaParte = pecaStr ? ` (${pecaStr})` : '';
+    return `Uso inadequado de uniforme${pecaParte}. Estudante orientado(a) sobre a norma.`;
+  }
+
+  // Caso 4: Se o texto contém tags do tipo [Campo: Valor], limpa suavemente
+  let limpo = texto;
+
+  // Simplifica as tags [Campo]: Valor para "Campo: Valor"
+  limpo = limpo.replace(/\[(.*?)\]:\s*/g, '$1: ');
+
+  // Remove menções de encerramento repetitivas se já estavam no texto
+  limpo = limpo
+    .replace(/diante do ocorrido, foram realizados[^\.]*\.?/gi, '')
+    .replace(/nada mais havendo a registrar[^\.]*\.?/gi, '')
+    .replace(/nada mais havendo a tratar[^\.]*\.?/gi, '')
+    .trim();
+
+  return limpo;
+}
+
+/**
+ * Gera o texto oficial completo para copiar e colar diretamente no SGE (Sistema Oficial)
+ */
+export function gerarTextoCompletoSGE(params: {
+  dataStr?: string;
+  horarioStr?: string;
+  nomeAluno: string;
+  turmaAluno?: string;
+  tipoOcorrencia?: string;
+  relato: string;
+}): string {
+  const { cabecalho } = gerarCabecalhoOficialSesi({
+    dataStr: params.dataStr,
+    horarioStr: params.horarioStr,
+    nomeAluno: params.nomeAluno,
+    turmaAluno: params.turmaAluno
+  });
+
+  const relatoSucinto = extrairRelatoSucinto(params.relato, params.tipoOcorrencia);
+
+  return `${cabecalho}
+
+${relatoSucinto}
+
+${ENCAMINHAMENTOS_PADRAO_ATA}
+${FECHAMENTO_PADRAO_ATA_ABNT}`;
+}
+
+/**
+ * Gera a mensagem concisa para os responsáveis (WhatsApp / E-mail)
+ */
+export function gerarMensagemResponsaveis(params: {
+  nomeAluno: string;
+  turmaAluno?: string;
+  tipoOcorrencia: string;
+  relato: string;
+  emissor?: string;
+  dataStr?: string;
+}): string {
+  const dataExt = parseDataEHorarioAta(params.dataStr);
+  const relatoSucinto = extrairRelatoSucinto(params.relato, params.tipoOcorrencia);
+  const emissorNome = params.emissor || 'Coordenação Pedagógica';
+
+  return `Prezados(as) responsáveis pelo(a) estudante ${params.nomeAluno}, esperamos que estejam bem.
+
+Informamos que, na data de ${dataExt.dataFormatada}, foi realizado o seguinte registro pedagógico no Colégio SESI Internacional:
+• Ocorrência: ${params.tipoOcorrencia}
+• Detalhes: ${relatoSucinto}
+
+O(a) estudante recebeu as devidas orientações da equipe escolar. Solicitamos o apoio da família no acompanhamento da conduta e cumprimento das normas escolares.
+
+Atenciosamente,
+${emissorNome}
+Colégio SESI Internacional`;
 }

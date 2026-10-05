@@ -11,13 +11,16 @@ export const generateWordOccurrence = async (record: DailyOccurrenceRecord | Reg
   const rawDate = isDaily ? record.created_at : (record.dados?.['Data'] || record.criadoEm);
 
   const numAta = !isDaily && record.dados ? (record.dados['Número da Ata'] || record.dados['numero da ata'] || '') : '';
+  const tipoDoc: 'ata' | 'diario' = !isDaily && numAta ? 'ata' : 'diario';
 
   const estrutura = montarEstruturaAta({
-    numeroAta: numAta,
+    tipoDocumento: tipoDoc,
+    numeroAta: tipoDoc === 'ata' ? numAta : '',
     dataStr: rawDate,
     nomeAluno: studentName,
     turmaAluno: turma,
     nomeEmissor: emissorName,
+    mostrarResponsavel: true,
     relato: report
   });
 
@@ -95,7 +98,15 @@ export const generateWordOccurrence = async (record: DailyOccurrenceRecord | Reg
             font: "Arial",
             size: 22,
             bold: true
-          })
+          }),
+          ...(ass.papel ? [
+            new TextRun({
+              text: ` (${ass.papel})`,
+              font: "Arial",
+              size: 18,
+              italics: true
+            })
+          ] : [])
         ],
         alignment: AlignmentType.LEFT,
         spacing: { after: 300 },
@@ -114,5 +125,6 @@ export const generateWordOccurrence = async (record: DailyOccurrenceRecord | Reg
 
   const blob = await Packer.toBlob(doc);
   const cleanName = studentName.replace(/\s+/g, '_');
-  saveAs(blob, `Ata_${cleanName}.docx`);
+  const prefix = tipoDoc === 'ata' ? 'Ata' : 'Registro_Diario';
+  saveAs(blob, `${prefix}_${cleanName}.docx`);
 };

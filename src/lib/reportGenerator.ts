@@ -304,14 +304,26 @@ export const appendFichaOcorrenciaToDoc = (
   let currentY = HEADER_START_Y;
 
   // -----------------------------------------------------------------------
-  // Extração e Preparação dos Dados da ATA
+  // Extração e Preparação dos Dados da ATA ou Registro Diário
   // -----------------------------------------------------------------------
   const dados = ocorrencia.dados || {};
 
   const numAtaKey = Object.keys(dados).find(k =>
-    k.toLowerCase().includes('número da ata') || k.toLowerCase().includes('numero da ata') || k.toLowerCase() === 'ata' || k.toLowerCase() === 'número' || k.toLowerCase() === 'numero'
+    k.toLowerCase().includes('número da ata') || k.toLowerCase().includes('numero da ata') || k.toLowerCase() === 'ata'
   );
-  const numeroAta = configAssinaturas.numeroAta || (numAtaKey ? String(dados[numAtaKey]) : '') || ocorrencia.numeroAta || '';
+  const rawNumAta = (configAssinaturas.numeroAta || (numAtaKey ? String(dados[numAtaKey]) : '') || ocorrencia.numeroAta || '').trim();
+
+  const isDaily =
+    configAssinaturas.tipoDocumento === 'diario' ||
+    ocorrencia.modeloFormularioId === 'diario' ||
+    ocorrencia.nomeModelo === 'diario' ||
+    'occurrence_type' in ocorrencia ||
+    (!rawNumAta && !configAssinaturas.tipoDocumento);
+
+  const tipoDocumento: 'ata' | 'diario' =
+    configAssinaturas.tipoDocumento || (isDaily ? 'diario' : 'ata');
+
+  const numeroAta = tipoDocumento === 'ata' ? rawNumAta : '';
 
   const dateKey = Object.keys(dados).find(k => k.toLowerCase() === 'data' || k.toLowerCase().includes('data'));
   const rawDate = configAssinaturas.dataAta || ocorrencia.dataOcorrencia || (dateKey ? String(dados[dateKey]) : ocorrencia.criadoEm) || new Date().toISOString();
@@ -337,8 +349,9 @@ export const appendFichaOcorrenciaToDoc = (
       return descKey ? String(dados[descKey]) : '';
     })();
 
-  // Monta a estrutura contínua da ATA padrão ABNT
+  // Monta a estrutura contínua da ATA / Registro no padrão ABNT
   const estrutura = montarEstruturaAta({
+    tipoDocumento,
     numeroAta,
     anoAta: configAssinaturas.anoAta,
     dataStr: rawDate,
@@ -349,11 +362,15 @@ export const appendFichaOcorrenciaToDoc = (
     nomeEmissor,
     cargoEmissor,
     relato: relatoRaw,
+    mostrarAluno: configAssinaturas.mostrarAluno !== false,
+    mostrarResponsavel: configAssinaturas.mostrarResponsavel !== false,
+    nomeResponsavel: configAssinaturas.nomeResponsavel,
+    mostrarEmissor: configAssinaturas.mostrarEmissor !== false,
     assinaturasExtras
   });
 
   // -----------------------------------------------------------------------
-  // Título da ATA (ex: "ATA 1040/2026")
+  // Título (ex: "REGISTRO DIÁRIO - 28/09/2026" ou "ATA 1040/2026")
   // -----------------------------------------------------------------------
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
@@ -369,44 +386,15 @@ export const appendFichaOcorrenciaToDoc = (
   const LH = 7.0; // Espaçamento 1,5 linha (7.0 mm)
   const MAX_W = pageWidth - MARGIN_X * 2; // 160 mm
 
-  // Coleta lista de assinaturas
-  const allSigs: { label: string; name: string }[] = [];
+  // Assinaturas estruturadas
+  const allSigs = estrutura.assinaturas;
 
-  if (configAssinaturas.mostrarAluno !== false) {
-    if (configAssinaturas.alunos && configAssinaturas.alunos.length > 0) {
-      configAssinaturas.alunos.forEach((al: string) => {
-        allSigs.push({ label: '', name: al });
-      });
-    } else {
-      const nAl = configAssinaturas.nomeAluno || ocorrencia.nomeAluno;
-      if (nAl && (nAl.includes(' e ') || nAl.includes(','))) {
-        nAl.split(/,|\se\s/).map((s: string) => s.trim()).filter(Boolean).forEach((al: string) => {
-          allSigs.push({ label: '', name: al });
-        });
-      } else if (nAl) {
-        allSigs.push({ label: '', name: nAl });
-      }
-    }
-  }
-
-  if (configAssinaturas.mostrarEmissor !== false && nomeEmissor) {
-    allSigs.push({ label: '', name: nomeEmissor });
-  }
-
-  if (configAssinaturas.nomeResponsavel && configAssinaturas.mostrarResponsavel) {
-    allSigs.push({ label: '', name: configAssinaturas.nomeResponsavel });
-  }
-
-  assinaturasExtras.forEach(e => {
-    if (e.nome && !allSigs.some(s => s.name.toLowerCase() === e.nome.toLowerCase())) {
-      allSigs.push({ label: '', name: e.nome });
-    }
-  });
-
-  // Espaço que as assinaturas ocupam
-  const sigRows = Math.max(1, Math.ceil(allSigs.length / 2));
-  const sigBlock = sigRows * 26 + 25;
-  const TEXT_BOTTOM = pageHeight - sigBlock;
+  // Espaço que as assinaturas ocupam e margem segura anti-sobreposição do logo SESI
+  const numCols = allSigs.length <= 2 ? 2 : (allSigs.length === 3 ? 3 : 2);
+  const sigRows = Math.max(1, Math.ceil(allSigs.length / numCols));
+  const sigBlock = sigRows * 22 + 15;
+  const FOOTER_SAFE_MARGIN = 38; // Margem de segurança de 38mm para o logotipo SESI
+  const TEXT_BOTTOM = pageHeight - FOOTER_SAFE_MARGIN - sigBlock;
 
   type TxtSeg = { text: string; bold: boolean };
 
@@ -535,31 +523,42 @@ export const appendFichaOcorrenciaToDoc = (
   }
 
   // -----------------------------------------------------------------------
-  // Assinaturas no Rodapé
+  // Assinaturas no Rodapé com Espaçamento Seguro (Acima do Logo SESI)
   // -----------------------------------------------------------------------
-  if (currentY + sigBlock > pageHeight - 15) {
+  if (currentY + sigBlock > pageHeight - FOOTER_SAFE_MARGIN) {
     doc.addPage();
     applyBackground();
     currentY = HEADER_START_Y;
   }
 
-  const sigW = 65;
-  const sigY = pageHeight - 20 - sigBlock + 20;
+  const sigW = numCols === 2 ? 65 : 46;
+  const colGap = numCols === 2 ? (MAX_W - sigW * 2) : (MAX_W - sigW * 3) / 2;
+  const sigY = Math.max(currentY + 10, pageHeight - FOOTER_SAFE_MARGIN - sigBlock + 4);
 
   allSigs.forEach((sig, index) => {
-    const col = index % 2;
-    const row = Math.floor(index / 2);
-    const x = col === 0 ? MARGIN_X : pageWidth - MARGIN_X - sigW;
-    const y = sigY + row * 26;
+    const col = index % numCols;
+    const row = Math.floor(index / numCols);
+    const x = MARGIN_X + col * (sigW + colGap);
+    const y = sigY + row * 22;
 
+    // Linha de assinatura
     doc.setDrawColor(50, 50, 50);
     doc.setLineWidth(0.3);
     doc.line(x, y, x + sigW, y);
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
+    // Nome
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
     doc.setTextColor(0, 0, 0);
-    doc.text(sig.name, x + sigW / 2, y + 5, { align: 'center' });
+    doc.text(sig.nome, x + sigW / 2, y + 4.5, { align: 'center' });
+
+    // Papel / Cargo
+    if (sig.papel) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.8);
+      doc.setTextColor(80, 80, 80);
+      doc.text(sig.papel, x + sigW / 2, y + 7.5, { align: 'center' });
+    }
   });
 };
 
@@ -619,8 +618,9 @@ export const generateStudentAllOccurrencesPDF = async (
       } : rec;
 
       const config = {
+        tipoDocumento: isDaily ? 'diario' : (ocObj.dados?.['Número da Ata'] ? 'ata' : 'diario'),
         mostrarAluno: true,
-        mostrarResponsavel: false,
+        mostrarResponsavel: true,
         mostrarEmissor: true,
         nomeEmissor: ocObj.professorAtual || 'Administração',
         nomeAluno: ocObj.nomeAluno,

@@ -11,6 +11,7 @@ import { arquivarELimparMes } from '../services/dataService';
 import { generateBackupZip, generateDossieZip, generateStudentAllOccurrencesPDF } from '../lib/reportGenerator';
 import { occurrenceService } from '../services/occurrenceService';
 import FichaOcorrencia from './FichaOcorrencia';
+import ModalRegistroDiarioSGE from './ModalRegistroDiarioSGE';
 import ProntuarioPDF from './ProntuarioPDF';
 
 interface Props {
@@ -27,6 +28,7 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
   const [selecao, setSelecao] = useState<{ unidade?: string; turma?: string; aluno?: Aluno }>({});
   const [busca, setBusca] = useState('');
   const [visualizandoDoc, setVisualizandoDoc] = useState<RegistroOcorrencia | null>(null);
+  const [visualizandoDiarioDoc, setVisualizandoDiarioDoc] = useState<DailyOccurrenceRecord | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [baixandoDossie, setBaixandoDossie] = useState(false);
   const [baixandoPDFUnico, setBaixandoPDFUnico] = useState(false);
@@ -195,27 +197,12 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
     });
   }, [documentosDoAluno]);
 
-  // Abre visualização de documento formatando ocorrência diária para ficha de atas se necessário
+  // Abre visualização de documento: Modal SGE para ocorrência diária e Ficha A4 para ATA formal
   const handleVerDocumento = (doc: any) => {
     if (doc.tipo === 'ata') {
       setVisualizandoDoc(doc.dadosOriginais);
     } else {
-      const rec = doc.dadosOriginais as DailyOccurrenceRecord;
-      const mapped: RegistroOcorrencia = {
-        id: rec.id || '',
-        modeloFormularioId: 'diario',
-        nomeModelo: rec.occurrence_type,
-        nomeAluno: rec.student_name,
-        turmaAluno: rec.school_year,
-        anoAluno: rec.school_year,
-        professorAtual: rec.created_by || 'Administração',
-        criadoEm: rec.created_at || new Date().toISOString(),
-        dados: {
-          'Tipo de Ocorrência': rec.occurrence_type,
-          'Descrição': rec.report
-        }
-      };
-      setVisualizandoDoc(mapped);
+      setVisualizandoDiarioDoc(doc.dadosOriginais as DailyOccurrenceRecord);
     }
   };
 
@@ -579,6 +566,17 @@ export default function ExploradorProntuario({ alunos, ocorrencias, atualizar }:
             Sincronizado com Supabase
         </div>
       </div>
+
+      <AnimatePresence>
+        {visualizandoDiarioDoc && (
+          <ModalRegistroDiarioSGE
+            record={visualizandoDiarioDoc}
+            onClose={() => setVisualizandoDiarioDoc(null)}
+            onUpdate={atualizar}
+            onDelete={atualizar}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {visualizandoDoc && (

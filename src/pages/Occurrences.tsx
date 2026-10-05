@@ -8,9 +8,11 @@ import { useAuth } from '../context/AuthContext';
 import type { DailyOccurrenceRecord, RegistroOcorrencia } from '../types';
 import { generateWordOccurrence } from '../lib/wordGenerator';
 import FichaOcorrencia from '../components/FichaOcorrencia';
+import ModalRegistroDiarioSGE from '../components/ModalRegistroDiarioSGE';
 import ProntuarioPDF from '../components/ProntuarioPDF';
 import { FluxogramaOcorrencias } from '../components/FluxogramaOcorrencias';
 import { HelpCircle } from 'lucide-react';
+import { gerarTextoCompletoSGE, extrairRelatoSucinto } from '../lib/ataUtils';
 import html2canvas from 'html2canvas';
 
 import jsPDF from 'jspdf';
@@ -151,6 +153,7 @@ export function Occurrences() {
   const [emissorName, setEmissorName] = useState('');
   const [generatedMessageAfterSubmit, setGeneratedMessageAfterSubmit] = useState('');
   const [submittedRecord, setSubmittedRecord] = useState<DailyOccurrenceRecord | null>(null);
+  const [copiadoSubmitSGE, setCopiadoSubmitSGE] = useState(false);
   const [reoffenderAlert, setReoffenderAlert] = useState<{
     visible: boolean;
     studentName: string;
@@ -595,77 +598,65 @@ export function Occurrences() {
   };
 
   const getUniformMessage = () => {
-    return `Prezados responsáveis pelo(a) estudante ${studentName || '[NOME DO ALUNO]'}, esperamos que estejam bem.
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('pt-BR');
+    const pecaStr = dynamicValue ? ` (${dynamicValue})` : '';
+    return `Prezados(as) responsáveis pelo(a) estudante ${studentName || '[NOME DO ALUNO]'},
 
-Informamos que, nesta data, o(a) estudante compareceu à escola sem o uniforme adequado. Reforçamos que seu uso é obrigatório e importante para a identificação e a segurança dos alunos. Contamos com a colaboração da família para que ele(a) venha devidamente uniformizado(a) nos próximos dias.
+Informamos que, na data de ${dateStr}, foi registrado o uso inadequado do uniforme escolar${pecaStr}.
 
-Agradecemos pela atenção e parceria.`;
+Reforçamos que o uso do uniforme completo e adequado é obrigatório para identificação e segurança no ambiente escolar. Contamos com a parceria da família.
+
+Atenciosamente,
+${emissorName || 'Coordenação Pedagógica'}
+Colégio SESI Internacional`;
   };
 
   const getUniformReport = () => {
-    const defaultDetails = dynamicValue ? dynamicValue : 'em desacordo com as normas estabelecidas para o uso do uniforme escolar';
-    return `O(A) estudante ${studentName || '[NOME DO ALUNO]'}, do ${schoolYear || '[ANO/TURMA]'}, apresentou-se na instituição ${defaultDetails}, estando em desacordo com as normas estabelecidas para a permanência no ambiente escolar.
-
-O(A) estudante foi orientado(a) sobre a obrigatoriedade do uso completo e adequado do uniforme durante o período de aula e nas demais atividades promovidas pela instituição. Foi ressaltado que o uniforme contribui para a identificação dos estudantes, para a segurança da comunidade escolar e para a organização da rotina pedagógica.
-
-Também foi reforçado que o uso do uniforme representa o pertencimento à instituição e favorece um ambiente baseado na igualdade, na responsabilidade, na disciplina e no cumprimento das normas de convivência.
-
-A ocorrência foi registrada para acompanhamento pedagógico e institucional. O(A) estudante foi orientado(a) a comparecer às próximas atividades utilizando o uniforme completo. Em caso de reincidência, os pais ou responsáveis poderão ser comunicados pelos canais oficiais da instituição.`;
+    const pecaStr = dynamicValue ? ` (${dynamicValue})` : '';
+    return `Uso inadequado do uniforme escolar${pecaStr}. O(a) estudante foi orientado(a) sobre a obrigatoriedade do uniforme completo para identificação e segurança no ambiente escolar.`;
   };
 
   const getCellPhoneMessage = () => {
     const today = new Date();
     const dateStr = today.toLocaleDateString('pt-BR');
-    return `Prezados responsáveis pelo(a) estudante ${studentName || '[NOME DO ALUNO]'}, esperamos que estejam bem.
+    const justStr = dynamicValue ? `\n• Justificativa relatada: ${dynamicValue}` : '';
+    return `Prezados(as) responsáveis pelo(a) estudante ${studentName || '[NOME DO ALUNO]'},
 
-Informamos que, nesta data (${dateStr}), ${studentName || '[NOME DO ALUNO]'} foi orientado(a) devido ao uso de celular durante o período escolar, sem autorização para finalidade pedagógica. Conforme a Lei Federal nº 15.100/2025 e o Regimento Escolar, o uso de aparelhos eletrônicos pessoais é proibido durante o período letivo, salvo quando autorizado para fins pedagógicos ou em situações previstas em lei.
+Informamos que, na data de ${dateStr}, o(a) estudante foi orientado(a) devido ao uso indevido de aparelho eletrônico (celular) durante o período escolar sem autorização para finalidade pedagógica.${justStr}
 
-A ocorrência foi registrada para acompanhamento. Contamos com a parceria da família para reforçar essa orientação com ${studentName || '[NOME DO ALUNO]'}.
+Conforme a Lei Federal nº 15.100/2025 e o Regimento Escolar, o uso de celulares é restrito no ambiente escolar. Contamos com a parceria da família no acompanhamento.
 
-Agradecemos pela atenção e colaboração.`;
+Atenciosamente,
+${emissorName || 'Coordenação Pedagógica'}
+Colégio SESI Internacional`;
   };
 
   const getCellPhoneReport = () => {
-    const currentDateStr = new Date().toLocaleDateString('pt-BR');
-    return `Na data de ${currentDateStr}, o(a) aluno(a) ${studentName || '_____________________________'}, do ${schoolYear || '____ ano'} foi abordado(a) pela equipe escolar em razão do uso indevido de celular e aparelhos eletrônicos durante o período escolar.
-
-Ao ser questionado(a), o(a) estudante apresentou a seguinte justificativa: ${dynamicValue || '_____________________________'}
-
-O(a) aluno(a) foi orientado(a) sobre as normas institucionais referentes ao uso de dispositivos eletrônicos e sobre a Lei Federal nº 15.100/2025, que regulamenta o uso de aparelhos eletrônicos pessoais nas instituições de ensino.
-
-Foi esclarecido que a utilização de celular e aparelhos eletrônicos somente é permitida para fins pedagógicos, mediante autorização da equipe escolar, ou em situações específicas previstas pela instituição, nos locais previamente definidos para essa finalidade.
-
-O(a) estudante declarou estar ciente das orientações recebidas e comprometeu-se a cumprir as normas estabelecidas pela escola.`;
+    const justStr = dynamicValue ? ` Justificativa apresentada: ${dynamicValue}.` : '';
+    return `Uso não autorizado de aparelho eletrônico (celular) durante o período escolar.${justStr} O(a) estudante foi orientado(a) sobre a restrição de aparelhos pessoais (Lei Federal nº 15.100/2025 e Regimento Escolar), guardando o dispositivo em seguida.`;
   };
 
   const getAtrasoReport = () => {
     const momentoTexto = momentoAtraso === 'Outro' ? (customMomentoAtraso || 'Outro') : momentoAtraso;
-    return `Na presente data, o(a) estudante ${studentName || '[NOME DO(A) ESTUDANTE]'}, do ${schoolYear || '[ANO/TURMA]'}, apresentou atraso às ${dynamicValue || '____'}, no momento de ${momentoTexto.toUpperCase()}.
-
-Ao ser questionado(a), apresentou a seguinte justificativa: ${motivoAtraso || '________________________________'}.
-
-O(a) estudante foi orientado(a) quanto à importância do cumprimento dos horários estabelecidos pela instituição, considerando que a pontualidade contribui para o pleno aproveitamento das atividades pedagógicas, para a organização da rotina escolar e para evitar interrupções no andamento das aulas e demais atividades.
-
-Também foi reforçada a necessidade de comparecer ou retornar aos espaços escolares nos horários determinados, demonstrando responsabilidade, comprometimento e respeito à organização coletiva da instituição.
-
-A ocorrência foi registrada para acompanhamento pedagógico e institucional. O(a) estudante declarou estar ciente das orientações recebidas e foi orientado(a) a evitar novos atrasos. Em caso de reincidência, os pais ou responsáveis poderão ser comunicados pelos canais oficiais da instituição.`;
+    const horaStr = dynamicValue ? ` às ${dynamicValue}` : '';
+    const motivoStr = motivoAtraso ? ` Justificativa apresentada: ${motivoAtraso}.` : '';
+    return `Ocorrência de atraso registrada${horaStr} (${momentoTexto}).${motivoStr} O(a) estudante foi orientado(a) quanto à pontualidade e cumprimento dos horários escolares.`;
   };
 
   const getAtrasoMessage = () => {
     const momentoTexto = momentoAtraso === 'Outro' ? (customMomentoAtraso || 'Outro') : momentoAtraso;
-    return `Prezados(as) responsáveis,
+    const horaStr = dynamicValue ? ` às ${dynamicValue}` : '';
+    const motivoStr = motivoAtraso ? `\n• Justificativa: ${motivoAtraso}` : '';
+    return `Prezados(as) responsáveis pelo(a) estudante ${studentName || '[NOME DO ALUNO]'},
 
-Informamos que, na presente data, o(a) estudante ${studentName || '[NOME DO(A) ESTUDANTE]'}, do ${schoolYear || '[ANO/TURMA]'}, apresentou atraso às ${dynamicValue || '____'}, no momento de ${momentoTexto.toUpperCase()}.
+Informamos que, na presente data, o(a) estudante apresentou atraso${horaStr} no momento de ${momentoTexto.toUpperCase()}.${motivoStr}
 
-O(a) estudante apresentou a seguinte justificativa: ${motivoAtraso || '________________________________'}.
-
-Ele(a) foi orientado(a) quanto à importância do cumprimento dos horários estabelecidos pela instituição, considerando que a pontualidade contribui para o aproveitamento das atividades pedagógicas, para a organização da rotina escolar e para evitar interrupções no andamento das aulas.
-
-Solicitamos o apoio da família para reforçar a importância do cumprimento dos horários e prevenir novos atrasos.
+O(a) estudante foi orientado(a) quanto à importância da pontualidade. Solicitamos o apoio da família para reforçar o cumprimento dos horários e prevenir novos atrasos.
 
 Atenciosamente,
-${emissorName || 'Responsável pelo Registro'}
-Coordenação Pedagógica / SESI`;
+${emissorName || 'Coordenação Pedagógica'}
+Colégio SESI Internacional`;
   };
 
   const copyUniformMessage = () => {
@@ -808,7 +799,7 @@ Coordenação Pedagógica / SESI`;
                       </div>
                     )}
 
-                    <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md pt-2">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md pt-2">
                       <button 
                         type="button"
                         onClick={() => {
@@ -821,10 +812,27 @@ Coordenação Pedagógica / SESI`;
                       </button>
                       <button 
                         type="button"
-                        onClick={() => generateSingleOccurrencePDF(submittedRecord)}
-                        className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs uppercase tracking-widest transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
+                        onClick={async () => {
+                          const sgeText = extrairRelatoSucinto(
+                            submittedRecord.report,
+                            submittedRecord.occurrence_type
+                          );
+                          await navigator.clipboard.writeText(sgeText);
+                          setCopiadoSubmitSGE(true);
+                          setTimeout(() => setCopiadoSubmitSGE(false), 2500);
+                        }}
+                        className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-blue-500/20 cursor-pointer flex items-center justify-center gap-2"
                       >
-                        <Download size={14} /> Baixar PDF
+                        {copiadoSubmitSGE ? <Check size={14} /> : <Copy size={14} />}
+                        {copiadoSubmitSGE ? 'Copiado para SGE!' : 'Copiar para SGE'}
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setSelectedRecord(submittedRecord)}
+                        className="px-3.5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-all cursor-pointer border border-slate-700"
+                        title="Ver ocorrência formatada para o SGE"
+                      >
+                        <FileText size={16} />
                       </button>
                     </div>
                   </motion.div>
@@ -1700,66 +1708,15 @@ Coordenação Pedagógica / SESI`;
         </motion.div>
       </AnimatePresence>
 
-      {/* Modal de Detalhe da Ocorrência usando o novo componente FichaOcorrencia */}
+      {/* Modal de Detalhe da Ocorrência usando ModalRegistroDiarioSGE */}
       <AnimatePresence>
         {selectedRecord && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-5xl my-8"
-            >
-              {isAdmin && (
-                <button 
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    if (window.confirm('Tem certeza que deseja apagar este registro?')) {
-                      try {
-                        if (selectedRecord.id) {
-                          await occurrenceService.deleteRecord(selectedRecord.id);
-                          setRecords(prev => prev.filter(r => r.id !== selectedRecord.id));
-                          setThirtyDaysRecords(prev => prev.filter(r => r.id !== selectedRecord.id));
-                          setSelectedRecord(null);
-                        }
-                      } catch(e) {
-                        alert('Erro ao apagar registro.');
-                      }
-                    }
-                  }}
-                  className="absolute top-4 left-4 z-[120] p-3 rounded-full bg-red-600 hover:bg-red-700 text-white transition-all shadow-xl cursor-pointer print:hidden flex items-center justify-center hover:-translate-y-0.5 active:translate-y-0"
-                  title="Apagar Registro"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              )}
-              {(() => {
-                const mappedRecord: RegistroOcorrencia = {
-                  id: selectedRecord.id || '',
-                  modeloFormularioId: 'diario',
-                  nomeModelo: selectedRecord.occurrence_type,
-                  nomeAluno: selectedRecord.student_name,
-                  turmaAluno: selectedRecord.school_year,
-                  anoAluno: selectedRecord.school_year,
-                  professorAtual: selectedRecord.created_by || 'Administração',
-                  criadoEm: selectedRecord.created_at || new Date().toISOString(),
-                  dados: {
-                    'Tipo de Ocorrência': selectedRecord.occurrence_type,
-                    'Descrição': selectedRecord.report
-                  }
-                };
-                return (
-                  <FichaOcorrencia 
-                    ocorrencia={mappedRecord} 
-                    onClose={() => setSelectedRecord(null)} 
-                    onEditSuccess={fetchRecords}
-                    onDeleteSuccess={fetchRecords}
-                    startInEditMode={editModeOnOpen}
-                  />
-                );
-              })()}
-            </motion.div>
-          </div>
+          <ModalRegistroDiarioSGE
+            record={selectedRecord}
+            onClose={() => setSelectedRecord(null)}
+            onUpdate={fetchRecords}
+            onDelete={fetchRecords}
+          />
         )}
       </AnimatePresence>
 

@@ -68,17 +68,20 @@ export function gerarPdfSolicitacaoCFTV(solicitacao: SolicitacaoCFTV) {
 
   currentY += 16;
 
+  const sectionHeaderStyle = { fillColor: [230, 235, 245] as [number, number, number], fontStyle: 'bold' as const };
+  const lastSectionStyle = { fillColor: [220, 230, 242] as [number, number, number], fontStyle: 'bold' as const };
+
   // Tabela de Dados Principais
-  const tableData = [
+  const tableData: any[] = [
     [
-      { content: '1. SOLICITANTE', colSpan: 2, styles: { fillColor: [230, 235, 245], fontStyle: 'bold' as const } }
+      { content: '1. SOLICITANTE', colSpan: 2, styles: sectionHeaderStyle }
     ],
     ['Nome Completo:', solicitacao.solicitante_nome],
     ['Cargo / Função:', solicitacao.solicitante_cargo],
     ['E-mail Institucional:', solicitacao.solicitante_email],
 
     [
-      { content: '2. DATA E HORÁRIO DO FATO', colSpan: 2, styles: { fillColor: [230, 235, 245], fontStyle: 'bold' as const } }
+      { content: '2. DATA E HORÁRIO DO FATO', colSpan: 2, styles: sectionHeaderStyle }
     ],
     ['Data da Ocorrência:', solicitacao.data_fato ? new Date(solicitacao.data_fato + 'T12:00:00').toLocaleDateString('pt-BR') : 'N/I'],
     ['Tipo de Intervalo:', `${solicitacao.tipo_intervalo} ${solicitacao.tipo_intervalo === 'Amplo' ? '(Intervalo Superior a 1 Hora)' : ''}`],
@@ -86,24 +89,24 @@ export function gerarPdfSolicitacaoCFTV(solicitacao: SolicitacaoCFTV) {
     ['Horário de Término:', solicitacao.horario_termino],
 
     [
-      { content: '3. LOCAL DA OCORRÊNCIA', colSpan: 2, styles: { fillColor: [230, 235, 245], fontStyle: 'bold' as const } }
+      { content: '3. LOCAL DA OCORRÊNCIA', colSpan: 2, styles: sectionHeaderStyle }
     ],
     ['Andar:', solicitacao.andar],
     ['Setor / Ambiente Escolar:', solicitacao.ambiente],
     ['Ponto de Referência Visual:', solicitacao.ponto_referencia || 'Nenhum ponto de referência informado'],
 
     [
-      { content: '4. TIPO DE OCORRÊNCIA', colSpan: 2, styles: { fillColor: [230, 235, 245], fontStyle: 'bold' as const } }
+      { content: '4. TIPO DE OCORRÊNCIA', colSpan: 2, styles: sectionHeaderStyle }
     ],
     ['Classificação:', solicitacao.tipo_ocorrencia + (solicitacao.tipo_ocorrencia_outro ? ` - ${solicitacao.tipo_ocorrencia_outro}` : '')],
 
     [
-      { content: '5. DESCRIÇÃO DETALHADA DOS FATOS', colSpan: 2, styles: { fillColor: [230, 235, 245], fontStyle: 'bold' as const } }
+      { content: '5. DESCRIÇÃO DETALHADA DOS FATOS', colSpan: 2, styles: sectionHeaderStyle }
     ],
     ['Relato do Ocorrido:', solicitacao.descricao_fatos],
 
     [
-      { content: '6. IDENTIFICAÇÃO DOS ENVOLVIDOS E DESLOCAMENTO', colSpan: 2, styles: { fillColor: [230, 235, 245], fontStyle: 'bold' as const } }
+      { content: '6. IDENTIFICAÇÃO DOS ENVOLVIDOS E DESLOCAMENTO', colSpan: 2, styles: sectionHeaderStyle }
     ],
     ['Nomes / Turmas dos Envolvidos:', solicitacao.envolvidos_nomes_turmas || 'Não informados / Desconhecidos'],
     ['Características Visuais:', solicitacao.envolvidos_caracteristicas || 'Não informadas'],
@@ -111,12 +114,12 @@ export function gerarPdfSolicitacaoCFTV(solicitacao: SolicitacaoCFTV) {
     ['Objetos ou Bens Envolvidos:', solicitacao.objetos_envolvidos || 'Não informados'],
 
     [
-      { content: '7. FINALIDADE / MOTIVO DA SOLICITAÇÃO', colSpan: 2, styles: { fillColor: [230, 235, 245], fontStyle: 'bold' as const } }
+      { content: '7. FINALIDADE / MOTIVO DA SOLICITAÇÃO', colSpan: 2, styles: sectionHeaderStyle }
     ],
     ['Motivo:', solicitacao.motivo_solicitacao + (solicitacao.motivo_outro_descricao ? ` - ${solicitacao.motivo_outro_descricao}` : '')],
 
     [
-      { content: '8. PARECER TÉCNICO E ANÁLISE DE CÂMERAS', colSpan: 2, styles: { fillColor: [220, 230, 242], fontStyle: 'bold' as const } }
+      { content: '8. PARECER TÉCNICO E ANÁLISE DE CÂMERAS', colSpan: 2, styles: lastSectionStyle }
     ],
     ['Status Atual:', solicitacao.status],
     ['Câmeras Analisadas:', solicitacao.cameras_analisadas || 'Em levantamento'],

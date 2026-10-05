@@ -18,7 +18,7 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean; setIsOpen?: (
   const isMonitor = role === 'monitor';
 
   const allNavItems = [
-    { to: '/', icon: LayoutGrid, label: 'Agora', visible: role === 'super_admin' },
+    { to: '/', icon: LayoutGrid, label: 'Agora', visible: true },
     { to: '/rooms', icon: DoorOpen, label: 'Salas', visible: true },
     { to: '/teachers', icon: Users, label: 'Professores', visible: true },
     { to: '/monitores', icon: BookOpen, label: 'Monitores', visible: true },
@@ -26,7 +26,7 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean; setIsOpen?: (
     { to: '/after', icon: Sparkles, label: 'After School', visible: true },
     { to: '/atas-pendentes', icon: AlertTriangle, label: 'Atas Pendentes', visible: isAdmin },
     { to: '/forms', icon: FileText, label: 'Ocorrências', visible: isAdmin },
-    { to: '/ocorrencias', icon: ClipboardCheck, label: 'Reg. Diário', visible: isAdmin || isProfessor || isMonitor },
+    { to: '/ocorrencias', icon: ClipboardCheck, label: 'Reg. Diário', visible: true },
     { to: isProfessor ? '/professor-chamada' : '/controle-faltas', icon: ClipboardCheck, label: 'Chamadas', visible: isAdmin || isProfessor },
     { to: '/realocacao', icon: RefreshCw, label: 'Realocação', visible: isAdmin },
     { to: '/chamados', icon: Wrench, label: 'Chamados', visible: true },
@@ -146,10 +146,10 @@ export function BottomNav() {
   const isMonitor = role === 'monitor';
 
   const navItems = [
-    { to: '/', icon: LayoutGrid, label: 'Agora', visible: role === 'super_admin' },
+    { to: '/', icon: LayoutGrid, label: 'Agora', visible: true },
     { to: '/rooms', icon: DoorOpen, label: 'Salas', visible: true },
     { to: '/teachers', icon: Users, label: 'Profs', visible: true },
-    { to: '/ocorrencias', icon: ClipboardCheck, label: 'Reg. Diário', visible: isAdmin || isProfessor || isMonitor },
+    { to: '/ocorrencias', icon: ClipboardCheck, label: 'Reg. Diário', visible: true },
     { to: '/admin', icon: Shield, label: 'Admin', visible: isAdmin },
   ];
 
