@@ -189,15 +189,10 @@ export default function PendingAtas() {
     return result;
   }, [pendingAtas, busca, filtroAno, filtroTipo, ordenacao]);
 
-  // Copia o texto formatado para o SGE de um dia específico
+  // Copia o texto formatado para o SGE de um dia específico (mensagem curta independente da data)
   const handleCopiarDiaSGE = async (rec: DailyOccurrenceRecord, idKey: string) => {
-    const textoSGE = gerarTextoCompletoSGE({
-      dataStr: rec.created_at,
-      nomeAluno: rec.student_name,
-      turmaAluno: rec.school_year,
-      tipoOcorrencia: rec.occurrence_type,
-      relato: rec.report
-    });
+    const relato = extrairRelatoSucinto(rec.report, rec.occurrence_type);
+    const textoSGE = `${rec.occurrence_type.toUpperCase()}\n\n${relato}\n\nDiante do ocorrido, foram realizados os encaminhamentos e/ou orientações necessários, conforme as normas e procedimentos da instituição.`;
 
     try {
       await navigator.clipboard.writeText(textoSGE);
@@ -207,6 +202,27 @@ export default function PendingAtas() {
       }, 2000);
     } catch (e) {
       console.error('Erro ao copiar texto do dia:', e);
+    }
+  };
+
+  const [copiadoMensagemPais, setCopiadoMensagemPais] = useState<Record<string, boolean>>({});
+
+  const handleCopiarMensagemPais = async (group: PendingAtaGroup, cardKey: string) => {
+    const listaRegistros = group.records.map((rec) => {
+      const dataFormatada = rec.created_at ? new Date(rec.created_at).toLocaleDateString('pt-BR') : 'Data não informada';
+      const relato = extrairRelatoSucinto(rec.report, rec.occurrence_type);
+      return `• ${dataFormatada}: ${relato}`;
+    }).join('\n');
+
+    const mensagem = `Prezados(as) responsáveis pelo(a) estudante ${group.studentName}, esperamos que estejam bem.\n\nGostaríamos de compartilhar com vocês alguns registros de acompanhamento pedagógico recentes, referentes a ocorrências de "${group.type}". Abaixo, detalhamos cada um dos episódios registrados:\n\n${listaRegistros}\n\nO(a) estudante tem recebido as devidas orientações de nossa equipe em cada um desses momentos. No entanto, diante da reincidência, solicitamos a parceria e o apoio da família na conversa em casa e no acompanhamento da conduta escolar, visando o melhor desenvolvimento do(a) aluno(a).\n\nFicamos à disposição para eventuais dúvidas.\n\nAtenciosamente,\nCoordenação Pedagógica\nColégio SESI Internacional`;
+    try {
+      await navigator.clipboard.writeText(mensagem);
+      setCopiadoMensagemPais(prev => ({ ...prev, [cardKey]: true }));
+      setTimeout(() => {
+        setCopiadoMensagemPais(prev => ({ ...prev, [cardKey]: false }));
+      }, 2500);
+    } catch (e) {
+      console.error('Erro ao copiar mensagem:', e);
     }
   };
 
@@ -464,17 +480,32 @@ ${relato}
 
                           <button
                             type="button"
+                            onClick={() => handleCopiarMensagemPais(group, cardKey)}
+                            className={cn(
+                              "px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer shadow-md",
+                              !!copiadoMensagemPais[cardKey]
+                                ? "bg-emerald-500 text-black shadow-emerald-500/20"
+                                : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20"
+                            )}
+                            title="Copiar mensagem para enviar aos pais (WhatsApp)"
+                          >
+                            {!!copiadoMensagemPais[cardKey] ? <Check size={16} /> : <Share2 size={16} />}
+                            {!!copiadoMensagemPais[cardKey] ? 'Copiado!' : 'Mensagem Pais'}
+                          </button>
+
+                          <button
+                            type="button"
                             onClick={() => handleCopiarTodosSGE(group, cardKey)}
                             className={cn(
                               "px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer shadow-md",
                               todosCopiados 
-                                ? "bg-emerald-500 text-black shadow-emerald-500/20" 
+                                ? "bg-blue-500 text-white shadow-blue-500/20" 
                                 : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20"
                             )}
                             title="Copiar todas as atas formatadas deste aluno para o SGE"
                           >
                             {todosCopiados ? <Check size={16} /> : <Copy size={16} />}
-                            {todosCopiados ? 'Copiado para o SGE!' : 'Copiar p/ SGE'}
+                            {todosCopiados ? 'Copiado SGE!' : 'Copiar p/ SGE'}
                           </button>
                         </div>
                       </div>

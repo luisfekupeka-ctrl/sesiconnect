@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { RegistroOcorrencia } from '../types';
-import { Printer, X, User, ClipboardList, MapPin, CheckSquare, Square, Plus, Trash2, Download, Clock, Calendar, FileText, GraduationCap } from 'lucide-react';
+import { Printer, X, User, ClipboardList, MapPin, CheckSquare, Square, Plus, Trash2, Download, Clock, Calendar, FileText, GraduationCap, Share2, Check, Copy } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { generateFichaOcorrenciaPDF } from '../lib/reportGenerator';
 import papelTimbradoImg from '../assets/papel_timbrado.png';
 import { occurrenceService } from '../services/occurrenceService';
-import { montarEstruturaAta } from '../lib/ataUtils';
+import { montarEstruturaAta, gerarMensagemResponsaveis } from '../lib/ataUtils';
 
 const CARGOS_SUGERIDOS = [
   'Psicólogo Escolar',
@@ -243,6 +243,26 @@ export default function FichaOcorrencia({
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const [copiadoMensagem, setCopiadoMensagem] = useState(false);
+
+  const handleCopiarMensagem = async () => {
+    const mensagem = gerarMensagemResponsaveis({
+      nomeAluno: listaAlunos.join(' e ') || 'Estudante',
+      turmaAluno,
+      tipoOcorrencia: ocorrencia.nomeModelo || 'Registro',
+      relato: relatoTexto,
+      emissor: nomeEmissor,
+      dataStr: dataAta
+    });
+    try {
+      await navigator.clipboard.writeText(mensagem);
+      setCopiadoMensagem(true);
+      setTimeout(() => setCopiadoMensagem(false), 2500);
+    } catch (e) {
+      console.error('Falha ao copiar:', e);
+    }
   };
 
   const handleBaixarPDF = async () => {
@@ -603,6 +623,16 @@ export default function FichaOcorrencia({
 
           {/* Botões de Ação */}
           <div className="mt-auto pt-4 border-t border-gray-200 space-y-2.5">
+            <button
+              onClick={handleCopiarMensagem}
+              className={cn(
+                "w-full flex items-center justify-center gap-2 px-5 py-3 text-white rounded-2xl text-xs font-black uppercase transition-all shadow-md cursor-pointer",
+                copiadoMensagem ? "bg-emerald-500 hover:bg-emerald-600" : "bg-emerald-600 hover:bg-emerald-700"
+              )}
+            >
+              {copiadoMensagem ? <Check size={16} /> : <Share2 size={16} />} 
+              {copiadoMensagem ? 'Mensagem Copiada!' : 'Copiar Mensagem Pais'}
+            </button>
             <button
               onClick={handlePrint}
               className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-gray-900 text-white rounded-2xl text-xs font-black uppercase hover:bg-gray-800 transition-all shadow-md cursor-pointer"

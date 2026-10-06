@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Copy, Check, FileText, User, Calendar, Clock, 
@@ -66,16 +66,48 @@ export default function ModalRegistroDiarioSGE({
     return relatoSucinto;
   }, [relatoSucinto]);
 
+  const [reincidentes, setReincidentes] = useState<DailyOccurrenceRecord[]>([]);
+
+  useEffect(() => {
+    async function fetchReincidentes() {
+      try {
+        const records = await occurrenceService.fetchRecords();
+        // Filtra pelo mesmo aluno e tipo
+        const filtrados = records.filter(r => 
+          r.student_name.trim().toLowerCase() === record.student_name.trim().toLowerCase() && 
+          r.occurrence_type === record.occurrence_type
+        );
+        // Ordena por data (mais antigo para mais recente)
+        filtrados.sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+        setReincidentes(filtrados.length > 0 ? filtrados : [record]);
+      } catch (e) {
+        console.error('Erro ao buscar reincidentes:', e);
+        setReincidentes([record]);
+      }
+    }
+    fetchReincidentes();
+  }, [record.student_name, record.occurrence_type, record]);
+
   const mensagemResponsaveis = useMemo(() => {
-    return gerarMensagemResponsaveis({
-      nomeAluno: record.student_name,
-      turmaAluno: record.school_year,
-      tipoOcorrencia: record.occurrence_type,
-      relato: record.report,
-      emissor: record.created_by || profile?.full_name,
-      dataStr
-    });
-  }, [record, profile, dataStr]);
+    if (reincidentes.length <= 1) {
+      return gerarMensagemResponsaveis({
+        nomeAluno: record.student_name,
+        turmaAluno: record.school_year,
+        tipoOcorrencia: record.occurrence_type,
+        relato: record.report,
+        emissor: record.created_by || profile?.full_name,
+        dataStr
+      });
+    }
+
+    const listaRegistros = reincidentes.map((rec) => {
+      const recDate = rec.created_at ? new Date(rec.created_at).toLocaleDateString('pt-BR') : 'Data não informada';
+      const relatoCurto = extrairRelatoSucinto(rec.report, rec.occurrence_type);
+      return `• ${recDate}: ${relatoCurto}`;
+    }).join('\n');
+
+    return `Prezados(as) responsáveis pelo(a) estudante ${record.student_name}, esperamos que estejam bem.\n\nGostaríamos de compartilhar com vocês alguns registros de acompanhamento pedagógico recentes, referentes a ocorrências de "${record.occurrence_type}". Abaixo, detalhamos cada um dos episódios registrados:\n\n${listaRegistros}\n\nO(a) estudante tem recebido as devidas orientações de nossa equipe em cada um desses momentos. No entanto, diante da reincidência, solicitamos a parceria e o apoio da família na conversa em casa e no acompanhamento da conduta escolar, visando o melhor desenvolvimento do(a) aluno(a).\n\nFicamos à disposição para eventuais dúvidas.\n\nAtenciosamente,\nCoordenação Pedagógica\nColégio SESI Internacional`;
+  }, [record, profile, dataStr, reincidentes]);
 
   const handleCopiarSGE = async () => {
     try {
@@ -236,7 +268,7 @@ export default function ModalRegistroDiarioSGE({
                     {copiadoRelato ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
                     {copiadoRelato ? 'Relato copiado!' : 'Copiar só relato'}
                   </button>
-                  {isAdmin && (
+                  {true && (
                     <button
                       type="button"
                       onClick={() => setModoEdicao(!modoEdicao)}
@@ -315,7 +347,7 @@ export default function ModalRegistroDiarioSGE({
           {/* Modal Footer */}
           <div className="p-4 md:p-6 bg-slate-900/90 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              {isAdmin && (
+              {true && (
                 <button
                   type="button"
                   onClick={handleExcluir}
